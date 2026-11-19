@@ -1,6 +1,8 @@
 """`Abstraction.compress`, `is_goal` and `family_types` on the small amulet pool: what a state stores and what it merges."""
 
+import copy
 import dataclasses
+import pickle
 
 import pytest
 from abstraction_pool import (
@@ -54,6 +56,20 @@ def test_a_state_is_a_hashable_value():
     with pytest.raises(dataclasses.FrozenInstanceError):
         state.status = ()
 
+
+
+def test_a_state_holds_its_fields_in_slots_and_a_pickle_carries_them_without_the_hash():
+    """#1332: a state has no dict of attributes (a bound's build holds millions of states); its hash and order key are made when asked and a
+    pickle or a copy carries the fields alone (string hashes are salted per process), and gives an equal state with the same hash."""
+    ab = abstraction()
+    state = ab.compress(fractured_item(RESIST_2))
+    hashed, order = hash(state), state.order_key
+
+    assert not hasattr(state, "__dict__")
+    carried = pickle.loads(pickle.dumps(state))
+    assert carried._hash is None and carried._order_key is None
+    assert carried == state and hash(carried) == hashed and carried.order_key == order
+    assert copy.deepcopy(state) == state and dataclasses.replace(state, strands=1) != state
 
 def test_every_tier_of_a_fractured_resist_is_one_state_when_no_tier_is_asked():
     ab = abstraction()

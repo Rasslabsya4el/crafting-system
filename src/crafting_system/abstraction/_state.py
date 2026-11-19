@@ -166,7 +166,7 @@ class OfferedMod:
     __getstate__ = _state_without_hash
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, slots=True)
 class CompressedState:
     """The part of an item that decides what an action can do next.
 
@@ -206,46 +206,58 @@ class CompressedState:
     imprints: tuple["CompressedState", ...] = ()
     strands: int = 0
     replaced: tuple[str, ...] = ()
+    # the hash and the order key, made when first asked (both read every field, and a state is asked often). The fields are slots (#1332): a
+    # state held a dict of its attributes, about 300 bytes of the 500 a state took, and a bound's build holds millions of states (the members
+    # it tried, `Pattern._feasible`: 1.6 million at 22 minutes of R13)
+    _hash: int | None = field(default=None, init=False, repr=False, compare=False)
+    _order_key: tuple | None = field(default=None, init=False, repr=False, compare=False)
 
     def __hash__(self) -> int:
-        try:
-            return self._hash  # type: ignore[attr-defined]
-        except AttributeError:
-            parts = (self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints)
-            if self.strands:  # at 0 strands the hash of before ticket #277
-                parts = (*parts, self.strands)
-            if self.replaced:  # with none replaced the hash of before ticket #528
-                parts = (*parts, ("replaced", self.replaced))
-            value = hash(parts)
-            object.__setattr__(self, "_hash", value)
+        value = self._hash
+        if value is not None:
             return value
+        parts = (self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints)
+        if self.strands:  # at 0 strands the hash of before ticket #277
+            parts = (*parts, self.strands)
+        if self.replaced:  # with none replaced the hash of before ticket #528
+            parts = (*parts, ("replaced", self.replaced))
+        value = hash(parts)
+        object.__setattr__(self, "_hash", value)
+        return value
 
     @property
     def order_key(self) -> tuple:
         """A total order on states made of plain values, the same in every process: how the imprints of a state are sorted (`repr` is not stable)."""
-        try:
-            return self._order_key  # type: ignore[attr-defined]
-        except AttributeError:
-            flags = self.flags
-            value = (
-                (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences)), flags.unopened),
-                tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.fractured),
-                tuple(int(entry) for entry in self.status),
-                tuple(slot.key for slot in self.slots),
-                tuple((entry.grade, tuple(int(c) for c in entry.contribution), entry.line) for entry in self.implicits),
-                () if self.quality is None else (getattr(self.quality.type, "value", ""), self.quality.percent),  # a plain quality has no type
-                tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
-                tuple(held.order_key for held in self.imprints),
-            )
-            if self.replaced:  # with none replaced the key of before ticket #528; the count stays in its place so keys compare
-                value = (*value, self.strands, self.replaced)
-            elif self.strands:  # at 0 strands the key of before ticket #277; a stranded state sorts after the state at 0 with the same rest
-                value = (*value, self.strands)
-            object.__setattr__(self, "_order_key", value)
+        value = self._order_key
+        if value is not None:
             return value
+        flags = self.flags
+        value = (
+            (flags.rarity.value, flags.corrupted, tuple(sorted(entry.value for entry in flags.influences)), flags.unopened),
+            tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.fractured),
+            tuple(int(entry) for entry in self.status),
+            tuple(slot.key for slot in self.slots),
+            tuple((entry.grade, tuple(int(c) for c in entry.contribution), entry.line) for entry in self.implicits),
+            () if self.quality is None else (getattr(self.quality.type, "value", ""), self.quality.percent),  # a plain quality has no type
+            tuple((entry.mod_id, tuple(int(c) for c in entry.contribution)) for entry in self.offer),
+            tuple(held.order_key for held in self.imprints),
+        )
+        if self.replaced:  # with none replaced the key of before ticket #528; the count stays in its place so keys compare
+            value = (*value, self.strands, self.replaced)
+        elif self.strands:  # at 0 strands the key of before ticket #277; a stranded state sorts after the state at 0 with the same rest
+            value = (*value, self.strands)
+        object.__setattr__(self, "_order_key", value)
+        return value
 
-    def __getstate__(self) -> dict:
-        return {name: value for name, value in self.__dict__.items() if name not in ("_hash", "_order_key")}
+    def __getstate__(self) -> tuple:
+        """What a pickle or a copy carries: the fields, without the hash and the order key (string hashes are salted per process)."""
+        return (self.flags, self.fractured, self.status, self.slots, self.implicits, self.quality, self.offer, self.imprints, self.strands, self.replaced)
+
+    def __setstate__(self, state: tuple) -> None:
+        for name, value in zip(_STATE_FIELDS, state, strict=True):
+            object.__setattr__(self, name, value)
+        object.__setattr__(self, "_hash", None)
+        object.__setattr__(self, "_order_key", None)
 
     def __repr__(self) -> str:
         """The dataclass repr, with the item-state fields shown only when they hold something: the text of a B1 state is what it was before ticket #142 (goldens key by it)."""
@@ -275,6 +287,8 @@ class CompressedState:
         """How many mods of `side` the item holds besides the fractured ones."""
         return sum(slot.side is side for slot in self.slots)
 
+
+_STATE_FIELDS = ("flags", "fractured", "status", "slots", "implicits", "quality", "offer", "imprints", "strands", "replaced")  # what a pickle of a state carries, in order
 
 def implicit_status_of(leaf: ImplicitWanted, mod_id: str, grade: int, values: tuple[int, ...]) -> Status:
     """What an implicit gives `leaf`: ABSENT when it is not one of the leaf's mods, BELOW when its grade or a roll falls short, else PASSING."""
