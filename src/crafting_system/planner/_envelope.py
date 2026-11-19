@@ -648,6 +648,9 @@ class Search[S]:
         self._round: Round | None = None  # the pool of the round being walked
         self._memo_at: dict[int, tuple[dict[S, int], float]] | None = None  # the kernels a worker made at the tip being realized, by offer
         self._made: dict[int, dict[int, tuple[dict[S, int], float]]] | None = None  # in a worker: the kernels it made, by tip and offer
+        self._made_listed: dict[S, tuple] = {}  # in a worker: the listings it made, by state (`listing`)
+        self._listed: dict[S, tuple] = {}  # the listings workers made, by state, for `expand` to take
+        self._keys: dict[bytes, bytes] = {}  # in a worker: one object for each shared part's key it sent
         self.prime_skip = 0  # states to leave before the problem is asked to prime again (see `realize`)
         self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
@@ -767,11 +770,31 @@ class Search[S]:
     # ---- expanding and realizing --------------------------------------------------------------------------------
 
     def expand(self, i: int) -> None:
-        """List the offers of node `i` with their lower bounds; nothing is realized yet."""
+        """List the offers of node `i` with their lower bounds; nothing is realized yet.
+
+        A listing a pool worker made of the state (`_ahead`, #1340) is taken when the floors it read are those of this process now
+        (`Problem.listing_version`): it is the listing this process would make, and the prunings it would have written are written here."""
         self.expanded[i] = 1
-        split = getattr(self.p, "split_candidates", None)
-        own, rest = split(self.states[i]) if split is not None else (self.p.candidates(self.states[i]), ())
-        offers = self.cands[i] = Offers(_sorted_arrays(own), self.intern_offers(rest) if rest else None)
+        state = self.states[i]
+        listed = self._listed.pop(state, None) if self._listed else None
+        if listed is not None and listed[0] != self.p.listing_version():
+            listed = None
+        if listed is None and self._made is not None and hasattr(self.p, "listing"):  # a worker: listed so that its parent can take it
+            listed = self._made_listed[state] = self.listing(state)
+        if listed is not None:
+            _, own_la, own_pos, key, notes, seconds = listed
+            if self._made is None:
+                self.p.relisted(notes)
+                self.ahead.making += seconds
+                if self._round is not None:
+                    self._round.useful += seconds
+            offers = self.cands[i] = Offers((own_la, own_pos), self._base(key) if key is not None else None)
+        else:
+            mark = time.perf_counter()
+            split = getattr(self.p, "split_candidates", None)
+            own, rest = split(state) if split is not None else (self.p.candidates(state), ())
+            offers = self.cands[i] = Offers(_sorted_arrays(own), self.intern_offers(rest) if rest else None)
+            self.ahead.making += time.perf_counter() - mark
         self.rows[i] = []
         self.stats.expanded += 1
         self.stats.candidates += len(offers)
@@ -782,12 +805,27 @@ class Search[S]:
         """The sorted arrays of these entries, one pair for every node that lists the same (#1337): the offers whose `la` is their price or floor
         are most of a node's when the bound's model holds few of them (R13: 5,367 of 5,557), and the same at many states."""
         la, pos = _sorted_arrays(entries)
-        key = la.tobytes() + pos.tobytes()
+        return self._base(la.tobytes() + pos.tobytes())
+
+    def _base(self, key: bytes) -> tuple[np.ndarray, np.ndarray]:
         found = self.bases.get(key)
         if found is None:  # read-only views of the key itself: the content is held once
-            n = len(la)
+            n = len(key) // 16
             found = self.bases[key] = (np.frombuffer(key, dtype=np.float64, count=n), np.frombuffer(key, dtype=np.int64, count=n, offset=8 * n))
         return found
+
+    def listing(self, state: S) -> tuple:
+        """The listing of `state` that a pool worker sends (`_ahead`): the floors' version, its own offers as sorted arrays, the key of its
+        shared part (`intern_offers`; one object for one content, so that a chunk's result holds it once), the prunings and the seconds."""
+        mark = time.perf_counter()
+        version, own, rest, notes = self.p.listing(state)
+        own_la, own_pos = _sorted_arrays(own)
+        key = None
+        if rest:
+            la, pos = _sorted_arrays(rest)
+            key = la.tobytes() + pos.tobytes()
+            key = self._keys.setdefault(key, key)
+        return version, own_la, own_pos, key, notes, time.perf_counter() - mark
 
     def _consistent(self, i: int, least: float) -> None:
         """Raise `BoundError` when the bound of node `i` is above `least`, the least lower bound of its offers (a consistent bound is at most that)."""

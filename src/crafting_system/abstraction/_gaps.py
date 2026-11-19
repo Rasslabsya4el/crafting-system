@@ -9,7 +9,8 @@ One `Abstraction` owns one `ModelGaps` (`Abstraction.gaps`); the walks of one pl
 that is met again (the bound pruning solves the same states again) counts once.
 """
 
-from collections.abc import Hashable
+import contextlib
+from collections.abc import Hashable, Iterator
 from dataclasses import dataclass
 
 from crafting_system.actions import ConsumesInputsError, OutOfScopeError
@@ -69,10 +70,24 @@ class Prunings:
 
     def __init__(self) -> None:
         self._labels: dict[str, dict[str, None]] = {}
+        self._held: list[tuple[str, str]] | None = None  # the notes kept aside, in their order (`held`)
 
     def note(self, label: str, why: str) -> None:
         """Write that the offer `label` was left out of a state for the reason `why` (`PRUNED_CORRUPTING` or `PRUNED_QUALITY`)."""
+        if self._held is not None:
+            self._held.append((label, why))
+            return
         self._labels.setdefault(why, {})[label] = None
+
+    @contextlib.contextmanager
+    def held(self) -> Iterator[list[tuple[str, str]]]:
+        """Keep the notes of the block aside, in their order, instead of writing them: a pool worker lists a state's offers for its parent, which
+        writes them when it takes the listing (`planner._ahead`, #1340), so that they are written in the order one process writes them."""
+        saved, self._held = self._held, []
+        try:
+            yield self._held
+        finally:
+            self._held = saved
 
     def labels(self, why: str) -> tuple[str, ...]:
         """The offers left out of some state for the reason `why`, in the order they were first left out."""

@@ -45,12 +45,14 @@ def _hold(search: object) -> object:
     return search
 
 
-def _make(tips: Sequence[int]) -> tuple[dict[int, dict[int, tuple[object, float]]], float]:
-    """In a worker: realize these tips as `Search.run` does and return the kernels made, by tip and offer, each with its seconds."""
+def _make(tips: Sequence[int]) -> tuple[dict[int, dict[int, tuple[object, float]]], dict[object, tuple], float]:
+    """In a worker: realize these tips as `Search.run` does and return the kernels made, by tip and offer, each with its seconds, and the
+    listings of the tips it expanded, by state (`Search.listing`)."""
     search = parallel.context()
     made: dict[int, dict[int, tuple[object, float]]] = {}
     began = time.perf_counter()
     search.kernels.room = None  # the workers' memory is read by the pool's wait (`parallel.WorkerPool`), not by this copy of the search
+    listed = search._made_listed = {}
     search._made = made
     try:
         with budget.unasked():  # a forked worker holds its parent's net: the parent asks it between two windows
@@ -65,7 +67,7 @@ def _make(tips: Sequence[int]) -> tuple[dict[int, dict[int, tuple[object, float]
                     search.p.release()
     finally:
         search._made = None
-    return made, time.perf_counter() - began
+    return made, listed, time.perf_counter() - began
 
 
 class Ahead:
@@ -118,6 +120,7 @@ class Round:
     """The pool of one round: windows of its tips made ahead in the workers, handed to the search tip by tip (`at`)."""
 
     def __init__(self, search: object, tips: Sequence[int], ahead: Ahead, workers: int) -> None:
+        self.search = search
         self.ahead = ahead
         self.tips = list(tips)
         self.workers = workers
@@ -162,8 +165,9 @@ class Round:
                 self._drop()
             else:
                 self.waited += time.perf_counter() - mark
-                for made, _ in results:
+                for made, listed, _ in results:
                     self.memo.update(made)
+                    self.search._listed.update(listed)
                 self._send()
         return self.memo.pop(tip, None)
 
@@ -182,6 +186,7 @@ class Round:
         pool, self.pool = self.pool, None
         self.pending.clear()
         self.memo.clear()
+        self.search._listed.clear()
         if pool is not None:
             pool.abandon()
 
@@ -194,6 +199,7 @@ class Round:
             else:
                 pool.close()
         self.memo.clear()
+        self.search._listed.clear()
         if tips_walked:
             self.ahead.lost += max(0.0, self.waited - self.useful / self.workers)
             self.ahead.lost_tips += tips_walked

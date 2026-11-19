@@ -4,9 +4,11 @@ The searches here fork a pool at every round of two tips or more (`ahead_always`
 what they compare is what a pool changes, which must be nothing but which process made a kernel.
 """
 
+from dataclasses import dataclass, field
+
 import numpy as np
 import pytest
-from envelope_support import ExplicitProblem, dense_optimum, random_graph
+from envelope_support import ExplicitProblem, dense_optimum, q_value, random_graph
 
 from crafting_system import parallel
 from crafting_system.planner import _ahead
@@ -108,3 +110,65 @@ def test_workers_that_take_the_search_to_its_memory_net_are_stopped_and_the_sear
     pooled, _, ahead = _search(2, 0.0, net=net, workers=3, ahead_always=True)
     _same(alone, ahead)
     assert alone.stopped is None and pooled.ahead.stopped is not None and "the workers were stopped" in pooled.ahead.stopped
+
+
+@dataclass
+class ListedProblem(ExplicitProblem):
+    """A problem whose listings a worker can make (`listing`): each writes a note, as the prunings are written, and the floors `tighten` lifts
+    change the listings after it, as the offers' floors do (`Problem.listing_version`)."""
+
+    lifted: dict[int, int] = field(default_factory=dict)
+    written: list[str] = field(default_factory=list)
+    listed_here: int = 0
+    _held: list[str] | None = None
+
+    def _floor(self, position: int) -> float:
+        return 1.0 - 0.5 ** (self.lifted.get(position, 0) + 1)
+
+    def lower(self, state: int) -> float:
+        return 0.5 * super().lower(state)  # under the least floor of the offers (a half of theirs), so the bound stays consistent
+
+    def candidates(self, state: int) -> list[tuple[float, int]]:
+        (self._held if self._held is not None else self.written).append(f"listed {state}")
+        return [(la * self._floor(offer), offer) for la, offer in super().candidates(state)]
+
+    def split_candidates(self, state: int):
+        if self._held is None:
+            self.listed_here += 1
+        out = self.candidates(state)
+        return [entry for entry in out if entry[1] % 2], [entry for entry in out if not entry[1] % 2]
+
+    def tighten(self, state: int, position: int, best: float) -> float | None:
+        level = self.lifted.get(position, 0)
+        if level < 3 and state % 5 == 0:
+            self.lifted[position] = level + 1
+        return self.alpha * q_value(self.graph, self.value, state, position) * self._floor(position)
+
+    def listing(self, state: int):
+        self._held = []
+        try:
+            own, rest = self.split_candidates(state)
+            return self.listing_version(), own, rest, self._held
+        finally:
+            self._held = None
+
+    def listing_version(self):
+        return tuple(sorted(self.lifted.items()))
+
+    def relisted(self, notes) -> None:
+        self.written.extend(notes)
+
+
+@pytest.mark.parametrize("seed", [1, 5])  # seeds whose made-up floors keep the search's guards quiet (most raise `BoundError`, alone as with workers)
+def test_listings_made_by_workers_are_taken_only_on_the_floors_they_read_and_write_their_notes_in_order(seed):
+    graph = random_graph(seed, 400)
+    value, _ = dense_optimum(graph)
+    runs = []
+    for options in ({"workers": 1}, {"workers": 3, "ahead_always": True}):
+        problem = ListedProblem(graph, value, 0.3)
+        search = Search(problem, **options)
+        runs.append((search, problem, search.run()))
+    (_, alone, one), (pooled, ahead, other) = runs
+    _same(one, other)
+    assert ahead.written == alone.written and ahead.lifted == alone.lifted
+    assert pooled.ahead.pooled and ahead.listed_here < alone.listed_here  # workers listed some of the states this process expanded
