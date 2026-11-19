@@ -19,10 +19,20 @@ runner's 16 GB while the caller held 0.7 GB. Past the limit the workers are kill
 Where `fork` exists (Linux, macOS) the workers are forked, so `args` are inherited and not pickled; elsewhere (Windows)
 they are spawned and `args` are pickled once per worker, which is why the game data's read-only mappings get a pickler
 here (`types.MappingProxyType` has none).
+
+A forked pool holds the objects of this process frozen (`gc.freeze`) from just before the fork until the pool closes (#1345). A fork shares
+its parent's pages until either side writes one, and the cyclic garbage collector writes into the header of every object it walks: the first
+collections in a worker walked the parent's whole heap and made each worker a private copy of most of it within a second (R13, a 5 GB
+process: about 1.7 GB per worker in one second and 2 GB in 20 s, so three workers took the run to its 12 GB net at the search's round 2; a
+stand-in heap of 2.3 GB: 1.7 GB per worker in one second, and 10 to 20 MB once frozen). Frozen objects are walked by neither the workers'
+collections nor this process's while the pool lives, so the pages stay shared; the objects made after the fork are collected as before, and
+the frozen ones go back to the collector when the pool closes (`gc.unfreeze`, which like `gc.freeze` moves a list and does not walk it). A
+pool forked while something else holds objects frozen leaves them frozen when it closes: it cannot tell its own from the others.
 """
 
 import contextlib
 import copyreg
+import gc
 import math
 import multiprocessing
 import os
@@ -316,6 +326,7 @@ class WorkerPool:
         self._executor: ProcessPoolExecutor | None = None
         self._local: object = None
         self._have_local = False
+        self._froze = False  # whether this pool froze the objects of this process for its forked workers (`_start`) and must thaw them
 
     def __enter__(self) -> "WorkerPool":
         return self
@@ -327,6 +338,13 @@ class WorkerPool:
         if self._executor is not None:
             self._executor.shutdown(wait=True, cancel_futures=True)
             self._executor = None
+        self._thaw()
+
+    def _thaw(self) -> None:
+        """Give the objects this pool froze before its fork back to the collector (the module's note, #1345)."""
+        if self._froze:
+            self._froze = False
+            gc.unfreeze()
 
     def abandon(self) -> None:
         """Kill the workers and drop the pool without waiting on them (a worker that does not return must not hold the caller, #535)."""
@@ -347,6 +365,7 @@ class WorkerPool:
                 results._writer.close()
             if manager is not None:
                 manager.join(ABANDON_SECONDS)
+        self._thaw()
 
     def _start(self) -> ProcessPoolExecutor:
         if self._executor is None:
@@ -354,6 +373,9 @@ class WorkerPool:
             method = "fork" if "fork" in methods else "spawn"
             if method != "fork":
                 copyreg.pickle(MappingProxyType, _pickle_mapping_proxy)
+            elif not self._froze:  # the workers are forked at the first submit, after this: their parent's objects are frozen by then (#1345)
+                self._froze = gc.get_freeze_count() == 0
+                gc.freeze()
             self._executor = ProcessPoolExecutor(
                 max_workers=self.workers,
                 mp_context=multiprocessing.get_context(method),
