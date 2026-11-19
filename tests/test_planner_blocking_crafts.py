@@ -1489,7 +1489,7 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     # 1): a share of 27 s and room for one more (`Room.late` 1: 54 s); its first model (10 of 84 offers) is solved at 2.5 s, its second (18)
     # at 4.3 s: at that pace it needs 2.5 + 1.8 * 74 / 8 = 19.15 s; its third (30) at 11.6 s: 2.5 + 9.1 * 74 / 20 = 36.17 s; it ends at
     # 38.3 s. The figure holds between two solved models: its fourth model takes 8.5 s, and the pace is not read off a model being built.
-    from crafting_system.abstraction._pattern import OUTRUN, PACE, QUARTER, SHARE, Growth, Pace, Room
+    from crafting_system.abstraction._pattern import OUTRUN, PACE, QUARTER, SHARE, Growth, Pace, Room, Tally
 
     def exalted() -> Pace:
         pace = Pace()
@@ -1555,6 +1555,18 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     assert r13.need == pytest.approx(0.9)
     assert r13.verdict(7.4, 20.0, held) is None and r13.need == pytest.approx(0.9 + 6.5 * 6)
     assert r13.verdict(7.5, 20.0, held) == OUTRUN == r13.verdict(7.5, 20.0, walked) and r13.need == pytest.approx(0.9 + 6.6 * 6)
+    # counted in pieces the same rule holds, and the stop names the forecast it ran past and the need it reads now
+    tally = Tally(20_000, lambda done, cap: "pieces", room=held)
+    tally.grows = True
+    tally.grown(Growth(58, 78, 54, 54), 300.0)
+    tally.grown(Growth(63, 78, 54, 58), 400.0)
+    tally.done = 7_400
+    assert tally() is None
+    tally.done = 7_500
+    assert tally() == (
+        "it had done 7,500 of its 20,000 pieces of work, past the 900 its model's pace of growth foretold, its next model unsolved, and with "
+        "what it ran over charged to that pace it would need about 40,500, more than it may take: the rest is left for the search"
+    )
     # a build that keeps to its pace goes on: its third model solved before the 13 s foretold, the figure moves on
     steady = Pace()
     steady.grows = True

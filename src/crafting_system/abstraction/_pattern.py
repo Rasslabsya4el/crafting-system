@@ -1397,7 +1397,7 @@ class Pace:
         sizes it). With a plan in hand (#1099, #1224) its net is the round's whole share and its room `1 + room.late` times it:
         * before `room.quarter` of the net it goes on;
         * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`, or once the build has
-          outrun it the pace of the work it has finished, `reckon`, #1325), and stops as soon as it does
+          outrun it that forecast with the overrun charged to its pace, `reckon`, #1325), and stops as soon as it does
           not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
           no pace yet that grows its model (`grows`: its first model not solved, or its growth has added no offer) has nothing that shows
           it will end there: it stops, whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its
@@ -1460,7 +1460,7 @@ class Tally(Pace):
             elif stop == PACE:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, and at the pace its model grew it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
             elif stop == OUTRUN:
-                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, past the {self.need:,.0f} its model's pace of growth foretold, its next model unsolved: the rest is left for the search"
+                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, past the {self.forecast:,.0f} its model's pace of growth foretold, its next model unsolved, and with what it ran over charged to that pace it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
             else:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work and its model had not grown past its first, so nothing showed that it would end within what it may take: the rest is left for the search"
             return said + (", the build having gone on past it, nearly done" if self.late else "")
