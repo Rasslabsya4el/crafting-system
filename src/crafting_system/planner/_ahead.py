@@ -165,14 +165,18 @@ class Round:
             if len(window) < min(self.size, self.workers * CHUNKS):
                 return False
             search = self.search
-            pieces = [search.states[j] for j in window if not search.expanded[j]]
+            pieces = [search.states[j] for j in window if not search.expanded[j] and not search.goal[j]]  # the chain expands no goal
         else:
             pieces = window
         if not window:
             return False
         step = max(1, -(-len(pieces) // (self.workers * CHUNKS)))
         mark = time.perf_counter()
-        futures = [self.pool.submit(_list if self.chain else _make, pieces[at : at + step]) for at in range(0, len(pieces), step)]
+        try:
+            futures = [self.pool.submit(_list if self.chain else _make, pieces[at : at + step]) for at in range(0, len(pieces), step)]
+        except Exception:  # the fork failed (no memory) or the pool broke: this process goes on alone, as with one worker
+            self._drop()
+            return False
         if not self.forked and futures:  # the workers are forked at the first submit
             self.forked = True
             self.ahead.fork = (time.perf_counter() - mark) / self.workers

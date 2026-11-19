@@ -643,7 +643,7 @@ class Search[S]:
         self.restart_kernel: int | None = None
         # the rounds' tips realized ahead in forked workers (`_ahead`, #1340): the worker count is the machine's (`CRAFTING_WORKERS`, OR-40); none
         # where there is no fork (OR-57); `ahead_always` forks at every round, whatever the measures (the tests)
-        count = parallel.worker_count() if workers is None else workers
+        count = 1 if self.counted else parallel.worker_count() if workers is None else workers  # a count forks no pool: the setting is not read
         self.ahead = Ahead(count if parallel.can_inherit() else 1, POLL_SECONDS, always=ahead_always)
         self._round: Round | None = None  # the pool of the round being walked
         self._memo_at: dict[int, tuple[dict[S, int], float]] | None = None  # the kernels a worker made at the tip being realized, by offer

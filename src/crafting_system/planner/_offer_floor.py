@@ -140,6 +140,7 @@ class OfferFloors:
         chosen_leaves = [goal.leaves[index] for index in self.chosen]
         self.entries: list[_Entry] = []
         self.lifted: dict[int, int] = {}  # the offers `tighten` lifted during the search, with their levels (`version`)
+        self._version: tuple[tuple[int, int], ...] | None = None
         for index, (offer, (kind, named), made) in enumerate(zip(priced, kinds, crafted)):
             if index % 256 == 0:
                 self.ask()
@@ -453,12 +454,15 @@ class OfferFloors:
         while raisable(entry.kind, entry.level) and klass in (INSIDE, OUTSIDE) and self.lower(position, klass) * (1 - SLACK) <= above:
             self._lift(0, entry, entry.level + 1)
             self.lifted[position] = entry.level
+            self._version = None
         return self.lower(position, klass)
 
     def version(self) -> tuple[tuple[int, int], ...]:
         """What the search has changed of the floors (`tighten`): the offers it lifted, with their levels. Two processes whose versions are equal
         give every offer the same floor (a pool worker's listing of a state is taken only so, `planner._ahead`, #1340)."""
-        return tuple(sorted(self.lifted.items()))
+        if self._version is None:
+            self._version = tuple(sorted(self.lifted.items()))
+        return self._version
 
 
 __all__ = ["CLASSES", "FloorsStopped", "OfferFloors", "SHAPED", "shape_of"]

@@ -172,3 +172,14 @@ def test_listings_made_by_workers_are_taken_only_on_the_floors_they_read_and_wri
     _same(one, other)
     assert ahead.written == alone.written and ahead.lifted == alone.lifted
     assert pooled.ahead.pooled and ahead.listed_here < alone.listed_here  # workers listed some of the states this process expanded
+
+
+def test_a_fork_that_fails_leaves_the_search_to_this_process(monkeypatch):
+    def failed(self, function, pieces):
+        raise OSError(12, "Cannot allocate memory")
+
+    monkeypatch.setattr(parallel.WorkerPool, "submit", failed)
+    _, _, alone = _search(4, 0.3, workers=1)
+    pooled, _, ahead = _search(4, 0.3, workers=3, ahead_always=True)
+    _same(alone, ahead)
+    assert pooled.ahead.pooled
