@@ -243,21 +243,30 @@ def test_a_failed_chunk_ends_the_wait_at_once_and_kills_the_hung_one(monkeypatch
 
 
 def test_kept_objects_freezes_what_is_alive_at_settle_and_unfreezes_at_the_end():
-    """#1340: inside the stretch, what is alive at `settle` is out of the collector's walks; the end gives it back, and a cycle made garbage while
-    frozen is freed by the next collection."""
+    """#1340: inside the stretch, what is alive at `settle` is out of the collector's walks; a cycle already garbage at `settle` is freed then;
+    the end gives back the rest, and a cycle dropped while frozen is freed by the next collection."""
     import gc
     import weakref
 
     class Node:
         pass
 
-    assert gc.get_freeze_count() == 0
-    with parallel.kept_objects() as settle:
-        kept = [[] for _ in range(100)]
+    def cycle():
         node = Node()
         node.me = node
+        return node
+
+    if gc.get_freeze_count():
+        pytest.skip("objects are frozen already: the stretch settles nothing")
+    with parallel.kept_objects() as settle:
+        kept = [[] for _ in range(100)]
+        dropped = cycle()
+        gone = weakref.ref(dropped)
+        del dropped
+        node = cycle()
         seen = weakref.ref(node)
         settle()
+        assert gone() is None  # garbage at settle: collected, never frozen
         assert gc.get_freeze_count() >= len(kept)
         del node
         gc.collect()
@@ -265,6 +274,19 @@ def test_kept_objects_freezes_what_is_alive_at_settle_and_unfreezes_at_the_end()
     assert gc.get_freeze_count() == 0
     gc.collect()
     assert seen() is None  # given back: the cycle is freed
+
+
+def test_kept_objects_unfreezes_when_the_work_raises():
+    import gc
+
+    if gc.get_freeze_count():
+        pytest.skip("objects are frozen already: the stretch settles nothing")
+    with pytest.raises(RuntimeError):
+        with parallel.kept_objects() as settle:
+            settle()
+            assert gc.get_freeze_count()
+            raise RuntimeError("stopped")
+    assert gc.get_freeze_count() == 0
 
 
 def test_kept_objects_settles_nothing_where_objects_are_already_frozen():

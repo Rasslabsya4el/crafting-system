@@ -296,6 +296,7 @@ CHOICE = -2  # the offer index of a row of a choice node (`_relaxed`): a step of
 SINK = -1  # the successor of the mass an approximate kernel does not account for: a state that costs nothing (the goal)
 SHRINK = Fraction(2**30 - 1, 2**30)  # every chance of a float kernel is taken this much lower; the float error is 1e-13, so no chance is above its exact one
 PRIME_FROM = 16  # a key that is given at least this many offers at once primes their distributions in a process pool (fewer cost more in forks than they save: R14, 11 offers), in chunks of ...
+SETTLE_SHARE = 4  # the build settles its objects when the keys looked at since the last time reach this share of the keys before (`_pass_keys`): a ratio, as the collector's own rule for its full collections (a quarter), not a count of keys
 PRIME_CHUNK = 32  # ... this many offers (the net is asked between two chunks)
 POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read, cheap beside one offer)
 SIDES = (Side.PREFIX, Side.SUFFIX)
@@ -1677,10 +1678,12 @@ class PatternBuilder:
                 return reached.reason
 
     def _pass_keys(self, settle: Callable[[], None] = lambda: None) -> str | None:
-        """The keys' loop of `_pass`. `settle` is called after each key: what is alive then is what the build keeps (`parallel.kept_objects`, #1340)."""
+        """The keys' loop of `_pass`. `settle` (`parallel.kept_objects`, #1340) is called between two keys, each time the keys looked at since the last
+        call reach a `SETTLE_SHARE`-th of those before it: each call walks the objects made since the one before, so the walks add up to a few
+        times what the build makes, and the collector's own walks see at most about that share beside what is kept."""
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
         last = polled = time.perf_counter()
-        i = 0
+        i = settled = 0
 
         def tick(oi: int, inner: bool = False) -> None:
             """Between two offers: ask the net, and say where the build is every 30 seconds (a key can take minutes: no longer one silent step).
@@ -1729,8 +1732,10 @@ class PatternBuilder:
                     self._release()
             self.pending.pop(i, None)
             self.expanded[i] = True
-            settle()
             i += 1
+            if i - settled >= max(1, settled // SETTLE_SHARE):
+                settle()  # collects what was made since the last settle, then keeps the collector off what is alive
+                settled = i
             now = time.perf_counter()
             if progress is not None and now - last >= 30:
                 last = now

@@ -256,19 +256,25 @@ def kept_objects() -> Iterator[Callable[[], None]]:
 
     The bound's build keeps millions of objects (keys, rows, kernels, members, the abstraction's caches) and makes many more that live for one
     key only. Python's collector is generational: each full collection walks every object alive, so the kept ones were walked again and again
-    (#1340: 17 to 28% of R04's build, 11% of R13's run, in the main process). `settle` (called between two units of work, when what is alive is
-    what the work keeps) moves every object alive into the collector's permanent generation (`gc.freeze`, a constant-time move); the collector
-    then walks only what was made since. No value changes: the collector frees cycles only, and a frozen object is still freed by its count.
-    A cycle made garbage while frozen is freed when the stretch ends: everything is unfrozen then, and the next collection walks it once.
+    (#1340: 12 to 20% of the build's wall time on R13 and R04, in the main process). `settle` (called between two units of work) first collects
+    the cycles that are garbage, walking only what was made since the last `settle`, then moves every object still alive into the collector's
+    permanent generation (`gc.freeze`, a constant-time move); the collector's own collections then walk only what was made since. No value
+    changes: the collector frees cycles only, and a frozen object is still freed by its count. A cycle that a later unit drops while it is
+    frozen is freed when the stretch ends: everything is unfrozen then, on every way out, and the next collection walks it once.
     Nested inside another stretch, or where objects are already frozen by someone else (a pool's parent, `risk._regen`), `settle` does nothing.
     """
     if gc.get_freeze_count():
         yield _settle_nothing
         return
     try:
-        yield gc.freeze
+        yield _settle
     finally:
         gc.unfreeze()
+
+
+def _settle() -> None:
+    gc.collect()
+    gc.freeze()
 
 
 def _settle_nothing() -> None:
