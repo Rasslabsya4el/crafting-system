@@ -61,7 +61,7 @@ from crafting_system.items.words import base_words, mod_words, mod_words_of
 from ._gaps import ModelGaps, Prunings
 from ._goal import Goal, Status
 from ._inputs import input_kernel
-from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags
+from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags, unraised
 from ._rolls import Cells, RollLaw, implicit_roll_law, implicit_values_for, is_rollable, multinomial, roll_law
 from ._state import (
     CompressedState,
@@ -909,9 +909,9 @@ class Abstraction:
             try:
                 prepared.key = self._mixture_key(prepared)
             except (NotApplicableError, OutOfScopeError) as refusal:
-                prepared.refusal = refusal
+                prepared.refusal = unraised(refusal)
         if prepared.refusal is not None:
-            raise prepared.refusal.with_traceback(None)
+            raise unraised(prepared.refusal)
         return prepared.key
 
     def _mixture_key(self, prepared: _Prepared) -> Hashable:
@@ -1577,14 +1577,14 @@ class Abstraction:
             try:
                 prepared = self._build(view, erasing, action)
             except (NotApplicableError, OutOfScopeError) as refusal:
-                prepared = _Prepared(None, {}, refusal=refusal)
+                prepared = _Prepared(None, {}, refusal=unraised(refusal))
             store[key] = prepared
             if shared and len(store) > SHARED_PAIRS:
                 del store[next(iter(store))]
         elif shared:
             store[key] = store.pop(key)  # the latest used is last
         if prepared.outcomes is None:
-            raise prepared.refusal.with_traceback(None)
+            raise unraised(prepared.refusal)
         return prepared
 
     def _build(self, view: _View, erasing: bool, action: Action) -> _Prepared:
@@ -1609,13 +1609,13 @@ class Abstraction:
             known = self._refused_by.get(refusal_class)
             if known is not None:
                 self.refusals_shared += 1
-                raise known.with_traceback(None)
+                raise unraised(known)
         try:
             outcomes = self._outcomes(action, item)  # a refusal of the action comes first
         except NotApplicableError as refusal:
             self._refusal_depends_on_the_family(view, erasing, action, origins)
             if refusal_class is not None:
-                self._refused_by[refusal_class] = refusal
+                self._refused_by[refusal_class] = unraised(refusal)
             raise
         self._check_type_blind(view, outcomes)
         self._check_fracture_without_partners(view, outcomes)
@@ -1642,10 +1642,10 @@ class Abstraction:
             try:
                 found = self._item_of(view, erasing)
             except ValueError as error:  # `ItemError` is a `ValueError`
-                found = error
+                found = unraised(error)
             self._items_by[key] = found
         if isinstance(found, ValueError):
-            raise found.with_traceback(None)
+            raise unraised(found)
         return found
 
     def _refusal_class(self, view: _View, action: Action, item: Item) -> Hashable | None:

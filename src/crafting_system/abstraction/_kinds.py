@@ -537,10 +537,10 @@ class Kinds:
             try:
                 found = self._find_mod(key, side, tags, unveiled)
             except ValueError as error:
-                found = error
+                found = unraised(error)
             self._mods_found[(key, side, tags, unveiled)] = found
         if isinstance(found, ValueError):
-            raise found.with_traceback(None)
+            raise unraised(found)
         return found
 
     def _find_mod(self, key: str, side: Side, tags: frozenset[str], unveiled: bool) -> Mod:
@@ -564,3 +564,21 @@ class Kinds:
             raise ValueError(f"no {side.value} mod of the family {key} fits a base like {self.base_id}")
         # the data order decides, except that a signature placeholder comes after the generic one
         return min(found, key=lambda mod: mod.domain == VEILED_DOMAIN and mod.id not in GENERIC_PLACEHOLDER_IDS)
+
+
+def unraised(error: BaseException) -> BaseException:
+    """A copy of `error` that has never been raised: the same type, arguments and attributes, its cause copied so too, and no traceback (#1332).
+
+    A refusal that a cache keeps (a pair's, a refusal class's, an item's, a mod's) is raised again many times. Raised itself, the kept object
+    took a traceback each time, and a traceback holds the frames it passed through and the frames that called them (a frame keeps its caller
+    once it ends): the frame of the bound's build that met the refusal last, and with it the builder, its kernel keys and its members. On R13
+    the abstraction of the first round kept its builder (5.6 GB) and its members' feasibility (1.5 GB) alive through every later round this way.
+    So the caches keep a copy that is never raised, and raise a fresh copy of it each time. `with_traceback(None)` before a raise did not
+    help: the raise gives the same object its new traceback as it travels."""
+    kind = type(error)
+    copy = kind.__new__(kind, *error.args)
+    copy.__dict__.update(getattr(error, "__dict__", {}))
+    if error.__cause__ is not None:
+        copy.__cause__ = unraised(error.__cause__)
+    copy.__suppress_context__ = error.__suppress_context__
+    return copy

@@ -61,7 +61,7 @@ from crafting_system.actions import BLOCKING, Action, ActionError, NotApplicable
 from crafting_system.items import Influence, Item, Rarity, Side
 
 from ._kernel import Abstraction
-from ._kinds import ALIKE, TYPE_PREFIX, base_kind, held_families, kind_families
+from ._kinds import ALIKE, TYPE_PREFIX, base_kind, held_families, kind_families, unraised
 from ._goal import Status
 from ._state import CompressedState, Slot
 
@@ -552,7 +552,7 @@ class Coarsening:
         if found.kernels if bound == "lower" else found.error is None:
             return found.kernels
         assert found.error is not None
-        raise found.error.with_traceback(None)  # a cached refusal is raised many times: do not stack tracebacks on it
+        raise unraised(found.error)  # a cached refusal is raised many times: never the kept object itself (`unraised`)
 
     def _evaluate(self, block: Block, action: Action) -> _Evaluation:
         if self._last is not None and self._last[0] == block and self._last[1] == action:
@@ -596,7 +596,7 @@ class Coarsening:
                 exact = self.abstraction.kernel(member, action)
             except (NotApplicableError, OutOfScopeError) as refusal:  # either: the refusal is kept and raised again by `variants`; a model gap wins over a game refusal
                 if error is None or (isinstance(refusal, OutOfScopeError) and not isinstance(error, OutOfScopeError)):
-                    error = refusal
+                    error = unraised(refusal)
                 continue
             if invariant and kernels:
                 continue
