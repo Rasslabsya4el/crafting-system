@@ -977,6 +977,8 @@ def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_wh
     now[0] = 5.0
     assert fresh().startswith("stopped after 5 of the 20 seconds") and held() is None
     assert blind().startswith("stopped after 5 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown")
+    now[0] = 6.0  # its last model (the other 2 offers), solved: 1 + 5 * 8 / 6 = 7.67 s at that pace, and the build goes on while that one is
+    held.grown(Growth(12, 12, 4, 10), held.used())  # being built, past it while it is no slower than the pace it shows (#1325)
     now[0] = 19.9
     assert held() is None
     now[0] = 20.0
@@ -1496,7 +1498,11 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     pace.grown(Growth(40, 84, 10, 30), 11.6)
     assert pace.need == pytest.approx(2.5 + 9.1 * 74 / 20)
     assert pace.verdict(19.0, 27.0, walked) is None  # inside its fourth model: the pace of the third holds
-    assert pace.verdict(27.0, 27.0, walked) is None and pace.verdict(38.3, 27.0, walked) is None  # past the share, within 54 s at its pace
+    # the fourth model (52 offers) is solved at 20.1 s and the last (84) at 36.0 s (figures set here: its 17 models, in round numbers)
+    pace.grown(Growth(52, 84, 10, 40), 20.1)
+    assert pace.verdict(27.0, 27.0, walked) is None  # past the share, within 54 s at its pace
+    pace.grown(Growth(84, 84, 10, 80), 36.0)
+    assert pace.verdict(38.3, 27.0, walked) is None  # its last model is solved at 38.3 s
     assert pace.verdict(54.0, 27.0, walked) == SHARE  # never past its room
     assert pace.verdict(27.0, 27.0, Room(late=0.0)) == SHARE  # the last round: no room past its share
     # R13's round 2 (#1142, heavy run 44097630217): its first model held 49 of 51 offers and the model adding the other 2 never ended; R17's
@@ -1524,6 +1530,25 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     assert slow.verdict(4.9, 20.0, held) is None and slow.verdict(8.0, 20.0, held) == PACE and slow.verdict(8.0, 20.0, walked) == PACE
     # with no plan in hand the net is the quarter itself: the build stops at it, whatever its pace
     assert exalted().verdict(6.8, 6.8, None) == SHARE and exalted().verdict(6.7, 6.8, None) is None
+    # #1325, R13's site plan (server runs n1325-R13 to n1325d-R13): with per-key joining a model's work is no longer in proportion to its
+    # offers. A round's share of 20 s, room 40 s: its first model (54 of 78 offers) solved at 1 s, its second (4 offers at the 29 keys that
+    # need them) at 1.5 s, so the held pace says 1 + 0.5 * 24 / 4 = 4 s; its third model (5 offers more, 63) begins the build again at
+    # 8,943 keys and is not solved in 40 s. The held figure alone let it run to 40 s, nearly done, and its search had 0 s. Were the third
+    # model solved at 10 s, the need would be 1 + 9 * 24 / 9 = 25 s; past 15.625 s it is more than 40 s (at 16 s, 41 s): the build stops
+    # there, and the search has the rest of the share
+    r13 = Pace()
+    r13.grows = True
+    r13.grown(Growth(58, 78, 54, 54), 1.0)
+    r13.grown(Growth(63, 78, 54, 58), 1.5)
+    assert r13.need == pytest.approx(4.0)
+    assert r13.verdict(10.0, 20.0, held) is None and r13.need == pytest.approx(25.0)
+    assert r13.verdict(15.6, 20.0, held) is None and r13.verdict(16.0, 20.0, held) == PACE and r13.need == pytest.approx(41.0)
+    # and a model being built that keeps to the held pace leaves it as it was
+    steady = Pace()
+    steady.grows = True
+    steady.grown(Growth(58, 78, 54, 54), 1.0)
+    steady.grown(Growth(63, 78, 54, 58), 3.0)
+    assert steady.need == pytest.approx(13.0) and steady.verdict(5.0, 20.0, held) is None and steady.need == pytest.approx(13.0)
 
 
 @pytest.mark.parametrize("pace", [True, False])

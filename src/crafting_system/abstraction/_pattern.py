@@ -1346,7 +1346,18 @@ class Pace:
     has a pace: the offers it added (`solved - start`) for what it used since. Kept to the offers still out, the build is expected to need
     `need = grew_from + (used - grew_from) * (total - start) / (solved - start)` in all. The figure is set at a solved model and held until the next,
     so a long model being built does not move it (R11's Exalted round: its third and fourth models, 12 Screaming essences, take 7 and 8 s of
-    its 38 s)."""
+    its 38 s) while it stays within that figure.
+
+    **A model being built past the pace (#1325).** The figure is a forecast from the models solved so far; the model being built is evidence
+    too. Were it solved this instant, the growth would have added `inside - start` offers for `used - grew_from`, and the need it then
+    shows, `grew_from + (used - grew_from) * (total - start) / (inside - start)`, is the least the build can be expected to need from here
+    (the model being built ends no sooner than now). So `verdict` takes the larger of the two (`expect`): the held figure while the model being
+    built keeps to it, the figure the model being built already shows once it has run longer. Since per-key joining (#1325) a model's work is
+    no longer in proportion to its offers: an offer built at the 29 keys that need it costs a fraction of a second, and the next model, whose
+    offers grow the universe and begin the build again at every key, costs the round's whole share. R13's site plan: its second model, 4
+    offers at 29 keys, was solved at once; the pace held from it said the build ends within its room, and the third model (5 offers, 8,943
+    keys made again) went on to twice the share, nearly done by that figure; 13 of its rounds had 0 s for the search, and the plan cost
+    390,773 c against main's 89,548 to 95,719 c."""
 
     def __init__(self) -> None:
         self.growth: Growth | None = None
@@ -1361,13 +1372,23 @@ class Pace:
         if growth.solved > growth.start:
             self.need = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
 
+    def expect(self, used: float) -> float | None:
+        """The need `verdict` reads when the build has used `used`: the held figure, or the larger one the model being built already shows
+        (see the class text); None while the growth has no pace. It raises `need`, so what a stop says names the figure it stopped on."""
+        growth = self.growth
+        if self.need is None or growth is None or self.grew_from is None or used <= self.grew_from or growth.inside <= growth.start:
+            return self.need
+        self.need = max(self.need, self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.inside - growth.start))
+        return self.need
+
     def verdict(self, used: float, given: float, room: "Room | None") -> str | None:
         """Why a build that has used `used` of its net `given` stops now (`SHARE`, `QUARTER` or `PACE`), or None to go on.
 
         With no plan in hand (`room` None) the build stops at its net, and the net is the quarter `SEARCH_PER_BUILD` leaves it (the caller
         sizes it). With a plan in hand (#1099, #1224) its net is the round's whole share and its room `1 + room.late` times it:
         * before `room.quarter` of the net it goes on;
-        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`), and stops as soon as it does
+        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`expect`: the held `need`, or the larger
+          one a model being built past it already shows, #1325), and stops as soon as it does
           not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
           no pace yet that grows its model (`grows`: its first model not solved, or its growth has added no offer) has nothing that shows
           it will end there: it stops, whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its
@@ -1381,11 +1402,13 @@ class Pace:
         if used >= given:
             if room.late <= 0 or used >= whole:
                 return SHARE
-            return None if self.need is not None and self.need <= whole else SHARE
+            need = self.expect(used)
+            return None if need is not None and need <= whole else SHARE
         if used < room.quarter * given:
             return None
-        if self.need is not None:
-            return None if self.need <= whole else PACE
+        need = self.expect(used)
+        if need is not None:
+            return None if need <= whole else PACE
         return QUARTER if self.grows else None
 
 
