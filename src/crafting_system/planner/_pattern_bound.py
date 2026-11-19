@@ -457,7 +457,8 @@ def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: 
 
 
 def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
-    """Give a key that needs offers at least as many as it already holds of those built at some keys only, the least floors first (#1325).
+    """Give a key of another shape that needs offers at least as many as it already holds of those built at some keys only, the least floors
+    first (#1325).
 
     The model's value at a key of another shape rises by cents as offers join, and every offer's floor there is its price (`OfferFloors.lower`):
     R24's thousands of fossil sets, priced a cent apart, joined three a round at one key, 325 rounds of a solve each with no end in sight. Given as
@@ -478,6 +479,8 @@ def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of,
     added = 0
     ranked: dict[int, list[tuple[float, int]]] = {}
     for klass, keys in keys_of.items():
+        if klass in (INSIDE, OUTSIDE):  # the start's shape: the floors are strong and `needed` names the few offers that could lower a key's value
+            continue  # (R24, doubled there too: 21 offers needed at 18,385 keys became 367,700 pairs, the whole join again in a few rounds)
         short = [k for k in keys.tolist() if 0 < given.get(k, 0) < held.get(k, 0)]
         if not short:
             continue
