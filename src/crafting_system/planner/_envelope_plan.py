@@ -107,6 +107,7 @@ class CraftingProblem:
         self.keys_missing = 0
         self.bound_error = float(bound.error_bound)  # what the values below are lowered by: the search's consistency guard allows for it above 1e-6 (#867)
         self._last_key: tuple[CompressedState, int | None] | None = None
+        self._own: set[int] = set()  # the positions whose `la` the last `candidates` read from the key (`split_candidates`)
         self.closed_start: float | None = None  # the closed model's value of the start key, when the first plan follows it (#948)
         if goal is None:  # the search's walk toward the goal reads the target's own goal; a donor's want has none of its own (#1142)
             self.distance = abstraction.unmet

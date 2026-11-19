@@ -216,6 +216,8 @@ class Problem[S](Protocol):
         ...
 
     # optional: `prime(state, positions)` makes, side by side, what the kernels of these offers at the state will cost most (a process pool); it changes no answer
+    # optional: `split_candidates(state)` is `candidates` in two lists, the second the offers whose `la` many states share (their price or floor):
+    # the search holds one copy of each such list (`Offers`, #1337); it changes no figure
     # optional: `first_choice(state)` is the offers the first plan tries at the state, best first, or None for the least `la` (see "The first plan"); a
     # problem whose bound is blind at some states (a build a net stopped) gives one; it changes what the first plan realizes, never what the search proves
     # optional: `distance(state)` is a whole number, 0 at a goal, that orders the walk toward the goal when the first plan reaches none, and
@@ -437,7 +439,7 @@ class Offers:
     """The offers of an expanded node not realized yet, the least `la` first out (#1337): what was a list of (la, position) tuples, held compact.
 
     The list held every offer of the state: R13's search on its 190-offer bound lists 5,557 offers at each state, a tuple of 64 bytes and its float
-    of 24 with a slot of 8 (about 470 KB a state), and grew the run by 4.4 GB over the first plan's 10,263 states. Here the offers whose `la` the
+    of 24, a position past 256 of 32 and a slot of 8 (127 bytes an entry measured, about 670 KB a state), and grew the run 5 to 9.5 GB over its first plan. Here the offers whose `la` the
     state's own key gives (`own`) are two arrays, and the offers whose `la` is their price or floor (`base`, `Problem.split_candidates`) are one
     pair of arrays shared by every state that lists the same (`Search.intern_offers`); a node keeps how much of each is left and what was taken
     out of it elsewhere than at its end (`gone`). The `la` stored is the problem's own; the slack (`SLACK`) is applied when it is read, so every
@@ -464,7 +466,7 @@ class Offers:
     def __bool__(self) -> bool:
         return len(self) > 0
 
-    def _end(self, la: np.ndarray | None, pos: np.ndarray | None, n: int) -> int:
+    def _end(self, pos: np.ndarray | None, n: int) -> int:
         """The index of the live end of one part (the next out of it), -1 when it is empty."""
         gone = self.gone
         n -= 1
@@ -476,8 +478,8 @@ class Offers:
         """Yield the entries in the order out: (slackened la, position, part, index); part 0 is `added`, 1 `own`, 2 `base`."""
         added = self.added or []
         ia = len(added) - 1
-        io = self._end(self.own_la, self.own_pos, self.own_n)
-        ib = self._end(self.base_la, self.base_pos, self.base_n)
+        io = self._end(self.own_pos, self.own_n)
+        ib = self._end(self.base_pos, self.base_n)
         gone = self.gone
         while ia >= 0 or io >= 0 or ib >= 0:
             best = None
@@ -525,7 +527,7 @@ class Offers:
         """Take entry `index` of part 1 or 2 out: at its live end the part shortens (and forgets the gone entries past it), else it is gone."""
         pos_arr = self.own_pos if part == 1 else self.base_pos
         n = self.own_n if part == 1 else self.base_n
-        if self._end(None, pos_arr, n) == index:
+        if self._end(pos_arr, n) == index:
             if self.gone is not None:
                 for k in range(index + 1, n):
                     self.gone.discard(int(pos_arr[k]))
