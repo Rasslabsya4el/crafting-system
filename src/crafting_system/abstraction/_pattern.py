@@ -339,6 +339,8 @@ KERNEL_KEY_SHARE, KERNEL_KEY_BYTES = 1 / 12, 1024  # `computed` may hold this sh
 MEMBER_SHARE, MEMBER_BYTES = 1 / 20, 300  # `Pattern._feasible` may hold this share, in members of about 300 bytes (#1335); a 12 GB net: 2^19 keys, about 2^20 members a generation
 KERNEL_KEYS_KEPT: int | None = None  # a generation of `computed` set by hand (the tests); None: from the net (`kept_entries`)
 MEMBERS_KEPT: int | None = None  # a generation of `Pattern._feasible` set by hand (the tests); None: from the net
+LISTS_SHARE, LISTS_BYTES = 1 / 12, 300  # `PatternBuilder.members_kept` may hold this share, in members of about 300 bytes in their lists (#1341: R04, 3,515 MB for 12.6 million)
+LISTS_KEPT: int | None = None  # a generation of `members_kept`, in members, set by hand (the tests); None: from the net
 SHARE_KEY_PARTS = True  # a kernel key stored in `PatternBuilder.computed` holds its parts shared with the other keys (`_shared_parts`, #1332); False: as made
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
@@ -1615,7 +1617,11 @@ class PatternBuilder:
         self.narrow: dict[int, set[int]] = {}  # an offer built only at some keys (#1325): offer number -> the numbers of those keys
         self.at_key: dict[int, list[int]] = {}  # key number -> the offers held at it only (`narrow`)
         self.pending: dict[int, list[int]] = {}  # an expanded key -> the offers of `narrow` it is to be given at the next pass
-        self.members_kept: dict[int, dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]]] = {}
+        # (key number, the times it was made again, policy) -> the key's members of the policy, of the keys expanded lately (#1341). Kept whole, they held
+        # 3,515 MB of R04's 1,245-offer bound once its 625,547 keys were expanded, the most of any part, where the offers that join later are built
+        # at a few thousand keys. A list let go is made again where an offer is built at its key later: the same members, so the same model.
+        self.members_kept: Recent[list[CompressedState]] = Recent(LISTS_KEPT or kept_entries(LISTS_SHARE, LISTS_BYTES), weigh=len)
+        self.remade: dict[int, int] = {}  # key number -> how many times the universe's growth made it again (`_begin_again`): its older lists hold other members
         self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
         self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
         self.pattern.note(self.start)
@@ -1713,7 +1719,7 @@ class PatternBuilder:
         for i in again:
             self.rows[i] = []
             self.expanded[i] = False
-            self.members_kept.pop(i, None)
+            self.remade[i] = self.remade.get(i, 0) + 1  # its lists kept go stale: they age out of `members_kept`
             self.pending.pop(i, None)  # made again from the start: it is given all it holds
         keys = {self.keys[i] for i in again}
         self.gaps = {found: value for found, value in self.gaps.items() if found[0] not in keys}
@@ -1854,11 +1860,17 @@ class PatternBuilder:
         the list `members` would make again, so the build is the same."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
         key = self.keys[i]
-        by_mode: dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]] = self.members_kept.setdefault(i, {}) if self.grow else {}
+        by_mode: dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]] = {}  # this key's lists while it is given its offers
+        kept = self.members_kept if self.grow else None
+        made = self.remade.get(i, 0)
         anyone = (Mode.ANY, frozenset(), None)
 
         def members_for(policy: tuple[Mode, frozenset[str], tuple | None]) -> list[CompressedState]:
             members = by_mode.get(policy)
+            if members is None and kept is not None:
+                members = kept.get((i, made, policy))
+                if members is not None:
+                    by_mode[policy] = members
             if members is None:
                 if policy == anyone and firsts is not None and firsts[1] == pattern.grew:
                     members = firsts[0]
@@ -1866,6 +1878,8 @@ class PatternBuilder:
                     members = pattern.members(key, *policy[:2]) if policy[2] is None else pattern.members(key, *policy)
                 by_mode[policy] = members
                 stats.members += len(members)
+                if kept is not None:
+                    kept[(i, made, policy)] = members
             return members
         added: list[tuple[int, int]] = []
         for n, oi in enumerate(given):

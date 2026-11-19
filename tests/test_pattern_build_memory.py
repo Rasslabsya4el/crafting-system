@@ -10,20 +10,25 @@ again is found among the model's kernels and gets its id), so the model is the m
 * The model of the hand-worked bow world, built with one entry a generation (every answer let go almost at once), is the model of the build
   that keeps everything: the same keys, actions, kernels, values and start value, from more kernels made.
 * The same on a real route up to a net of pairs (R13, as `test_pattern_items_kept`), with memos small enough that they let entries go.
+* A bound whose model grows keeps the members of its keys lately expanded only (`members_kept`, #1341): a list let go is made again, the same.
 """
 
 import contextlib
 
 import pytest
 from abstraction_support import real_game_data
+from coarse_support import abstraction as coarse_abstraction
 from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, STARTS, build, offers_of, pattern_data
 from test_abstraction_pattern_real import CASES, E
+from test_cli_envelope_build import floors_on, world  # noqa: F401  (fixtures)
+from test_packed_walk_light import START_ITEM
 from test_pattern_items_kept import same_model
 
 from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, _pattern
 from crafting_system.abstraction._pattern import build_pattern_model
 from crafting_system.abstraction._recent import Recent, kept_entries
+from crafting_system.planner._offer_floor import OfferFloors
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 
 
@@ -41,16 +46,31 @@ def test_a_memo_keeps_what_was_used_in_the_last_generation():
         Recent(0)
 
 
+def test_a_memo_of_lists_counts_their_items():
+    memo = Recent(5, weigh=len)  # a generation holds about 5 members, in lists (`PatternBuilder.members_kept`, #1341)
+    memo["a"] = [1, 2]
+    memo["b"] = [3, 4]
+    assert memo.generation == 0  # 4 members: room for more
+    memo["c"] = [5]  # 5: full, the young generation becomes the old one
+    assert memo.generation == 1 and memo.weight == 0
+    memo["d"] = []  # an empty list weighs one: a memo of them still lets go
+    assert memo.get("a") == [1, 2] and memo.weight == 3
+    memo["e"] = [6, 7]  # full again: "b", "c" go; "a" was read in this generation
+    assert "a" in memo and "b" not in memo and memo.dropped == 3
+
+
 @contextlib.contextmanager
-def kept(keys: int | None, members: int | None):
-    """The build with memos of `keys` kernel keys and `members` members a generation (None: as large as no build fills)."""
-    before = _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT
+def kept(keys: int | None, members: int | None, lists: int | None = None):
+    """The build with memos of `keys` kernel keys, `members` members and `lists` members in the keys' lists a generation (None: as large as no
+    build fills; `lists` None follows `members`)."""
+    before = _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT, _pattern.LISTS_KEPT
     _pattern.KERNEL_KEYS_KEPT = keys or 1 << 62
     _pattern.MEMBERS_KEPT = members or 1 << 62
+    _pattern.LISTS_KEPT = lists or members or 1 << 62
     try:
         yield
     finally:
-        _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT = before
+        _pattern.KERNEL_KEYS_KEPT, _pattern.MEMBERS_KEPT, _pattern.LISTS_KEPT = before
 
 
 def test_a_memo_holds_a_share_of_the_memory_net():
@@ -97,3 +117,22 @@ def test_the_bound_of_a_real_route_is_the_bound_that_keeps_every_answer(route, t
     assert list(small.value) == list(whole.value)
     assert small.start_value == whole.start_value
     assert small.model.stats.kernels > whole.model.stats.kernels  # the small memos let kernel keys go that were asked again
+
+
+def test_a_growing_bound_that_lets_its_keys_members_go_is_the_bound_that_keeps_them(world, floors_on, monkeypatch):
+    """#1341: a bound whose model grows (the offers' floors on) kept every key's members for the offers that join later: 3,515 MB on R04's
+    1,245-offer bound. Kept for one member a generation, each list is made again where an offer joins its key: the same model, values and start.
+    The model starts on a bench craft and the restart: the crafts that join later ask the members the first one asked (29 lists here)."""
+    offers = world[2]
+    monkeypatch.setattr(OfferFloors, "initial", lambda self: [1, 6])
+
+    def made(lists):
+        fresh = coarse_abstraction()
+        with kept(None, None, lists):
+            return pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
+
+    whole, small = made(None), made(1)
+    assert whole.rounds > 1 and whole.floors is not None  # offers joined at keys expanded before: their members were asked again
+    same_model(whole.model, small.model)
+    assert list(small.value) == list(whole.value) and small.start_value == whole.start_value
+    assert small.model.stats.members > whole.model.stats.members  # the lists let go were made again
