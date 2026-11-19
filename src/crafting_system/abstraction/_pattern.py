@@ -285,6 +285,7 @@ from ._kernel import Abstraction
 from ._relaxed import ChoiceNode, relaxed_draw
 from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags, protected_tags
 from ._rolls import is_rollable
+from ._recent import Recent
 from ._state import CompressedState, Slot, best_of
 
 # The two families of refusal an action raises (`actions/errors.py`, #506). A game refusal (`NotApplicableError`: the game forbids the action on that
@@ -301,6 +302,8 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+KERNEL_KEYS_KEPT = 1 << 19  # the kernel keys a build keeps in each generation of `computed` (`Recent`, #1335): about 1 KB a key with its parts, so at most about 1 GB
+MEMBERS_KEPT = 1 << 20  # the members whose answer `Pattern._ok` keeps in each generation (`Recent`, #1335): about 300 bytes a member, so at most about 600 MB
 SHARE_KEY_PARTS = True  # a kernel key stored in `PatternBuilder.computed` holds its parts shared with the other keys (`_shared_parts`, #1332); False: as made
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
@@ -575,7 +578,7 @@ class Pattern:
         self._reads: dict[Action, object] = {}
         self._only_named: dict[Action, bool] = {}
         self._draws: dict[Action, bool] = {}
-        self._feasible: dict[CompressedState, bool] = {}
+        self._feasible: Recent[bool] = Recent(MEMBERS_KEPT)  # member state -> whether it is an item (`_ok`), the members asked lately (#1335)
         self._tag_kind: dict[str, tuple] = {}
         self._veiled_kind: dict[str, bool] = {}
         self._pure_reads: dict[tuple, bool] = {}
@@ -1534,8 +1537,9 @@ class PatternBuilder:
         self.expanded: list[bool] = []
         self.kernel_ids: dict[tuple, int] = {}
         self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
-        self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model; each key stored with its parts shared (`_shared_parts`, #1332)
-        self.parts: dict = {}  # one object for each distinct part of the stored kernel keys (`_shared_parts`)
+        self.computed: Recent[int] = Recent(KERNEL_KEYS_KEPT)  # kernel key of the abstraction -> kernel id of the model, the keys asked lately (#1335); each stored with its parts shared (`_shared_parts`, #1332)
+        self.parts: dict = {}  # one object for each distinct part of the kernel keys stored since `computed` last let a generation go (`_shared_parts`)
+        self.parts_of = 0  # the generation of `computed` that `parts` serves
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key has been given (each built there unless it is held at some keys only)
         self.wide: list[int] = []  # the offers built at every key, in order
@@ -1892,6 +1896,8 @@ class PatternBuilder:
                         pushed[self._intern(successor)] += chance
                     if self.approximate:
                         pushed = _lowered(pushed)
+                    if self.parts_of != self.computed.generation:  # the keys that held the parts are going: the parts go with them (#1335)
+                        self.parts, self.parts_of = {}, self.computed.generation
                     kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
                 if kid not in seen:
                     seen.add(kid)
