@@ -301,6 +301,7 @@ POLL_SECONDS = 0.5  # how often a build asks its net (a clock and a memory read,
 SIDES = (Side.PREFIX, Side.SUFFIX)
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_OF_METAMOD = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+SHARE_KEY_PARTS = True  # a kernel key stored in `PatternBuilder.computed` holds its parts shared with the other keys (`_shared_parts`, #1332); False: as made
 SHARE_REFUSED = True  # a pair whose refusal class holds a refusal is answered from it, without `kernel_key` (#1256); False: each pair asks it
 SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refuses the action at the key's other members too (#1193); False: each is looked up
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
@@ -1533,7 +1534,8 @@ class PatternBuilder:
         self.expanded: list[bool] = []
         self.kernel_ids: dict[tuple, int] = {}
         self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
-        self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model
+        self.computed: dict = {}  # kernel key of the abstraction -> kernel id of the model; each key stored with its parts shared (`_shared_parts`, #1332)
+        self.parts: dict = {}  # one object for each distinct part of the stored kernel keys (`_shared_parts`)
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key has been given (each built there unless it is held at some keys only)
         self.wide: list[int] = []  # the offers built at every key, in order
@@ -1890,7 +1892,7 @@ class PatternBuilder:
                         pushed[self._intern(successor)] += chance
                     if self.approximate:
                         pushed = _lowered(pushed)
-                    kid = self.computed[ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
+                    kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
                 if kid not in seen:
                     seen.add(kid)
                     added.append((oi, kid))
@@ -2089,6 +2091,25 @@ def _lowered(pushed: dict[int, Fraction]) -> dict[int, Fraction]:
     if missing:
         lowered[SINK] = missing
     return lowered
+
+
+def _shared_parts(parts: dict, key):
+    """`key` with each of its parts (a tuple, a frozenset, a hashable leaf) replaced by the one equal part `parts` holds, which is added when
+    there is none (#1332): the stored key equals `key`, so a lookup of `computed` finds what it found before, and the parts many keys repeat
+    are held once.
+
+    A kernel key (`Abstraction.kernel_key`) is a fresh tuple of every part of the pair it reads, and the keys of one model repeat most of
+    them: the flags, the slots kept and added, the status of each leaf, the pool signature. Stored as made, the keys held about 4.5 KB each,
+    3.4 GB of R13's first bound of 742,710 kernel keys at 10 minutes and 6.9 GB of R04's of 1,347,857 at 11 minutes, more than every other
+    store of the build together (`.claude/scratch/t1332`, a sampled run, #1332). With the parts shared, R13's keys at 6 minutes took 348 MB
+    in place of 1,954 MB, with 1.69 million distinct parts. A part equal to another of another type (1 and `Fraction(1)`, `True` and 1) may
+    be held as the other: they are equal and hash alike, so no lookup tells them apart."""
+    kind = type(key)
+    if kind is tuple:
+        key = tuple([_shared_parts(parts, part) for part in key])
+    elif kind is frozenset:
+        key = frozenset([_shared_parts(parts, part) for part in key])
+    return parts.setdefault(key, key)
 
 
 def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]) -> int:

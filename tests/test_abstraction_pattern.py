@@ -42,6 +42,7 @@ from abstraction_removals_support import (
 from pattern_support import all_members, check_dominates, exact_values, pushed
 
 from crafting_system.abstraction import Abstraction, Goal
+from crafting_system.abstraction import _pattern
 from crafting_system.abstraction._pattern import Mode, Pattern, PatternBuilder, PatternOffer, build_pattern_model
 from crafting_system.actions import (
     ActionError,
@@ -282,6 +283,46 @@ def test_an_essence_that_joins_with_a_mod_outside_the_pool_begins_the_build_agai
     for key, k in whole.index.items():
         assert float(by_grown[grown.index[key]]) == pytest.approx(float(by_whole[k]), rel=1e-9), key
     assert 0 < grown.stats.restarted_keys < len(grown.keys)  # only the keys the essence's slot fits began again
+
+
+@pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
+def test_the_kernel_keys_stored_with_their_parts_shared_give_the_same_model_and_hold_each_part_once(world, tags, monkeypatch):
+    """#1332: `computed` stores each kernel key with its parts shared (`_shared_parts`). The keys stored equal the keys as made, so the build
+    finds the same kernels: the same keys, rows, kernels and value at each key as the build that stores the keys as made, grown in two steps
+    (the second asks `computed` for the first's keys). A part two stored keys hold equally is one object."""
+    data, ab, _ = world
+    start = ab.compress(build(data, BOW, STARTS[0]))
+    offers = [*offers_of(), PatternOffer("essence-outside-pool", ACTIONS["essence-outside-pool"], 4.0)]
+
+    def grown():
+        builder = PatternBuilder(ab, start, tags=tags, grow=True)
+        builder.extend(offers[:-1])
+        return builder, builder.extend(offers[-1:])
+
+    shared_builder, shared = grown()
+    with monkeypatch.context() as patch:
+        patch.setattr(_pattern, "SHARE_KEY_PARTS", False)
+        plain_builder, plain = grown()
+    assert shared.keys == plain.keys and shared.actions == plain.actions and shared.kernels == plain.kernels
+    assert set(shared_builder.computed) == set(plain_builder.computed) and shared_builder.computed == plain_builder.computed
+    by_shared = solve_packed(pack_pattern_model(shared, offers)).value
+    by_plain = solve_packed(pack_pattern_model(plain, offers)).value
+    assert list(by_shared) == list(by_plain)
+
+    def parts(keys) -> tuple[int, int]:
+        ids, equal = set(), set()
+        stack = list(keys)
+        while stack:
+            part = stack.pop()
+            if type(part) in (tuple, frozenset):
+                ids.add(id(part))
+                equal.add(part)
+                stack.extend(part)
+        return len(ids), len(equal)
+
+    held, distinct = parts(shared_builder.computed)
+    assert held == distinct  # each distinct part held once
+    assert parts(plain_builder.computed)[0] > held  # as made, the keys hold equal parts many times
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
