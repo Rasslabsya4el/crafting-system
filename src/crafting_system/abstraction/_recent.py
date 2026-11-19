@@ -64,6 +64,20 @@ class Recent(Generic[V]):
             self.young = {}
             self.generation += 1
 
+    def items(self) -> dict[Hashable, V]:
+        """Every entry held, the young generation's answer where a key is in both (a dict, for reading)."""
+        return {**self.old, **self.young}
+
+    def __iter__(self):
+        return iter(self.items())
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, Recent):
+            return self.items() == other.items()
+        return NotImplemented
+
+    __hash__ = None  # a memo changes: it is no key
+
     def __len__(self) -> int:
         """The entries held (an entry read from the old generation is in both and counted twice)."""
         return len(self.young) + len(self.old)
