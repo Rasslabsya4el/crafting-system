@@ -958,7 +958,7 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
 def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_while_its_pace_ends_within_its_net(monkeypatch):
     # #1099, #1224, on the clock: a build keeps three times its time for the search (`SEARCH_PER_BUILD`), so of a 20 s net it stops at 5 s;
     # with a plan in hand (`Net.held`) it goes on past 5 s while the pace its model grows at ends within the net (its first model solved at
-    # 1 s, half of the 8 offers to add joined by 3 s: 1 + 2 * 8 / 4 = 5 s), and only the net itself stops it. One whose model has not grown
+    # 1 s, 8 of the 76 offers to add joined by 3 s: 1 + 2 * 76 / 8 = 20 s), and only the net itself stops it. One whose model has not grown
     # yet has nothing to show it will end there: it stops at 5 s too, and the search has the rest. The clock is a figure set here.
     from crafting_system.abstraction._pattern import Growth
 
@@ -967,18 +967,16 @@ def test_a_build_that_begins_with_a_plan_in_hand_keeps_no_room_for_the_search_wh
     fresh, held, blind = (_envelope_plan.build_stop(_envelope.Net(seconds=20.0, held=plan), 0.0) for plan in (False, True, True))
     held.grows = blind.grows = True  # both grow their model from part of their offers (`_pattern_bound`)
     now[0] = 1.0
-    held.grown(Growth(5, 12, 4, 4), held.used())
-    blind.grown(Growth(5, 12, 4, 4), blind.used())
+    held.grown(Growth(5, 80, 4, 4), held.used())
+    blind.grown(Growth(5, 80, 4, 4), blind.used())
     now[0] = 3.0
-    held.grown(Growth(10, 12, 4, 8), held.used())
-    assert held.need == pytest.approx(5.0)
+    held.grown(Growth(13, 80, 4, 12), held.used())
+    assert held.need == pytest.approx(20.0)
     now[0] = 4.9
     assert fresh() is None and held() is None and blind() is None
     now[0] = 5.0
     assert fresh().startswith("stopped after 5 of the 20 seconds") and held() is None
     assert blind().startswith("stopped after 5 of the 20 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown")
-    now[0] = 6.0  # its last model (the other 2 offers), solved: 1 + 5 * 8 / 6 = 7.67 s at that pace, and the build goes on while that one is
-    held.grown(Growth(12, 12, 4, 10), held.used())  # being built, past it while it is no slower than the pace it shows (#1325)
     now[0] = 19.9
     assert held() is None
     now[0] = 20.0
@@ -1481,7 +1479,7 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     # 1): a share of 27 s and room for one more (`Room.late` 1: 54 s); its first model (10 of 84 offers) is solved at 2.5 s, its second (18)
     # at 4.3 s: at that pace it needs 2.5 + 1.8 * 74 / 8 = 19.15 s; its third (30) at 11.6 s: 2.5 + 9.1 * 74 / 20 = 36.17 s; it ends at
     # 38.3 s. The figure holds between two solved models: its fourth model takes 8.5 s, and the pace is not read off a model being built.
-    from crafting_system.abstraction._pattern import PACE, QUARTER, SHARE, Growth, Pace, Room
+    from crafting_system.abstraction._pattern import OUTRUN, PACE, QUARTER, SHARE, Growth, Pace, Room
 
     def exalted() -> Pace:
         pace = Pace()
@@ -1531,24 +1529,26 @@ def test_past_a_quarter_of_its_share_a_build_with_a_plan_in_hand_goes_on_only_at
     # with no plan in hand the net is the quarter itself: the build stops at it, whatever its pace
     assert exalted().verdict(6.8, 6.8, None) == SHARE and exalted().verdict(6.7, 6.8, None) is None
     # #1325, R13's site plan (server runs n1325-R13 to n1325d-R13): with per-key joining a model's work is no longer in proportion to its
-    # offers. A round's share of 20 s, room 40 s: its first model (54 of 78 offers) solved at 1 s, its second (4 offers at the 29 keys that
-    # need them) at 1.5 s, so the held pace says 1 + 0.5 * 24 / 4 = 4 s; its third model (5 offers more, 63) begins the build again at
-    # 8,943 keys and is not solved in 40 s. The held figure alone let it run to 40 s, nearly done, and its search had 0 s. Were the third
-    # model solved at 10 s, the need would be 1 + 9 * 24 / 9 = 25 s; past 15.625 s it is more than 40 s (at 16 s, 41 s): the build stops
-    # there, and the search has the rest of the share
+    # offers. A round's share of 20 s, room 40 s: its first model (54 of 78 offers) solved at 0.3 s, its second (4 offers at the 29 keys
+    # that need them) at 0.4 s, so its pace foretells 0.3 + 0.1 * 24 / 4 = 0.9 s; its third model (5 offers more) begins the build again at
+    # 8,943 keys and is not solved in 40 s. Read alone, that figure let it run to 40 s, nearly done, and its search had 0 s. Past 0.9 s it
+    # has outrun it, and the figure is the pace of what it finished, 4 offers: 0.3 + (used - 0.3) * 24 / 4, past the room of 40 s from
+    # 6.92 s on: it stops there, and its search has the rest of the share
     r13 = Pace()
     r13.grows = True
-    r13.grown(Growth(58, 78, 54, 54), 1.0)
-    r13.grown(Growth(63, 78, 54, 58), 1.5)
-    assert r13.need == pytest.approx(4.0)
-    assert r13.verdict(10.0, 20.0, held) is None and r13.need == pytest.approx(25.0)
-    assert r13.verdict(15.6, 20.0, held) is None and r13.verdict(16.0, 20.0, held) == PACE and r13.need == pytest.approx(41.0)
-    # and a model being built that keeps to the held pace leaves it as it was
+    r13.grown(Growth(58, 78, 54, 54), 0.3)
+    r13.grown(Growth(63, 78, 54, 58), 0.4)
+    assert r13.need == pytest.approx(0.9)
+    assert r13.verdict(6.9, 20.0, held) is None and r13.need == pytest.approx(0.3 + 6.6 * 6)
+    assert r13.verdict(7.0, 20.0, held) == OUTRUN == r13.verdict(7.0, 20.0, walked) and r13.need == pytest.approx(0.3 + 6.7 * 6)
+    # a build that keeps to its pace goes on: its third model solved before the 13 s foretold, the figure moves on
     steady = Pace()
     steady.grows = True
     steady.grown(Growth(58, 78, 54, 54), 1.0)
     steady.grown(Growth(63, 78, 54, 58), 3.0)
-    assert steady.need == pytest.approx(13.0) and steady.verdict(5.0, 20.0, held) is None and steady.need == pytest.approx(13.0)
+    assert steady.need == pytest.approx(13.0) and steady.verdict(12.9, 20.0, held) is None and steady.need == pytest.approx(13.0)
+    steady.grown(Growth(70, 78, 54, 63), 12.0)
+    assert steady.need == pytest.approx(1.0 + 11.0 * 24 / 9) and not steady.outrun
 
 
 @pytest.mark.parametrize("pace", [True, False])

@@ -1348,22 +1348,23 @@ class Pace:
     so a long model being built does not move it (R11's Exalted round: its third and fourth models, 12 Screaming essences, take 7 and 8 s of
     its 38 s) while it stays within that figure.
 
-    **A model being built past the pace (#1325).** The figure is a forecast from the models solved so far; the model being built is evidence
-    too. Were it solved this instant, the growth would have added `inside - start` offers for `used - grew_from`, and the need it then
-    shows, `grew_from + (used - grew_from) * (total - start) / (inside - start)`, is the least the build can be expected to need from here
-    (the model being built ends no sooner than now). So `verdict` takes the larger of the two (`expect`): the held figure while the model being
-    built keeps to it, the figure the model being built already shows once it has run longer. Since per-key joining (#1325) a model's work is
-    no longer in proportion to its offers: an offer built at the 29 keys that need it costs a fraction of a second, and the next model, whose
-    offers grow the universe and begin the build again at every key, costs the round's whole share. R13's site plan: its second model, 4
-    offers at 29 keys, was solved at once; the pace held from it said the build ends within its room, and the third model (5 offers, 8,943
-    keys made again) went on to twice the share, nearly done by that figure; 13 of its rounds had 0 s for the search, and the plan cost
-    390,773 c against main's 89,548 to 95,719 c."""
+    **A build that outruns its pace (#1325).** The figure is a forecast from the models solved so far. A build that has used more than
+    it, its next model still unsolved, has shown that the forecast was too low; from then on the figure is the pace of the work it has
+    finished, the time it has used for the offers its solved models hold (`reckon`): it grows as the build goes on, and the build stops
+    once it passes the room (`OUTRUN`), as any build whose pace ends past its room does. Since per-key joining (#1325) a model's work is no
+    longer in proportion to its offers: an offer built at the 29 keys that need it costs a fraction of a second, and the next model, whose
+    offers grow the universe and begin the build again at 8,943 keys, costs the round's whole share. On R13's site plan the second model
+    (4 offers at 29 keys) was solved at once and its pace foretold well under a second; read alone, that figure let the third run to twice
+    the share, nearly done: 26 builds ran past their share, 13 searches had 0 s, and the plan cost 390,773 c against main's 89,548 to
+    95,719 c. A build that keeps to its pace, each model solved before the figure (R11's Exalted round: 19.15 s, then 36.17 s), goes on as
+    before."""
 
     def __init__(self) -> None:
         self.growth: Growth | None = None
         self.grew_from: float | None = None  # the net's count when the first model was solved
         self.need: float | None = None  # the build's expected need at its pace of growth, None until growth has added offers
         self.grows = False  # the build grows its model from part of its offers (its offers' floors are worked out, `_pattern_bound`)
+        self.outrun = False  # it has used more than its pace foretold, its next model unsolved (`reckon`, #1325)
 
     def grown(self, growth: Growth, used: float) -> None:
         self.growth = growth
@@ -1371,14 +1372,19 @@ class Pace:
             self.grew_from = used
         if growth.solved > growth.start:
             self.need = self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start)
+            self.outrun = False
 
-    def expect(self, used: float) -> float | None:
-        """The need `verdict` reads when the build has used `used`: the held figure, or the larger one the model being built already shows
-        (see the class text); None while the growth has no pace. It raises `need`, so what a stop says names the figure it stopped on."""
+    def reckon(self, used: float) -> float | None:
+        """The need `verdict` reads when the build has used `used` (see the class text): the figure its pace foretold while the build keeps
+        to it; once it has used more, its next model unsolved, the figure of the work it has finished, `grew_from + (used - grew_from) *
+        (total - start) / (solved - start)`, which grows with `used` (it raises `need`, so what a stop says names it). None with no pace."""
         growth = self.growth
-        if self.need is None or growth is None or self.grew_from is None or used <= self.grew_from or growth.inside <= growth.start:
+        if self.need is None or growth is None or self.grew_from is None or growth.solved <= growth.start:
             return self.need
-        self.need = max(self.need, self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.inside - growth.start))
+        if not self.outrun and used <= self.need:
+            return self.need
+        self.outrun = True
+        self.need = max(self.need, self.grew_from + (used - self.grew_from) * (growth.total - growth.start) / (growth.solved - growth.start))
         return self.need
 
     def verdict(self, used: float, given: float, room: "Room | None") -> str | None:
@@ -1387,32 +1393,32 @@ class Pace:
         With no plan in hand (`room` None) the build stops at its net, and the net is the quarter `SEARCH_PER_BUILD` leaves it (the caller
         sizes it). With a plan in hand (#1099, #1224) its net is the round's whole share and its room `1 + room.late` times it:
         * before `room.quarter` of the net it goes on;
-        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`expect`: the held `need`, or the larger
-          one a model being built past it already shows, #1325), and stops as soon as it does
+        * past it, a build whose growth has a pace goes on only while that pace ends within its room (`need`, or once the build has
+          outrun it the pace of the work it has finished, `reckon`, #1325), and stops as soon as it does
           not: the rest of the share is its search's, where it took the whole share and left the search none (R17, R20: #1167). A build with
           no pace yet that grows its model (`grows`: its first model not solved, or its growth has added no offer) has nothing that shows
           it will end there: it stops, whatever the plan in hand (R13's round 2, #1142: its first model held 49 of 51 offers and its
           second never ended; R17's site plan: rounds whose first model of 10 to 69 offers was not solved after their whole share, and
           whose searches had 0 s). One that does not grow (one model on every offer, or still working out its offers' floors, or a
           floors pass alone, `_rounds.by_floor`) keeps the whole share, as since #1099;
-        * past its net it goes on while nearly done: only at a pace that ends within its room."""
+        * past its net it goes on while nearly done: only at a pace that ends within its room (`reckon`)."""
         if room is None:
             return SHARE if used >= given else None
         whole = (1.0 + room.late) * given
         if used >= given:
             if room.late <= 0 or used >= whole:
                 return SHARE
-            need = self.expect(used)
+            need = self.reckon(used)
             return None if need is not None and need <= whole else SHARE
         if used < room.quarter * given:
             return None
-        need = self.expect(used)
+        need = self.reckon(used)
         if need is not None:
-            return None if need <= whole else PACE
+            return None if need <= whole else (OUTRUN if self.outrun else PACE)
         return QUARTER if self.grows else None
 
 
-SHARE, QUARTER, PACE = "share", "quarter", "pace"  # why a build's net stops it (`Pace.verdict`)
+SHARE, QUARTER, PACE, OUTRUN = "share", "quarter", "pace", "outrun"  # why a build's net stops it (`Pace.verdict`)
 
 
 @dataclass(frozen=True)
@@ -1450,6 +1456,8 @@ class Tally(Pace):
                 said = self.words(self.done, self.cap)
             elif stop == PACE:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, and at the pace its model grew it would need about {self.need:,.0f}, more than it may take: the rest is left for the search"
+            elif stop == OUTRUN:
+                said = f"it had done {self.done:,} of its {self.cap:,} pieces of work, past the {self.need:,.0f} its model's pace of growth foretold, its next model unsolved: the rest is left for the search"
             else:
                 said = f"it had done {self.done:,} of its {self.cap:,} pieces of work and its model had not grown past its first, so nothing showed that it would end within what it may take: the rest is left for the search"
             return said + (", the build having gone on past it, nearly done" if self.late else "")

@@ -36,7 +36,7 @@ import numpy as np
 
 from crafting_system import parallel
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
-from crafting_system.abstraction._pattern import CHOICE, PACE, QUARTER, SINK, Pace, Pattern, Room
+from crafting_system.abstraction._pattern import CHOICE, OUTRUN, PACE, QUARTER, SINK, Pace, Pattern, Room
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
@@ -352,6 +352,12 @@ class BuildStop(Pace):
                 return (
                     f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit: at the pace its model grew it would need about "
                     f"{self.need:.0f} s, more than the {(1.0 + net.late) * net.seconds:.0f} s it may take, so the rest is left for the search for the plan"
+                )
+            elif stop == OUTRUN:
+                return (
+                    f"stopped after {spent:.0f} of the {net.seconds:g} seconds of the time limit, to leave the rest for the search for the plan: "
+                    f"its next model was not solved by the time its pace of growth foretold, and at the pace of the work it has finished it would "
+                    f"need about {self.need:.0f} s, more than the {(1.0 + net.late) * net.seconds:.0f} s it may take"
                 )
             elif stop == QUARTER:
                 return (
