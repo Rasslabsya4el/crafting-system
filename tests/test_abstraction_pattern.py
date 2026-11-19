@@ -17,7 +17,9 @@ Nothing here asserts a time (ADR-0014).
 """
 
 import dataclasses
+import gc
 import random
+import weakref
 from collections import Counter
 
 import pytest
@@ -323,6 +325,36 @@ def test_the_kernel_keys_stored_with_their_parts_shared_give_the_same_model_and_
     held, distinct = parts(shared_builder.computed)
     assert held == distinct  # each distinct part held once
     assert parts(plain_builder.computed)[0] > held  # as made, the keys hold equal parts many times
+
+
+def test_a_refusal_the_abstraction_keeps_holds_none_of_the_frames_that_met_it(world):
+    """#1332: the abstraction keeps the refusals it met (`_shared_by`, `_refused_by`, `_items_by`). Raised again, a kept refusal took a
+    traceback holding the frames it passed through and their callers, the bound's build among them: R13's first bound (7 GB) lived through
+    every later round. The caches keep a copy never raised and raise a fresh copy (`unraised`): what the caller held is freed once it returns,
+    though the abstraction lives on, and the refusal raised is the same (type and text) each time."""
+    data, ab, _ = world
+    start = ab.compress(build(data, BOW, STARTS[0]))  # a rare: an Orb of Alteration is refused, and the refusal is kept
+
+    class Holder:
+        pass
+
+    def asked(holder):
+        texts = []
+        for _ in range(3):  # met, then raised again from the cache
+            for ask in (ab.kernel_key, ab.kernel):
+                try:
+                    ask(start, ACTIONS["alter"])
+                except NotApplicableError as refusal:
+                    texts.append((type(refusal), str(refusal)))
+        return texts
+
+    holder = Holder()
+    held = weakref.ref(holder)
+    texts = asked(holder)
+    del holder
+    gc.collect()
+    assert len(texts) == 6 and len(set(texts)) == 1
+    assert held() is None
 
 
 @pytest.mark.parametrize("tags", [True, False], ids=["tags", "no-tags"])
