@@ -4,6 +4,8 @@ The searches here fork a pool at every round of two tips or more (`ahead_always`
 what they compare is what a pool changes, which must be nothing but which process made a kernel.
 """
 
+import os
+import threading
 from dataclasses import dataclass, field
 
 import numpy as np
@@ -68,7 +70,7 @@ def test_a_run_counted_in_states_forks_no_pool():
 
 
 def test_a_pool_that_meets_the_memory_net_is_dropped_and_the_search_goes_on_alone(monkeypatch):
-    def reached(self, futures):
+    def reached(self, futures, stop=None):
         raise parallel.MemoryNetReached("this process and its workers held 9 MB, the limit is 8 MB; the workers were stopped")
 
     monkeypatch.setattr(parallel.WorkerPool, "gather", reached)
@@ -193,3 +195,48 @@ def test_the_pace_is_that_of_all_the_rounds_so_a_round_that_needed_nothing_does_
     assert ahead.per_tip == pytest.approx(2.0 / 189)
     ahead.fork = 0.04
     assert ahead.workers_for(1539) == 4
+
+
+@dataclass
+class HangingProblem(ExplicitProblem):
+    """A problem whose kernels never come back in a forked worker: a kernel there that the search's net would cut (R12, #1340)."""
+
+    home: int = field(default_factory=os.getpid)
+
+    def kernel(self, state: int, position: int) -> dict[int, int]:
+        if os.getpid() != self.home:
+            threading.Event().wait()
+        return super().kernel(state, position)
+
+
+def test_a_search_waiting_on_its_workers_asks_its_own_net_and_goes_on_alone_once_it_is_reached(monkeypatch):
+    # the net a kernel's making asks (`Search._kernel_ask`) is planted as reached: each pool's wait is stopped by it, and its workers with it;
+    # this process makes the kernels itself, as one process does (the explicit kernels never ask it), and the search ends the same
+    monkeypatch.setattr(Search, "_kernel_ask", lambda self: lambda: "the test's net was reached")
+    graph = random_graph(3, 120)
+    value, _ = dense_optimum(graph)
+    runs = []
+    for options in ({"workers": 1}, {"workers": 3, "ahead_always": True}):
+        search = Search(HangingProblem(graph, value, 0.3), **options)
+        runs.append((search, search.run()))
+    (_, alone), (pooled, ahead) = runs
+    _same(alone, ahead)
+    assert pooled.ahead.pooled and pooled.ahead.stopped is None  # the search's own net stops a pool, not this search's pools: the next round forks again
+
+
+def _hang(pieces):
+    threading.Event().wait()
+
+
+def test_a_wait_on_workers_ends_at_the_callers_reason_and_kills_them():
+    pool = parallel.WorkerPool(_ahead._hold, (None,), workers=2)
+    futures = [pool.submit(_hang, [1]), pool.submit(_hang, [2])]
+    asked = []
+
+    def stop():
+        asked.append(1)
+        return "reached" if len(asked) >= 2 else None
+
+    with pytest.raises(parallel.Stopped, match="reached"):
+        pool.gather(futures, stop=stop)
+    assert len(asked) == 2 and pool._executor is None  # asked at each watch, and the workers killed at the reason

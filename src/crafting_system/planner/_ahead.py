@@ -29,7 +29,7 @@ counts against it (`parallel.WorkerPool`, #626).
 """
 
 import time
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from concurrent.futures import Future
 
 from crafting_system import budget, parallel
@@ -147,8 +147,25 @@ class Round:
     the tips of a round (`_make`: kernels and listings), or the states of the first plan's chain (`_list`: listings; the chain's queue grows as it
     is walked, and a window is sent once the queue holds one)."""
 
-    def __init__(self, search: object, items: list[int], ahead: Ahead, workers: int, *, chain: bool = False, per_item: float | None = None) -> None:
+    def __init__(
+        self,
+        search: object,
+        items: list[int],
+        ahead: Ahead,
+        workers: int,
+        *,
+        chain: bool = False,
+        per_item: float | None = None,
+        ask: Callable[[], str | None] | None = None,
+        memory_mb: float | None = None,
+    ) -> None:
         self.search = search
+        # what is asked while this process waits on a window: the search's net as its own making of a kernel asks it (`ask`, the search's
+        # `_kernel_ask`), and the memory of this process and its workers against the search's memory net (`memory_mb`). Once either is
+        # reached the workers are stopped and this process goes on alone, so it meets the net where one process meets it (R12: three
+        # workers made, unasked, kernels the search's net would have cut, and the 16 GB of the run's cgroup were passed while it waited)
+        self.ask = ask
+        self.memory_mb = memory_mb
         self.ahead = ahead
         self.items = items  # the search's own list: a chain's queue grows while it is walked
         self.chain = chain
@@ -199,7 +216,9 @@ class Round:
             _, futures = self.pending.pop(0)
             mark = time.perf_counter()
             try:
-                results = self.pool.gather(futures)
+                results = self.pool.gather(futures, stop=self._asked)
+            except parallel.Stopped:  # the search's net, or its memory, met while waiting: this process goes on alone and meets it itself
+                self._drop()
             except parallel.MemoryNetReached as reached:  # the workers' memory passed the net: they are stopped, and no pool forks again in this search
                 self.ahead.stopped = str(reached)
                 self._drop()
@@ -213,6 +232,15 @@ class Round:
                 while self.pool is not None and len(self.pending) < 2 and self._send(place):
                     pass
         return self.memo.pop(tip, None)
+
+    def _asked(self) -> str | None:
+        """While this process waits on a window: the reason to stop the workers, or None (`ask`, `memory_mb`). A memory net they passed forks no
+        pool again in this search (`give_room`)."""
+        if self.memory_mb is not None:
+            self.give_room(self.memory_mb)
+            if self.ahead.stopped is not None:
+                return self.ahead.stopped
+        return self.ask() if self.ask is not None else None
 
     def give_room(self, limit: float, growth: float = 0.0) -> None:
         """Drop the pool when this process and its workers hold `limit` MB or more, with `growth` MB to come: the search's own memory net reads the

@@ -737,16 +737,25 @@ class Search[S]:
         search's own questions. The seconds are those of the first plan's chain where they are more (`Net.first`), so that a chain the net lets
         run is not cut inside one of its kernels; a kernel of a later round may then overrun the round's own seconds by at most `first - seconds`,
         and the round's own question between two kernels stops it there. Raises `Refused` as `kernel` does."""
-        net = self.net
-        if self.began is None or (net.seconds is None and net.memory_mb is None):
+        ask = self._kernel_ask()
+        if ask is None:
             return self.p.kernel(state, position)
-        seconds = None if net.first is None or net.seconds is None else max(net.first, net.seconds)
-        began = self.began
         try:
-            with budget.asking(lambda: self._net(began, states=False, seconds=seconds)):
+            with budget.asking(ask):
                 return self.p.kernel(state, position)
         except budget.NetReached as reached:
             raise _Cut(f"{reached.reason}, inside the making of the next action's outcomes: it was left unmade") from None
+
+    def _kernel_ask(self) -> Callable[[], str | None] | None:
+        """The question the making of a kernel asks (`_netted_kernel`), or None in a search with no time or memory net: the reason its net is
+        reached, the time limit being the larger of the round's and the first plan's chain's (`Net.first`). A round's pool asks the same while
+        this process waits on its workers (`_ahead.Round`), so that a pooled round stops where one process stops."""
+        net = self.net
+        if self.began is None or (net.seconds is None and net.memory_mb is None):
+            return None
+        seconds = None if net.first is None or net.seconds is None else max(net.first, net.seconds)
+        began = self.began
+        return lambda: self._net(began, states=False, seconds=seconds)
 
     def _counted_kernel(self, state: S, position: int) -> dict[S, int]:
         """The kernel of offer `position` at `state` in a search counted in states, made on an allowance of the states the search may still know
@@ -927,7 +936,9 @@ class Search[S]:
                 if pool is None and not self.counted and place and hasattr(self.p, "listing"):
                     count = self.ahead.workers_for(len(queue) - place - 1, self.ahead.making / place)
                     if count:
-                        pool = self._round = Round(self, queue, self.ahead, count, chain=True, per_item=self.ahead.making / place)
+                        pool = self._round = Round(
+                            self, queue, self.ahead, count, chain=True, per_item=self.ahead.making / place, ask=self._kernel_ask(), memory_mb=self.net.memory_mb
+                        )
                 if pool is not None and self.net.memory_mb is not None:  # the workers are stopped before their memory stops the chain
                     pool.give_room(self.net.memory_mb)
             if self._round is not None:
@@ -1471,7 +1482,7 @@ class Search[S]:
             tips = fake.tolist()
             self.ahead.making = 0.0
             count = 0 if self.counted else self.ahead.workers_for(len(tips))
-            pool = self._round = Round(self, tips, self.ahead, count) if count else None
+            pool = self._round = Round(self, tips, self.ahead, count, ask=self._kernel_ask(), memory_mb=self.net.memory_mb) if count else None
             if pool is None:
                 self.ahead.processes = 1
             walked = 0

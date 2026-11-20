@@ -48,7 +48,7 @@ from crafting_system import budget
 WORKERS_ENV = "CRAFTING_WORKERS"
 MIN_CHUNK = 1  # a chunk is never smaller than this many pieces
 ABANDON_SECONDS = 30.0  # the most an abandoned pool waits for its executor's thread to end (it ends at once once its workers are dead; a bound, not a measure)
-WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory while a memory net is set
+WATCH_SECONDS = 0.5  # how often the wait on the workers reads the memory, or asks the caller's `stop`, while one is watched
 READ_SHARE = 20.0  # a net's question reads the proportional sizes at most once per this many times what the last reading took (`held_mb`, #1252)
 
 _memory_net: float | None = None  # the limit in MB of the run's memory net (`memory_net`), None when no net is set
@@ -58,6 +58,10 @@ _dear: list = [-math.inf, None]  # when a net's question may next read the propo
 
 class MemoryNetReached(Exception):
     """The memory of this process and its workers passed the run's memory net while it waited on them; the workers were killed."""
+
+
+class Stopped(Exception):
+    """The caller's own question (`gather`'s `stop`) gave a reason to stop while it waited on the workers; the workers were killed."""
 
 
 @contextlib.contextmanager
@@ -440,14 +444,14 @@ class WorkerPool:
             results.extend(future.result())
         return results
 
-    def _wait(self, futures: list, timeout: float | None, clock: "budget.Clock | None" = None) -> None:
+    def _wait(self, futures: list, timeout: float | None, clock: "budget.Clock | None" = None, stop: Callable[[], str | None] | None = None) -> None:
         """Wait on the futures; past `timeout` raise `TimeoutError`, past the memory net `MemoryNetReached`, past the run's net (`clock`) the run's
-        stop, the workers killed in every case."""
+        stop, at a reason of `stop` `Stopped`, the workers killed in every case."""
         deadline = None if timeout is None else time.monotonic() + max(0.0, timeout)
         waiting = futures
         while waiting:
             left = None if deadline is None else max(0.0, deadline - time.monotonic())
-            watching = _memory_net is not None or clock is not None
+            watching = _memory_net is not None or clock is not None or stop is not None
             step = left if not watching else WATCH_SECONDS if left is None else min(left, WATCH_SECONDS)
             _, waiting = wait(waiting, timeout=step, return_when=FIRST_EXCEPTION)
             failed = next((future for future in futures if future.done() and not future.cancelled() and future.exception() is not None), None)
@@ -466,6 +470,9 @@ class WorkerPool:
             if clock is not None and (found := clock.over(clock.stage, clock.what, held=held if clock.budget.memory_mb is not None else None)) is not None:
                 self.abandon()
                 raise budget.BudgetExceeded(clock.bind(found))
+            if stop is not None and (reason := stop()) is not None:
+                self.abandon()
+                raise Stopped(reason)
             if deadline is not None and time.monotonic() >= deadline:
                 self.abandon()
                 raise TimeoutError(f"{len(waiting)} of {len(futures)} chunks did not come back in {timeout:.0f} s; their workers were stopped")
@@ -477,10 +484,12 @@ class WorkerPool:
             raise ValueError("submit needs a pool of two workers or more: with one, the caller runs its own code")
         return self._start().submit(_run_whole, function, pieces)
 
-    def gather(self, futures: Sequence[Future]) -> list:
+    def gather(self, futures: Sequence[Future], stop: Callable[[], str | None] | None = None) -> list:
         """The results of `submit`'s futures, in their order, waited on as `map` waits: the memory net and the run's net are watched, and past
-        either the workers are killed and the stop raised (`MemoryNetReached`, `budget.BudgetExceeded`)."""
-        self._wait(list(futures), None, _watched_clock())
+        either the workers are killed and the stop raised (`MemoryNetReached`, `budget.BudgetExceeded`). `stop`, asked every `WATCH_SECONDS`,
+        is the caller's own net: once it gives a reason the workers are killed and `Stopped` raised with it, so that a caller that waits on its
+        workers stops when it would have stopped working alone (#1340: R12's search waited on three kernels its net would have cut)."""
+        self._wait(list(futures), None, _watched_clock(), stop)
         return [future.result() for future in futures]
 
     def map_chunks(self, function: Callable, pieces: Iterable, *, chunk: int) -> list:
