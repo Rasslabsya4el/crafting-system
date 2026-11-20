@@ -6,7 +6,7 @@ Issues live in GitHub Issues for `Rasslabsya4el/crafting-system` (via the `gh` C
 
 ### Triage labels
 
-Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`, plus `deferred` and `needs-rewrite` (see "Direction since 2026-11-13"). See `docs/agents/triage-labels.md`.
+Default vocabulary: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`, plus `deferred` and `needs-rewrite` (see "Direction since 2026-11-13"), and two priority marks set by the triage of 2026-11-20: `critical-path` (the ticket stands between today and a heavy reference craft giving a proved, playable plan; these are taken first) and `after-beta` (true, harmless to leave, not needed for the beta; taken only when nothing else waits). A `ready-for-agent` ticket with neither mark is needed for the beta. See `docs/agents/triage-labels.md`.
 
 ### Domain docs
 
