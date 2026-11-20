@@ -458,6 +458,14 @@ def fossil_actions(data: GameData, item: Item) -> list[ApplyFossils]:
 
 
 def _build(data: GameData, item: Item, records: list[Fossil]) -> FossilOutcomes:
+    """The outcomes of the resonator: one part for each distinct pool its Tangled outcome records and forced mods give.
+
+    A pool is the candidates weighed by `FossilWeights.factor`, which reads of a mod its tag set and, under a Sanctified Fossil, its required
+    level, nothing else (`fossil_weights.py`). So two weights that give each class (tag set, level) of the candidates the same factor weigh
+    them alike: the pool is the same, and it is built once (#1352: a Tangled set weighed and grouped its candidates for each of its 420
+    outcome records, which gave a few dozen pools; on R04 192,986 pools grouped at one key for 22,433 distinct ones). Exact: the pool built
+    is the one the first weights of that factor vector give, which every other gives too.
+    """
     opulent = any(_special(record, "opulent") for record in records)
     sanctified = any(record.rolls_lucky for record in records)
     tangled = any(_special(record, "tangled") for record in records)
@@ -466,6 +474,8 @@ def _build(data: GameData, item: Item, records: list[Fossil]) -> FossilOutcomes:
     fractures = any(_special(record, "fractured") for record in records)
     candidates_for: dict[str | None, tuple[Candidate, ...]] = {}
     retained_for: dict[str | None, Item] = {}
+    classes_for: dict[str | None, tuple[tuple[frozenset[str], int | None], ...]] = {}
+    pools: dict[tuple, tuple] = {}  # (forced mod, the factor of each class of its candidates) -> (signature, pool)
     merged: dict[tuple, list] = {}
     for pair_chance, pair in pairs:
         weights = fossil_weights(records, pair, opulent=opulent, sanctified=sanctified)
@@ -474,10 +484,19 @@ def _build(data: GameData, item: Item, records: list[Fossil]) -> FossilOutcomes:
             if key not in retained_for:
                 retained_for[key] = retained_item(data, item, forced)
                 candidates_for[key] = pool_candidates(data, retained_for[key], None, extra)
-            pool = group_pool(candidates_for[key], weights.factor)
-            signature = (key, tuple((family.family, tuple((e.mod.id, e.weight) for e in family.mods)) for family in pool))
-            part = Outcomes.over(data, retained_for[key], pool, None, forced, rolls_lucky=sanctified)
-            entry = merged.setdefault(signature, [Fraction(0), part])
+                classes_for[key] = tuple(
+                    dict.fromkeys((frozenset(c.mod.implicit_tags), c.mod.required_level if sanctified else None) for c in candidates_for[key])
+                )
+            vector = (key, tuple(weights.class_factor(tags, level) for tags, level in classes_for[key]))
+            found = pools.get(vector)
+            if found is None:
+                pool = group_pool(candidates_for[key], weights.factor)
+                signature = (key, tuple((family.family, tuple((e.mod.id, e.weight) for e in family.mods)) for family in pool))
+                found = pools[vector] = (signature, pool)
+            signature, pool = found
+            entry = merged.get(signature)
+            if entry is None:
+                entry = merged[signature] = [Fraction(0), Outcomes.over(data, retained_for[key], pool, None, forced, rolls_lucky=sanctified)]
             entry[0] += pair_chance * forced_chance
     components = tuple((chance, part) for chance, part in merged.values())
     return FossilOutcomes(data, components, fractures)
