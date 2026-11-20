@@ -41,7 +41,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
-from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Tally
+from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Ruin, Tally
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors, shape_of
@@ -112,7 +112,8 @@ def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floo
     """The packed graph of the model: state `k` is key `k`, an action's tag is its offer number.
 
     `floor(k, key, expanded)` is the cost of the floor action of key number `k` (None for none): an action with tag `FAKE` to one more goal state, the last. A key that
-    was not expanded (a tip) has no other action.
+    was not expanded (a tip) has no other action. The ruined state (`PatternModel.ruined`, #1367) has none once built with its restart row: that row is
+    its value on every offer, worked out or not (`abstraction._pattern`, "The ruined keys"), so no offer's floor is below it and none joins it.
     """
     builder = PackedBuilder()
     built: dict[int, int] = {}
@@ -127,7 +128,7 @@ def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floo
                 made = built[kernel] = builder.kernel([n if successor < 0 else successor for successor in successors], weights)  # -1 is the sink
             # a row of a choice node (a step of a relaxed draw, `abstraction/_relaxed.py`) costs nothing: carried at `FLOOR_COST`, as a floor of 0
             builder.action(offer_index, FLOOR_COST if offer_index == CHOICE else offers[offer_index].cost, made)
-        if floor is not None and not is_goal and not isinstance(key, ChoiceNode):
+        if floor is not None and not is_goal and not isinstance(key, ChoiceNode) and not (k == model.ruined and was_built and row):
             cost = floor(k, key, was_built)
             if cost is not None:
                 if sink is None:
@@ -201,7 +202,10 @@ def pattern_lower_bound(
                 f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
                 f"({phases['floors']:.1f} s)"
             )
-    builder = PatternBuilder(abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None, approximate=floors is not None if approximate is None else approximate, tally=tally)
+    builder = PatternBuilder(
+        abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None,
+        approximate=floors is not None if approximate is None else approximate, tally=tally, ruin=Ruin.of(abstraction, all_offers),
+    )
     kept = None  # the last round that ran to its end: (model, value, error bound, order, the offers held at some keys only)
     adding = list(order)
     at: list[list[int]] | None = None  # where the offers joining are built: every key for the first model, the keys that need them after (#1325)
@@ -243,7 +247,9 @@ def pattern_lower_bound(
         n = len(model.keys)
         value = np.asarray(solved.value[: n + 1])  # the keys, and the sink last (a goal: 0)
         say(
-            f"model {rounds}: {len(order):,} offers, {n:,} keys ({sum(model.expanded):,} expanded), {model.stats.kernels:,} kernels, start value "
+            f"model {rounds}: {len(order):,} offers, {n:,} keys ({sum(model.expanded):,} expanded"
+            + (f", {model.stats.ruined_keys:,} ruined keys held by one" if model.stats.ruined_keys else "")
+            + f"), {model.stats.kernels:,} kernels, start value "
             f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
         )
         if model.stopped is not None or floors is None or not (outside or holders):  # every offer built at every key: nothing can join
