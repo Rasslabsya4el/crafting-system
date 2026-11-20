@@ -1,0 +1,4 @@
+free keys (None): 0
+iter 0: LP 774.19 support 845 (choice nodes in support 0) 0s
+iter 1: LP 2985629.52 support 840 (choice nodes in support 0) 0s
+RESULT e-R24q.npz gap 0.01 lead floor free None 0 keys 940 nongoal 939 worth-work 933 LOWER 774.19 UPPER(last support) 840 min-support 840

@@ -1,0 +1,9 @@
+iter 0: blocks 51
+iter 1: blocks 513
+iter 2: blocks 762
+iter 3: blocks 914
+iter 4: blocks 981
+iter 5: blocks 1096
+iter 6: blocks 1135
+iter 7: blocks 1135
+RESULT e-R13.npz keys 78654 goals 3 bisimulation blocks 1135 distinct values 24

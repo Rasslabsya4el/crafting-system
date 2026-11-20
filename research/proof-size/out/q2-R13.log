@@ -1,0 +1,74 @@
+e-R13.npz offers 72
+  Harvest Reforge Lightning                        rows   78443 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Cold                             rows   78443 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Physical                         rows   78443 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Life                             rows   78443 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Defence                          rows   78443 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Attack                           rows   78443 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Caster                           rows       0 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Bench craft +(15-25) to maximum Life             rows    2220 argmin at       0 keys (on the plan path    0); within 1% at    2220
+  Bench craft +(16-20)% to Fire Resistance         rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(16-20)% to Cold Resistance         rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(16-20)% to Lightning Resistance    rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(15-20) to Strength                 rows    1874 argmin at       0 keys (on the plan path    0); within 1% at    1874
+  Bench craft +(21-28)% to Fire Resistance         rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(29-35)% to Fire Resistance         rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(21-28)% to Cold Resistance         rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(29-35)% to Cold Resistance         rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(21-28)% to Lightning Resistance    rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(29-35)% to Lightning Resistance    rows    1442 argmin at       0 keys (on the plan path    0); within 1% at    1442
+  Bench craft +(10-12)% to Fire and Cold Resistanc rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(10-12)% to Cold and Lightning Resi rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(10-12)% to Fire and Lightning Resi rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(26-40) to maximum Life             rows    2220 argmin at       0 keys (on the plan path    0); within 1% at    2220
+  Bench craft +(41-55) to maximum Life             rows    2220 argmin at       0 keys (on the plan path    0); within 1% at    2220
+  Bench craft +(25-34) to maximum Mana             rows    4410 argmin at       0 keys (on the plan path    0); within 1% at    4401
+  Bench craft (15-23)% increased Elemental Damage  rows    4243 argmin at       0 keys (on the plan path    0); within 1% at    4237
+  Bench craft (24-32)% increased Elemental Damage  rows    4243 argmin at       6 keys (on the plan path    3); within 1% at    4243
+  Bench craft (5-10)% increased Flask Effect Durat rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft Warcries cannot Exert Travel Skills  rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(31-36)% Chaos Resistance against D rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(16-20) to Strength and Dexterity   rows    1857 argmin at       0 keys (on the plan path    0); within 1% at    1857
+  Bench craft +(16-20) to Dexterity and Intelligen rows    1874 argmin at       0 keys (on the plan path    0); within 1% at    1874
+  Bench craft +(16-20) to Strength and Intelligenc rows    1857 argmin at       0 keys (on the plan path    0); within 1% at    1857
+  Bench craft +(151-213) to Armour and Evasion Rat rows    4076 argmin at       0 keys (on the plan path    0); within 1% at    4067
+  Bench craft +(151-213) to Armour / +(16-20) to m rows    4076 argmin at       0 keys (on the plan path    0); within 1% at    4067
+  Bench craft +(151-213) to Evasion Rating / +(16- rows    4076 argmin at       0 keys (on the plan path    0); within 1% at    4067
+  Bench craft Flasks applied to you have (8-10)% i rows    4410 argmin at       0 keys (on the plan path    0); within 1% at    4401
+  Bench craft (6-8)% increased Cooldown Recovery R rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft Regenerate 120 Energy Shield per sec rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(28-33) to maximum Life / Regenerat rows    2220 argmin at       0 keys (on the plan path    0); within 1% at    2220
+  Bench craft +(34-40) to maximum Life / Regenerat rows    2220 argmin at       0 keys (on the plan path    0); within 1% at    2220
+  Bench craft +(41-45) to maximum Life / Regenerat rows    2220 argmin at       0 keys (on the plan path    0); within 1% at    2220
+  Bench craft Your Critical Strike Chance is Lucky rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft (12-14)% increased Damage            rows    4243 argmin at       0 keys (on the plan path    0); within 1% at    4216
+  Bench craft (15-17)% increased Damage            rows    4243 argmin at       6 keys (on the plan path    6); within 1% at    4222
+  Bench craft +(9-10)% to Fire and Chaos Resistanc rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(9-10)% to Lightning and Chaos Resi rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft +(9-10)% to Cold and Chaos Resistanc rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft (7-8)% increased Trap Throwing Speed rows    1908 argmin at       0 keys (on the plan path    0); within 1% at    1908
+  Bench craft Can have up to 3 Crafted Modifiers   rows     541 argmin at       3 keys (on the plan path    3); within 1% at       3
+  Remove Crafted Mods                              rows   76477 argmin at     795 keys (on the plan path    0); within 1% at   76468
+  Orb of Scouring                                  rows   78649 argmin at     206 keys (on the plan path   31); within 1% at   77720
+  Orb of Annulment                                 rows   78647 argmin at     122 keys (on the plan path   27); within 1% at   78353
+  The bought item's own mods                       rows       1 argmin at       1 keys (on the plan path    1); within 1% at       1
+  restart                                          rows   78650 argmin at       0 keys (on the plan path    0); within 1% at   77721
+  Orb of Transmutation                             rows       1 argmin at       0 keys (on the plan path    0); within 1% at       1
+  Orb of Alchemy                                   rows       1 argmin at       1 keys (on the plan path    1); within 1% at       1
+  Chaos Orb                                        rows   78440 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Fire                             rows   78440 argmin at   77514 keys (on the plan path  373); within 1% at   77514
+  Orb of Alteration                                rows     206 argmin at       0 keys (on the plan path    0); within 1% at     206
+  Harvest Reforge Chaos                            rows   78440 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Critical                         rows       0 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Harvest Reforge Speed                            rows       0 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Veiled Chaos Orb                                 rows   78440 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Essence of Insanity                              rows   78441 argmin at       0 keys (on the plan path    0); within 1% at   77515
+  Essence of Hysteria                              rows   78435 argmin at       0 keys (on the plan path    0); within 1% at   77515
+  Essence of Delirium                              rows   78435 argmin at       0 keys (on the plan path    0); within 1% at   77515
+  Essence of Horror                                rows   78435 argmin at       0 keys (on the plan path    0); within 1% at   77515
+  Harvest Reforge Elemental                        rows   78434 argmin at       0 keys (on the plan path    0); within 1% at   77514
+  Harvest Reforge Drop                             rows       0 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Harvest Reforge Mana                             rows   78434 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Harvest Reforge Attribute                        rows   78434 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Harvest Reforge Minion                           rows       0 argmin at       0 keys (on the plan path    0); within 1% at       0
+  offers argmin at some key: 9 ; argmin at a path key: 8

@@ -1,0 +1,2 @@
+iter 0: LP 28761.93 support 30491 (choice nodes in support 0) 134s
+RESULT e-R24.npz gap 0.01 lead alpha:0.5 keys 60904 nongoal 60895 worth-work 60868 LOWER 28761.93 UPPER(last support) 30491 min-support 30491

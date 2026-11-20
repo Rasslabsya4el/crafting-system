@@ -1,0 +1,4 @@
+free keys (oracle): 93565
+iter 0: LP 6072.33 support 6506 (choice nodes in support 0) 742s
+iter 1: LP 146601269.72 support 6488 (choice nodes in support 0) 2004s
+RESULT e-R04.npz gap 0.01 lead floor free oracle 93565 keys 100773 nongoal 100771 worth-work 100771 LOWER 6072.33 UPPER(last support) 6488 min-support 6488

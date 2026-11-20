@@ -1,0 +1,2 @@
+iter 0: LP 4428.43 support 5810 (choice nodes in support 0) 5s
+RESULT e-R24.npz gap 0.01 lead alpha:0.95 keys 60904 nongoal 60895 worth-work 60868 LOWER 4428.43 UPPER(last support) 5810 min-support 5810

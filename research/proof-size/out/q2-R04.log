@@ -1,0 +1,23 @@
+/root/projects/crafting system/.claude/scratch/t1360/e-R04.npz offers 21
+  Chaos Orb                                        rows  116416 argmin at      23 keys (on the plan path    0); within 1% at  116097
+  Deafening Essence of Rage                        rows   35778 argmin at    1266 keys (on the plan path  140); within 1% at   35677
+  Essence of Insanity                              rows   35556 argmin at    2904 keys (on the plan path  144); within 1% at   35487
+  Bench craft (7-12)% increased Attack Speed       rows   11623 argmin at       4 keys (on the plan path    2); within 1% at   11623
+  Bench craft Prefixes Cannot Be Changed           rows   12030 argmin at       0 keys (on the plan path    0); within 1% at       0
+  Bench craft Suffixes Cannot Be Changed           rows   16724 argmin at       4 keys (on the plan path    3); within 1% at       9
+  Bench craft Cannot roll Attack Modifiers         rows   12029 argmin at      14 keys (on the plan path    5); within 1% at   12027
+  Bench craft Cannot roll Caster Modifiers         rows   12029 argmin at       0 keys (on the plan path    0); within 1% at   12025
+  Remove Crafted Mods                              rows   77234 argmin at    9698 keys (on the plan path    7); within 1% at   77211
+  Orb of Alchemy                                   rows       1 argmin at       0 keys (on the plan path    0); within 1% at       1
+  Orb of Transmutation                             rows       1 argmin at       0 keys (on the plan path    0); within 1% at       1
+  Orb of Alteration                                rows     293 argmin at      15 keys (on the plan path    0); within 1% at     293
+  Orb of Augmentation                              rows      45 argmin at       1 keys (on the plan path    0); within 1% at      45
+  Regal Orb                                        rows     378 argmin at     106 keys (on the plan path    0); within 1% at     378
+  Exalted Orb                                      rows   82194 argmin at     895 keys (on the plan path   26); within 1% at   82095
+  Orb of Scouring                                  rows  100770 argmin at    5568 keys (on the plan path    3); within 1% at  100458
+  Orb of Annulment                                 rows   99234 argmin at     337 keys (on the plan path  118); within 1% at   99106
+  Fracturing Orb                                   rows  114716 argmin at    2467 keys (on the plan path  853); within 1% at   31626
+  Veiled Chaos Orb                                 rows  100338 argmin at       0 keys (on the plan path    0); within 1% at  100029
+  Beastcraft Wild Bristle Matron (add a metamod)   rows   24194 argmin at       4 keys (on the plan path    0); within 1% at     159
+  restart                                          rows  100770 argmin at   85438 keys (on the plan path  172); within 1% at   96644
+  offers argmin at some key: 16 ; argmin at a path key: 11

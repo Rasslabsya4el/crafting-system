@@ -1,0 +1,4 @@
+e-R13.npz F keys 1 optimal row by offer: [("The bought item's own mods", 1)] optimal kernel also a start kernel: 1 of 1
+ optimal rows at F keys whose kernel is shared by >= 100 keys: 1
+ not-F keys 78650 optimal rows by offer: [('Harvest Reforge Fire', 77514), ('Remove Crafted Mods', 795), ('Orb of Scouring', 206), ('Orb of Annulment', 122), ('Bench craft (24-32)% increased Elemental Damage with Attack Skills', 6), ('Bench craft (15-17)% increased Damage', 6), ('Bench craft Can have up to 3 Crafted Modifiers', 3), ('Orb of Alchemy', 1)]
+ V - V0 at F keys: quantiles [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]

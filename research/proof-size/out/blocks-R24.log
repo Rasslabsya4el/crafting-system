@@ -1,0 +1,18 @@
+blocks 939 (with several keys 780), keys in them 60736
+  flags: varies in 0 blocks
+  fractured: varies in 0 blocks
+  status: varies in 603 blocks
+  held: varies in 285 blocks
+  crafted: varies in 0 blocks
+  counts: varies in 151 blocks
+  tags: varies in 151 blocks
+  veiled: varies in 267 blocks
+  drop flags: coarse keys 60895, of which mixing several blocks 0
+  drop fractured: coarse keys 60895, of which mixing several blocks 0
+  drop status: coarse keys 3251, of which mixing several blocks 2182
+  drop held: coarse keys 6844, of which mixing several blocks 718
+  drop crafted: coarse keys 36903, of which mixing several blocks 23992
+  drop counts: coarse keys 60895, of which mixing several blocks 0
+  drop tags: coarse keys 60895, of which mixing several blocks 0
+  drop veiled: coarse keys 55185, of which mixing several blocks 559
+largest blocks [1536, 1536, 1536, 1536, 1536, 1536, 1536, 1536, 1536, 1536] singletons 159

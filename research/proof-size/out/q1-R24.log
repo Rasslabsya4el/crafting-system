@@ -1,0 +1,3 @@
+e-R24.npz: plan path 197 keys (191 not goals)
+  all keys (60895 keys): status (and slots, junk) 48484 (79.6%); slots (crafted, held, veiled) and junk 12194 (20.0%); on the path 191 (0.3%); junk only (counts, tags) 26 (0.0%)
+  S-R24-floor-1.npy (39343 keys): status (and slots, junk) 33866 (86.1%); slots (crafted, held, veiled) and junk 5272 (13.4%); on the path 179 (0.5%); junk only (counts, tags) 26 (0.1%)

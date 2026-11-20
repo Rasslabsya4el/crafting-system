@@ -1,0 +1,13 @@
+/root/projects/crafting system/.claude/scratch/t1360/e-R24.npz offers 11
+  Harvest Add Remove Fire                          rows    1389 argmin at       9 keys (on the plan path    0); within 1% at      10
+  Deafening Essence of Torment                     rows    4261 argmin at    4210 keys (on the plan path  120); within 1% at    4220
+  Bench craft Suffixes Cannot Be Changed           rows    2583 argmin at      19 keys (on the plan path   16); within 1% at      19
+  Veiled Chaos Orb                                 rows    6106 argmin at    1557 keys (on the plan path   16); within 1% at    6053
+  Unveil                                           rows    1286 argmin at      23 keys (on the plan path    9); within 1% at    1280
+  Pick 1                                           rows   54051 argmin at   53991 keys (on the plan path   15); within 1% at   54015
+  Pick 2                                           rows   54051 argmin at   53991 keys (on the plan path   15); within 1% at   54015
+  Pick 3                                           rows   54051 argmin at   54051 keys (on the plan path   27); within 1% at   54051
+  Orb of Annulment                                 rows    6843 argmin at    1548 keys (on the plan path    6); within 1% at    6788
+  Orb of Alteration                                rows       0 argmin at       0 keys (on the plan path    0); within 1% at       0
+  restart                                          rows   60894 argmin at       0 keys (on the plan path    0); within 1% at   12923
+  offers argmin at some key: 9 ; argmin at a path key: 8
