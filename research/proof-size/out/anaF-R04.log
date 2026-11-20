@@ -1,0 +1,4 @@
+e-R04.npz F keys 93566 optimal row by offer: [('restart', 85438), ('Remove Crafted Mods', 5067), ('Essence of Insanity', 2904), ('Regal Orb', 54), ('Orb of Scouring', 45), ('Exalted Orb', 41), ('Orb of Alteration', 12), ('Chaos Orb', 5)] optimal kernel also a start kernel: 2904 of 93566
+ optimal rows at F keys whose kernel is shared by >= 100 keys: 90539
+ not-F keys 7205 optimal rows by offer: [('Remove Crafted Mods', 4631), ('Fracturing Orb', 2467), ('Deafening Essence of Rage', 1266), ('Orb of Scouring', 1214), ('Exalted Orb', 854), ('Orb of Annulment', 337), ('Regal Orb', 20), ('Chaos Orb', 18), ('Bench craft Cannot roll Attack Modifiers', 14), ('Bench craft (7-12)% increased Attack Speed', 4), ('Bench craft Suffixes Cannot Be Changed', 4), ('Beastcraft Wild Bristle Matron (add a metamod)', 4), ('Orb of Alteration', 3), ('Orb of Augmentation', 1)]
+ V - V0 at F keys: quantiles [-0.0, 3.2, 3.2, 3.2, 3.2, 3.2, 3.2]

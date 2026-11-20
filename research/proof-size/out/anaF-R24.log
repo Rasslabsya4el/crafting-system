@@ -1,0 +1,4 @@
+e-R24.npz F keys 60727 optimal row by offer: [('Pick 1', 53951), ('Deafening Essence of Torment', 4210), ('Orb of Annulment', 1529), ('Veiled Chaos Orb', 1021), ('Pick 3', 12), ('Unveil', 4)] optimal kernel also a start kernel: 4217 of 60727
+ optimal rows at F keys whose kernel is shared by >= 100 keys: 4218
+ not-F keys 168 optimal rows by offer: [('Pick 3', 88), ('Pick 1', 40), ('Pick 2', 40), ('Bench craft Suffixes Cannot Be Changed', 19), ('Orb of Annulment', 19), ('Unveil', 19), ('Veiled Chaos Orb', 18), ('Harvest Add Remove Fire', 9)]
+ V - V0 at F keys: quantiles [-0.0, 0.0, 0.0, 12.73, 19.095, 19.095, 19.095]
