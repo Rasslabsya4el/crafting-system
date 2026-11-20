@@ -1,0 +1,5 @@
+free keys (free-R24-corelock.npz): 59526
+lemma spec free-R24-corelock.npz: contexts 1, free keys with a span 59526, raiser triples 224, moves 0
+iter 0: LP 734.93 support 764 (choice nodes in support 0) 0s
+iter 1: LP 2569545.72 support 764 (choice nodes in support 0) 0s
+RESULT e-R24.npz gap 0.01 lead floor free free-R24-corelock.npz 59526 keys 60904 nongoal 60895 worth-work 60868 LOWER 734.93 UPPER(last support) 764 min-support 764

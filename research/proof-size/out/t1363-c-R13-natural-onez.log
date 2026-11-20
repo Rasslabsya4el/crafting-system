@@ -1,0 +1,7 @@
+free keys (free-R13-natural.npz): 77721
+lemma spec free-R13-natural.npz (one z): free keys with a span 77721, raiser pairs 21, B 28163.668835
+Traceback (most recent call last):
+  File "$REPO/.claude/worktrees/t1363/research/proof-size/cert.py", line 124, in <module>
+    assert r.status == 0, r.message
+           ^^^^^^^^^^^^^
+AssertionError: The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)

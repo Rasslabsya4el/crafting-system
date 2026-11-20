@@ -1,0 +1,7 @@
+R13 F keys 77722 blocks in F 1082 values in F 4
+  drop status: classes 10417; mixing blocks 6049 (59650 keys); mixing values 0 (0 keys)
+  drop status, keep which leaves pass: classes 33835; mixing blocks 12219 (40390 keys); mixing values 0 (0 keys)
+  drop status, mod names (contributions kept): classes 1275; mixing blocks 740 (66807 keys); mixing values 0 (0 keys)
+  drop status, crafted and held mod names: classes 1275; mixing blocks 740 (66807 keys); mixing values 0 (0 keys)
+  drop status and crafted (keep counts): classes 46; mixing blocks 43 (77699 keys); mixing values 0 (0 keys)
+  drop status, crafted, held: classes 46; mixing blocks 43 (77699 keys); mixing values 0 (0 keys)

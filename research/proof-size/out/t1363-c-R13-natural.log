@@ -1,0 +1,5 @@
+free keys (free-R13-natural.npz): 77721
+lemma spec free-R13-natural.npz: contexts 4, free keys with a span 77721, raiser triples 25, moves 5
+iter 0: LP 325.72 support 380 (choice nodes in support 0) 1s
+iter 1: LP 7070910.35 support 378 (choice nodes in support 0) 1s
+RESULT e-R13.npz gap 0.01 lead floor free free-R13-natural.npz 77721 keys 78654 nongoal 78651 worth-work 78651 LOWER 325.72 UPPER(last support) 378 min-support 378

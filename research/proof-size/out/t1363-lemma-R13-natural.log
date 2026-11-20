@@ -1,0 +1,9 @@
+R13 natural: keys 78654 F 77722 (98.8%)  rows at F 1722936, raiser rows at F 1317951
+  (1) mechanics check: undeclared rows at F keys that leave F: 0 []
+  raiser (offer, kernel) pairs at F: 21 {'Harvest Reforge Lightning': 1, 'Harvest Reforge Cold': 1, 'Harvest Reforge Physical': 1, 'Harvest Reforge Life': 1, 'Harvest Reforge Defence': 1, 'Harvest Reforge Attack': 1, "The bought item's own mods": 1, 'Orb of Transmutation': 1, 'Orb of Alchemy': 1, 'Chaos Orb': 1, 'Harvest Reforge Fire': 1, 'Orb of Alteration': 1, 'Harvest Reforge Chaos': 1, 'Veiled Chaos Orb': 1, 'Essence of Insanity': 1, 'Essence of Hysteria': 1, 'Essence of Delirium': 1, 'Essence of Horror': 1, 'Harvest Reforge Elemental': 1, 'Harvest Reforge Mana': 1, 'Harvest Reforge Attribute': 1}; B = 28163.668835 (V0 28164.016157); argmin offer Orb of Alchemy
+  (2) value check: keys of F with V < B: 0; at B (rel 1e-9): 1; V-B over F: max 0.3473
+  keys with V >= V0 (oracle's free set) 1, of them in F 1
+  bisim blocks split by F: 0 of 1134; blocks wholly in F 1082
+  contexts 4; raiser (context, offer, kernel) triples 25; moves 5: [(np.int64(1), 0, 17.4), (np.int64(1), 2, 0.3463), (np.int64(2), 0, 17.4), (np.int64(3), 0, 17.4), (np.int64(3), 2, 0.3463)]
+  (3) per-context value check: keys of F with V < B_ctx: 0; B per context [28164.0162, 28164.0151, 28163.6688, 28163.9518]
+  contexts with no raiser row: 0

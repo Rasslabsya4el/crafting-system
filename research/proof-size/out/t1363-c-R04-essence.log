@@ -1,0 +1,7 @@
+free keys (free-R04-essence.npz): 98818
+lemma spec free-R04-essence.npz: contexts 59, free keys with a span 98818, raiser triples 50, moves 146
+Traceback (most recent call last):
+  File "$REPO/.claude/worktrees/t1363/research/proof-size/cert.py", line 124, in <module>
+    assert r.status == 0, r.message
+           ^^^^^^^^^^^^^
+AssertionError: The problem is infeasible. (HiGHS Status 8: model_status is Infeasible; primal_status is None)

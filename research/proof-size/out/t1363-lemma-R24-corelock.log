@@ -1,0 +1,9 @@
+R24 corelock: keys 60904 F 59527 (97.7%)  rows at F 239993, raiser rows at F 10000
+  (1) mechanics check: undeclared rows at F keys that leave F: 0 []
+  raiser (offer, kernel) pairs at F: 224 {'Deafening Essence of Torment': 1, 'Veiled Chaos Orb': 223}; B = 3617.644354 (V0 3617.644354); argmin offer Deafening Essence of Torment
+  (2) value check: keys of F with V < B: 0; at B (rel 1e-9): 36062; V-B over F: max 19.0950
+  keys with V >= V0 (oracle's free set) 60727, of them in F 59527
+  bisim blocks split by F: 0 of 939; blocks wholly in F 828
+  contexts 1; raiser (context, offer, kernel) triples 224; moves 0: []
+  (3) per-context value check: keys of F with V < B_ctx: 0; B per context [3617.6444]
+  contexts with no raiser row: 0

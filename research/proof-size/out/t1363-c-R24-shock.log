@@ -1,0 +1,5 @@
+free keys (free-R24-shock.npz): 48761
+lemma spec free-R24-shock.npz: contexts 1, free keys with a span 48761, raiser triples 1, moves 0
+iter 0: LP 5965.44 support 6188 (choice nodes in support 0) 5s
+iter 1: LP 22017346.13 support 6126 (choice nodes in support 0) 12s
+RESULT e-R24.npz gap 0.01 lead floor free free-R24-shock.npz 48761 keys 60904 nongoal 60895 worth-work 60868 LOWER 5965.44 UPPER(last support) 6126 min-support 6126
