@@ -43,6 +43,7 @@ from crafting_system.items import (
     Influence,
     Item,
     ItemError,
+    Metamod,
     PlainQuality,
     Quality,
     Rarity,
@@ -121,6 +122,8 @@ def _low_values(mod: Mod) -> tuple[int, ...]:
 
 Origins = dict[tuple[str, bool, bool], "FracturedMod | Slot"]  # (mod id, fractured, crafted) of the item given to an action
 KEPT_VIEW = True  # an action that erases the ordinary mods, at an item whose lock keeps one side, is given the item without the other side's (`_kept_sides`, #1352); False: the whole item
+CRAFTED_VIEW = True  # an action that erases the ordinary and the crafted mods (`Adds.keeps_crafted` False) is given the item without the crafted mods that hold no metamod (`_reads_crafted`, #1358); False: with every crafted mod
+METAMOD_FAMILIES = frozenset(metamod.value for metamod in Metamod)
 TYPES_KEPT = 65_536  # the families of pool tables whose type is remembered by object (`Abstraction._pool_types`); past it the memory starts again
 SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstraction._shared_by`): past it the least recently used leaves. It is the size
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
@@ -255,6 +258,8 @@ class Abstraction:
         self._weights = weights
         self._alike = alike  # a twin of `alike_twin`: the ordinary slots are told apart by side and protected tags alone (#1146)
         self._fracturing: dict[Action, bool] = {}  # an action -> whether it may fracture a mod it draws (`lumps`)
+        self._crafted_kept: dict[Action, bool] = {}  # an action -> whether a crafted mod survives it (`Adds.keeps_crafted`; `_reads_crafted`)
+        self._metamod_kinds: dict[str, bool] = {}  # a crafted slot's mod id -> whether the mod is a metamod (`_view`)
         self.gaps = ModelGaps()  # the actions the model had no rule for, written by whoever walks this abstraction (ticket #506)
         self.prunings = Prunings()  # the offers left out of the states that cannot use them (K13)
         self._reading = reading
@@ -878,8 +883,13 @@ class Abstraction:
            to choose the view. The view leaves out the status, which no step reads, and the ordinary slots and the offer where the
            action erases them (`_erases`: it does not read the junk, `Reads.junk`, and the item has no lock to keep a side; the
            contract of `Reads.junk` says both), and at an item whose lock keeps one side the ordinary slots of the other side (`_kept_sides`,
-           #1352: the action keeps none of them and reads none). An imprint move and a kernel averaged over inputs do read the whole state, and their
-           key is the kernel itself.
+           #1352: the action keeps none of them and reads none). Where it erases the ordinary mods and the crafted ones too (`Adds.keeps_crafted`
+           False: a Chaos Orb, an essence, a fossil set, a Harvest reforge, an Alteration, a Scouring), the view leaves out every crafted slot
+           that holds no metamod (`_reads_crafted`, #1358): at an item with no lock (the case of `_erases`) the action keeps of the item the
+           fractured mods alone (`metamods.kept_by_reroll`; the contract suite checks no result keeps a crafted mod it was given), its
+           refusals and its pool read of the crafted mods their metamods (a blocking metamod, an Attack or Caster metamod), which the view
+           keeps, and the item given without the others is the same item but for mods it erases unread. An imprint move and a kernel
+           averaged over inputs do read the whole state, and their key is the kernel itself.
         2. Everything `_mixture_kernel` reads of a pair is in the key. Per part it calls one of `_add_fixed` (the split), `_add_drawn` (the
            split and the distribution of the signature), `_add_rerolled` (the split, the rerolled slots, `("rerolled", lucky)`) and
            `_add_fractured` (the split, the entries of the signature and the forced mod, the families of the pool with their mods and
@@ -1564,11 +1574,34 @@ class Abstraction:
         sides = frozenset(side for metamod, side in LOCKED_SIDE.items() if metamod.value in families)
         return sides if sides and len(sides) < len(LOCKED_SIDE) else None
 
-    def _view(self, state: CompressedState, erasing: bool, kept: frozenset | None = None) -> _View:
-        """The projection of `state` an action's kernel reads: all but the status, and without the ordinary slots and the offer when it erases them;
-        with `kept` (`_kept_sides`), without the ordinary slots of the sides a lock does not keep."""
+    def _reads_crafted(self, action: Action) -> bool:
+        """Whether the kernel of `action`, where it erases the ordinary mods (`_erases`), may read a crafted mod that holds no metamod (#1358).
+
+        An action that erases the crafted mods too (`Adds.keeps_crafted` False: a Chaos Orb, an essence, a fossil set, a Harvest reforge, an
+        Alteration, a Scouring; the contract suite checks that no result keeps one) leaves of the item before its draws `metamods.kept_by_reroll`
+        alone: the fractured mods and the mods of a locked side, and `_erases` holds only at an item with no lock. Its refusals read of the crafted
+        mods their metamods (`refuse_blocking_metamod`, a pool an Attack or Caster metamod blocks), which the view keeps. So it reads no other
+        crafted mod: True for every other action, and with `CRAFTED_VIEW` off."""
+        if not (CRAFTED_VIEW and self.project):
+            return True
+        found = self._crafted_kept.get(action)
+        if found is None:
+            found = self._crafted_kept[action] = bool(action.adds(self.data, None).keeps_crafted)
+        return found
+
+    def _is_metamod(self, mod_id: str) -> bool:
+        found = self._metamod_kinds.get(mod_id)
+        if found is None:
+            found = self._metamod_kinds[mod_id] = not METAMOD_FAMILIES.isdisjoint(self.data.mods[mod_id].families)
+        return found
+
+    def _view(self, state: CompressedState, erasing: bool, kept: frozenset | None = None, crafted: bool = True) -> _View:
+        """The projection of `state` an action's kernel reads: all but the status, and without the ordinary slots and the offer when it erases them
+        (and, with `crafted` False, without the crafted slots that hold no metamod: `_reads_crafted`); with `kept` (`_kept_sides`), without the
+        ordinary slots of the sides a lock does not keep."""
         if erasing:
-            return _View(state.flags, state.fractured, tuple(slot for slot in state.slots if slot.crafted), state.implicits, state.quality, (), state.imprints, state.strands, state.replaced)
+            slots = tuple(slot for slot in state.slots if slot.crafted and (crafted or self._is_metamod(slot.kind)))
+            return _View(state.flags, state.fractured, slots, state.implicits, state.quality, (), state.imprints, state.strands, state.replaced)
         slots = state.slots if kept is None else tuple(slot for slot in state.slots if slot.crafted or slot.side in kept)
         return _View(state.flags, state.fractured, slots, state.implicits, state.quality, state.offer, state.imprints, state.strands, state.replaced)
 
@@ -1595,7 +1628,7 @@ class Abstraction:
                 else "the item is already open: the draw of a bought item's mods works only on the listing"
             )
         erasing = self._erases(state, action)
-        view = self._view(state, erasing, None if erasing else self._kept_sides(state, action))
+        view = self._view(state, erasing, None if erasing else self._kept_sides(state, action), not erasing or self._reads_crafted(action))
         key = (action, view)
         shared = erasing  # the view leaves the ordinary mods out: every state with these flags, fractured and crafted mods has it
         store = self._shared_by if shared else self._prepared_by
