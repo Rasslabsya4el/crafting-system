@@ -9,7 +9,7 @@ least the cheapest price, a goal or the sink is 0, a choice node's h is 0 and it
 and imposing the row constraint at EVERY key is no loss: at a tip u = 0 and the row holds by consistency. So the LP
     min sum_k u_k / (V_k - h_k)   s.t.  u_k - y_j <= c_a + sum P h - h_k  (every row k,a,j),  y_j <= sum_s P_j(s) u_s,  u_0 >= (1-GAP)V0 - h_0,  0 <= u_k <= V_k - h_k
 has optimum <= |S| for every certificate S (u_k/(V_k-h_k) <= 1 on S, 0 off it): a LOWER bound on the smallest certificate. Its support (after
-reweighting, REWEIGHT rounds) is a certificate: an UPPER bound, checked again by solving the model on S exactly (verify.py).
+reweighting, REWEIGHT rounds) is a certificate: an UPPER bound, not re-solved exactly (the note says so under "Not done").
 python cert.py e-ROUTE.npz GAP [LEAD.npy] [OUT.npy]  -- LEAD: h per key (not checked consistent: then only the upper bound is valid)."""
 import sys, time, os
 import numpy as np, scipy.sparse as sp

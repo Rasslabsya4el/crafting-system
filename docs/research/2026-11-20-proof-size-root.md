@@ -4,7 +4,7 @@ Ticket #1360. A design note, no planner code. It follows the three counted lines
 
 Rules read: OR-12 (nothing is dropped for being unlikely: every lemma below is exact, and every count says which keys it leaves out and why their value is known), OR-13, OR-37, OR-38 (no proof is claimed from a count), OR-39 (the 1% stop), OR-40.
 
-**Every figure below is a count that was run** on the owner's server on 2026-11-20, one process and one thread a count (load beside the long ones). A sentence that is a prediction says so. The scripts are in `research/proof-size/` (section 8); the dumps and logs stay under `.claude/scratch/t1360/` and `.claude/scratch/t1310/`.
+**Every figure below is a count that was run** on the owner's server on 2026-11-20, one process and one thread a count (load beside the long ones). A sentence that is a prediction says so. The scripts are in `research/proof-size/` (section 9); the dumps and logs stay under `.claude/scratch/t1360/` and `.claude/scratch/t1310/`.
 
 Words, as in the notes before. A **key** is the exact bound's summary of an item; to **work a key out** is to build every offer's row at it; a **tip** is a key not worked out, valued today at the cheapest offer's price (the **floor**: 0.0105 c on R04, 0.0000002 c on R24). `V` is the value of the complete model of a dump (the bound's own figure); `V0` its value at the start key.
 
@@ -26,7 +26,7 @@ has an optimum **at most `|S|` for every certificate `S`** (each term is at most
 
 `alpha` leads: `h = max(alpha V, floor)` is consistent for `alpha <= 1` (V is a fixed point), so the same program counts how good a lead at every key must be for a small proof.
 
-The dumps: R24 (`k-R24.pkl`, #1310: 10 offers and the restart, 60,904 keys, `V0` 3,617.64 c), R04 (`k-R04.pkl`: 20 offers and the restart, 100,773 keys, 23,534.09 c), and, new here, R13 ({R13_DUMP}). R14 and R20 have no complete dump (#1310: R20's stops; R14's was never made), and none was made here.
+The dumps: R24 (`k-R24.pkl`, #1310: 10 offers and the restart, 60,904 keys, `V0` 3,617.64 c), R04 (`k-R04.pkl`: 20 offers and the restart, 100,773 keys, 23,534.09 c), and, new here, R13 (`k-R13.pkl`, dumped here by `kd2.py`: the first complete bound of R13's natural run with at least 1,000 keys, 72 offers with the restart, 78,654 keys, 156,935 kernels, `V0` 28,164.02 c, built in 1,167 s at load 4 to 10; its kernels are the approximate ones of the run, error 3.2e-7, the missing mass going to the sink). R14 and R20 have no complete dump (#1310: R20's stops; R14's was never made), and none was made here.
 
 ## 2. Question 3: the smallest proof
 
@@ -38,7 +38,7 @@ The dumps: R24 (`k-R24.pkl`, #1310: 10 offers and the restart, 60,904 keys, `V0`
 | R24 | | | 5% | 36,106 (59.3%) | 38,816 |
 | R24 | | | 10% | 33,590 (55.2%) | 38,184 |
 | R04 | 100,771 | 679 | 1% | {R04_FLOOR} |
-| R13 | {R13_N} | {R13_PATH} | 1% | {R13_FLOOR} |
+| R13 | 78,651 | 442 | 1% | {R13_FLOOR} |
 
 **So the bound's form is the root.** On R24 no proof of 1% under today's tip value can work out fewer than 38,368 keys, whatever leads it, in what order, from below or from above; #1321's upper-led build stopped at 45,113 (floor) and 38,885 (direct lead), #1322's best direct-led build at 37,864: they were already near this floor. Ten times the slack (10%) removes an eighth of it. The 197 keys of the plan are not the size of its proof.
 
@@ -55,13 +55,13 @@ This is #1315's "no middle" stated for every build at once: a lead must be worth
 
 | Route | Keys | Worth at least `V0` (no better than the start) | of them: worth exactly `V0` + the restart | Rows within 1% of the best row at such keys |
 |---|---|---|---|---|
-| R24 | 60,895 | **60,727 (99.7%)** | 0 | Annulment, the Veiled Chaos Orb, the picks: nearly every row (`q2-R24.txt`) |
+| R24 | 60,895 | **60,727 (99.7%)** | 0 | Annulment, the Veiled Chaos Orb, the picks: nearly every row (`out/q2-R24.log`) |
 | R04 | 100,771 | **93,566 (92.9%)** | 85,438 | every offer but the locks: e.g. Chaos Orb 116,097 of 116,416 rows, Scouring 100,458 of 100,770 |
-| R13 | {R13_N} | {R13_F} | {R13_FR} | {R13_NEAR} |
+| R13 | 78,651 | 1 (the start: a bought listing, its price sunk, so every other key is a little cheaper); **77,719 (98.8%)** at or above the reset value (28,163.95 c, the most common value) | 0; Harvest Reforge Fire is the best row at 77,514 | Harvest Reforge Fire within 1% at 77,514 of 78,440 rows, Scouring at 77,720 of 78,649, Annulment at 78,353 of 78,647 (`out/q2-R13.log`) |
 
 A key the plan does not want is, nearly always, an item that went wrong: its best move is to start again (R04: the restart at 85,438 keys) or to reroll back to an item like the start (R24: V - V0 is 0, 12.73 or 19.10 c at every such key, the price of one pick, Annulment or essence). Its value is `V0` plus a little, and every row there is within 1% of every other. A certificate must show, at every such key it reaches, that **no** row leads somewhere cheap; with the tips at the floor, a row that reaches a tip with any weight leads somewhere worth nothing, so the proof must reach on, and the reach of an erasing reroll is thousands of keys. That is the whole size of the certificate, on both routes.
 
-**What one fact would remove it.** Give each key with `V >= V0` one row to the start at no cost and no other row, and no work (`FREE=oracle`: the most that any lemma "this key is no better than the start" could give; it reads the truth): the smallest certificate on R24 is then **87 to 94 keys**, on R04 {R04_ORACLE}, on R13 {R13_ORACLE}. The proof is small exactly when the bound knows, without working them out, that the failures are failures.
+**What one fact would remove it.** Give each key with `V >= V0` one row to the start at no cost and no other row, and no work (`FREE=oracle`: the most that any lemma "this key is no better than the start" could give; it reads the truth): the smallest certificate on R24 is then **87 to 94 keys**, on R04 **6,072 to 6,488 keys** (R04 has 7,205 keys worth less than the start, and a proof must still work those out), on R13 **328 to 380 keys** (R13's start is a bought listing, so the free row goes to the key of the most common value, the item after an erasing reroll: `FREE=mode`, 77,719 free keys). The proof is small exactly when the bound knows, without working them out, that the failures are failures.
 
 ## 3. Question 1: where the keys come from
 
@@ -72,7 +72,7 @@ A key the plan does not want is, nearly always, an item that went wrong: its bes
 | R24, all keys | 60,895 | 191 | **26 (0.04%)** | 12,194 (20.0%) | 48,484 (79.6%) | 0 |
 | R24, the certificate of 39,343 | 39,343 | 179 | 26 | 5,272 (13.4%) | 33,866 (86.1%) | 0 |
 | R04, all keys | 100,771 | 679 | **202 (0.2%)** | 11,011 (10.9%) | 18,051 (17.9%) | 70,828 (70.3%) |
-| R13, all keys | {R13_N} | {R13_PATH} | {R13_Q1} |
+| R13, all keys | 78,651 | 442 | **34 (0.04%)** | 15,904 (20.2%) | 26,266 (33.4%) | 36,005 (45.8%, a fractured mod or the flags) |
 
 So **the keys do not come from junk beside the plan's items.** The ticket's guess (junk count, side, tags) holds for 26 and 202 keys. They come from **other outcomes**: other wanted mods at other tiers (the status), other unveiled offers and crafted slots, and, on R04, a wrong mod fractured (70% of the keys). Each is a draw that went wrong, and section 2 says the proof needs most of them, because it must show each is a failure.
 
@@ -82,7 +82,7 @@ So **the keys do not come from junk beside the plan's items.** The ticket's gues
 |---|---|---|---|---|---|
 | R24 | 60,904 | **940** | 28 | at least 774, found 838 | the status in 603 of 780 merged states (leaves 3 and 4 between below and passing, leaves 5 and 6), the held offer in 285, the veiled slots in 267, junk counts and tags in 151 |
 | R04 | 100,773 | 51,174 | 389 | {R04_Q} | the status in 31,252 of 31,256 (leaves 3 and 4, below and passing, in 18,536), the fractured mod in 4,306, tags in 409 |
-| R13 | {R13_N} | {R13_BISIM} | {R13_VALS} | {R13_QCERT} | |
+| R13 | 78,654 | **1,135** | 24 | at least 1,078, found 1,105 | not counted |
 
 On R24 the exact model has 65 times more keys than it needs; on R04, 2 times. **Which lemma would give R24's 940 is not found.** One candidate, that leaves 3 and 4 (and 5 and 6) are interchangeable, is counted and is **not** exact: under that swap 137 of R24's classes and 329 of R04's hold keys of different values (`swap.py`).
 
@@ -90,13 +90,13 @@ On R24 the exact model has 65 times more keys than it needs; on R04, 2 times. **
 
 ## 4. Question 2: where the offers come from
 
-Counted on the dumps' offers (21, 11 and {R13_OFFERS}); R04's 1,245 offers and R14's 10,907 have **no complete dump** (R04's 1,245-offer model is #1352's: 625,773 keys, about 34 hours at model 6, #1358), so their counts are **not made**.
+Counted on the dumps' offers (21, 11 and 72); R04's 1,245 offers and R14's 10,907 have **no complete dump** (R04's 1,245-offer model is #1352's: 625,773 keys, about 34 hours at model 6, #1358), so their counts are **not made**.
 
 | Route | Offers | The best row at some key | The best row at a key of the plan's path |
 |---|---|---|---|
 | R24 | 11 | 9 (not Alteration, which has no row; not the restart) | 8 |
 | R04 | 21 | 16 | 11 |
-| R13 | {R13_OFFERS} | {R13_ARG} | {R13_ARGP} |
+| R13 | 72 | 9 (Harvest Reforge Fire at 77,514 keys; Remove Crafted Mods 795; Scouring 206; Annulment 122; three bench crafts; Alchemy; the listing) | 8 |
 
 **Exact dominance before the build.** Two offers can be compared without the build only where their rows can: equal kernels (the twins, already lumped, `_offer_kinds.py`), or a kernel that is the other's with mass moved onto keys known to be no cheaper. One such fact is exact and free: **the restart is a row at every key, so `V(k) <= c_r + V0` everywhere, and a ruined key (section 5) is worth exactly `c_r + V0`, the most any key is worth.** So if offer B costs no more than A and, at a context (the flags, fractured mods and crafted slots an erasing offer's outcome depends on, ADR-0023), B's chance of each key that is not ruined is at least A's, then B is never worse than A at any key of that context: A can be left out there, exactly. **Not counted**: it needs the fossil sets' kernels at R04's contexts, which only the 1,245-offer build makes. Beyond this, a dominance between two fossil sets needs an order of keys that every value respects, and none is known: more junk is not always worse (a full side steers a slam), so "fewer junk mods" is no such order.
 
@@ -108,7 +108,7 @@ What the counts do say about offers: at a failure key every row is within 1% of 
 
 **The lemma.** A fractured mod is never removed (no action of the game removes one), and a corrupted item takes no further action but those the abstraction lists for it. If a key's permanent mods leave no assignment of the target's necessary leaves to free slots (a fractured mod that gives no leaf takes a slot of a side the target fills; a fractured mod below the leaf's tier takes the leaf's group), then **no plan from it reaches the goal without the restart**, and its value is **exactly `c_r + V(start)`**: any plan from it restarts at some time, at cost at least `c_r`, and then costs at least `V(start)`; restarting at once costs exactly that. Nothing is cut (OR-12): the key keeps its exact value, it is only not worked out. The build values such a key by its restart row alone and offers none of its other rows; a kernel's mass onto ruined keys goes to one state.
 
-**Its size, counted.** R04: every key with a fractured mod that gives no leaf (66,572, 66% of the keys) is worth exactly `V0 + c_r` in the complete model; the keys from which no goal is reachable without the restart in the model's own graph are 82,986 (82%). With those 82,986 keys certified by the lemma, the smallest certificate on R04 is {R04_RUIN}. R24: **0 ruined keys** (its start's fractured mod is wanted, and no offer fractures), so A does nothing there. R13: {R13_RUIN}.
+**Its size, counted.** R04: every key with a fractured mod that gives no leaf (66,572, 66% of the keys) is worth exactly `V0 + c_r` in the complete model; the keys from which no goal is reachable without the restart in the model's own graph are 82,986 (82%). With those 82,986 keys given their value by the restart row alone, the smallest certificate on R04 is {R04_RUIN}. The lemma's own test (a fractured mod that gives no leaf) finds 66,572 of them; the other 16,414 are dead in the model's graph for other reasons (a fractured mod of a wrong tier, a full side), and whether the lemma's test reaches them is not counted. A certificate with fewer keys valued free can only be larger, so with the lemma's 66,572 the figure is at least the one above. R24: **0 ruined keys** (its start's fractured mod is wanted, and no offer fractures), so A does nothing there. R13: **0 ruined keys** (no offer of its dump fractures), so A does nothing there.
 
 **What it costs.** A test per key found, of the fractured mods against the target's leaves and sides: no row, no kernel, no member. It is cheaper than one offer at one member.
 
@@ -118,7 +118,7 @@ What the counts do say about offers: at a failure key every row is within 1% of 
 
 The count of section 2 says what is missing on R24: a way to know that a key is no better than the start without working it out. An exact lemma of that kind is a **dominance between keys**: `V(k) >= V(j)` for a key `j` already worked out (the start, or any key whose value the proof holds), proved from the two keys alone. Then the tip `k` takes one row to `j` at no cost, which is sound by the same argument as a lead (the model with that row is under the true one). With the truth as the dominance (`FREE=oracle`) it gives 87 to 94 keys on R24. **No such lemma is known**, and the obvious ones are false: "more junk is no better" fails (a full side steers a slam), "a key with fewer wanted leaves passing is no better" fails (R24's 1,536-key merged states hold keys whose statuses differ at two leaves and have equal values, and swapping those leaves is not exact). A simulation computed on the model would prove it, but it needs the rows of the keys it compares, which is the work it would save.
 
-So B is not proposed for building. It is the open question this note leaves: **a structural dominance of keys that holds on the failures of R24.** Filed as {ISSUE_B}.
+So B is not proposed for building. It is the open question this note leaves: **a structural dominance of keys that holds on the failures of R24.** Filed as #1363 (research, no planner code).
 
 ### Not proposed, and why each is not one of the three counted lines
 
@@ -128,16 +128,40 @@ So B is not proposed for building. It is the open question this note leaves: **a
 
 ## 6. Question 5: what stays impossible
 
-{IMPOSSIBLE}
+**Impossible under today's bound: a proof of hundreds of keys.** On R24 every exact 1% proof with tips at the floor works out at least 38,368 keys (63% of the complete model), at 10% still 33,590; on R13 at least 1,078 of the 1,135 states of its exact merge{R04_IMP}. No order, lead from below or above, or rule can go under these, since they are counts over every certificate.
 
-## 7. Recommendation
+**Not shown impossible: a proof within the server's memory.** The complete bounds measured fit: R04's model 6 of 625,773 keys holds 7.6 GB (#1341), R13's 78,654-key bound about 3 to 5 GB (#1332). What stops them today is time (R04's model 6, #1358; R24's growth, #1329; the one core of #1340), not memory. R14 and R17 have no complete bound or dump, so nothing about them is counted here; for them neither "possible" nor "impossible" is shown.
+
+
+## 7. What this means for the work (for the dispatcher and the owner)
+
+**(a) Is the complete build, made cheap and parallel, the only known road to a 1% proof today? Yes.** Section 2 bounds every order, lead and rule at once: under today's tip value any 1% proof on R24 works out at least 38,368 of its 60,895 keys, on R13 at least 1,078 of the 1,135 states of its exact merge (so nearly all of it), {R04_FLOOR_SHORT}. A lead must be worth 98% of the truth at every key before the proof falls to hundreds, and none counted is near (#1310, #1315, #1321, #1322). Proposal A shrinks R04 only. So a proof today means building nearly the whole bound, and the line of #1335 to #1358 (memory, shared kernels, the fossil outcomes, the cores of #1340) is the critical path, not a detour. Its cost, from the measurements of #1325, #1329, #1341, #1352 and #1358 (none rebuilt here):
+
+| Route | Offers of the default methods | The bound as far as it was built | Offers at a key | Time measured (server, load 2 to 7) | Proof within 1% |
+|---|---|---|---|---|---|
+| R04 | about 6,100 (1,245 join round 1's bound) | round 1, model 6: **625,773 keys, 1,439,271 kernels**, 7.6 GB (#1341) | about 73 at most keys; 1,245 at 36 keys (#1358) | models 1 to 5 about 80 minutes (#1341); model 6 measured at about 35 s for each of its 36 slow keys, about 20 minutes once #1358 shares their outcomes (a prediction of #1358's count) | not reached: no plan yet; the rounds after round 1 are not measured |
+| R24 | 4,105 (2,831 join) | model 52 after #1325: 21,483 keys and still growing past 50 minutes; 7 offers built at 21,444 keys in one round, about 9 ms a key and offer (#1329) | 21 in the start's class at most keys; 2,831 at the 39 keys that need them (#1325) | stopped by hand at 50 minutes, bound not ended | not reached: no plan |
+| R13 | 172 to 190 in its later rounds' bounds (#1332, #1338) | first complete bound: **78,654 keys, 156,935 kernels, 72 offers**, 1,167 s (this note's dump); later: the 190-offer bound of 44,637 keys and the 172-offer bound of 78,654 keys (#1332, #1338) | 72, then up to 190 | first bound 14 to 22 minutes; runs of 120 and 189 minutes spent 46 to 61% of their time in the bound's build and 31 to 37% in the search (#1340) | a plan of 28,206.73 c; a proof within 1% over every offer not shown |
+
+In keys times offers: R04 is about 46 million key-offer pairs if every key of model 6 holds the 73 offers that model 6's pass gives (a prediction from #1358's count, not a measurement), R13's first bound 5.7 million (78,654 keys by 72 offers), R24 not known because its bound has not ended. These are what a complete proof costs on today's bound; the counts of section 2 say no proof of the same bound can cost less than about two thirds of them.
+
+**(b) What Proposal A saves.** On R04: {R04_RUIN_SHORT} On R24 and R13 it does nothing: neither dump has a ruined key (R24's fractured mod is wanted, R13's offers fracture nothing).
+
+**(c) What a new bound would need for hundreds of keys to be enough.** One of two things, each counted on R24: a value at every key not worked out that is at least 98% of its true value (328 keys at 98%, 4,428 at 95%, 8,695 at 90%), or a proof, from the key alone, that it is no better than the start or than the item after an erasing reroll (87 to 94 keys on R24, 328 to 380 on R13, 6,072 to 6,488 on R04). What counted suggests such a bound may exist: the exact merge of R24's 60,904 keys has only 940 states and 28 distinct values, R13's 78,654 keys 1,135 states and 24 values, and 98.8% of R13's keys sit at one value (the reset); a rule that names those states before the build would also make the complete build itself 940 and 1,135 states. What counts against: the obvious rules are false (leaves 3 and 4 swapped is not exact, more junk is not always worse), and on R04 the merge keeps 51,174 states. So it is suggested, not shown; #1363 looks for it.
+
+## 8. Recommendation
 
 {RECOMMEND}
 
-## 8. The tools
+## 9. The tools
 
-`research/proof-size/`: `kd2.py` (kd.py of #1310 with the lead optional and the first complete bound of at least `MINKEYS` keys dumped), `dump.sh`, `export.py` (a dump into arrays and the complete values by the planner's solver; its start value equals the dump's to the last digit on R24 and R04), `cert.py` (the certificate's program; `FREE=oracle|ruin`; `alpha:` leads; `REWEIGHT`), `sweep.sh`, `bisim.py`, `quot.py` (the merged model, its values equal to the dump's: largest spread 0.0), `blocks.py`, `sdiff.py`, `swap.py`, `q1.py`, `q2.py`, `anaF.py`, `r13.sh`, and the outputs (`*.txt`). The dumps and per-run logs stay on the server under `.claude/scratch/t1360/` and `.claude/scratch/t1310/`.
+`research/proof-size/`: `kd2.py` (kd.py of #1310 with the lead optional and the first complete bound of at least `MINKEYS` keys dumped), `dump.sh`, `export.py` (a dump into arrays and the complete values by the planner's solver; its start value equals the dump's to the last digit on R24 and R04), `cert.py` (the certificate's program; `FREE=oracle|ruin`; `alpha:` leads; `REWEIGHT`), `sweep.sh`, `bisim.py`, `quot.py` (the merged model, its values equal to the dump's: largest spread 0.0), `blocks.py`, `sdiff.py`, `swap.py`, `q1.py`, `q2.py`, `anaF.py`, `r13.sh`, and the outputs (`out/*.log`). The dumps and per-run logs stay on the server under `.claude/scratch/t1360/` and `.claude/scratch/t1310/`.
 
 ## Not done, not verified
 
-{NOTDONE}
+- R14, R17 and R20: no complete dump, no count (R20's dump stops, #1310; R14's was never made). R04's 1,245 offers and R14's 10,907 are not counted (section 4): their dumps would need the complete 1,245-offer build.
+- The exact dominance between offers of section 4 is stated, not counted.
+- The certificates "found" are the supports of the program's solutions, certificates up to the solver's tolerance (1e-7 of a key's span); none was solved again exactly on its keys.
+- Proposal A's lemma test (66,572 keys on R04) is narrower than the graph count used for its certificate (82,986); its certificate with the lemma's keys alone is not counted. Its size on R04's complete 625,773-key model is a prediction.
+- The cost of a complete proof in section 7 is read from earlier handoffs, not measured again; R04's 46 million key-offer pairs is a prediction.
+- R13's dump has approximate kernels (error 3.2e-7, the missing mass to the sink), as the run's own bound has.{R04_ND}
