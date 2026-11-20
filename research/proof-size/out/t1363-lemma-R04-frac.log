@@ -1,0 +1,9 @@
+R04 frac: keys 100773 F 87942 (87.3%)  rows at F 725178, raiser rows at F 150684
+  (1) mechanics check: undeclared rows at F keys that leave F: 0 []
+  raiser (offer, kernel) pairs at F: 47 {'Deafening Essence of Rage': 23, 'Essence of Insanity': 23, 'restart': 1}; B = 22132.296049 (V0 23534.092203); argmin offer Deafening Essence of Rage
+  (2) value check: keys of F with V < B: 0; at B (rel 1e-9): 1068; V-B over F: max 1404.9962
+  keys with V >= V0 (oracle's free set) 93566, of them in F 84928
+  bisim blocks split by F: 0 of 51173; blocks wholly in F 43348
+  contexts 56; raiser (context, offer, kernel) triples 102; moves 56: [(np.int64(0), 25, 0.3463), (np.int64(1), 26, 0.3463), (np.int64(2), 27, 0.3463), (np.int64(3), 28, 0.3463), (np.int64(4), 29, 0.3463), (np.int64(5), 30, 0.3463), (np.int64(6), 31, 0.3463), (np.int64(7), 32, 0.3463), (np.int64(8), 33, 0.3463), (np.int64(9), 34, 0.3463), (np.int64(10), 38, 0.3463), (np.int64(11), 39, 0.3463)]
+  (3) per-context value check: keys of F with V < B_ctx: 0; B per context [23537.2922, 23537.2922, 23537.2922, 23537.2922, 23537.2922, 23537.2922, 23537.2922, 23537.2922]
+  contexts with no raiser row: 0

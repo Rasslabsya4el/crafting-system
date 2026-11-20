@@ -1,0 +1,6 @@
+free keys (free-R04-frac.npz): 87942
+lemma spec free-R04-frac.npz: contexts 56, free keys with a span 87942, raiser triples 102, moves 56
+iter 0: LP 11469.28 support 12306 (choice nodes in support 0) 644s
+iter 1: LP 286332768.40 support 12257 (choice nodes in support 0) 1347s
+RESULT e-R04.npz gap 0.01 lead floor free free-R04-frac.npz 87942 keys 100773 nongoal 100771 worth-work 100771 LOWER 11469.28 UPPER(last support) 12257 min-support 12257
+exit 0

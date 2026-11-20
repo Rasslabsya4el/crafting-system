@@ -1,0 +1,5 @@
+free keys (free-R04-essence.npz): 98818
+lemma spec free-R04-essence.npz: contexts 59, free keys with a span 98818, raiser triples 50, moves 146
+iter 0: LP 1597.21 support 1828 (choice nodes in support 0) 6s
+iter 1: LP 41204259.33 support 1823 (choice nodes in support 0) 12s
+RESULT e-R04.npz gap 0.1 lead floor free free-R04-essence.npz 98818 keys 100773 nongoal 100771 worth-work 100771 LOWER 1597.21 UPPER(last support) 1823 min-support 1823

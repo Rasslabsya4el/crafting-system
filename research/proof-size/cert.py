@@ -44,7 +44,7 @@ span = np.maximum(V - h, 0.0)
 var = ng & (span > 1e-12)  # a key whose V equals h needs no work: u = 0
 idx = -np.ones(n, dtype=np.int64); idx[var] = np.arange(var.sum()); nv = int(var.sum())
 # variables: u (nv), y (m)
-FREE = os.environ.get("FREE")  # keys whose value a lemma gives without working them out: their rows go, one row to the start takes their place
+FREE = os.environ.get("FREE")  # oracle | ruin | mode | a lemma spec .npz (t1363); keys whose value a lemma gives without working them out: their rows go, one row to the start takes their place
 free = np.zeros(n, bool); free_cost = 0.0
 if FREE == "oracle":  # every key no cheaper than the start (V >= V0): the most a 'no better than the start' lemma could give; reads the truth
     free = (V >= V[0] - 1e-9 * V[0]) & ~goal
@@ -73,6 +73,9 @@ if FREE == "mode":  # keys no cheaper than the most common value (the value of a
     anchor = int(np.flatnonzero((np.abs(V - vm) < 1e-6) & ~goal)[0])
     free = (V >= V[anchor] - 1e-9 * V[anchor]) & ~goal
     print(f"anchor key {anchor} value {V[anchor]} (keys at that value {cnt.max()})", flush=True)
+spec = None
+if FREE and FREE.endswith(".npz"):  # a lemma's spec (t1363 lemma.py): keys F valued by one shared variable z <= every raiser row (c_a + K_a W)
+    spec = np.load(FREE); free = spec["free"] & ~goal
 free[0] = False; free[anchor] = False
 print(f"free keys ({FREE}): {int(free.sum())}", flush=True)
 var = var & ~free | (free & var)
@@ -81,18 +84,44 @@ keep = var[rk] & ~free[rk]  # a row of a key with u fixed 0 holds: 0 - y <= b ne
 A1 = sp.csr_matrix((np.r_[np.ones(keep.sum()), -np.ones(keep.sum())], (np.r_[np.arange(keep.sum()), np.arange(keep.sum())], np.r_[idx[rk[keep]], nv + rj[keep]])), shape=(keep.sum(), nv + m))
 Kv = K[:, np.flatnonzero(var)]
 A2 = sp.hstack([-Kv, sp.identity(m)]).tocsr()
-fv = np.flatnonzero(free & var)
+fv = np.flatnonzero(free & var) if spec is None else np.zeros(0, dtype=np.int64)
 A3 = sp.csr_matrix((np.r_[np.ones(len(fv)), -np.ones(len(fv))], (np.r_[np.arange(len(fv)), np.arange(len(fv))], np.r_[idx[fv], np.full(len(fv), idx[anchor])])), shape=(len(fv), nv + m))
 A = sp.vstack([A1, A2, A3]).tocsr()
 b = np.r_[b_row[keep], np.zeros(m), free_cost + h[anchor] - h[fv]]
 need = (1 - GAP) * V[0] - h[0]
 lo = np.zeros(nv + m); hi = np.r_[span[var], np.full(m, np.inf)]
+if spec is not None and os.environ.get("ONEZ"):  # v1: one variable z (last): h_k + u_k - z <= 0 at free keys; z - y_j <= c_a + K_j h for every raiser pair
+    fk = np.flatnonzero(free & var); po, pj = spec["offers"], spec["kernels"]; nf, npair = len(fk), len(po)
+    A = sp.hstack([A, sp.csr_matrix((A.shape[0], 1))]).tocsr()
+    A4 = sp.csr_matrix((np.r_[np.ones(nf), -np.ones(nf)], (np.r_[np.arange(nf), np.arange(nf)], np.r_[idx[fk], np.full(nf, nv + m)])), shape=(nf, nv + m + 1))
+    A5 = sp.csr_matrix((np.r_[np.ones(npair), -np.ones(npair)], (np.r_[np.arange(npair), np.arange(npair)], np.r_[np.full(npair, nv + m), nv + pj])), shape=(npair, nv + m + 1))
+    A = sp.vstack([A, A4, A5]).tocsr()
+    b = np.r_[b, -h[fk], costs[po] + Kh[pj]]
+    lo = np.r_[lo, -np.inf]; hi = np.r_[hi, np.inf]; nz = 1
+    print(f"lemma spec {FREE} (one z): free keys with a span {nf}, raiser pairs {npair}, B {float(spec['B']):.6f}", flush=True)
+elif spec is not None:  # v2: one variable z_X per context X (after u and y): W(k) <= z_ctx(k); z_X <= c_a + K_a W (raisers of X); z_X <= c_b + z_Y (moves)
+    nz = int(spec["nctx"]); Z = nv + m; ctx = spec["ctx"]
+    fk = np.flatnonzero(free & var); nf = len(fk)
+    pc, po, pj = spec["p_ctx"], spec["p_off"], spec["p_ker"]; npair = len(po)
+    mf, mt, mc = spec["m_from"], spec["m_to"], spec["m_cost"]; nm = len(mf)
+    A = sp.hstack([A, sp.csr_matrix((A.shape[0], nz))]).tocsr(); N = nv + m + nz
+    A4 = sp.csr_matrix((np.r_[np.ones(nf), -np.ones(nf)], (np.r_[np.arange(nf), np.arange(nf)], np.r_[idx[fk], Z + ctx[fk]])), shape=(nf, N))
+    A5 = sp.csr_matrix((np.r_[np.ones(npair), -np.ones(npair)], (np.r_[np.arange(npair), np.arange(npair)], np.r_[Z + pc, nv + pj])), shape=(npair, N))
+    A6 = sp.csr_matrix((np.r_[np.ones(nm), -np.ones(nm)], (np.r_[np.arange(nm), np.arange(nm)], np.r_[Z + mf, Z + mt])), shape=(nm, N))
+    A = sp.vstack([A, A4, A5, A6]).tocsr()
+    b = np.r_[b, -h[fk], costs[po] + Kh[pj], mc]
+    lo = np.r_[lo, np.full(nz, -np.inf)]; hi = np.r_[hi, np.full(nz, np.inf)]
+    print(f"lemma spec {FREE}: contexts {nz}, free keys with a span {nf}, raiser triples {npair}, moves {nm}", flush=True)
+else:
+    nz = 0
 lo[idx[0]] = need
 w = np.where(choice[var] | free[var], 0.0, 1.0 / span[var])
 REW = int(os.environ.get("REWEIGHT", "3"))
 t0 = time.time(); res = []
 for it in range(REW + 1):
-    c = np.r_[w, np.zeros(m)]
+    c = np.r_[w, np.zeros(m + nz)]
+    if os.environ.get("MAXSTART"):  # t1363: the lower model's own value at the start (the largest W(start) the rows allow), no 1% demand
+        c = np.zeros(nv + m + nz); c[idx[0]] = -1.0; lo[idx[0]] = 0.0
     r = linprog(c, A_ub=A, b_ub=b, bounds=np.c_[lo, hi], method=os.environ.get("METHOD", "highs"))
     assert r.status == 0, r.message
     u = r.x[:nv]; frac = u / span[var]
