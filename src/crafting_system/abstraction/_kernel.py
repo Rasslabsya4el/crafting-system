@@ -888,7 +888,9 @@ class Abstraction:
            that holds no metamod (`_reads_crafted`, #1358): at an item with no lock (the case of `_erases`) the action keeps of the item the
            fractured mods alone (`metamods.kept_by_reroll`; the contract suite checks no result keeps a crafted mod it was given), its
            refusals and its pool read of the crafted mods their metamods (a blocking metamod, an Attack or Caster metamod), which the view
-           keeps, and the item given without the others is the same item but for mods it erases unread. An imprint move and a kernel
+           keeps, and the item given without the others is the same item but for mods it erases unread. That the refusals and the pool read
+           no other crafted mod is read off each such action (no declaration says it; `test_abstraction_crafted_view.py` checks it by brute
+           force): a new erasing action that reads one must declare `keeps_crafted` True. An imprint move and a kernel
            averaged over inputs do read the whole state, and their key is the kernel itself.
         2. Everything `_mixture_kernel` reads of a pair is in the key. Per part it calls one of `_add_fixed` (the split), `_add_drawn` (the
            split and the distribution of the signature), `_add_rerolled` (the split, the rerolled slots, `("rerolled", lucky)`) and
