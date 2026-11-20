@@ -209,10 +209,31 @@ class HangingProblem(ExplicitProblem):
         return super().kernel(state, position)
 
 
+def _planted_while_waiting(monkeypatch, read) -> None:
+    """Plant `read` (a reading of the run's state) to answer while this process waits on its workers (`WorkerPool._wait` on the stack) only."""
+    waiting = []
+    wait = parallel.WorkerPool._wait
+
+    def watched(self, *args, **kwargs):
+        waiting.append(1)
+        try:
+            return wait(self, *args, **kwargs)
+        finally:
+            waiting.pop()
+
+    monkeypatch.setattr(parallel.WorkerPool, "_wait", watched)
+    read(waiting)
+
+
 def test_a_search_waiting_on_its_workers_asks_its_own_net_and_goes_on_alone_once_it_is_reached(monkeypatch):
-    # the net a kernel's making asks (`Search._kernel_ask`) is planted as reached: each pool's wait is stopped by it, and its workers with it;
-    # this process makes the kernels itself, as one process does (the explicit kernels never ask it), and the search ends the same
-    monkeypatch.setattr(Search, "_kernel_ask", lambda self: lambda: "the test's net was reached")
+    # the search's net (`Search._net`) is planted as reached while this process waits on workers whose kernels never come back: each pool's
+    # wait is stopped by it, and its workers with it; this process makes the kernels itself, as one process does, and the search ends the same
+    def read(waiting):
+        net = Search._net
+        monkeypatch.setattr(Search, "_kernel_ask", lambda self: lambda: None)  # a search on a net: its pools ask it
+        monkeypatch.setattr(Search, "_net", lambda self, *args, **kwargs: "the test's net was reached" if waiting else net(self, *args, **kwargs))
+
+    _planted_while_waiting(monkeypatch, read)
     graph = random_graph(3, 120)
     value, _ = dense_optimum(graph)
     runs = []
@@ -240,3 +261,17 @@ def test_a_wait_on_workers_ends_at_the_callers_reason_and_kills_them():
     with pytest.raises(parallel.Stopped, match="reached"):
         pool.gather(futures, stop=stop)
     assert len(asked) == 2 and pool._executor is None  # asked at each watch, and the workers killed at the reason
+
+
+def test_workers_that_pass_the_memory_net_while_this_process_waits_are_stopped_and_no_pool_forks_again(monkeypatch):
+    # the memory read is planted past the net only while this process waits on hanging workers
+    _planted_while_waiting(monkeypatch, lambda waiting: monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 10_000.0 if waiting else 1.0))
+    graph = random_graph(3, 120)
+    value, _ = dense_optimum(graph)
+    runs = []
+    for options in ({"workers": 1}, {"workers": 3, "ahead_always": True}):
+        search = Search(HangingProblem(graph, value, 0.3), net=Net(memory_mb=8000.0), **options)
+        runs.append((search, search.run()))
+    (_, alone), (pooled, ahead) = runs
+    _same(alone, ahead)
+    assert pooled.ahead.stopped is not None and pooled.ahead.pooled == 1

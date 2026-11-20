@@ -748,8 +748,8 @@ class Search[S]:
 
     def _kernel_ask(self) -> Callable[[], str | None] | None:
         """The question the making of a kernel asks (`_netted_kernel`), or None in a search with no time or memory net: the reason its net is
-        reached, the time limit being the larger of the round's and the first plan's chain's (`Net.first`). A round's pool asks the same while
-        this process waits on its workers (`_ahead.Round`), so that a pooled round stops where one process stops."""
+        reached, the time limit being the larger of the round's and the first plan's chain's (`Net.first`). The first plan's chain's pool asks
+        the same while this process waits on its workers (`_ahead.Round`); a round's pool asks what the round asks between two tips."""
         net = self.net
         if self.began is None or (net.seconds is None and net.memory_mb is None):
             return None
@@ -1482,7 +1482,9 @@ class Search[S]:
             tips = fake.tolist()
             self.ahead.making = 0.0
             count = 0 if self.counted else self.ahead.workers_for(len(tips))
-            pool = self._round = Round(self, tips, self.ahead, count, ask=self._kernel_ask(), memory_mb=self.net.memory_mb) if count else None
+            # the wait on a window asks what this process asks between two tips (the round's own limit, not the first plan's chain's)
+            ask = None if self._kernel_ask() is None else lambda: self._net(began, states=False)
+            pool = self._round = Round(self, tips, self.ahead, count, ask=ask, memory_mb=self.net.memory_mb) if count else None
             if pool is None:
                 self.ahead.processes = 1
             walked = 0
