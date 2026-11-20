@@ -1,0 +1,2 @@
+iter 0: LP 33590.21 support 38184 (choice nodes in support 0) 194s
+RESULT e-R24.npz gap 0.1 lead floor keys 60904 nongoal 60895 worth-work 60868 LOWER 33590.21 UPPER(last support) 38184 min-support 38184

@@ -1,0 +1,4 @@
+free keys (None): 0
+iter 0: LP 1078.22 support 1105 (choice nodes in support 0) 1s
+iter 1: LP 30902038.74 support 1105 (choice nodes in support 0) 2s
+RESULT e-R13q.npz gap 0.01 lead floor free None 0 keys 1135 nongoal 1134 worth-work 1134 LOWER 1078.22 UPPER(last support) 1105 min-support 1105

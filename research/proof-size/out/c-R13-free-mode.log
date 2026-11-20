@@ -1,0 +1,5 @@
+anchor key 208 value 28163.951832750783 (keys at that value 77514)
+free keys (mode): 77719
+iter 0: LP 327.70 support 382 (choice nodes in support 0) 1s
+iter 1: LP 7127181.13 support 380 (choice nodes in support 0) 2s
+RESULT e-R13.npz gap 0.01 lead floor free mode 77719 keys 78654 nongoal 78651 worth-work 78651 LOWER 327.70 UPPER(last support) 380 min-support 380

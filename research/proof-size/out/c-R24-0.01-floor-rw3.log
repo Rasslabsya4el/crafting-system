@@ -1,0 +1,7 @@
+iter 0: LP 38368.47 support 39496 (choice nodes in support 0) 102s
+iter 1: LP 142407369.70 support 39363 (choice nodes in support 0) 252s
+iter 2: LP 142240593.23 support 39345 (choice nodes in support 0) 478s
+iter 3: LP 142209169.92 support 39343 (choice nodes in support 0) 722s
+RESULT e-R24.npz gap 0.01 lead floor keys 60904 nongoal 60895 worth-work 60868 LOWER 38368.47 UPPER(last support) 39343 min-support 39343
+
+[exited with code 0]

@@ -1,0 +1,9 @@
+iter 0: blocks 22
+iter 1: blocks 139
+iter 2: blocks 265
+iter 3: blocks 449
+iter 4: blocks 743
+iter 5: blocks 910
+iter 6: blocks 940
+iter 7: blocks 940
+RESULT e-R24.npz keys 60904 goals 9 bisimulation blocks 940 distinct values 28
