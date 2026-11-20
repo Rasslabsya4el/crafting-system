@@ -14,7 +14,7 @@ for a in "R24 shock" "R24 corelock" "R24 split" "R13 natural"; do
 done
 FREE=free-R13-natural.npz ONEZ=1 REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R13.npz 0.01 floor > c-R13-natural-onez.log 2>&1 || true
 for g in 0.01 0.05 0.10; do FREE=free-R04-essence.npz REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R04.npz $g floor > c-R04-essence-$g.log 2>&1 || true; done
-for g in 0.01 0.05; do FREE=free-R04-frac.npz REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R04.npz $g floor > c-R04-frac-$g.log 2>&1 || true; done
+METHOD=highs-ipm FREE=free-R04-frac.npz REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R04.npz 0.01 floor > c-R04-frac-0.01-ipm.log 2>&1 || true
 for a in "R24 split" "R13 natural" "R04 essence" "R04 frac"; do set -- $a; "$P" "$HERE/vi.py" $1 free-$1-$2.npz > vi-$1-$2.log 2>&1; done
 "$P" "$HERE/bnames.py" R24 free-R24-split.npz > bnames-R24.log 2>&1; "$P" "$HERE/bnames.py" R13 free-R13-natural.npz > bnames-R13.log 2>&1
 FREE=free-R24-split.npz REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R24.npz 0.01 floor S-R24-split.npy > c-R24-split-support.log 2>&1; "$P" "$HERE/rest.py" free-R24-split.npz S-R24-split.npy > rest-R24.log 2>&1
