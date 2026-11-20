@@ -1,0 +1,3 @@
+free keys (ruin): 82986
+iter 0: LP 16055.90 support 17203 (choice nodes in support 0) 1282s
+RESULT e-R04.npz gap 0.01 lead floor free ruin 82986 keys 100773 nongoal 100771 worth-work 100771 LOWER 16055.90 UPPER(last support) 17203 min-support 17203

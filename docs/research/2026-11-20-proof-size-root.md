@@ -10,7 +10,11 @@ Words, as in the notes before. A **key** is the exact bound's summary of an item
 
 ## Short answer
 
-{SHORT}
+- **Under today's bound, a proof within 1% needs most of the keys, whatever the build does.** A certificate of "every plan costs at least 99% of the bound's value" must work out at least **38,368 of R24's 60,895 keys (63%)**, at least 1,078 of the 1,135 states of R13's exact merge, {R04_FLOOR_SHORT}. These are lower bounds over every certificate, so no order, lead from below or above, or rule can go under them (section 2). **The root is the bound's form**: a key not worked out is valued at the cheapest price (the floor), and nearly every key is a draw that went wrong, worth the start's value plus a little (99.7% of R24's keys, 92.9% of R04's, 98.8% of R13's at the reset); the proof must work each one out to show it is no better.
+- **How strong a lead must be.** With every key not worked out valued at a share of its true value, R24's smallest proof is 28,762 keys at 50%, 15,768 at 80%, **8,695 at 90%, 4,428 at 95%, 328 at 98%** (lower bounds; certificates found 30,491, 18,713, 9,851, 5,810, 712). Only a lead worth about 98% of the truth at every key brings the proof to hundreds. The leads counted so far are worth 1.5% to 86% (#1310 to #1322).
+- **What one fact would do.** If the bound knew, without working a key out, that it is no better than the start (or than the item after an erasing reroll), the proof would be 87 to 94 keys on R24, 328 to 380 on R13, 6,072 to 6,488 on R04. No exact lemma for that is known (#1363).
+- **Proposal A (exact):** on R04, the keys that cannot reach the goal without the restart (82,986 of 100,771) given their exact value without working out: the smallest proof falls to **16,056 to 17,203 keys** {R04_A_VS}. On R24 and R13 it does nothing (no such key). Filed as {ISSUE_A}.
+- **So today the only known road to a 1% proof is the complete build made cheap and parallel** (#1335 to #1358, #1340), with Proposal A on R04 beside it (section 7).
 
 ## 1. What was counted: the smallest certificate, whatever the build does
 
@@ -81,7 +85,7 @@ So **the keys do not come from junk beside the plan's items.** The ticket's gues
 | Route | Keys | Merged states (bisimulation) | Distinct values | Certificate on the merged model (floor, 1%) | What differs inside a merged state |
 |---|---|---|---|---|---|
 | R24 | 60,904 | **940** | 28 | at least 774, found 838 | the status in 603 of 780 merged states (leaves 3 and 4 between below and passing, leaves 5 and 6), the held offer in 285, the veiled slots in 267, junk counts and tags in 151 |
-| R04 | 100,773 | 51,174 | 389 | {R04_Q} | the status in 31,252 of 31,256 (leaves 3 and 4, below and passing, in 18,536), the fractured mod in 4,306, tags in 409 |
+| R04 | 100,773 | 51,174 | 389 | at least 46,518, found 49,624 | the status in 31,252 of 31,256 (leaves 3 and 4, below and passing, in 18,536), the fractured mod in 4,306, tags in 409 |
 | R13 | 78,654 | **1,135** | 24 | at least 1,078, found 1,105 | not counted |
 
 On R24 the exact model has 65 times more keys than it needs; on R04, 2 times. **Which lemma would give R24's 940 is not found.** One candidate, that leaves 3 and 4 (and 5 and 6) are interchangeable, is counted and is **not** exact: under that swap 137 of R24's classes and 329 of R04's hold keys of different values (`swap.py`).
@@ -108,7 +112,7 @@ What the counts do say about offers: at a failure key every row is within 1% of 
 
 **The lemma.** A fractured mod is never removed (no action of the game removes one), and a corrupted item takes no further action but those the abstraction lists for it. If a key's permanent mods leave no assignment of the target's necessary leaves to free slots (a fractured mod that gives no leaf takes a slot of a side the target fills; a fractured mod below the leaf's tier takes the leaf's group), then **no plan from it reaches the goal without the restart**, and its value is **exactly `c_r + V(start)`**: any plan from it restarts at some time, at cost at least `c_r`, and then costs at least `V(start)`; restarting at once costs exactly that. Nothing is cut (OR-12): the key keeps its exact value, it is only not worked out. The build values such a key by its restart row alone and offers none of its other rows; a kernel's mass onto ruined keys goes to one state.
 
-**Its size, counted.** R04: every key with a fractured mod that gives no leaf (66,572, 66% of the keys) is worth exactly `V0 + c_r` in the complete model; the keys from which no goal is reachable without the restart in the model's own graph are 82,986 (82%). With those 82,986 keys given their value by the restart row alone, the smallest certificate on R04 is {R04_RUIN}. The lemma's own test (a fractured mod that gives no leaf) finds 66,572 of them; the other 16,414 are dead in the model's graph for other reasons (a fractured mod of a wrong tier, a full side), and whether the lemma's test reaches them is not counted. A certificate with fewer keys valued free can only be larger, so with the lemma's 66,572 the figure is at least the one above. R24: **0 ruined keys** (its start's fractured mod is wanted, and no offer fractures), so A does nothing there. R13: **0 ruined keys** (no offer of its dump fractures), so A does nothing there.
+**Its size, counted.** R04: every key with a fractured mod that gives no leaf (66,572, 66% of the keys) is worth exactly `V0 + c_r` in the complete model; the keys from which no goal is reachable without the restart in the model's own graph are 82,986 (82%). With those 82,986 keys given their value by the restart row alone, the smallest certificate on R04 is **at least 16,056 keys, found 17,203** (`out/i-R04-ruin.log`, HiGHS interior point, 1,282 s){R04_RUIN_CMP}. The lemma's own test (a fractured mod that gives no leaf) finds 66,572 of them; the other 16,414 are dead in the model's graph for other reasons (a fractured mod of a wrong tier, a full side), and whether the lemma's test reaches them is not counted. A certificate with fewer keys valued free can only be larger, so with the lemma's 66,572 the figure is at least the one above. R24: **0 ruined keys** (its start's fractured mod is wanted, and no offer fractures), so A does nothing there. R13: **0 ruined keys** (no offer of its dump fractures), so A does nothing there.
 
 **What it costs.** A test per key found, of the fractured mods against the target's leaves and sides: no row, no kernel, no member. It is cheaper than one offer at one member.
 
@@ -145,13 +149,16 @@ So B is not proposed for building. It is the open question this note leaves: **a
 
 In keys times offers: R04 is about 46 million key-offer pairs if every key of model 6 holds the 73 offers that model 6's pass gives (a prediction from #1358's count, not a measurement), R13's first bound 5.7 million (78,654 keys by 72 offers), R24 not known because its bound has not ended. These are what a complete proof costs on today's bound; the counts of section 2 say no proof of the same bound can cost less than about two thirds of them.
 
-**(b) What Proposal A saves.** On R04: {R04_RUIN_SHORT} On R24 and R13 it does nothing: neither dump has a ruined key (R24's fractured mod is wanted, R13's offers fracture nothing).
+**(b) What Proposal A saves.** On R04: the smallest certificate falls to at least 16,056 keys (one found of 17,203){R04_A_VS}, because 82,986 of its 100,771 keys need no working out. In the complete 1,245-offer model of round 1 (625,773 keys) the share of ruined keys is not counted; if it is near the 82% of the 21-offer dump (a prediction), model 6 would shrink about five times. On R24 and R13 it does nothing: neither dump has a ruined key (R24's fractured mod is wanted, R13's offers fracture nothing).
 
 **(c) What a new bound would need for hundreds of keys to be enough.** One of two things, each counted on R24: a value at every key not worked out that is at least 98% of its true value (328 keys at 98%, 4,428 at 95%, 8,695 at 90%), or a proof, from the key alone, that it is no better than the start or than the item after an erasing reroll (87 to 94 keys on R24, 328 to 380 on R13, 6,072 to 6,488 on R04). What counted suggests such a bound may exist: the exact merge of R24's 60,904 keys has only 940 states and 28 distinct values, R13's 78,654 keys 1,135 states and 24 values, and 98.8% of R13's keys sit at one value (the reset); a rule that names those states before the build would also make the complete build itself 940 and 1,135 states. What counts against: the obvious rules are false (leaves 3 and 4 swapped is not exact, more junk is not always worse), and on R04 the merge keeps 51,174 states. So it is suggested, not shown; #1363 looks for it.
 
 ## 8. Recommendation
 
-{RECOMMEND}
+1. **Keep the complete build cheap and parallel as the critical path** (#1340 the cores, #1358 R04's model 6, #1329 R24's growth). It is the only known road to a 1% proof on R24 and R13, and section 2 shows no build order or lead of today's bound avoids it.
+2. **Build Proposal A first, on R04**: {ISSUE_A}. It is exact (OR-12), cheap (a test of fractured mods against the target, no row), and cuts R04's smallest proof to 16,056 to 17,203 keys{R04_A_VS}. It does nothing on R24 and R13, and its PR must show they are unchanged.
+3. **Research the missing lemma** (#1363): a structural "no better than the start" between keys. It is the only counted way to proofs of hundreds of keys (87 to 94 on R24); nothing counted says it exists, but the exact merges (940 states on R24, 1,135 on R13, two dozen values each) suggest the structure is there.
+4. Not recommended: any further lead or order of the build (#1310, #1315, #1321, #1322 lines). Section 2 bounds them all.
 
 ## 9. The tools
 
