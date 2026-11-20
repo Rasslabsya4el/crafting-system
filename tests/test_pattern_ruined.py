@@ -9,8 +9,9 @@ state whose row is the restart alone (`PatternModel.ruined`). On the hand-worked
   fractured junk suffix does not where the suffixes have room; a fractured attack speed below the leaf's tier takes the leaf's family and ruins
   the key, unless the target accepts another leaf in its place; the test is off without a restart and with an offer that may take a fractured
   mod off;
-* the model with the ruined state and the model without it (`RUIN_KEYS`) have the same value at every key, the start's included (OR-12): a
-  ruined key at the ruined state's value, and the keys the model without it reached only through ruined keys are ruined and at that value too;
+* the model on all its offers with the ruined state and without it (`RUIN_KEYS`) have the same value at every key, the start's included
+  (OR-12): a ruined key at the ruined state's value, and the keys the model without it reached only through ruined keys are ruined and at that
+  value too;
 * no member of a ruined key is made and no kernel is asked at a member of one;
 * the plan through the planner's entry (`plan_target`) is the plan without it, on a bound with fewer keys.
 
@@ -32,6 +33,7 @@ from crafting_system.abstraction._pattern import Pattern, PatternOffer, Ruin
 from crafting_system.actions import Adds, ChaosOrb, FracturingOrb
 from crafting_system.planner import PlanSettings, plan_target
 from crafting_system.planner._offers import BuyStartItem, Offer, PricedOffer
+from crafting_system.planner import _pattern_bound
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.prices.provenance import EXCHANGE, Provenance
@@ -138,7 +140,10 @@ def test_the_model_with_the_ruined_state_has_the_value_of_the_model_without_it_a
     assert len(model.keys) < len(old.model.keys) and model.stats.pairs < old.model.stats.pairs
 
 
-def test_a_ruined_key_is_never_worked_out(monkeypatch):
+@pytest.mark.parametrize("on", [True, False], ids=["ruin", "control"])
+def test_a_ruined_key_is_never_worked_out(monkeypatch, on):
+    """With the ruined state no member of a ruined key is made and no kernel asked at one; without it (the control) both are, so the spy
+    sees them. The test reads the flags, the fractured mods and the imprints of a key, which a `Pattern` with or without tags reads alike."""
     test = Ruin.of(abstraction(), offers())
     asked: list = []
     members, kernel_key = Pattern.members, KernelAbstraction.kernel_key
@@ -153,9 +158,20 @@ def test_a_ruined_key_is_never_worked_out(monkeypatch):
 
     monkeypatch.setattr(Pattern, "members", members_asked)
     monkeypatch.setattr(KernelAbstraction, "kernel_key", kernel_key_asked)
-    new, _ = bound(True)
-    assert new.model.stats.ruined_keys > 0 and asked
-    assert not [key for key in asked if test(key)]
+    made, _ = bound(on)
+    assert asked and (made.model.stats.ruined_keys > 0) == on
+    assert bool([key for key in asked if test(key)]) != on
+
+
+def test_too_many_choices_of_a_fractured_family_type_call_no_key_ruined(monkeypatch):
+    """A fractured attack speed is held as its family type here (a Fracturing Orb is offered): its family is tried for each mod the leaf
+    names (`Ruin._type_families`); with no choice allowed none is taken, and the key is not called ruined (weaker, never stronger)."""
+    ab = Abstraction(BOW_DATA, Goal((SOCKET_LEAF, SPEED_TIER_1)), BOW, LEVEL, (ChaosOrb(), FracturingOrb()))
+    state = ab.compress(bow(SOCKET, FIRE, FIRE_RES, AS_1, fractured=(AS_1,)))
+    assert state.fractured[0].mod_id.startswith("~")
+    assert Ruin.of(ab, offers()[:1])(Pattern(ab).key(state))
+    monkeypatch.setattr(_pattern, "RUIN_CHOICES", 0)
+    assert not Ruin.of(ab, offers()[:1])(Pattern(ab).key(state))
 
 
 TARGET = f"""\
@@ -176,7 +192,12 @@ start: bought
 """
 
 
-def test_the_plan_through_the_planners_entry_is_the_plan_without_the_ruined_state():
+@pytest.mark.parametrize("floors", [False, True], ids=["all-offers", "floors"])
+def test_the_plan_through_the_planners_entry_is_the_plan_without_the_ruined_state(monkeypatch, floors):
+    """`floors`: the bound built on the offers' floors' path (`_pattern_bound.MIN_OFFERS` lowered to these three offers). Here every offer is in
+    its first model; a ruined state beside offers left outside the model is met on R04's heavy run (#1367's PR)."""
+    if floors:
+        monkeypatch.setattr(_pattern_bound, "MIN_OFFERS", 2)
     data = BOW_DATA  # the fixture bow whole (its bench crafts name its mods): the third prefix the target needs is the cold damage
     start_item = bow(FIRE, SOCKET, AS_5, FIRE_RES)  # a rare bow of four mods, none fractured: a Fracturing Orb takes it
     target = dataclasses.replace(parse_target(TARGET, data, source="t.yaml"), start_item=start_item, actions=("chaos-orb", "fracturing-orb"))

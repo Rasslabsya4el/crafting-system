@@ -246,8 +246,9 @@ its imprints, `min(LB(s), c + LB(h))`, is not one: an item at its own snapshot h
 ADR-0060: `V(h, {h}) = V(h, {}) - beast`), and a gamble from `h` is worth less with `h` held than without it.
 
 **The ruined keys (#1367, research note 2026-11-20-proof-size-root, Proposal A).** A fractured mod is never removed and its values never
-change: every action keeps the fractured mods it was given (`Adds.erases_fractured` False, checked by the contract suite) unless it declares
-otherwise, and a Divine Orb rerolls no fractured mod. If a key's fractured mods leave no assignment of the target's leaves to an item (`Ruin`:
+change: every action keeps the fractured mods it was given (`Adds.erases_fractured` False: the contract suite checks that their ids stay)
+unless it declares otherwise, and no action changes their values (a Divine Orb, the one reroll of values, leaves them, `divine_orb.fractured_mods_stay`;
+an Orb of Dominance and an Awakener's Orb refuse a fractured item). If a key's fractured mods leave no assignment of the target's leaves to an item (`Ruin`:
 each fractured mod takes a slot of its side and its families, a leaf it passes is met; the other leaves of some set that meets every
 requirement, a target with alternatives included, need mods of families no fractured mod holds, in the free slots of their sides), then no
 plan from a member of the key reaches the goal without the restart, the only row that replaces the item (an opened item takes no draw of a
@@ -255,9 +256,12 @@ listing, and a result of another base is no state of the model). Its value is th
 restart at some time, at cost at least `c_r`, and from the start costs at least `V(start)`; restarting at once costs exactly that. The test
 reads the fractured mods alone, and is weaker than the game (it allows a leaf any mod the leaf accepts, wherever it spawns, at any roll), so
 a key it calls ruined is ruined; one it does not call ruined is built as before. So every such key is one state of the model, `PatternModel.
-ruined`, whose row is the restart alone and which no member, offer or kernel of a ruined key is ever made for (OR-12: no value changes, the
-work is not done). The model with the state is a lower bound by the argument of the first paragraph: the value of the model on all offers at
-a ruined key is `c_r` plus its value at the start, which is at least the restart row's backup here. The test is off when an offer may take
+ruined`, whose row is the restart alone and which no member, offer or kernel of a ruined key is ever made for (OR-12: the work is not done,
+nothing is dropped). The model with the state is a lower bound by the argument of the first paragraph: the value of the model on all offers at
+a ruined key is `c_r` plus its value at the start, which is at least the restart row's backup here. On all its offers the model has the same
+value at every key with the state as without it. A model built on part of the offers (`_pattern_bound`, the offers' floors) gave a ruined key
+the floor of the offers left out where that was lower; it now gives it its exact value, so a value there, and one that leans on it, can only
+rise, and stays a lower bound. The test is off when an offer may take
 the fractured mods off (a corrupting brick at Craft of Exile's reading) or takes an input item (a recombinator), and with no restart offered.
 
 **The Eldritch implicits (#835, ADR-0025).** The key holds the item state beyond the mods exactly (`held`), and with it the pair of a state that
@@ -391,7 +395,7 @@ SHARE_VIEWS = True  # an action that tells ordinary slots apart by what the key 
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
 RUIN_KEYS = True  # a key whose fractured mods leave the goal no room is the one ruined state, never worked out (`Ruin`, #1367); False: built as any key
-RUIN_CHOICES = 64  # the most choices of families of fractured family types a key's test tries; past them none is taken (weaker, never stronger)
+RUIN_CHOICES = 64  # (both caps only make the test weaker: past them a key is built as before) the most choices of families of fractured family types a key's test tries; past them none is taken (weaker, never stronger)
 RUIN_STEPS = 100_000  # the steps the search of one fractured set's assignment may take; past them the key is not called ruined (built as before)
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 NOTHING = "nothing"  # what `Pattern.alike_of` says of a side whose pure junk an action reads by its count and class alone

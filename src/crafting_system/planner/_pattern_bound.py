@@ -112,8 +112,10 @@ def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floo
     """The packed graph of the model: state `k` is key `k`, an action's tag is its offer number.
 
     `floor(k, key, expanded)` is the cost of the floor action of key number `k` (None for none): an action with tag `FAKE` to one more goal state, the last. A key that
-    was not expanded (a tip) has no other action. The ruined state (`PatternModel.ruined`, #1367) has none once built with its restart row: that row is
-    its value on every offer, worked out or not (`abstraction._pattern`, "The ruined keys"), so no offer's floor is below it and none joins it.
+    was not expanded (a tip) has no other action. The ruined state (`PatternModel.ruined`, #1367) has none once built with its restart row: that row's
+    backup is the value of every ruined key on all the offers, worked out or not (`abstraction._pattern`, "The ruined keys"), so no offer needs to
+    join it, and the search offers a state of it the restart alone (`_envelope_plan.CraftingProblem.candidates`): an offer's floor there may be lower,
+    but no plan through that offer is cheaper.
     """
     builder = PackedBuilder()
     built: dict[int, int] = {}
