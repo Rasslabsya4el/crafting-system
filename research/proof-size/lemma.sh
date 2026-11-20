@@ -1,4 +1,3 @@
-#!/bin/bash
 # Run with bash; REPO is the repo's main folder (env). t1363: the reroll lemma's checks, its lower model's value and its certificates.
 # The dumps (e-ROUTE.npz, their .parts.pkl and -bisim.npy, from #1360's export.py and bisim.py) and the scipy venv lpenv are #1360's,
 # under .claude/scratch/t1360; the run works in .claude/scratch/t1363 with copies of the dumps. One process at a time, one thread.
@@ -18,3 +17,6 @@ for g in 0.01 0.05 0.10; do FREE=free-R04-essence.npz REWEIGHT=1 cap "$P" "$HERE
 for g in 0.01 0.05; do FREE=free-R04-frac.npz REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R04.npz $g floor > c-R04-frac-$g.log 2>&1 || true; done
 for a in "R24 split" "R13 natural" "R04 essence" "R04 frac"; do set -- $a; "$P" "$HERE/vi.py" $1 free-$1-$2.npz > vi-$1-$2.log 2>&1; done
 "$P" "$HERE/bnames.py" R24 free-R24-split.npz > bnames-R24.log 2>&1; "$P" "$HERE/bnames.py" R13 free-R13-natural.npz > bnames-R13.log 2>&1
+FREE=free-R24-split.npz REWEIGHT=1 cap "$P" "$HERE/cert.py" e-R24.npz 0.01 floor S-R24-split.npy > /dev/null 2>&1; "$P" "$HERE/rest.py" free-R24-split.npz S-R24-split.npy > rest-R24.log 2>&1
+FREE=free-R13-natural.npz ONEZ=1 MAXSTART=1 REWEIGHT=0 cap "$P" "$HERE/cert.py" e-R13.npz 0.01 floor > c-R13-natural-onez-maxstart.log 2>&1
+FREE=free-R13-natural.npz MAXSTART=1 REWEIGHT=0 cap "$P" "$HERE/cert.py" e-R13.npz 0.01 floor > c-R13-natural-maxstart.log 2>&1

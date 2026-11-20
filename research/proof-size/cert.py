@@ -120,6 +120,8 @@ REW = int(os.environ.get("REWEIGHT", "3"))
 t0 = time.time(); res = []
 for it in range(REW + 1):
     c = np.r_[w, np.zeros(m + nz)]
+    if os.environ.get("MAXSTART"):  # t1363: the lower model's own value at the start (the largest W(start) the rows allow), no 1% demand
+        c = np.zeros(nv + m + nz); c[idx[0]] = -1.0; lo[idx[0]] = 0.0
     r = linprog(c, A_ub=A, b_ub=b, bounds=np.c_[lo, hi], method=os.environ.get("METHOD", "highs"))
     assert r.status == 0, r.message
     u = r.x[:nv]; frac = u / span[var]
