@@ -209,7 +209,7 @@ def test_an_action_is_asked_once_for_each_projection_however_many_states_share_i
             assert ab._erases(state, action)
             answer(lambda: ab.kernel_key(state, action))
             answer(lambda: ab.kernel(state, action))
-            views.add((action, ab._view(state, True)))
+            views.add((action, ab._view(state, True, None, ab._reads_crafted(action))))  # a reroll that erases the crafted mods: their metamods only (#1358)
             asked[action] += 1
         ab.release_prepared(keep_erased=True)
     locked = sum(ab._holds_lock(state) for state in states)
