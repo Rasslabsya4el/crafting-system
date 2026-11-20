@@ -193,6 +193,22 @@ class CraftingProblem:
         own = self._own
         return [entry for entry in out if entry[1] in own], [entry for entry in out if entry[1] not in own]
 
+    def listing(self, state: CompressedState) -> tuple[Hashable, list[tuple[float, int]], list[tuple[float, int]], list[tuple[str, str]]]:
+        """`split_candidates` in a pool worker (`_ahead`, #1340): the floors' version it read, its two parts, and the prunings it would have
+        written, kept aside for the parent (`relisted`)."""
+        with self.ab.prunings.held() as notes:
+            own, rest = self.split_candidates(state)
+        return self.listing_version(), own, rest, list(notes)
+
+    def listing_version(self) -> Hashable:
+        """What a listing reads that the search changes (the offers' floors `tighten` lifts): a listing of another version is not taken."""
+        return None if self.floors is None else self.floors.version()
+
+    def relisted(self, notes: Sequence[tuple[str, str]]) -> None:
+        """Write the prunings of a listing a worker made (`listing`), as `split_candidates` here would have written them."""
+        for label, why in notes:
+            self.ab.prunings.note(label, why)
+
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
         found = None if k is None or self.tip[k] else self.lowest[k]

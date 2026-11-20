@@ -146,6 +146,7 @@ from typing import Protocol
 import numpy as np
 
 from crafting_system import budget, parallel
+from ._ahead import Ahead, Round
 from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
 from crafting_system.solver._packed import BIG_TOTAL
 from crafting_system.solver._packed_solve import ACCEPT_BOUND, solve_graph
@@ -600,6 +601,8 @@ class Search[S]:
         gap_after: float | None = None,
         watch: Callable[[Standing], None] | None = None,
         beaten_at: float | None = None,
+        workers: int | None = None,
+        ahead_always: bool = False,
     ) -> None:
         if not (gap >= 0.0 and math.isfinite(gap)):
             raise ValueError(f"the gap of the stop is a share, zero or more (0.01 is 1%); got {gap!r}")
@@ -638,6 +641,16 @@ class Search[S]:
         self.tags: np.ndarray | None = None  # the tag (offer position, or FAKE) of the action the last solve chose at each node, NO_ACTION where none
         self.n_solved = 0
         self.restart_kernel: int | None = None
+        # the rounds' tips realized ahead in forked workers (`_ahead`, #1340): the worker count is the machine's (`CRAFTING_WORKERS`, OR-40); none
+        # where there is no fork (OR-57); `ahead_always` forks at every round, whatever the measures (the tests)
+        count = 1 if self.counted else parallel.worker_count() if workers is None else workers  # a count forks no pool: the setting is not read
+        self.ahead = Ahead(count if parallel.can_inherit() else 1, POLL_SECONDS, always=ahead_always)
+        self._round: Round | None = None  # the pool of the round being walked
+        self._memo_at: dict[int, tuple[dict[S, int], float]] | None = None  # the kernels a worker made at the tip being realized, by offer
+        self._made: dict[int, dict[int, tuple[dict[S, int], float]]] | None = None  # in a worker: the kernels it made, by tip and offer
+        self._made_listed: dict[S, tuple] = {}  # in a worker: the listings it made, by state (`listing`)
+        self._listed: dict[S, tuple] = {}  # the listings workers made, by state, for `expand` to take
+        self._keys: dict[bytes, bytes] = {}  # in a worker: one object for each shared part's key it sent
         self.prime_skip = 0  # states to leave before the problem is asked to prime again (see `realize`)
         self.prime_zero = 0
         self.self_mass = np.zeros(0)  # per action of the graph last built: the chance of its node in its kernel (the solver sums shared kernels once)
@@ -692,7 +705,21 @@ class Search[S]:
                 if not self._fresh_equal(state, position, kid):
                     raise ValueError(f"two states share the kernel key {key!r} but not its kernel (checked at {state!r})")
             return kid
-        weights = self._counted_kernel(state, position) if self.counted else self._netted_kernel(state, position)
+        held = self._memo_at.pop(position, None) if self._memo_at else None
+        if held is not None:  # made ahead in a worker at the round's start (`_ahead`): the same kernel this process would make here
+            weights, seconds = held
+            if self._round is not None:
+                self._round.useful += seconds
+        else:
+            mark = time.perf_counter()
+            if self._made is not None:  # a worker of `_ahead`: made plainly, the parent asks its nets (and counts nothing: no pool in a count)
+                weights = self.p.kernel(state, position)
+            else:
+                weights = self._counted_kernel(state, position) if self.counted else self._netted_kernel(state, position)
+            seconds = time.perf_counter() - mark
+            if self._made is not None:
+                self._made.setdefault(i, {})[position] = (weights, seconds)
+        self.ahead.making += seconds
         kid = self._store([self.intern(s) for s in weights], list(weights.values()))
         if key is not None:
             self.shared[key] = kid
@@ -710,16 +737,25 @@ class Search[S]:
         search's own questions. The seconds are those of the first plan's chain where they are more (`Net.first`), so that a chain the net lets
         run is not cut inside one of its kernels; a kernel of a later round may then overrun the round's own seconds by at most `first - seconds`,
         and the round's own question between two kernels stops it there. Raises `Refused` as `kernel` does."""
-        net = self.net
-        if self.began is None or (net.seconds is None and net.memory_mb is None):
+        ask = self._kernel_ask()
+        if ask is None:
             return self.p.kernel(state, position)
-        seconds = None if net.first is None or net.seconds is None else max(net.first, net.seconds)
-        began = self.began
         try:
-            with budget.asking(lambda: self._net(began, states=False, seconds=seconds)):
+            with budget.asking(ask):
                 return self.p.kernel(state, position)
         except budget.NetReached as reached:
             raise _Cut(f"{reached.reason}, inside the making of the next action's outcomes: it was left unmade") from None
+
+    def _kernel_ask(self) -> Callable[[], str | None] | None:
+        """The question the making of a kernel asks (`_netted_kernel`), or None in a search with no time or memory net: the reason its net is
+        reached, the time limit being the larger of the round's and the first plan's chain's (`Net.first`). The first plan's chain's pool asks
+        the same while this process waits on its workers (`_ahead.Round`); a round's pool asks what the round asks between two tips."""
+        net = self.net
+        if self.began is None or (net.seconds is None and net.memory_mb is None):
+            return None
+        seconds = None if net.first is None or net.seconds is None else max(net.first, net.seconds)
+        began = self.began
+        return lambda: self._net(began, states=False, seconds=seconds)
 
     def _counted_kernel(self, state: S, position: int) -> dict[S, int]:
         """The kernel of offer `position` at `state` in a search counted in states, made on an allowance of the states the search may still know
@@ -743,11 +779,31 @@ class Search[S]:
     # ---- expanding and realizing --------------------------------------------------------------------------------
 
     def expand(self, i: int) -> None:
-        """List the offers of node `i` with their lower bounds; nothing is realized yet."""
+        """List the offers of node `i` with their lower bounds; nothing is realized yet.
+
+        A listing a pool worker made of the state (`_ahead`, #1340) is taken when the floors it read are those of this process now
+        (`Problem.listing_version`): it is the listing this process would make, and the prunings it would have written are written here."""
         self.expanded[i] = 1
-        split = getattr(self.p, "split_candidates", None)
-        own, rest = split(self.states[i]) if split is not None else (self.p.candidates(self.states[i]), ())
-        offers = self.cands[i] = Offers(_sorted_arrays(own), self.intern_offers(rest) if rest else None)
+        state = self.states[i]
+        listed = self._listed.pop(state, None) if self._listed else None
+        if listed is not None and listed[0] != self.p.listing_version():
+            listed = None
+        if listed is None and self._made is not None and hasattr(self.p, "listing"):  # a worker: listed so that its parent can take it
+            listed = self._made_listed[state] = self.listing(state)
+        if listed is not None:
+            _, own_la, own_pos, key, notes, seconds = listed
+            if self._made is None:
+                self.p.relisted(notes)
+                self.ahead.making += seconds
+                if self._round is not None:
+                    self._round.useful += seconds
+            offers = self.cands[i] = Offers((own_la, own_pos), self._base(key) if key is not None else None)
+        else:
+            mark = time.perf_counter()
+            split = getattr(self.p, "split_candidates", None)
+            own, rest = split(state) if split is not None else (self.p.candidates(state), ())
+            offers = self.cands[i] = Offers(_sorted_arrays(own), self.intern_offers(rest) if rest else None)
+            self.ahead.making += time.perf_counter() - mark
         self.rows[i] = []
         self.stats.expanded += 1
         self.stats.candidates += len(offers)
@@ -758,12 +814,27 @@ class Search[S]:
         """The sorted arrays of these entries, one pair for every node that lists the same (#1337): the offers whose `la` is their price or floor
         are most of a node's when the bound's model holds few of them (R13: 5,367 of 5,557), and the same at many states."""
         la, pos = _sorted_arrays(entries)
-        key = la.tobytes() + pos.tobytes()
+        return self._base(la.tobytes() + pos.tobytes())
+
+    def _base(self, key: bytes) -> tuple[np.ndarray, np.ndarray]:
         found = self.bases.get(key)
         if found is None:  # read-only views of the key itself: the content is held once
-            n = len(la)
+            n = len(key) // 16
             found = self.bases[key] = (np.frombuffer(key, dtype=np.float64, count=n), np.frombuffer(key, dtype=np.int64, count=n, offset=8 * n))
         return found
+
+    def listing(self, state: S) -> tuple:
+        """The listing of `state` that a pool worker sends (`_ahead`): the floors' version, its own offers as sorted arrays, the key of its
+        shared part (`intern_offers`; one object for one content, so that a chunk's result holds it once), the prunings and the seconds."""
+        mark = time.perf_counter()
+        version, own, rest, notes = self.p.listing(state)
+        own_la, own_pos = _sorted_arrays(own)
+        key = None
+        if rest:
+            la, pos = _sorted_arrays(rest)
+            key = la.tobytes() + pos.tobytes()
+            key = self._keys.setdefault(key, key)
+        return version, own_la, own_pos, key, notes, time.perf_counter() - mark
 
     def _consistent(self, i: int, least: float) -> None:
         """Raise `BoundError` when the bound of node `i` is above `least`, the least lower bound of its offers (a consistent bound is at most that)."""
@@ -805,7 +876,8 @@ class Search[S]:
         rows, cands = self.rows[i], self.cands[i]
         best = min((self._q(c, kid) for _, c, kid, _ in rows), default=math.inf)
         first = force
-        prime = getattr(self.p, "prime", None) if not self.counted else None  # a count makes every kernel in the process, counted (`_prime`, #1105)
+        # a count makes every kernel in the process, counted (`_prime`, #1105); a tip a worker realized ahead (`_ahead`), and a worker, need none
+        prime = getattr(self.p, "prime", None) if not self.counted and self._memo_at is None and self._made is None else None
         tighten = getattr(self.p, "tighten", None)
         primed = 0  # how many of the offers at the end of `cands` have been primed
         self.prime_skip = max(self.prime_skip - 1, 0)
@@ -851,12 +923,26 @@ class Search[S]:
         seen = {0}
         walked: set[int] = set()  # the kernels whose successors are all in the queue: states that share a kernel (`kernel_key`) share its successors
         polled = -math.inf  # the memory is read at the first state, and then every `POLL_SECONDS`
-        for i in queue:
+        self.ahead.making = 0.0
+        for place, i in enumerate(queue):
             if self.goal[i]:
                 continue
             poll = time.perf_counter() - polled >= POLL_SECONDS
             if poll:
                 polled = time.perf_counter()
+            if poll or self.ahead.always:
+                # the states of the queue ahead listed in forked workers (`_ahead`, #1340), once the pace of the chain so far says it saves time
+                pool = self._round
+                if pool is None and not self.counted and place and hasattr(self.p, "listing"):
+                    count = self.ahead.workers_for(len(queue) - place - 1, self.ahead.making / place)
+                    if count:
+                        pool = self._round = Round(
+                            self, queue, self.ahead, count, chain=True, per_item=self.ahead.making / place, ask=self._kernel_ask(), memory_mb=self.net.memory_mb
+                        )
+                if pool is not None and self.net.memory_mb is not None:  # the workers are stopped before their memory stops the chain
+                    pool.give_room(self.net.memory_mb)
+            if self._round is not None:
+                self._round.at(place, i)
             # the clock at every state; the state net waits for the first round, so the chain is whole, except in a run counted in states (#1101):
             # there it is the only net, and a chain over a blind bound walks tens of thousands of states, so the count is asked at every state
             stopped = self._net(began, memory=poll, states=self.net.pieces is not None, seconds=self.net.first)
@@ -1196,6 +1282,8 @@ class Search[S]:
     def _room_check(self, growth_mb: float) -> None:
         """Raise `MemoryNet` when the kernel arrays' next growth of `growth_mb` would take the process past the memory net (#839): the net is
         asked before the arrays grow, not after, so a search stops under its memory setting and not past it."""
+        if self._round is not None:  # a round's workers hold memory of their own: they are stopped first if they take the search past its net
+            self._round.give_room(self.net.memory_mb, growth_mb)
         used = resident_mb()  # read in full, never paced: asked only before the arrays grow, and it must not come late (#1252)
         if used is not None and used + growth_mb >= self.net.memory_mb:
             raise MemoryNet(
@@ -1237,6 +1325,11 @@ class Search[S]:
             except MemoryNet as stop:
                 stopped = str(stop)
                 self.kernels.room = None  # the stop's own plan is solved over what the search holds
+            finally:
+                if self._round is not None:  # the chain's pool (`_seed`)
+                    self._round.close(len(self.states))
+                    self._round = None
+                self.ahead.making = 0.0
             self.stats.expand_seconds += time.perf_counter() - mark
             try:
                 upper = self._upper()[2]
@@ -1386,8 +1479,20 @@ class Search[S]:
                 break
             mark = time.perf_counter()
             polled = mark
+            tips = fake.tolist()
+            self.ahead.making = 0.0
+            count = 0 if self.counted else self.ahead.workers_for(len(tips))
+            # the wait on a window asks what this process asks between two tips (the round's own limit, not the first plan's chain's)
+            ask = None if self._kernel_ask() is None else lambda: self._net(began, states=False)
+            pool = self._round = Round(self, tips, self.ahead, count, ask=ask, memory_mb=self.net.memory_mb) if count else None
+            if pool is None:
+                self.ahead.processes = 1
+            walked = 0
             try:
-                for i in fake.tolist():
+                for i in tips:
+                    if pool is not None:
+                        self._memo_at = pool.at(walked, i)
+                    walked += 1
                     if not self.expanded[i]:
                         self.expand(i)
                     self.realize(i, force=True)
@@ -1397,6 +1502,8 @@ class Search[S]:
                         break
                     if time.perf_counter() - polled >= POLL_SECONDS:  # a round can expand tens of thousands of states: the net is asked inside it too (#626)
                         polled = time.perf_counter()
+                        if pool is not None and self.net.memory_mb is not None:  # the workers are stopped before their memory stops the search
+                            pool.give_room(self.net.memory_mb)
                         # here, where the clock polls, a states net is asked only beside a time or memory net (the run is on the clock anyway): a
                         # count alone (`Budget.in_states`) is asked above, at every state, so that it does not depend on the machine's speed
                         stopped = self._net(began, states=self.net.seconds is not None or self.net.memory_mb is not None)
@@ -1408,6 +1515,11 @@ class Search[S]:
             except _Cut as cut:  # the count's net, met inside the making of a kernel (#1105): the round ends as at the net, its plan in hand
                 stopped = cut.reason
                 self.p.release()
+            finally:
+                self._memo_at = self._round = None
+                if pool is not None:
+                    pool.close(walked)
+                self.ahead.end_round(walked)
             self.stats.expand_seconds += time.perf_counter() - mark
             if stopped is not None:
                 break
