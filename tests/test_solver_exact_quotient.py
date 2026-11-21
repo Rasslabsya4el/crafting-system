@@ -95,10 +95,11 @@ def test_a_graph_no_policy_of_which_reaches_the_goal_gives_no_exact_solve():
     assert _exact_solve.exact_quotient(graph, np.array([True, True, False])) is None
 
 
-def test_a_kernel_of_more_than_62_bits_of_weight_is_not_solved_exactly_and_the_refusal_says_so():
-    # the fractions of very large weights (#868: 22,965-bit totals) can grow past what one solve may take: such a quotient is refused as before
-    big = 2**70
-    graph = build((False, [(1.0, [(1, 1), (2, big - 1)])]), (True, []), (False, [(533.0, [(0, 1)])]))
-    assert graph.k_big  # the kernel keeps its exact weights apart
+def test_a_quotient_of_very_large_weights_is_not_solved_exactly_and_the_refusal_says_so():
+    # the fractions of very large weights (#868: 22,965-bit totals) can grow past what one solve may take: 3 classes of a 300,001-bit total
+    # are past `EXACT_WORK` and refused as before; R17's refused rounds (at most 9 classes of 126 bits, 4 of 3,113) are not
+    hit, miss = 2**299940 + 1, 2**300000 - 1  # a chance of about 2^-60 of the goal, in weights of 300,000 bits that share no factor
+    graph = build((False, [(1.0, [(1, hit), (2, miss)])]), (True, []), (False, [(533.0, [(0, 1)])]))
+    assert 3**3 * (3 * 300061) ** 1.5 > _exact_solve.EXACT_WORK >= max(9**3 * (9 * 126) ** 1.5, 4**3 * (4 * 3113) ** 1.5)
     with pytest.raises(ConvergenceError, match="the exact solve in rational numbers did not apply"):
         solve_graph(graph)

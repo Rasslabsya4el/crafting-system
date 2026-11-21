@@ -14,8 +14,8 @@ policy, every policy it passes through proper). What comes out is the optimum ex
 float64, so the certified relative error is one rounding (`EPS`), and no tolerance is asked or loosened.
 
 The work grows with the cube of the classes held at once and with the digits of the weights (Gauss-Jordan elimination of fractions), so it is
-tried only on a quotient of at most `EXACT_CLASSES` classes (the merge stops counting past it) whose kernels all add up to less than 2^62 (no
-`PackedGraph.k_big` kernel: #868's Chaos Orb kernels reach 22,965-bit totals, on which 20 classes did not end in 150 s); otherwise the solve is
+tried only on a quotient of at most `EXACT_CLASSES` classes (the merge stops counting past it) whose work, counted from its classes and the bits of its largest
+kernel total, is at most `EXACT_WORK` (#868's Chaos Orb kernels reach 22,965-bit totals, on which 20 classes did not end in 150 s); otherwise the solve is
 refused as before, by the caller's float64 certificate, and its refusal says the exact solve did not apply. It runs only where that
 certificate refused, so a solve that certified keeps its numbers to the bit.
 """
@@ -27,15 +27,18 @@ import numpy as np
 from ._packed import PackedGraph, kernel_any
 from ._packed_merge import exact_classes, quotient
 
-EXACT_CLASSES = 32  # the classes of a quotient solved in rational numbers: the work grows as their cube (measured on the server, a quotient whose
-# classes each reach every other with 61-bit weights: 32 classes 0.45 s, 16 classes 0.04 s; with 40-bit weights 63 classes took 8.9 s; R17's rounds
-# and R04's refused plan (#1291), 3 to 9 classes: milliseconds). A choice of the arithmetic, not a cut: a larger quotient is refused as before
+EXACT_CLASSES = 64  # the merge stops counting past this many classes: no quotient this large is within `EXACT_WORK` (with 40-bit weights, 63
+# classes took 8.9 s on the server)
+EXACT_WORK = 1e10  # the work of the elimination, counted as classes^3 * (classes * bits of the largest kernel total)^1.5 (each of its m^3 steps
+# multiplies fractions that grow to about m b bits). Measured on the server, every class reaching every other: 31 classes of 127 bits (7e9):
+# 1.05 s; 30 of 2,000 bits (4e11): 44 s, 20 of 20,000 bits (2e12): not ended in 150 s (#1380's checker); R17's refused rounds, 3 to 9 classes
+# of up to 3,113 bits (at most 1e8): milliseconds. A choice of the arithmetic, not a cut: a larger work is refused as before
 FLOAT_MAX = Fraction(np.finfo(np.float64).max)
 
 
 def exact_quotient(graph: PackedGraph, inside: np.ndarray) -> tuple[np.ndarray, np.ndarray, PackedGraph, np.ndarray, np.ndarray, np.ndarray] | None:
     """The exact optimum of `graph` over the states `inside` (the others are dead: an action that may reach one is not taken), or None when the
-    quotient has more than `EXACT_CLASSES` classes or a kernel of more than 62 bits of weight, when an action it may take is free (cost 0: an unveil, a pick; policy iteration is exact only
+    quotient has more than `EXACT_CLASSES` classes or its work is above `EXACT_WORK`, when an action it may take is free (cost 0: an unveil, a pick; policy iteration is exact only
     where every cost is above zero, so that no policy that never finishes costs less than one that does), or when none of its policies over
     `inside` reaches the goal from every state of it.
 
@@ -52,6 +55,9 @@ def exact_quotient(graph: PackedGraph, inside: np.ndarray) -> tuple[np.ndarray, 
     live |= reduced.goal
     bad = kernel_any(reduced, ~live)
     weights = [reduced.kernel_weights(k) for k in range(reduced.num_kernels)]
+    digits = max((sum(wt).bit_length() for k, wt in enumerate(weights) if not bad[k]), default=1)
+    if m**3 * (m * digits) ** 1.5 > EXACT_WORK:
+        return None  # the fractions would grow past what a solve may take (module text)
     chances = []
     for k, wt in enumerate(weights):
         total = sum(wt)
@@ -64,8 +70,6 @@ def exact_quotient(graph: PackedGraph, inside: np.ndarray) -> tuple[np.ndarray, 
         for a in range(int(reduced.act_ptr[s]), int(reduced.act_ptr[s + 1])):
             k = int(reduced.act_kernel[a])
             if not bad[k]:
-                if k in reduced.k_big:
-                    return None  # weights of more than 62 bits: the fractions would grow past what a solve may take (module text)
                 if not reduced.act_cost[a] > 0.0:
                     return None  # a free action: a free cycle can keep a run from the goal at no cost, and policy iteration needs every cost above zero
                 acts[s].append((a, Fraction(float(reduced.act_cost[a])), k))

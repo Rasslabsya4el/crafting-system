@@ -861,7 +861,7 @@ def solve_graph(
         raise ConvergenceError(
             f"the policy iteration on {n:,} states certifies only a relative bound of {certificate.bound:.3g} "
             f"(asked: tolerance {tolerance}, accepted: {refuse_above}; residual {certificate.residual:.3g} of its margin){_own_text(certificate)}; "
-            "the exact solve in rational numbers did not apply (its states merge into too many classes, it has a free action or a kernel of very large weights)",
+            "the exact solve in rational numbers did not apply (its states merge into too many classes, or its kernels' weights are too large, or it has a free action)",
             certificate.bound,
         )
     info["quotient_own_bound"], info["quotient_own_cost"] = certificate.own_bound, certificate.own_cost
