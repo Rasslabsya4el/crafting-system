@@ -959,7 +959,7 @@ def test_a_key_that_keeps_needing_offers_is_given_as_many_more_as_it_holds_the_l
     found = [(1.0, 3)]
     added = _doubled(needs, holders, {9: np.array([1, 2])}, [3, 4, 5, 6, 7], floors, found)
     assert added == 2
-    assert needs == {3: [1], 4: [1], 5: [1]}
+    assert {p: list(keys) for p, keys in needs.items()} == {3: [1], 4: [1], 5: [1]}
     assert sorted(found) == [(1.0, 3), (1.1, 4), (1.2, 5)]
     assert _doubled({3: [1]}, {}, {9: np.array([1, 2])}, [3, 4], floors, []) == 0  # nothing held at some keys only: nothing to double
 

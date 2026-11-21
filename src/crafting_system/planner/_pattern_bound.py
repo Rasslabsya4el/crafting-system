@@ -278,7 +278,7 @@ def pattern_lower_bound(
         say(
             f"model {rounds}: the floor action is the cheapest at some key (largest model value there: {said}); {len(more):,} offers more join the model"
             + (f" and {len(spread):,} of its offers are built at more keys" if spread else "")
-            + f", at {len({k for keys in needs.values() for k in keys}):,} keys that need them ({built:,} offers at a key): {names}"
+            + f", at {len(np.unique(np.concatenate(list(needs.values())))):,} keys that need them ({built:,} offers at a key): {names}"
         )
         adding = more
         order = [*order, *more]
@@ -409,7 +409,7 @@ def _binding(
     keys_of = {klass: np.array(keys, dtype=np.int64) for klass, keys in by_class.items()}
     best_of = {klass: best[keys] for klass, keys in keys_of.items()}
     found: list[tuple[float, int]] = []
-    needs: dict[int, list[int]] = {}
+    needs: dict[int, np.ndarray] = {}  # an offer -> the keys that need it (arrays: R04's growth asked for 55 million pairs in a round, #1366)
     candidates = [*outside, *held]
     examined = time.perf_counter()
     say(f"binding: examining {len(outside):,} offers outside the model and {len(held):,} held at some keys only")
@@ -417,23 +417,22 @@ def _binding(
         low = floors.needed(position, limit)
         if low is None:
             continue
-        where: list[int] = []
-        for klass, keys in keys_of.items():  # the keys where its floor is not above the model's best: there it could lower the value
-            where.extend(keys[floors.lower(position, klass) * (1 - SLACK) <= best_of[klass]].tolist())
+        parts = [keys[floors.lower(position, klass) * (1 - SLACK) <= best_of[klass]] for klass, keys in keys_of.items()]  # the keys where its floor is not above the model's best: there it could lower the value
+        where = np.concatenate(parts) if parts else np.zeros(0, dtype=np.int64)
         if position in held:
-            given = np.asarray(where, dtype=np.int64)
-            where = given[~np.isin(given, held[position])].tolist()
-        if where:
+            where = where[~np.isin(where, held[position])]
+        if len(where):
             found.append((low, position))
             needs[position] = where
     more = _doubled(needs, held, keys_of, candidates, floors, found)
+    asked = np.unique(np.concatenate(list(needs.values()))) if needs else ()
     say(
-        f"binding: {len(needs):,} of {len(candidates):,} offers are needed, at {len({k for keys in needs.values() for k in keys}):,} of {len(model.keys):,} keys"
+        f"binding: {len(needs):,} of {len(candidates):,} offers are needed, at {len(asked):,} of {len(model.keys):,} keys"
         + (f"; {more:,} more offers at a key, as many as those keys held (`_doubled`)" if more else "")
         + f" ({time.perf_counter() - examined:.1f} s)"
     )
     found.sort()
-    return {position: sorted(needs[position]) for _, position in found}, limit
+    return {position: np.sort(needs[position]) for _, position in found}, limit
 
 
 def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: PatternModel, floors: OfferFloors, holders: "Held | dict[int, set[int]]") -> None:
@@ -465,7 +464,7 @@ def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: 
         by_class[klass].extend(k for _, k in keys[: holding[klass]])
 
 
-def _doubled(needs: dict[int, list[int]], holders: "Held | dict[int, set[int]]", keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
+def _doubled(needs: dict, holders: "Held | dict[int, set[int]]", keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
     """Give a key of another shape that needs offers at least as many as it already holds of those built at some keys only, the least floors
     first (#1325).
 
@@ -474,43 +473,53 @@ def _doubled(needs: dict[int, list[int]], holders: "Held | dict[int, set[int]]",
     many as it held, a key that keeps needing offers holds twice as many each time it is found binding, so it is found binding at most about
     log2 of the offers times, and it is given at most twice the offers it needs in the end. Which offers a key holds changes nothing of
     the bound's soundness (any set of offers built at a key is a lower bound there, `_floor_of`): only how many rounds the growth takes.
-    Adds to `needs` and `found` in place; returns how many (offer, key) pairs were added."""
+    Adds to `needs` (an offer -> the keys that need it, an array or a list) and `found` in place; returns how many (offer, key) pairs were added.
+    The pairs are made in arrays, a key at a time (#1366: R04's round of model 29 asked for 55 million)."""
     holders = Held.of(holders)
     if not holders:
         return 0
-    counts = holders.counts()
-    held = {k: int(counts[k]) for k in np.flatnonzero(counts).tolist()}  # key -> how many offers held at some keys only it holds
-    given: dict[int, int] = {}
-    for keys in needs.values():
-        for k in keys:
-            given[k] = given.get(k, 0) + 1
-    added = 0
-    asked = {p: set(keys) for p, keys in needs.items()}  # (a set: `needs[p]` may name thousands of keys)
-    ranked: dict[int, list[tuple[float, int]]] = {}
+    held = holders.counts()  # key -> how many offers held at some keys only it holds
+    asking = Held.of(needs)  # the offers each key is given already
+    given = asking.counts()
+    count = lambda counts, k: int(counts[k]) if k < len(counts) else 0  # noqa: E731
+    keys_added: list[np.ndarray] = []
+    offers_added: list[np.ndarray] = []
+    ranked: dict[int, tuple[np.ndarray, list[tuple[float, int]]]] = {}
+    first_low: dict[int, float] = {}
     for klass, keys in keys_of.items():
         if klass in (INSIDE, OUTSIDE):  # the start's shape: the floors are strong and `needed` names the few offers that could lower a key's value
             continue  # (R24, doubled there too: 21 offers needed at 18,385 keys became 367,700 pairs, the whole join again in a few rounds)
-        short = [k for k in keys.tolist() if 0 < given.get(k, 0) < held.get(k, 0)]
+        short = [k for k in keys.tolist() if 0 < count(given, k) < count(held, k)]
         if not short:
             continue
         if klass not in ranked:
-            ranked[klass] = sorted((low, p) for p in candidates if (low := floors.lower(p, klass)) < math.inf)
+            order = sorted((low, p) for p in candidates if (low := floors.lower(p, klass)) < math.inf)
+            ranked[klass] = (np.array([p for _, p in order], dtype=np.int64), order)
+        offers, order = ranked[klass]
+        low_in = dict((p, low) for low, p in order)
         for k in short:
-            want = held[k] - given[k]
-            mine = set(holders.offers_at(k).tolist())
-            for low, p in ranked[klass]:
-                if want == 0:
-                    break
-                if p in mine or k in asked.get(p, ()):
-                    continue
-                if p not in needs:
-                    needs[p] = []
-                    found.append((low, p))
-                needs[p].append(k)
-                asked.setdefault(p, set()).add(k)
-                want -= 1
-                added += 1
-    return added
+            want = count(held, k) - count(given, k)
+            taken = np.concatenate((holders.offers_at(k), asking.offers_at(k)))
+            chosen = offers[~np.isin(offers, taken)][:want]  # the least floors the key neither holds nor is given
+            if len(chosen):
+                keys_added.append(np.full(len(chosen), k, dtype=np.int64))
+                offers_added.append(chosen)
+                for p in chosen.tolist():  # the floor an offer is ranked by is that of the first class it was added in, as it was one pair at a time
+                    first_low.setdefault(p, low_in[p])
+    if not keys_added:
+        return 0
+    keys = np.concatenate(keys_added)
+    offers = np.concatenate(offers_added)
+    by_offer = np.argsort(offers, kind="stable")
+    offers, keys = offers[by_offer], keys[by_offer]
+    cuts = np.flatnonzero(np.diff(offers)) + 1
+    for p, at in zip(offers[np.concatenate(([0], cuts))].tolist(), np.split(keys, cuts)):
+        if p not in needs:
+            needs[p] = at
+            found.append((first_low[p], p))
+        else:
+            needs[p] = np.concatenate((np.asarray(needs[p], dtype=np.int64), at))
+    return len(keys)
 
 
 __all__ = ["PatternBound", "pack_pattern_model", "pattern_lower_bound", "pattern_offers"]
