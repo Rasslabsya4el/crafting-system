@@ -21,14 +21,14 @@ import weakref
 
 import numpy as np
 import pytest
-from test_cli_envelope_build import START_ITEM, abstraction, counting_stop, floors_on, world  # noqa: F401  (fixtures)
+from test_cli_envelope_build import START_ITEM, abstraction, assert_lower_bound, counting_stop, floors_on, world  # noqa: F401  (fixtures)
 from test_planner_blocking_crafts import C, E, S, _prices, data, target  # noqa: F401  (the fixtures)
 
 from crafting_system import budget, parallel
 from crafting_system.abstraction._packed_rows import Held, Rows
 from crafting_system.abstraction._pattern import CHOICE
 from crafting_system.budget import Budget
-from crafting_system.planner import PlanSettings, _offers, plan_target
+from crafting_system.planner import PlanSettings, _offers, _pattern_bound, plan_target
 from crafting_system.planner._envelope_plan import CraftingProblem
 from crafting_system.planner._plan import PlanError
 from crafting_system.planner._offer_floor import OTHER, UNOPENED
@@ -96,6 +96,26 @@ def test_a_key_in_two_classes_is_given_an_offer_once_as_one_pair_at_a_time():
     assert added == 2
     assert {p: np.asarray(keys).tolist() for p, keys in needs.items()} == {0: [0], 1: [0], 2: [0]}
     assert sorted(found) == [(1.0, 0), (2.0, 1), (3.0, 2)]
+
+
+def test_a_grown_model_whose_solve_would_pass_the_memory_net_is_not_solved_and_the_round_before_stands(world, floors_on, monkeypatch):  # noqa: F811
+    # The solve cannot be cut: its memory (`SOLVE_BYTES` an action) is asked before it (#1366: R04's model 29, 108 million actions, was to take
+    # 11 GB more on 10.6 GB and the system killed the run at 16 GB). Held 100 MB of a 1,000 MB net, and an action taken as 1 GB: the first model
+    # is solved whatever it takes (nothing stands before it), the grown one is not, and the bound is the first round's, a lower bound.
+    ab, start, offers, _, exact, _ = world
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 100.0)
+    monkeypatch.setattr(_pattern_bound, "SOLVE_BYTES", 1 << 30)
+    said = []
+    fresh = abstraction()
+    with parallel.memory_net(1000.0):
+        bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM, progress=said.append)
+    assert bound.phase == "growth" and bound.rounds == 1 and bound.positions == (0, 6)
+    assert "past the limit of 1,000 MB" in bound.stopped and "the solve of" in bound.stopped
+    assert sum("solving the count" in line for line in said) == 1
+    assert any("model 2: the net was reached before the solve" in line for line in said)
+    assert_lower_bound(bound, ab, exact)
+    with parallel.memory_net(1e9):  # with room, the model grows as before
+        assert pattern_lower_bound(abstraction(), fresh.compress(START_ITEM), offers, item=START_ITEM).rounds > 1
 
 
 def test_the_backups_read_off_the_packed_rows_are_the_dicts_the_search_held(world, floors_on):  # noqa: F811

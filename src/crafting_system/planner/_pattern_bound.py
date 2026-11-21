@@ -40,6 +40,7 @@ from dataclasses import dataclass, field
 
 import numpy as np
 
+from crafting_system import parallel
 from crafting_system.abstraction import Abstraction, CompressedState
 from crafting_system.abstraction._packed_rows import Held
 from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Ruin, Tally
@@ -52,6 +53,8 @@ from ._offers import BuyStartItem, PricedOffer
 FAKE = -1  # the tag of the floor action
 FLOOR_COST = 1e-200  # a floor action of cost 0 is carried at this cost, as the envelope search carries a fake action
 BINDING = 1e-12  # relative: the floor action is "the cheapest" at a key when it is below the model's best by more than this
+SOLVE_BYTES = 112  # the memory an action of a grown model takes while it is packed and solved (#1366: R04's models 26 and 27, 27.6 and 54.5 million
+# actions, raised the run's group by 2.8 and 5.5 GB, 101 to 102 bytes an action; rounded up): a property of the solver's arrays, the same on every route
 MIN_OFFERS = 40  # fewer priced offers than this are all built and none is a twin left out (nothing to gain); `_plan` merges twins from this many too
 
 
@@ -106,6 +109,23 @@ def lowering(error: float) -> float:
 def pattern_offers(priced: Sequence[PricedOffer]) -> list[PatternOffer]:
     """The offers of a plan as the model sees them: the restart (`BuyStartItem`) has no action."""
     return [PatternOffer(p.label, None if isinstance(p.offer.action, BuyStartItem) else p.offer.action, p.cost) for p in priced]
+
+
+def _no_room_to_solve(model: PatternModel) -> str | None:
+    """Why a grown model is not packed and solved: the memory this process and its workers hold, and the `SOLVE_BYTES` an action its arrays take,
+    reach the run's memory net (`parallel.memory_net`); None where there is room, no net or no reading.
+
+    The net is otherwise asked between two offers and before the solve, and the solve, one step it cannot cut, overshot it by what it takes: on R04
+    the model of round 29 (108 million actions) was to take about 11 GB more on the 10.6 GB the build held, and the system killed the run at its
+    16 GB cap (#1366). The share is the run's net, not a constant (OR-40); the round before stands, a lower bound all the same."""
+    net = parallel.active_memory_net()
+    if net is None:
+        return None
+    need = model.actions.entries * SOLVE_BYTES / (1 << 20)
+    held = parallel.held_mb(under=max(net - need, 0.0))
+    if held is None or held + need < net:
+        return None
+    return f"the process held {held:,.0f} MB and the solve of {model.actions.entries:,} actions takes about {need:,.0f} MB more, past the limit of {net:,.0f} MB"
 
 
 def pack_pattern_model(model: PatternModel, offers: Sequence[PatternOffer], floor: Callable[[PatternKey, bool], float | None] | None = None):
@@ -224,6 +244,10 @@ def pattern_lower_bound(
         if model.stopped is not None and kept is not None:  # the round that was growing the model did not end: the round before stands
             reason = model.stopped
             say(f"model {rounds}: stopped while {len(adding):,} offers were joining ({reason}); the model of round {rounds - 1} stands")
+            model, value, error, order, narrow = kept
+            return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+        if kept is not None and (reason := _no_room_to_solve(model)) is not None:  # the solve cannot be interrupted: its memory is asked before it
+            say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
             model, value, error, order, narrow = kept
             return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
         inside = set(order)
