@@ -23,6 +23,7 @@ import pytest
 
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 from crafting_system.solver import _packed_linear as lin
+from crafting_system.solver import _exact_solve
 from crafting_system.solver import _packed_solve as ps
 from crafting_system.solver._packed_chain import CyclesTooTangled
 from crafting_system.solver._packed_solve import Certificate, Work, certify, evaluate_policy, lift_policy, proper_states, solve_graph
@@ -642,6 +643,7 @@ def test_an_accepted_bound_of_zero_is_refused_whatever_the_values():
         solve_graph(GEO, accept_bound=0.0)
 
     # the error carries the certified bound: GEO's value 4 is exact, so it is the rounding width 10 eps of `test_certify_of_an_exact_value...`
+    # (the exact solve of #1380 is tried after it, and refused too: its one rounding is above a bound of 0)
     assert refused.value.error_bound == pytest.approx(10 * EPS, rel=1e-6)
 
 
@@ -779,6 +781,7 @@ ACCEPTED = 0.5  # a power of two, so that "just above" is one step of the float 
 )
 def test_solve_graph_accepts_a_bound_up_to_the_one_accepted_and_refuses_the_next_float(monkeypatch, bound, accepted):
     stub_certify(monkeypatch, bound, 0.0)
+    monkeypatch.setattr(_exact_solve, "EXACT_CLASSES", 0)  # the refusal of the float64 certificate alone, with no exact solve after it (#1380)
 
     if accepted:
         assert solve_graph(GEO, accept_bound=ACCEPTED).certificate.bound == bound

@@ -13,6 +13,10 @@ The certificate divides each state's residual by the cost of a step, so its boun
 
 LONG: state 0 pays 1 and reaches the goal (2) with weight 1 of `N = 2^32`, else state 1; state 1 pays 1 and goes back. `V(0) = 2 N - 1`,
 `V(1) = 2 N`: 8.6e9 steps. `4 eps V = 7.6e-6` of a step.
+
+Since #1380 a solve the float64 certificate refuses is solved again exactly in rational numbers when its quotient is small
+(`_exact_solve`), and LONG's quotient is 3 classes: the tests here of what float64 alone certifies and refuses turn that off (`float_only`);
+`test_solver_exact_quotient.py` holds the exact solve.
 """
 
 import sys
@@ -29,6 +33,14 @@ from crafting_system.solver._packed_solve import ACCEPT_BOUND, Work, certify, co
 EPS = sys.float_info.epsilon
 N = 2**32
 LONG_VALUE = np.array([2.0 * N - 1.0, 2.0 * N, 0.0])
+
+
+@pytest.fixture
+def float_only(monkeypatch):
+    """The solve with no exact fallback (`_exact_solve.EXACT_CLASSES` 0): what float64 alone certifies and refuses (#1380)."""
+    from crafting_system.solver import _exact_solve
+
+    monkeypatch.setattr(_exact_solve, "EXACT_CLASSES", 0)
 
 
 def long_graph():
@@ -69,7 +81,7 @@ def test_a_correction_is_not_made_where_its_sums_cannot_be_taken():
 # ---- cause 3: more steps than float64 can certify to 1e-6 --------------------------------------------------------------------------------
 
 
-def test_a_plan_of_ten_to_the_ten_steps_is_refused_at_the_exact_bound_and_taken_with_its_error_above_it():
+def test_a_plan_of_ten_to_the_ten_steps_is_refused_at_the_exact_bound_and_taken_with_its_error_above_it(float_only):
     with pytest.raises(ConvergenceError) as refused:
         solve_graph(long_graph())
     assert ACCEPT_BOUND < refused.value.error_bound < 1e-4  # the rounding of the values: about 4 eps V
@@ -82,7 +94,7 @@ def test_a_plan_of_ten_to_the_ten_steps_is_refused_at_the_exact_bound_and_taken_
     assert core.value[1] * (1.0 - bound) <= LONG_VALUE[1] <= core.value[1] * (1.0 + bound)
 
 
-def test_a_bound_above_the_refusal_is_still_refused():
+def test_a_bound_above_the_refusal_is_still_refused(float_only):
     with pytest.raises(ConvergenceError):
         solve_graph(long_graph(), refuse_above=2e-6)
 
@@ -102,12 +114,22 @@ def long_world() -> Hand:
     )  # fmt: skip
 
 
-def test_the_exact_search_refuses_a_plan_it_cannot_certify_to_the_exact_bound():
+def test_the_exact_search_refuses_a_plan_it_cannot_certify_to_the_exact_bound(float_only):
     with pytest.raises(ConvergenceError):
         Search(long_world()).run()
 
 
-def test_a_search_with_a_gap_returns_that_plan_with_both_figures_around_its_exact_cost():
+def test_the_exact_search_solves_that_plan_exactly_on_its_small_quotient():
+    # #1380: what float64 refuses above is solved again in rational numbers on the 3 classes of the graph: the exact search returns the plan
+    result = Search(long_world()).run()
+
+    exact = 2.0 * N - 1.0  # hand-worked: V(0) = 2 N - 1, a float64 exactly
+    assert result.exact and result.upper is None and result.stopped is None
+    assert exact * (1.0 - 2 * EPS) <= result.lower <= exact  # the lower figure is the exact value less the one rounding the solve certifies
+    assert solve_graph(result.graph).value[0] == exact
+
+
+def test_a_search_with_a_gap_returns_that_plan_with_both_figures_around_its_exact_cost(float_only):
     result = Search(long_world(), gap=0.01, gap_after=0.0).run()
 
     exact = 2.0 * N - 1.0
@@ -173,7 +195,7 @@ def test_a_root_that_falls_within_the_certified_errors_of_its_solves_is_no_fall_
 # ---- `refuse_above` through the callers of the solve --------------------------------------------------------------------------------------
 
 
-def test_the_merged_solve_takes_the_refusal_of_its_caller_and_gives_the_error_with_the_values():
+def test_the_merged_solve_takes_the_refusal_of_its_caller_and_gives_the_error_with_the_values(float_only):
     with pytest.raises(ConvergenceError):
         solve_packed(long_graph())
     with pytest.raises(ConvergenceError):

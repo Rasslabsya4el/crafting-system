@@ -33,7 +33,9 @@ The bound may exceed `tolerance` when the values are large next to the cheapest 
 `_certify.py`); the loop stops when the residuals reach the tolerance or the rounding floor. A solve the certificate then refuses (a bound above
 `accept_bound`, 1e-6) is corrected (`corrected`: one step of iterative refinement, its residual taken with every sum rounded once, at most
 `CORRECTIONS` times) and measured again (#867). What is still above `accept_bound` raises `ConvergenceError`, unless the caller takes every
-value with its certified error and passed `refuse_above` (a search that stops at a gap): then only a bound above that is refused.
+value with its certified error and passed `refuse_above` (a search that stops at a gap): then only a bound above that is refused. A solve
+refused so is solved again in rational numbers when its exact quotient is small (`_exact_solve`, #1380): a plan of 10^14 attempts (R17's
+Alchemy round, 2.26e16 c) merges into 3 classes, and its optimum is then exact, where float64 certified it only to 0.18.
 """
 
 import math
@@ -51,6 +53,7 @@ from . import _packed_linear
 from ._packed_chain import ChainSolver
 from ._packed_linear import DENSE_LIMIT, backward_error  # noqa: F401  (DENSE_LIMIT: the default of `solve_graph`, read by callers; backward_error: by tests)
 from ._packed_merge import exact_classes, identity_classes, quotient
+from ._exact_solve import exact_quotient
 
 EPS = sys.float_info.epsilon
 INF = math.inf
@@ -73,6 +76,7 @@ class Certificate:
     window: int = 0  # the steps of the cost ahead that the bound given is measured against (0: each state's own cost; -1: the operator with the self-loops divided out, `_divided`)
     rounded_once: bool = False  # the bound given is measured with every Bellman sum rounded once (`_packed.kernel_sums_rounded_once`, #867), not once a term
     term_bound: float | None = None  # with `rounded_once`: the bound of the measure with a rounding a term, which the caller did not accept
+    exact: bool = False  # the values are the exact optimum rounded once to float64 (`_exact_solve`, #1380): `bound` is that rounding
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -218,6 +222,8 @@ class Work:
 
 def _own_text(certificate: Certificate) -> str:
     """What the certificate against each state's own cheapest cost alone gives, when that is not the bound given (#769)."""
+    if certificate.exact:
+        return " (solved exactly in rational numbers)"
     if certificate.rounded_once:
         return f" (measured with every sum rounded once; with a rounding a term: {certificate.term_bound:.3g})"
     if certificate.own_bound is None or certificate.window == 0:
@@ -848,6 +854,10 @@ def solve_graph(
         value, certificate, corrections = finer, again, corrections + 1
     info["corrections"] = corrections
     if not certificate.bound <= refuse_above:  # also false for an infinite or undefined bound
+        exact = _exact(graph, inside, info)  # values float64 cannot certify: the optimum in rational numbers on the quotient, when it is small (#1380)
+        if exact is not None and exact.certificate.bound <= refuse_above:  # (its one rounding: a caller that accepts no error at all is refused still)
+            say(f"solved exactly in rational numbers on {info['exact_classes']:,} classes: the float64 certificate gave only {certificate.bound:.3g}")
+            return exact
         raise ConvergenceError(
             f"the policy iteration on {n:,} states certifies only a relative bound of {certificate.bound:.3g} "
             f"(asked: tolerance {tolerance}, accepted: {refuse_above}; residual {certificate.residual:.3g} of its margin){_own_text(certificate)}",
@@ -857,6 +867,19 @@ def solve_graph(
     say(f"certificate on the quotient: bound {certificate.bound:.3g}{_own_text(certificate)} ({time.perf_counter() - began:.1f} s)")
     value = np.where(inside, value, INF)
     return Core(value, inside, np.where(inside & ~graph.goal, policy, -1), certificate)
+
+
+def _exact(graph: PackedGraph, inside: np.ndarray, info: dict) -> Core | None:
+    """The `Core` of `_exact_solve.exact_quotient` (the exact optimum over the proper states, its values rounded once), or None when it
+    does not apply (a quotient of more than `EXACT_CLASSES` classes)."""
+    found = exact_quotient(graph, inside)
+    if found is None:
+        return None
+    value, solved, reduced, kernel_map, cls, class_action = found
+    info["exact_classes"] = reduced.n
+    action = lift_policy(graph, reduced, kernel_map, cls, class_action)
+    action = np.where(solved & ~graph.goal, action, -1)
+    return Core(np.where(solved, value, INF), solved, action, Certificate(EPS, 1.0 - EPS, 1.0 + EPS, 0.0, True, exact=True))
 
 
 def solve_packed(
@@ -898,7 +921,8 @@ def solve_packed(
     value = core.value[cls]
     solved = core.solved[cls]
     mark = time.perf_counter()
-    certificate = certify(graph, value, solved, wanted=accept_bound)
+    # an exact solve of the quotient is the exact optimum of the graph (the merge is exact); float64 cannot measure it again (#1380)
+    certificate = core.certificate if core.certificate.exact else certify(graph, value, solved, wanted=accept_bound)
     info["certify_seconds"] = round(time.perf_counter() - mark, 2)
     info["quotient_bound"] = core.certificate.bound
     if not certificate.bound <= refuse_above:

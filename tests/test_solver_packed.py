@@ -272,6 +272,13 @@ def test_a_bound_the_certificate_cannot_show_raises_instead_of_being_returned():
     leaky = TabularModel(["g"], {"a": [Action("x", 1.0, (Outcome("b", 1),))], "b": [Action("y", 1.0, (Outcome("a", 10**15), Outcome("g", 1)))]})
 
     assert solve_packed_model(loop, ["a"]).values["a"] == pytest.approx(4.0)
-    with pytest.raises(ConvergenceError):
-        solve_packed_model(leaky, ["a"])
+    with pytest.MonkeyPatch.context() as patch:  # float64 alone: the refusal (the exact solve of #1380 turned off)
+        from crafting_system.solver import _exact_solve
+
+        patch.setattr(_exact_solve, "EXACT_CLASSES", 0)
+        with pytest.raises(ConvergenceError):
+            solve_packed_model(leaky, ["a"])
+    # #1380: its 3 classes are then solved in rational numbers: V(b) = 1 + q (1 + V(b)) with q = 10^15 / (10^15 + 1), so V(b) = 2 10^15 + 1
+    # and V(a) = 2 10^15 + 2, exactly
+    assert solve_packed_model(leaky, ["a"]).values["a"] == 2 * 10**15 + 2
 

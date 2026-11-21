@@ -201,9 +201,16 @@ def test_a_free_action_is_certified_and_only_a_free_cycle_is_a_convergence_error
     assert certified >= 6 and failed >= 1, (certified, failed)  # before #769 none certified: the free state's own cost was 0
 
 
-def test_a_cost_ratio_of_1e14_between_the_cheapest_action_and_the_values_is_a_convergence_error_not_a_bound_error():
+def test_a_cost_ratio_of_1e14_between_the_cheapest_action_and_the_values_is_a_convergence_error_not_a_bound_error(monkeypatch):
     graph = random_graph(34, SIZE)
     graph.costs = [cost * (1e-7 if offer % 2 else 1e7) / 6 for offer, cost in enumerate(graph.costs)]
     value, _ = dense_optimum(graph)
-    with pytest.raises(ConvergenceError, match="certifies only a relative bound"):
-        Search(ExplicitProblem(graph, value, 1.0)).run()
+    with monkeypatch.context() as patch:  # float64 alone (the exact solve of #1380 turned off)
+        from crafting_system.solver import _exact_solve
+
+        patch.setattr(_exact_solve, "EXACT_CLASSES", 0)
+        with pytest.raises(ConvergenceError, match="certifies only a relative bound"):
+            Search(ExplicitProblem(graph, value, 1.0)).run()
+    # #1380: the graph's few classes are solved again in rational numbers, and the search ends exact at the dense optimum
+    result = Search(ExplicitProblem(graph, value, 1.0)).run()
+    assert result.exact and result.lower == pytest.approx(value[0], rel=1e-9)

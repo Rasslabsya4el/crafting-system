@@ -1568,7 +1568,8 @@ def walk_stop(cause: str | None) -> str:
 
 
 def envelope_refusal(solver: str, error: Exception) -> str:
-    """The `PlanError` text of an envelope search that cannot answer (OR-13): the cause in words, and for `auto` the way to the walk, which is never taken silently (#535).
+    """The `PlanError` text of an envelope search that cannot answer (OR-13): the cause in words. It no longer points to the walk (`--solver packed`),
+    a retired path (#1380); the walk is never taken silently (#535).
 
     Under `auto` a refusal of the bound's build carries a player's cause (`.player`, set by `abstraction._pattern`) in place of the developer's text,
     and a search that found no route says so as the walk does, with no advice to walk: the walk would find none either. A search a net
@@ -1595,10 +1596,7 @@ def envelope_refusal(solver: str, error: Exception) -> str:
     if isinstance(error, NoPolicy):
         return f"no policy of the offered actions reaches the goal from the start item ({error})"
     cause = getattr(error, "player", None) or str(error)
-    return (
-        f"the search for the cheapest route could not give an answer: {cause}. "
-        "The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`"
-    )
+    return f"the search for the cheapest route could not give an answer: {cause}"  # (no advice to walk: the full walk is retired, #1380)
 
 
 def finished(plan: Plan) -> Plan:
