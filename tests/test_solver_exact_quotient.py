@@ -93,3 +93,12 @@ def test_a_graph_no_policy_of_which_reaches_the_goal_gives_no_exact_solve():
     # the rational solve answers only where a proper policy exists over the states it is given
     graph = build((False, [(1.0, [(1, 1)])]), (False, [(1.0, [(0, 1)])]), (True, []))
     assert _exact_solve.exact_quotient(graph, np.array([True, True, False])) is None
+
+
+def test_a_kernel_of_more_than_62_bits_of_weight_is_not_solved_exactly_and_the_refusal_says_so():
+    # the fractions of very large weights (#868: 22,965-bit totals) can grow past what one solve may take: such a quotient is refused as before
+    big = 2**70
+    graph = build((False, [(1.0, [(1, 1), (2, big - 1)])]), (True, []), (False, [(533.0, [(0, 1)])]))
+    assert graph.k_big  # the kernel keeps its exact weights apart
+    with pytest.raises(ConvergenceError, match="the exact solve in rational numbers did not apply"):
+        solve_graph(graph)

@@ -13,9 +13,11 @@ cheaper in exact arithmetic (policy iteration on a stochastic shortest path whos
 policy, every policy it passes through proper). What comes out is the optimum exactly: the values are the exact rationals rounded once to
 float64, so the certified relative error is one rounding (`EPS`), and no tolerance is asked or loosened.
 
-The work grows with the cube of the classes held at once (Gauss-Jordan elimination of fractions), so it is tried only on a quotient of at most
-`EXACT_CLASSES` classes (the merge stops counting past it); a larger one is refused as before, by the caller's float64 certificate. It runs only
-where that certificate refused, so a solve that certified keeps its numbers to the bit.
+The work grows with the cube of the classes held at once and with the digits of the weights (Gauss-Jordan elimination of fractions), so it is
+tried only on a quotient of at most `EXACT_CLASSES` classes (the merge stops counting past it) whose kernels all add up to less than 2^62 (no
+`PackedGraph.k_big` kernel: #868's Chaos Orb kernels reach 22,965-bit totals, on which 20 classes did not end in 150 s); otherwise the solve is
+refused as before, by the caller's float64 certificate, and its refusal says the exact solve did not apply. It runs only where that
+certificate refused, so a solve that certified keeps its numbers to the bit.
 """
 
 from fractions import Fraction
@@ -25,14 +27,15 @@ import numpy as np
 from ._packed import PackedGraph, kernel_any
 from ._packed_merge import exact_classes, quotient
 
-EXACT_CLASSES = 64  # the classes of a quotient solved in rational numbers: the work grows as their cube (measured on the server, a quotient whose
-# 63 classes each reach every other with 40-bit weights: 8.9 s; 48 classes: 2.6 s; R17's rounds, 3 to 9 classes: milliseconds). A choice of the
-# arithmetic, not a cut: a larger quotient is refused as before, by the float64 certificate
+EXACT_CLASSES = 32  # the classes of a quotient solved in rational numbers: the work grows as their cube (measured on the server, a quotient whose
+# classes each reach every other with 61-bit weights: 32 classes 0.45 s, 16 classes 0.04 s; with 40-bit weights 63 classes took 8.9 s; R17's rounds
+# and R04's refused plan (#1291), 3 to 9 classes: milliseconds). A choice of the arithmetic, not a cut: a larger quotient is refused as before
+FLOAT_MAX = Fraction(np.finfo(np.float64).max)
 
 
 def exact_quotient(graph: PackedGraph, inside: np.ndarray) -> tuple[np.ndarray, np.ndarray, PackedGraph, np.ndarray, np.ndarray, np.ndarray] | None:
     """The exact optimum of `graph` over the states `inside` (the others are dead: an action that may reach one is not taken), or None when the
-    quotient has more than `EXACT_CLASSES` classes, when an action it may take is free (cost 0: an unveil, a pick; policy iteration is exact only
+    quotient has more than `EXACT_CLASSES` classes or a kernel of more than 62 bits of weight, when an action it may take is free (cost 0: an unveil, a pick; policy iteration is exact only
     where every cost is above zero, so that no policy that never finishes costs less than one that does), or when none of its policies over
     `inside` reaches the goal from every state of it.
 
@@ -61,6 +64,8 @@ def exact_quotient(graph: PackedGraph, inside: np.ndarray) -> tuple[np.ndarray, 
         for a in range(int(reduced.act_ptr[s]), int(reduced.act_ptr[s + 1])):
             k = int(reduced.act_kernel[a])
             if not bad[k]:
+                if k in reduced.k_big:
+                    return None  # weights of more than 62 bits: the fractions would grow past what a solve may take (module text)
                 if not reduced.act_cost[a] > 0.0:
                     return None  # a free action: a free cycle can keep a run from the goal at no cost, and policy iteration needs every cost above zero
                 acts[s].append((a, Fraction(float(reduced.act_cost[a])), k))
@@ -86,6 +91,8 @@ def exact_quotient(graph: PackedGraph, inside: np.ndarray) -> tuple[np.ndarray, 
     out = np.full(m, np.inf)
     out[reduced.goal] = 0.0
     class_action = np.full(m, -1, dtype=np.int64)
+    if any(value[s] > FLOAT_MAX for s in states):
+        return None  # a value past the range of float64 (no caller could hold it)
     for s in states:
         out[s] = float(value[s])  # (`float` of a Fraction is correctly rounded)
         class_action[s] = policy[s][0]
