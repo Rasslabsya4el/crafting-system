@@ -1906,19 +1906,20 @@ class PatternBuilder:
 
     def _place(self, first: int, at, spread) -> None:
         """Record where the offers from number `first` on are built (`extend`), and give each expanded key the ones it is to be given."""
+        expanded = np.fromiter(self.expanded, dtype=bool, count=len(self.expanded))
         for n, oi in enumerate(range(first, len(self.offers))):
             keys = None if at is None else at[n]
             if keys is None:
                 self.wide.append(oi)
             else:
-                self._hold(oi, keys)
+                self._hold(oi, keys, expanded)
         for oi, keys in (spread or {}).items():
-            self._hold(oi, keys)
+            self._hold(oi, keys, expanded)
 
-    def _hold(self, oi: int, keys: Iterable[int]) -> None:
+    def _hold(self, oi: int, keys: Iterable[int], expanded: np.ndarray) -> None:
+        """Hold offer number `oi` at `keys` too; an expanded key among the new ones is to be given it at the next pass."""
         fresh = self.narrow.add(oi, keys)
         if len(fresh):
-            expanded = np.fromiter(self.expanded, dtype=bool, count=len(self.expanded))
             self.pending.add(oi, fresh[expanded[fresh]])
 
     def _given(self, i: int) -> list[int]:

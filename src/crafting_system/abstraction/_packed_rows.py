@@ -14,7 +14,8 @@ the search then walked the first plan with 10.5 GB held and was cut by the net.
 Here an action is two 32-bit integers (`Rows`: `offer[ptr[k]:ptr[k+1]]`, `kernel[...]`), and a pair held one 32-bit integer by offer and one
 by key (`Held`): about 16 bytes where there were about 290, the same model to the last action. Nothing is approximated and nothing is let go:
 `Rows` and `Held` answer what the lists and sets answered (`Rows[k]` is the row as a list of tuples, `Held[p]` the sorted keys of offer `p`),
-so every reader gets the same values; the readers that loop over every action read the arrays (`pack_pattern_model`, the search's backups).
+so every reader gets the same values; the search reads one key's backups off the arrays when it is at a state of that key
+(`_envelope_plan.CraftingProblem.lowest`), and the solve's graph is packed from the rows a key at a time (`pack_pattern_model`).
 The arrays of a held offer are never changed in place (`Held.add` makes a new one), so a snapshot of the model shares them with the builder
 and stays what it was when the builder goes on.
 """

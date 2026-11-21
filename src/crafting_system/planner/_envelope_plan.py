@@ -90,6 +90,7 @@ class CraftingProblem:
         self.floors = bound.floors
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
         self.holds = bound.holds  # an offer of the model held at some keys only has no abstract action at the others (#1325)
+        self.narrow = bound.narrow  # those offers, by key (`_packed_rows.Held.offers_at`): `candidates` reads a key's once
         self.tip = [not built for built in model.expanded] if model.expanded else [False] * len(model.keys)  # keys the build did not reach
         # the state of the ruined keys, once built with its restart row (`abstraction._pattern`, "The ruined keys", #1367): a state of it is offered the
         # restart alone, exactly (no plan from it reaches the goal without the restart, and the restart at once costs its value)
@@ -106,7 +107,8 @@ class CraftingProblem:
         self.rows = model.actions
         self.position_of = np.asarray(bound.positions, dtype=np.int64)  # the model's offer index -> its position in `offers`
         self.cost_of = np.array([self.offers[position].cost for position in bound.positions], dtype=np.float64)  # and its cost
-        self.expected = _expected(model, values)  # the lowered value of each pushed kernel of the model, in expectation
+        self.expected = _expected(model, values)
+        self._lowest: tuple | None = None  # the last key `lowest` read, with what it read it under, and its answer  # the lowered value of each pushed kernel of the model, in expectation
         self.restart = next((p for p, priced in enumerate(self.offers) if isinstance(priced.offer.action, BuyStartItem)), None)
         self.start_lower = float(values[0])  # key 0 is the start's
         self.keys_missing = 0
@@ -153,6 +155,9 @@ class CraftingProblem:
         """Offer position -> the least backup of key number `k`'s abstract actions for that offer (its cost plus the `expected` value of its
         kernel), read off the model's packed row (`_packed_rows.Rows`); with `finite`, a backup that is not finite is left out. A step of a
         relaxed draw (`CHOICE`) is no offer of a state."""
+        last = self._lowest
+        if last is not None and last[0] == k and last[1] is expected and last[2] == finite:  # `candidates` and then `first_choice` read the same key
+            return last[3]
         rows = self.rows
         a, b = int(rows.ptr[k]), int(rows.ptr[k + 1])
         index, kernel = rows.offer[a:b], rows.kernel[a:b]
@@ -166,6 +171,7 @@ class CraftingProblem:
                 continue
             if position not in found or backup < found[position]:
                 found[position] = backup
+        self._lowest = (k, expected, finite, found)
         return found
 
     def is_goal(self, state: CompressedState) -> bool:
@@ -220,6 +226,8 @@ class CraftingProblem:
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
         found = None if k is None or self.tip[k] else self.lowest(k, self.expected)
+        narrow = self.narrow
+        here = set(narrow.offers_at(k).tolist()) if found is not None and narrow else ()  # the offers held at some keys only that this key holds
         klass = self._klass(state)
         out: list[tuple[float, int]] = []
         own = self._own = set()  # the positions whose `la` the key gave (`split_candidates`)
@@ -238,7 +246,7 @@ class CraftingProblem:
                 continue
             if restart:
                 low = priced.cost + self.start_lower
-            elif found is None or position not in self.in_model or not self.holds(k, position):
+            elif found is None or position not in self.in_model or (position in narrow and position not in here):  # `PatternBound.holds`, read once a key
                 low = priced.cost  # no abstract action to read (the model did not build it at this key, #1325): the offer's own cost, or its floor below
             elif position in found:
                 low = found[position]
