@@ -233,11 +233,11 @@ def test_a_stopped_build_orders_the_offers_by_the_model_of_what_it_finished(worl
     assert problem.first_choice is not None and math.isfinite(problem.closed_start)
     assert problem.closed_start >= bound.start_value  # the closed model is the stopped one without its shortcuts: never below it
     order = problem.first_choice(begin)
-    backups = problem.closed_lowest[problem._key(begin)]
+    backups = problem.lowest(problem._key(begin), problem.closed_expected, finite=True)
     assert order and order[0] == min(backups, key=backups.get)
     assert [backups[p] for p in order] == sorted(backups[p] for p in order)
     # a state whose key the build never expanded: the restart alone
-    tips = [state for state in full.solution.values if (k := problem._key(state)) is not None and problem.tip[k] and not problem.closed_lowest[k]]
+    tips = [state for state in full.solution.values if (k := problem._key(state)) is not None and problem.tip[k] and not problem.lowest(k, problem.closed_expected, finite=True)]
     assert tips
     assert problem.first_choice(tips[0]) == [problem.restart]
 

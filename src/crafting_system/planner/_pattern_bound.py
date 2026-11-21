@@ -41,6 +41,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState
+from crafting_system.abstraction._packed_rows import Held
 from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, Growth, PatternBuilder, PatternKey, PatternModel, PatternOffer, PatternStats, Room, Ruin, Tally
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
@@ -73,12 +74,11 @@ class PatternBound:
     pieces: int = 0  # a build counted in pieces of work (`pieces` of `pattern_lower_bound`, #1101): the pieces it did; 0 otherwise
     share: int | None = None  # the pieces it was given; None for a build on the clock
     late: bool = False  # nearly done when its net was reached, it went on past it (`Growth`, `room` of `pattern_lower_bound`, #1135)
-    narrow: dict = field(default_factory=dict, compare=False)  # an offer of the model built at some keys only (#1325): its position in the offers given -> those keys' numbers
+    narrow: Held = field(default_factory=Held, compare=False)  # an offer of the model built at some keys only (#1325): its position in the offers given -> those keys' numbers (`_packed_rows.Held`, #1366)
 
     def holds(self, k: int, position: int) -> bool:
         """Whether the model built the offer at `position` at key number `k` (an offer of the model held at some keys only is not built elsewhere)."""
-        keys = self.narrow.get(position)
-        return keys is None or k in keys
+        return position not in self.narrow or self.narrow.holds(k, position)
 
     @property
     def lower(self) -> float:
@@ -212,7 +212,7 @@ def pattern_lower_bound(
     adding = list(order)
     at: list[list[int]] | None = None  # where the offers joining are built: every key for the first model, the keys that need them after (#1325)
     spread: dict[int, list[int]] | None = None  # offers of the model held at some keys, built at more keys (model offer number -> keys)
-    holders: dict[int, set[int]] = {}  # an offer held at some keys only: its position in `priced` -> the numbers of those keys
+    holders = Held()  # an offer held at some keys only: its position in `priced` -> the numbers of those keys
     first = len(order)  # the offers of the first model: what growth adds is the rest (`Growth.start`)
     rounds = 0
     while True:
@@ -256,21 +256,21 @@ def pattern_lower_bound(
         )
         if model.stopped is not None or floors is None or not (outside or holders):  # every offer built at every key: nothing can join
             phase = "floors" if floors_stopped else "model" if model.stopped else "complete"
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, phase, tally, watched, _frozen(holders))
+            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, phase, tally, watched, holders.copy())
         try:
             needs, limits = _binding(graph, solved, model, floors, outside, holders, say)
         except FloorsStopped as reached:  # the model of this round is solved and stands; only the offers that would join are not known
             say(f"model {rounds}: the net was reached while the offers outside the model were examined ({reached.reason}); the model of this round stands")
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth", tally, watched, _frozen(holders))
+            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth", tally, watched, holders.copy())
         if not needs:
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched, _frozen(holders))
+            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched, holders.copy())
         more = [p for p in needs if p not in inside]
         slot = {p: j for j, p in enumerate(order)}
         spread = {slot[p]: keys for p, keys in needs.items() if p in inside}
         at = [needs[p] for p in more]
-        kept = (model, value, float(solved.error_bound), list(order), _frozen(holders))
+        kept = (model, value, float(solved.error_bound), list(order), holders.copy())
         for p, keys in needs.items():
-            holders.setdefault(p, set()).update(keys)
+            holders.add(p, keys)
         built = sum(len(keys) for keys in needs.values())
         names = ", ".join(f"{priced[p].label} (cost {priced[p].cost:.3g})" for p in more[:2]) + (", ..." if len(more) > 2 else "")
         named = ((OUTSIDE, "outside E"), (INSIDE, "inside E"), (OTHER, "other shape"), (UNOPENED, "unopened"), *((k, f"shape {shape_of(k)}") for k in floors.classes[len(CLASSES):]))
@@ -286,15 +286,11 @@ def pattern_lower_bound(
             net.grown(Growth(len(order), len(priced), first, len(kept[3])), net.used())
 
 
-def _frozen(holders: dict[int, set[int]]) -> dict[int, frozenset[int]]:
-    return {p: frozenset(keys) for p, keys in holders.items()}
-
-
 def _bound(model, value, error, phases, began, order, floors, rounds, stopped, phase, tally: Tally | None = None, watched=(), narrow=None) -> PatternBound:
     solve = phases["solve"]
     return PatternBound(
         model, value, float(value[0]), error, time.perf_counter() - began - solve, solve, tuple(order), floors, stopped, phase, dict(phases), rounds,
-        0 if tally is None else tally.done, None if tally is None else tally.cap, any(getattr(net, "late", False) for net in watched), narrow or {},
+        0 if tally is None else tally.done, None if tally is None else tally.cap, any(getattr(net, "late", False) for net in watched), Held.of(narrow),
     )  # fmt: skip
 
 
@@ -329,13 +325,13 @@ def _tip_floor(priced: Sequence[PricedOffer]) -> Callable[[PatternKey, bool], fl
 
 
 def _floor_of(
-    floors: OfferFloors, outside: list[int], priced: Sequence[PricedOffer], holders: dict[int, set[int]] | None = None
+    floors: OfferFloors, outside: list[int], priced: Sequence[PricedOffer], holders: "Held | dict[int, set[int]] | None" = None
 ) -> Callable[[int, PatternKey, bool], float | None]:
     """The floor action of a key: the least floor of the offers the model did not build there (those outside the model, and those of the model
     held at other keys only, #1325), or of all the offers when the key is a tip."""
     names = range(len(priced))
     table = {klass: (floors.floor(outside, klass), floors.floor(names, klass)) for klass in floors.classes}
-    held = holders or {}
+    held = Held.of(holders)
     # the offers held at some keys only, least floor first, per class: a key's floor action is the first of them it does not hold, when that is
     # below the floor of the offers outside
     ranked = {klass: sorted((floors.lower(p, klass), p) for p in held) for klass in floors.classes} if held else {}
@@ -346,10 +342,13 @@ def _floor_of(
             cost = table[klass][1]
         else:
             cost = table[klass][0]
+            mine = None
             for low, p in ranked.get(klass, ()):
                 if low >= cost:
                     break
-                if k not in held[p]:
+                if mine is None:
+                    mine = set(held.offers_at(k).tolist())
+                if p not in mine:
                     cost = low
                     break
         return None if cost == float("inf") else cost
@@ -358,7 +357,7 @@ def _floor_of(
 
 
 def _binding(
-    graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int], holders: dict[int, set[int]] | None = None,
+    graph, solved, model: PatternModel, floors: OfferFloors, outside: list[int], holders: "Held | dict[int, set[int]] | None" = None,
     say: Callable[[str], None] = lambda _text: None,
 ) -> tuple[dict[int, list[int]], dict[int, float | None]]:
     """The offers the model did not build at a key where the floor action is the cheapest and that could lower its value there, each with the
@@ -376,7 +375,7 @@ def _binding(
     Built at every key, the offers a class of another shape needed joined by the thousand where one key needed them (R24: 2,831 offers needed at
     1 key, built at 18,478; R04: 1,245 offers, 49 s a key), since every offer's floor in such a class is its price (`OfferFloors.lower`).
     """
-    held = holders or {}
+    held = Held.of(holders)
     value = np.asarray(solved.value, dtype=np.float64)
     n = graph.n
     contribution = graph.k_prob * value[graph.k_succ]
@@ -422,11 +421,12 @@ def _binding(
         for klass, keys in keys_of.items():  # the keys where its floor is not above the model's best: there it could lower the value
             where.extend(keys[floors.lower(position, klass) * (1 - SLACK) <= best_of[klass]].tolist())
         if position in held:
-            where = [k for k in where if k not in held[position]]
+            given = np.asarray(where, dtype=np.int64)
+            where = given[~np.isin(given, held[position])].tolist()
         if where:
             found.append((low, position))
             needs[position] = where
-    more = _doubled(needs, holders or {}, keys_of, candidates, floors, found)
+    more = _doubled(needs, held, keys_of, candidates, floors, found)
     say(
         f"binding: {len(needs):,} of {len(candidates):,} offers are needed, at {len({k for keys in needs.values() for k in keys}):,} of {len(model.keys):,} keys"
         + (f"; {more:,} more offers at a key, as many as those keys held (`_doubled`)" if more else "")
@@ -436,7 +436,7 @@ def _binding(
     return {position: sorted(needs[position]) for _, position in found}, limit
 
 
-def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: PatternModel, floors: OfferFloors, holders: dict[int, set[int]]) -> None:
+def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: PatternModel, floors: OfferFloors, holders: "Held | dict[int, set[int]]") -> None:
     """Add to a class of another shape where the policy reaches a binding key as many more binding keys of that class as already hold offers
     built at some keys only, the most binding first (the least ratio of the floor action to the model's best), so the keys a class's offers are
     built at double each round it is found binding (#1325).
@@ -445,6 +445,7 @@ def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: 
     at a time (64 rounds, start value 222.03 to 222.82); given at every binding key at once, 2,884 offers were built at all 18,469 keys, the join
     of the whole model again. Doubling, a class is found binding at most about log2 of its keys times in a row. Which keys hold an offer changes
     nothing of the bound's soundness (`_floor_of`): only how many rounds the growth takes."""
+    holders = Held.of(holders)
     if not unreached or not holders:
         return
     klass_of = lambda k: floors.klass(model.keys[k].flags, model.keys[k].fractured, model.keys[k].status, model.keys[k].held[IMPRINTS])  # noqa: E731
@@ -452,7 +453,7 @@ def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: 
     if not wanted:
         return
     holding: dict[int, int] = {}
-    for k in set().union(*holders.values()):
+    for k in np.flatnonzero(holders.counts()).tolist():
         if (klass := klass_of(k)) in wanted:
             holding[klass] = holding.get(klass, 0) + 1
     spare: dict[int, list[tuple[float, int]]] = {}
@@ -464,7 +465,7 @@ def _spread(by_class: dict[int, list[int]], unreached: list[int], ratio, model: 
         by_class[klass].extend(k for _, k in keys[: holding[klass]])
 
 
-def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
+def _doubled(needs: dict[int, list[int]], holders: "Held | dict[int, set[int]]", keys_of, candidates: list[int], floors: OfferFloors, found: list) -> int:
     """Give a key of another shape that needs offers at least as many as it already holds of those built at some keys only, the least floors
     first (#1325).
 
@@ -474,12 +475,11 @@ def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of,
     log2 of the offers times, and it is given at most twice the offers it needs in the end. Which offers a key holds changes nothing of
     the bound's soundness (any set of offers built at a key is a lower bound there, `_floor_of`): only how many rounds the growth takes.
     Adds to `needs` and `found` in place; returns how many (offer, key) pairs were added."""
+    holders = Held.of(holders)
     if not holders:
         return 0
-    held: dict[int, int] = {}
-    for keys in holders.values():
-        for k in keys:
-            held[k] = held.get(k, 0) + 1
+    counts = holders.counts()
+    held = {k: int(counts[k]) for k in np.flatnonzero(counts).tolist()}  # key -> how many offers held at some keys only it holds
     given: dict[int, int] = {}
     for keys in needs.values():
         for k in keys:
@@ -497,10 +497,11 @@ def _doubled(needs: dict[int, list[int]], holders: dict[int, set[int]], keys_of,
             ranked[klass] = sorted((low, p) for p in candidates if (low := floors.lower(p, klass)) < math.inf)
         for k in short:
             want = held[k] - given[k]
+            mine = set(holders.offers_at(k).tolist())
             for low, p in ranked[klass]:
                 if want == 0:
                     break
-                if k in holders.get(p, ()) or k in asked.get(p, ()):
+                if p in mine or k in asked.get(p, ()):
                     continue
                 if p not in needs:
                     needs[p] = []

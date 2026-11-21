@@ -52,6 +52,18 @@ from ._prune import corrupting_offer_pruned
 RESTART_KEY = ("restart",)
 
 
+def _expected(model, values: np.ndarray) -> np.ndarray:
+    """The value of each pushed kernel of `model` under `values` (the keys', the sink last: the successor `SINK`, -1, of a float kernel is the
+    model's last state, the goal that costs nothing, `_pattern_bound`, `close_state`), in expectation."""
+    sink = len(model.keys)
+    expected = np.empty(len(model.kernels), dtype=np.float64)
+    for j, (successors, weights) in enumerate(model.kernels):
+        total = sum(weights)
+        chance = np.array([w / total for w in weights])  # int / int is exact to one rounding, whatever the size
+        expected[j] = float(chance @ values[[sink if key == SINK else key for key in successors]])
+    return expected
+
+
 class CraftingProblem:
     """The crafting plan as a `_envelope.Problem` (see the module text)."""
 
@@ -89,23 +101,12 @@ class CraftingProblem:
         factor = lowering(bound.error_bound)  # lowered by what the solver cannot certify (to 0 where it certifies nothing, #830)
         values = raw * factor if factor > 0.0 else np.where(np.isinf(raw), raw, 0.0)
         self.values = values
-        expected: list[float] = []  # the lowered value of each pushed kernel of the model, in expectation
-        sink = len(values) - 1  # the successor `SINK` (-1) of a float kernel is the model's last state, the goal that costs nothing (`_pattern_bound`, `close_state`)
-        for successors, weights in model.kernels:
-            total = sum(weights)
-            chance = np.array([w / total for w in weights])  # int / int is exact to one rounding, whatever the size
-            expected.append(float(chance @ values[[sink if key == SINK else key for key in successors]]))
-        self.lowest: list[dict[int, float]] = []  # key -> offer position -> the least lowered backup of its abstract actions there
-        for row in model.actions:
-            found: dict[int, float] = {}
-            for index, kernel in row:
-                if index == CHOICE:  # a step of a relaxed draw: no offer of a state
-                    continue
-                position = bound.positions[index]
-                q = self.offers[position].cost + expected[kernel]
-                if position not in found or q < found[position]:
-                    found[position] = q
-            self.lowest.append(found)
+        # the model's rows, read a key at a time (`lowest`): the search reads one key's backups at a state, so they are not held for every key
+        # (#1366: R04's 176,625 keys held 14.2 million of them in one dict a key, 759 MB, and as many again on a stopped build, `_closed`)
+        self.rows = model.actions
+        self.position_of = np.asarray(bound.positions, dtype=np.int64)  # the model's offer index -> its position in `offers`
+        self.cost_of = np.array([self.offers[position].cost for position in bound.positions], dtype=np.float64)  # and its cost
+        self.expected = _expected(model, values)  # the lowered value of each pushed kernel of the model, in expectation
         self.restart = next((p for p, priced in enumerate(self.offers) if isinstance(priced.offer.action, BuyStartItem)), None)
         self.start_lower = float(values[0])  # key 0 is the start's
         self.keys_missing = 0
@@ -133,23 +134,7 @@ class CraftingProblem:
             return
         if not math.isfinite(float(closed[0])):
             return
-        sink = len(model.keys)  # pack_pattern_model's last state, the goal the sink successor (-1) stands for
-        expected = []
-        for successors, weights in model.kernels:
-            total = sum(weights)
-            chance = np.array([w / total for w in weights])
-            expected.append(float(chance @ closed[[sink if key == SINK else key for key in successors]]))
-        self.closed_lowest: list[dict[int, float]] = []
-        for row in model.actions:
-            found: dict[int, float] = {}
-            for index, kernel in row:
-                if index == CHOICE:  # a step of a relaxed draw: no offer of a state
-                    continue
-                position = bound.positions[index]
-                q = self.offers[position].cost + expected[kernel]
-                if math.isfinite(q) and (position not in found or q < found[position]):
-                    found[position] = q
-            self.closed_lowest.append(found)
+        self.closed_expected = _expected(model, closed)  # pack_pattern_model's last state is the goal the sink successor (-1) stands for
         self.closed_start = float(closed[0])
         self.first_choice = self._closed_choice
 
@@ -157,12 +142,31 @@ class CraftingProblem:
         """The offers of `state` by the closed model's backup, least first (an offer with none is left out); the restart at its price and the start's
         closed value. An empty list where the closed model sees no way to the goal: the search leaves the state to the restart (`Search._first_choice`)."""
         k = self._key(state)
-        found = {} if k is None else self.closed_lowest[k]
+        found = {} if k is None else self.lowest(k, self.closed_expected, finite=True)
         ranked = sorted((q, position) for position, q in found.items())
         if self.restart is not None and state != self.start and self.restart not in found:
             ranked.append((self.offers[self.restart].cost + self.closed_start, self.restart))
             ranked.sort()
         return [position for _, position in ranked]
+
+    def lowest(self, k: int, expected: np.ndarray, finite: bool = False) -> dict[int, float]:
+        """Offer position -> the least backup of key number `k`'s abstract actions for that offer (its cost plus the `expected` value of its
+        kernel), read off the model's packed row (`_packed_rows.Rows`); with `finite`, a backup that is not finite is left out. A step of a
+        relaxed draw (`CHOICE`) is no offer of a state."""
+        rows = self.rows
+        a, b = int(rows.ptr[k]), int(rows.ptr[k + 1])
+        index, kernel = rows.offer[a:b], rows.kernel[a:b]
+        offer = index != CHOICE
+        if not offer.all():
+            index, kernel = index[offer], kernel[offer]
+        q = self.cost_of[index] + expected[kernel]  # each a float sum of the same two floats as `cost + expected[kernel]`
+        found: dict[int, float] = {}
+        for position, backup in zip(self.position_of[index].tolist(), q.tolist()):
+            if finite and not math.isfinite(backup):
+                continue
+            if position not in found or backup < found[position]:
+                found[position] = backup
+        return found
 
     def is_goal(self, state: CompressedState) -> bool:
         return self.ab.is_goal(state) if self.goal is None else self.goal(state)
@@ -215,7 +219,7 @@ class CraftingProblem:
 
     def candidates(self, state: CompressedState) -> list[tuple[float, int]]:
         k = self._key(state)
-        found = None if k is None or self.tip[k] else self.lowest[k]
+        found = None if k is None or self.tip[k] else self.lowest(k, self.expected)
         klass = self._klass(state)
         out: list[tuple[float, int]] = []
         own = self._own = set()  # the positions whose `la` the key gave (`split_candidates`)
