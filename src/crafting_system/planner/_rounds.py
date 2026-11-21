@@ -311,6 +311,7 @@ def widen(
     meter: StatesMeter | None = None,
     gap: float = 0.0,
     floor: Callable[[tuple, RoundCall], float | None] | None = None,
+    release: Callable[[object], None] | None = None,
 ) -> Widened:
     """Run the rounds of `groups` over `offers` (see the module text). `run(round_offers, call)` makes a round's plan (raising what `_make_plan`
     raises, or `Beaten`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and reason;
@@ -318,7 +319,8 @@ def widen(
     shares, `Share` and the rounds not tried read it, never `left` or the clock (the clock only times each round for the JSON). `gap` is the
     run's proof gap (`Budget.gap`, OR-39), the fall of a plan `Share` still counts as falling. `floor(round_offers, call)`, when given, is the
     figure no plan of those offers costs less than from their floors alone (`Floor`), or None: once the first plan is in hand, the rounds left go
-    by it (`by_floor`)."""
+    by it (`by_floor`). `release(plan)`, when given, is called on each finished round's plan before the next round: it lets go of what the
+    plan holds and no later round, nor the answer, needs (#1076: `_plan`'s drops the memos of the plan's abstraction)."""
     if meter is not None:
         left, measure = meter.left, meter.now
     else:
@@ -392,6 +394,11 @@ def widen(
             within = getattr(search, "within", None) if status == WITHIN else None
             if best is None or _cheaper(upper, upper_of(plan), best_mean, best_upper):
                 best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
+            if release is not None:
+                # a finished round holds its plan and its figures only (#1076), before anything after it runs (the floors' order pass, the
+                # next round): what its search made on the way (its abstraction's memos) would otherwise stay with the plan in hand through
+                # every later round and count against their memory net
+                release(plan)
         if lower is not None and best_upper is not None and k > 0:
             lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
         if lower is not None and not math.isfinite(lower):

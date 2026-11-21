@@ -1507,6 +1507,27 @@ class Abstraction:
         if not keep_erased:
             self._shared_by.clear()
 
+    def memo_count(self) -> int:
+        """How many label distributions this abstraction keeps, exact and in floats (`_cache`): what `release_memos` drops."""
+        return len(self._cache) + len(self._approx[0])
+
+    def release_memos(self) -> int:
+        """Drop every memo of the kernels: the prepared pairs (`release_prepared`), the label distributions and their reading in state terms
+        (`_cache`, `_expanded`, exact and in floats, `approximate`), the fractures, the input kernels, the roll spreads and the pool signatures
+        they are keyed by. Returns how many label distributions were dropped.
+
+        Each is a function of its key and this abstraction's settings, made again on the next ask, so a kernel asked after this is the kernel
+        asked before (only slower to make). What numbers the states (`_numbers`, the family types and their numbers, the drawn slots) stays: a
+        state made before is a state of this abstraction after. A plan keeps its abstraction to read its policy's actions (`PackedPolicy`); a
+        finished round's plan lets these go (`_rounds.widen`'s `release`, #1076): R12's round of five offers filled them with 4,078 distributions
+        of 11.7 million outcomes (12.4 GB) in the last search round its share allowed, and its plan, the cheapest so far, held them through every
+        later round, each of which then stopped at once at the 12 GB memory net."""
+        self.release_prepared()
+        dropped = self.memo_count()
+        for memo in (self._cache, self._expanded, self._fractures, self._input_kernels, *self._approx, self._spread, self._signatures, self._unrolled):
+            memo.clear()
+        return dropped
+
     def _prepared(self, state: CompressedState, action: Action) -> _Prepared:
         """`_prepare`, refusing an action that consumes other items when `allow_inputs` is False (every kernel goes through here)."""
         prepared = self._prepare(state, action)

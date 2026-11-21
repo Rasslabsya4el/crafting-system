@@ -1201,6 +1201,15 @@ def round_end(plan: Plan) -> tuple[str, str]:
     return _rounds.STOPPED, reason
 
 
+def release_round(plan: Plan) -> None:
+    """What a finished round's plan lets go of before the next round (`_rounds.widen`'s `release`, #1076): its abstraction's memos
+    (`Abstraction.release_memos`). The plan keeps its policy, its figures and its abstraction, whose kernels the answer's later steps (the Lock,
+    the risk, the route page) make again as they ask them."""
+    abstraction = getattr(plan, "abstraction", None)
+    if abstraction is not None:
+        abstraction.release_memos()
+
+
 def widened_plan(
     data: GameData, target: Target, prices: PriceFile, groups: Sequence[_rounds.Group], grouped: tuple[Offer, ...], limits: tuple[Limit, ...], *,
     price_of_start: StartPrice, clock: Clock | None, with_risk: bool, watch, foresee: bool, route_actions: tuple[str, ...] | None = None, **kwargs,
@@ -1240,7 +1249,7 @@ def widened_plan(
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
         left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=meter,
-        gap=0.0 if clock is None else clock.budget.gap, floor=floor,
+        gap=0.0 if clock is None else clock.budget.gap, floor=floor, release=release_round,
     )  # fmt: skip
     if widened.plan is None:
         said = _rounds.no_plan_words(widened.records)
