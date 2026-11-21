@@ -14,6 +14,7 @@ from crafting_system.data import GameData
 from crafting_system.planner import Plan
 
 from ._report import ReportStep, StepOutcome, state_parts
+from ._report_net import ask
 from ._route_view import _View, route_input
 
 NO_ACTION = "no action"
@@ -33,6 +34,7 @@ def _title(view: _View, number: int) -> str:
 
 
 def _step(view: _View, step) -> ReportStep:
+    ask()  # the report's memory net (#1381)
     plan, data = view.plan, view.data
     number = step.number + 1
     items = len(step.states)
