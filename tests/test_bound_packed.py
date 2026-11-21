@@ -175,3 +175,26 @@ def test_the_search_holds_no_python_object_a_key_for_the_bounds_rows(data, targe
     figure.clear()
     with pytest.raises(PlanError, match=f"the limit is {net:.0f} MB"):
         _belt(data, target, net)  # each round's search stops on the net with no plan
+
+
+def test_a_search_keeps_the_label_distributions_read_lately_and_plans_the_same(data, target, monkeypatch):  # noqa: F811
+    # The label distributions' memos (`Abstraction._cache`, `_expanded`) keep the distributions read lately, a share of the net (#1366): with a
+    # generation of one outcome, every distribution is let go at once and made again when it is asked again, and the plan is the hand-worked 133.
+    from crafting_system.abstraction import _kernel
+    from crafting_system.abstraction._recent import Recent
+
+    held = []
+    real = Recent.__setitem__
+
+    def write(self, key, value):
+        real(self, key, value)
+        if self.size is _kernel._distributions_kept:  # a memo of label distributions
+            held.append(len(self.young) + len(self.old))
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
+    whole = _belt(data, target, None)
+    monkeypatch.setattr(_kernel, "DISTRIBUTIONS_KEPT", 1)
+    monkeypatch.setattr(Recent, "__setitem__", write)
+    small = _belt(data, target, None)
+    assert small.mean_remaining == whole.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert held and max(held) <= 2  # the young generation and the old one, one distribution each

@@ -42,10 +42,10 @@ class Recent(Generic[V]):
 
     __slots__ = ("size", "young", "old", "generation", "dropped", "weigh", "weight")
 
-    def __init__(self, size: int, weigh: Callable[[V], int] | None = None) -> None:
-        if size < 1:
+    def __init__(self, size: "int | Callable[[], int]", weigh: Callable[[V], int] | None = None) -> None:
+        if not callable(size) and size < 1:
             raise ValueError("a memo keeps at least one entry")
-        self.size = size
+        self.size = size  # or a function of nothing, read each time an entry is written: a share of the net that holds when it is written (`kept_entries`)
         self.young: dict[Hashable, V] = {}
         self.old: dict[Hashable, V] = {}
         self.weigh = weigh  # an entry's weight (a list of members: its length, #1341); None: each entry weighs 1, and `size` counts entries
@@ -76,12 +76,27 @@ class Recent(Generic[V]):
         young = self.young
         young[key] = value
         self.weight += 1 if self.weigh is None else max(1, self.weigh(value))
-        if self.weight >= self.size:
+        if self.weight >= (self.size() if callable(self.size) else self.size):
             self.dropped += len(self.old)
             self.old = young
             self.young = {}
             self.weight = 0
             self.generation += 1
+
+    def clear(self) -> None:
+        """Let every entry go (`Abstraction.release_memos`)."""
+        self.dropped += len(self.young) + len(self.old)
+        self.young, self.old, self.weight = {}, {}, 0
+
+    def update(self, entries) -> None:
+        for key, value in dict(entries).items():
+            self[key] = value
+
+    def keys(self):
+        return self.items().keys()
+
+    def values(self):
+        return self.items().values()
 
     def items(self) -> dict[Hashable, V]:
         """Every entry held, the young generation's answer where a key is in both (a dict, for reading)."""
