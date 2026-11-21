@@ -122,7 +122,7 @@ def _no_room_to_solve(model: PatternModel) -> str | None:
     if net is None:
         return None
     need = model.actions.entries * SOLVE_BYTES / (1 << 20)
-    held = parallel.held_mb(under=max(net - need, 0.0))
+    held = parallel.held_mb(under=max(net - need, 0.0), paced=False)  # never late: asked once a round, before the step that cannot be cut
     if held is None or held + need < net:
         return None
     return f"the process held {held:,.0f} MB and the solve of {model.actions.entries:,} actions takes about {need:,.0f} MB more, past the limit of {net:,.0f} MB"
