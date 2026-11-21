@@ -172,14 +172,19 @@ def test_a_forked_pool_holds_its_parents_objects_frozen_until_it_closes():
 
 
 @pytest.mark.skipif(not parallel.can_inherit(), reason="only a forked worker shares its parent's pages")
-def test_a_forked_pool_leaves_frozen_what_was_frozen_before_it():
+def test_a_forked_pool_leaves_frozen_what_was_frozen_before_it(monkeypatch):
+    # what the pool must not do is thaw a freeze it did not make. The count itself may fall while the pool lives: a frozen object whose last
+    # reference goes is freed (two of them did on CI after the other tests of a slot, #1388), so the thaw is watched, not the count.
+    thawed = []
+    real_unfreeze = gc.unfreeze
     gc.freeze()
     try:
-        before = gc.get_freeze_count()
+        monkeypatch.setattr(gc, "unfreeze", lambda: thawed.append(True) or real_unfreeze())
         with WorkerPool(make_base, (0,), workers=2) as pool:
             assert pool.map(add_offset, [1, 2]) == [(1, 7), (2, 14)]
-        assert gc.get_freeze_count() >= before
+        assert thawed == [] and gc.get_freeze_count() > 0
     finally:
+        monkeypatch.undo()
         gc.unfreeze()
 
 
