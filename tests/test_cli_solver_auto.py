@@ -5,7 +5,8 @@
   answer; R12 is proved the cheapest in its first round, so it is exact at any budget; under a budget a search past its aim stops at a proved gap, #826, #925, OR-39,
   `tests/test_envelope_gap_stop_plan.py`);
   where it refuses, the walk (the object solver for a small graph), with or without a budget: the forecast and the ladder are no longer on `auto`'s way (#926);
-* an envelope search that cannot answer under `auto` is a `PlanError` that says why and names `--solver packed`: no silent walk;
+* an envelope search that cannot answer under `auto` is a `PlanError` that says why, with no silent walk and no advice to walk (`--solver packed`
+  is a retired path, #1380);
 * the command's `--solver` choices are the planner's, `auto` by default, and reach `make_plan` through `plan_with_starts`.
 
 Real routes: `test_cli_envelope_real.py`. Fixture world, no game dump needed.
@@ -131,10 +132,10 @@ def refused_under_auto(monkeypatch, error) -> str:
     return str(raised.value)
 
 
-def test_an_envelope_search_that_cannot_answer_under_auto_is_a_plan_error_that_names_the_walk_not_a_walk(monkeypatch):
+def test_an_envelope_search_that_cannot_answer_under_auto_is_a_plan_error_that_says_why_and_names_no_walk(monkeypatch):
     text = refused_under_auto(monkeypatch, OutOfScopeError("a model gap"))
 
-    assert "a model gap" in text and "`--solver packed`" in text and "envelope" not in text
+    assert "a model gap" in text and "--solver" not in text and "envelope" not in text  # the walk is a retired path (#1380)
 
 
 def test_no_route_under_auto_says_so_as_the_walk_does_and_does_not_advise_the_walk(monkeypatch):
@@ -160,7 +161,7 @@ def test_a_refusal_of_the_bounds_build_reaches_the_player_as_a_cause_not_the_dev
     """OR-13: under `auto` the player reads what went wrong in his words; the key, the member builder and the rule numbers stay in the developer's text."""
     text = refused_under_auto(monkeypatch, error)
 
-    assert error.player in text and "`--solver packed`" in text
+    assert error.player in text and "--solver" not in text
     for internal in ("status [", "counts (", "member", "key", "OR-1", "defect", "crafted-pattern"):
         assert internal not in text, internal
     assert "(status [0, 2]" in str(error)  # the developer's text is still the error's own

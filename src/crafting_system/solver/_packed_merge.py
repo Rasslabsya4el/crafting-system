@@ -158,9 +158,10 @@ def _next_blocks(graph: PackedGraph, blk: np.ndarray, nblk: int, act_state: np.n
 
 
 def exact_classes(
-    graph: PackedGraph, progress: Callable[[str], None] | None = None, max_rounds: int = 10_000
-) -> Classes:
-    """The coarsest exact partition of `graph` (see the module docstring)."""
+    graph: PackedGraph, progress: Callable[[str], None] | None = None, max_rounds: int = 10_000, most: int | None = None
+) -> Classes | None:
+    """The coarsest exact partition of `graph` (see the module docstring); with `most`, None as soon as it has more classes than that (a round
+    only splits classes, so the count of a round is at most the final count: `_packed_exact` asks for a small quotient, #1380)."""
     say = progress or (lambda _text: None)
     began = time.perf_counter()
     n = graph.n
@@ -176,6 +177,8 @@ def exact_classes(
         say(f"merge round {rounds}: {new_count:,} classes ({time.perf_counter() - began:.1f} s)")
         if new_count == count:
             break
+        if most is not None and new_count > most:
+            return None
         blk, count = new, new_count
     unique, cls = np.unique(blk, return_inverse=True)
     return Classes(cls.astype(np.int64), len(unique), rounds)
