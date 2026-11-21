@@ -208,3 +208,35 @@ def test_the_record_is_plain_json():
     plan = plan_target(DATA, load_target(R12, DATA), price_file(), settings_of_the_command())
     text = json.dumps(plan_record(plan, target_name=R12.name, stopped="why"), allow_nan=False)
     assert json.loads(text)[RECORD] == {"report_built": False, "stopped": "why"}
+
+
+def test_a_stop_removes_the_page_an_earlier_run_left_beside_the_record(tmp_path, capsys, monkeypatch):
+    stale = tmp_path / f"{R12.stem}.route.html"
+    stale.write_text("the page of an earlier plan", encoding="utf-8")
+    held_past_the_net_after(monkeypatch, _main, "plan_target")
+
+    code, out = run_command(tmp_path, "--memory-limit", str(NET_MB), prices=price_file())
+
+    assert code == 0 and read_json(out)[RECORD]["stopped"] == words()
+    assert not stale.exists()
+    assert not out.with_name(out.name + ".partial").exists()  # the JSON is written whole, then put in place
+
+
+def test_the_site_s_work_past_the_net_after_the_plan_gives_the_record_and_no_page(monkeypatch):
+    from web_support import FixtureWorld, r12_target
+
+    from crafting_system.budget import Budget
+    from crafting_system.config import load_config
+    from crafting_system.web import _work
+
+    class NettedWorld(FixtureWorld):
+        @property
+        def budget(self) -> Budget:  # type: ignore[override]
+            return Budget(seconds=None, memory_mb=NET_MB)
+
+    held_past_the_net_after(monkeypatch, _work, "plan_target")
+    route = _work.plan_request(NettedWorld(DATA, price_file(), load_config({})), {"target": r12_target()}, "poe1", lambda standing: None)
+
+    assert route["page"] is None
+    assert route["policy"][RECORD] == {"report_built": False, "stopped": words()}
+    assert route["summary"]["totals"] == route["policy"]["totals"] and route["summary"]["totals"]["mean_cost"]["value"] > 0

@@ -1,6 +1,7 @@
 """What the commands of the CLI share: loading the prices of a target and writing a JSON file."""
 
 import json
+import os
 from pathlib import Path
 
 from crafting_system.config import Config
@@ -18,4 +19,6 @@ def write_json(path: Path, document: dict) -> None:
     """Write `document` as UTF-8 JSON with LF line endings; infinity and NaN are an error (JSON has none)."""
     text = json.dumps(document, indent=2, ensure_ascii=False, allow_nan=False) + "\n"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8", newline="\n")
+    partial = path.with_name(path.name + ".partial")  # written whole, then put in place: a run killed while it writes leaves the file before (#1381)
+    partial.write_text(text, encoding="utf-8", newline="\n")
+    os.replace(partial, path)

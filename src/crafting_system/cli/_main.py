@@ -224,7 +224,9 @@ def main(
         name = target_path.name
         out = Path(args.json) if args.json else config.output_dir / f"{target_path.stem}.policy.json"
         write_json(out, plan_record(plan, target_name=name))  # the plan's record first: what follows may stop at the memory net, the plan is kept (#1381)
-        written = False  # whether the JSON policy has replaced the record
+        written = printed = False  # whether the JSON policy has replaced the record, and whether the text report was printed
+        check = None
+        page_path = out.parent / f"{target_path.stem}.route.html"
         try:
             with report_net(settings.budget.memory_mb if settings.budget is not None else None):  # the report and the page ask the run's memory net (#1381)
                 report = build_report(plan, game)
@@ -239,6 +241,7 @@ def main(
                     stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
 
                 print(render_text(report, check, target_name=name), end="")
+                printed = True
                 stage("text written")
                 document = policy_document(report, check, target_name=name)
                 if route_path is not None and route is not None and given is not None:
@@ -253,19 +256,20 @@ def main(
                 else:
                     spec = buy_spec_of(game, target) if target.start is StartKind.BOUGHT else None  # computed from the target: the buy step's link and filter
                     page = write_route_page(
-                        out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
+                        page_path, report, game, route=route, given=given,
                         buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
                     )  # fmt: skip
                     print(f"Route view written to {page}")
         except BudgetExceeded as stop:  # the memory net, met while the outputs of a finished plan were built: said, and the record kept (#1381)
             words = stop.binding.words()
+            page_path.unlink(missing_ok=True)  # a page of an earlier run would stand beside this plan's record
             if written:
                 print(f"Route view not written: {words}.")
             else:
                 write_json(out, plan_record(plan, target_name=name, stopped=words))
-                print(f"Report not built: {words}.")
+                print(f"{'JSON policy and route view not written' if printed else 'Report not built'}: {words}.")
                 print(f"The plan's record (its cost, odds, start and limits) is written to {out}")
-            return 0
+            return 2 if check is not None and not check.agrees else 0
     except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
         print(f"Error: {error}", file=sys.stderr)
         return 1

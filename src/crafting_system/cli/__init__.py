@@ -79,6 +79,7 @@ from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When,
 from ._shares import WeightShare, start_shares, weight_share
 from ._start_step import FirstStep, first_step
 from ._verify import Verification, verify
+from ._report_net import report_net
 from ._page_limits import page_limits as _page_limits
 
 present_with(_page_limits)  # a finished plan lists what the page cannot show of it; the maths is this package's (issue #882)
@@ -129,6 +130,7 @@ __all__ = [
     "policy_document",
     "price_offers",
     "render_text",
+    "report_net",
     "route_page",
     "run_budget",
     "start_shares",
