@@ -88,6 +88,7 @@ from crafting_system.solver._packed_lump import lump_states
 from crafting_system.planner import STEPS, Limit, claim
 
 from ._reach import policy_states
+from ._report_net import ask
 
 VISITS_TOLERANCE = 1e-12  # the relative residual BiCGSTAB aims at
 ACCEPT_RESIDUAL = 1e-9  # the largest backward error of a solve that is shown when no better one could be made; above it the flow is not `measured`
@@ -545,6 +546,7 @@ def _can_finish(chain: Chain) -> np.ndarray:
     while True:
         changed = False
         for a, b in blocks:
+            ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
             if finishing[a:b].all():
                 continue
             lo, hi = int(ptr[a]), int(ptr[b])
@@ -619,6 +621,7 @@ def _quotient(chain: Chain, block: np.ndarray) -> tuple[Chain, np.ndarray]:
     lengths = np.zeros(len(acting), dtype=np.int64)
     succ_parts, prob_parts = [], []
     for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):  # a chunk of kernels at a time: no temporary array the size of all edges
+        ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
         edge = expand_ranges(table.k_ptr[moves[acting[a:b]]], sizes[a:b])
         code = np.repeat(np.arange(b - a, dtype=np.int64), sizes[a:b]) * (count + 1) + to[table.k_succ[edge]]
         order = np.argsort(code, kind="stable")
@@ -672,6 +675,7 @@ def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: Los
     moves = chain.kernel[rep]
     sizes = table.kernel_sizes()[moves]
     for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):
+        ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
         edge = expand_ranges(table.k_ptr[moves[a:b]], sizes[a:b])
         yield np.repeat(rep[a:b], sizes[a:b]), table.k_succ[edge].astype(np.int64), np.repeat(weight[a:b], sizes[a:b]) * table.k_prob[edge]
 
@@ -701,6 +705,7 @@ def _solved(chain: Chain) -> _Solved:
             sizes = table.kernel_sizes()[used]
             inflow = np.zeros(m + len(chain.goals))
             for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):  # a chunk of kernels at a time
+                ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
                 edge = expand_ranges(table.k_ptr[used[a:b]], sizes[a:b])
                 inflow += np.bincount(table.k_succ[edge], weights=np.repeat(w[used[a:b]], sizes[a:b]) * table.k_prob[edge], minlength=len(inflow))
             inflow = inflow[:m]
@@ -787,6 +792,7 @@ def _system(chain: Chain, finishing: np.ndarray) -> _System | None:
     count, own, leave, leak = np.zeros(m, dtype=np.int64), np.zeros(m), np.zeros(m), np.zeros(m)
     blocks = _blocks(chain.ptr)
     for a, b in blocks:
+        ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
         if not finishing[a:b].any():
             continue
         row, _, p, live, inside, other = _read(chain, finishing, a, b)
@@ -800,6 +806,7 @@ def _system(chain: Chain, finishing: np.ndarray) -> _System | None:
     column, weight = np.empty(int(ptr[-1]), dtype=np.int32), np.empty(int(ptr[-1]))
     at = 0
     for a, b in blocks:
+        ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
         if not finishing[a:b].any():
             continue
         row, d, p, _, inside, other = _read(chain, finishing, a, b)
@@ -1187,6 +1194,7 @@ def _dead_region(chain: Chain, finishing: np.ndarray) -> _Dead:
     dead_edges: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
     entering: list[tuple[np.ndarray, np.ndarray, np.ndarray]] = []
     for a, b in _blocks(chain.ptr):
+        ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
         row, d, p, live, _, _ = _read(chain, finishing, a, b)
         state = d < m
         dead = ~live & state

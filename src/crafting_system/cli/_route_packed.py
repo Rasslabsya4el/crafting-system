@@ -45,6 +45,7 @@ from crafting_system.planner import (
     progress,
 )
 
+from ._report_net import ask
 from ._route_chain import chain_of_route
 
 VERIFY_FIRST = 20  # the first this many shared kernels of a route's reach are checked against a fresh one ...
@@ -325,6 +326,7 @@ def walk_route(plan: Plan, route, data: GameData) -> RouteReach:
     i = 0
     while i < len(states):
         checkpoint()  # the run's net (#825): the walk stops between two states once its time or memory is spent
+        ask()  # the report's memory net, when a finished plan's given route is read after it (#1381)
         state = states[i]
         taken, price = -1, 0.0
         if not goals[i]:

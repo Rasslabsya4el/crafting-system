@@ -22,6 +22,9 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
   (`<target>.route.html`): the goal card, then a row per step with its card and the item after it; the buy step of a
   target that buys its start item gets the trade-site search link of the buy spec computed from the target. The page model is `_route_view`, the HTML `_route_html`.
   `route_page(report, data, ...)` is the same page as text, which the website serves (`crafting_system.web`, #961).
+* `plan_record(plan)` and `_report_net` (#1381): the command writes the plan's record (its totals, start and limits, from the plan alone) where
+  the JSON policy goes before it builds anything else, and builds the report and the page inside the run's memory net; past it the outputs stop
+  with a stated stop beside the record, never a crash after a finished plan. The benchmark writes each route's record as soon as its plan is made.
 * `run_budget(config, aim, ...)`: the budget of a run from the planner settings of the machine (OR-40), and `load_target_prices(path, config)`: a price
   file with its overrides; the website reuses both.
 
@@ -70,12 +73,13 @@ from crafting_system.planner import (
 )
 from ._inputs import load_target_prices
 from ._main import main, run_budget
-from ._report import Report, build_report, policy_document, render_text
+from ._report import Report, build_report, plan_record, policy_document, render_text
 from ._route_view import route_page
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
 from ._start_step import FirstStep, first_step
 from ._verify import Verification, verify
+from ._report_net import report_net
 from ._page_limits import page_limits as _page_limits
 
 present_with(_page_limits)  # a finished plan lists what the page cannot show of it; the maths is this package's (issue #882)
@@ -122,9 +126,11 @@ __all__ = [
     "offers_for",
     "parse_route",
     "plan_with_starts",
+    "plan_record",
     "policy_document",
     "price_offers",
     "render_text",
+    "report_net",
     "route_page",
     "run_budget",
     "start_shares",

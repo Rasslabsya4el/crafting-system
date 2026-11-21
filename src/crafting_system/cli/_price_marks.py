@@ -6,7 +6,11 @@ it is bought): the price, where it came from (`prices.provenance`), how many uni
 the "Approximate inputs" the answer already prints (OR-23), so every channel that lists approximate inputs lists these too.
 
 The expected uses are solved only for a price that could be marked for depth: a resource whose depth in units is at least the most
-the plan could buy (its whole expected cost over the price) needs no solve, and one with no depth recorded needs none either.
+the plan could buy (its whole expected cost over the price) needs no solve, and one with no depth recorded needs none either. They are the
+expected visits of the policy's item states summed by the action each takes (`expected_uses`): the visits of the route page's own solve
+(`_route_flow._solved`, sparse, a block of edges at a time, made once for a chain and kept on it), so the price list and the uses of the
+page's steps are one number. Before #1381 they were solved by `risk.expected_totals`, dense on each cycle of the policy shown: on R20's
+lumped view (28,773 blocks in one cycle) that is a matrix of 6.6 GB, copied twice, and the kernel killed the run after its plan was made.
 """
 
 import math
@@ -16,11 +20,13 @@ from dataclasses import dataclass
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB
 from crafting_system.prices.price_marks import PriceMark, chaos_text, judged_depth, price_marks, provenance_of, units_text
 from crafting_system.prices.provenance import WIDER
-from crafting_system.risk import expected_totals
+import numpy as np
+
 from crafting_system.solver import Action
 from crafting_system.planner import Plan
 
 from ._reach import policy_states
+from ._route_flow import Chain, _solved, chain_of_policy
 
 UNIT_WORDS = "the unit every price is in"
 RATE_WORDS = "the price file's Divine rate"
@@ -63,7 +69,9 @@ def _counts(plan: Plan, labels: Mapping[str, Action]) -> dict[str, dict[str, int
     return counts
 
 
-def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *, solve_uses: bool = True, all_uses: bool = False) -> tuple[PriceUse, ...]:
+def price_uses(
+    plan: Plan, policy: Mapping | None, mean: float | None = None, *, solve_uses: bool = True, all_uses: bool = False, chain: Chain | None = None
+) -> tuple[PriceUse, ...]:
     """The priced resources the policy buys with, in the order its actions are first met (the start item first when it is bought).
 
     Every currency a step spends is listed, a bench craft's included (#983, OR-7): the Chaos Orb as the unit every price is in, the
@@ -71,7 +79,8 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
     with no entry in the price file (a start price given on the command line) is not listed: it carries no source to show. With `policy` None, or `solve_uses` False, no expected use is solved and a depth is
     compared with one unit, the least a plan that takes the action buys. `mean` is the policy's expected cost without the start item
     (default: the plan's own, `Plan.mean_remaining`); a given route passes its own, which the plan's optimum does not bound. With `all_uses`
-    the expected uses of every resource are solved, not only of those whose depth could matter (a report of what a plan buys).
+    the expected uses of every resource are solved, not only of those whose depth could matter (a report of what a plan buys). `chain` is
+    `policy` on item states when the caller holds it (a lumped view's item chain, `_route_chain.chain_of_plan`); else it is made from `policy`.
     """
     prices = getattr(plan, "prices", None)
     if prices is None:  # a stand-in plan of a test has no price file
@@ -100,11 +109,7 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
         need = list(names)
     solved: dict[str, float | None] = {}
     if need and solve_uses and policy is not None and labels:
-        ordered = list(labels)
-        estimates = expected_totals(
-            policy, plan.start, plan.is_goal, [(lambda action, label=label: 1.0 if action.label == label else 0.0) for label in ordered]
-        )
-        per_label = dict(zip(ordered, (e.value for e in estimates), strict=True))
+        per_label = expected_uses(chain if chain is not None else chain_of_policy(plan.start, policy, plan.is_goal), labels)
         for name in need:
             total = math.fsum(per_label[label] * count for label, count in counts.get(name, {}).items())
             if name == start_name:
@@ -127,6 +132,20 @@ def price_uses(plan: Plan, policy: Mapping | None, mean: float | None = None, *,
         wider = None if provenance is None or provenance.item != WIDER else (provenance.for_item or "")
         found.append(PriceUse(name, entry.chaos, source, depth, uses, marks, wider))
     return tuple(found)
+
+
+def expected_uses(chain: Chain, labels) -> dict[str, float]:
+    """The expected number of uses of each of `labels` in one run of the policy `chain` is: the expected visits of its states summed by the
+    label of the action each takes (`_route_flow._solved`). Infinite for every label when the policy has no finite mean (a reachable state that
+    cannot finish, or visits that could not be solved), as `risk.expected_totals` said it; zero for a start that already is a goal."""
+    if chain.m == 0:
+        return {label: 0.0 for label in labels}
+    done = _solved(chain)
+    if not (done.solved and bool(done.finishing.all())):
+        return {label: math.inf for label in labels}
+    per_key = np.bincount(chain.key, weights=done.visits, minlength=len(chain.keys))
+    index = {key: k for k, key in enumerate(chain.keys)}
+    return {label: float(per_key[index[("action", label)]]) if ("action", label) in index else 0.0 for label in labels}
 
 
 def use_line(use: PriceUse) -> str:

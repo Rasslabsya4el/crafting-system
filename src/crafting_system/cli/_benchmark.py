@@ -22,7 +22,7 @@ import platform
 import subprocess
 import sys
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, date, datetime
 from fractions import Fraction
@@ -30,7 +30,7 @@ from pathlib import Path
 
 from crafting_system.actions import imprints_held_at_most
 from crafting_system.benchmark_record import GUIDED_PLAN, SITE_PLAN, record_of_plan
-from crafting_system.budget import Budget
+from crafting_system.budget import Budget, BudgetExceeded
 from crafting_system.config import Config, find_project_root, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, default_price_file_path, planned_price, stale_warning
@@ -45,6 +45,7 @@ from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict
 from ._benchmark_outcomes import ADDS, FRACTURED, REMOVED, PublishedOutcome, published_outcomes
 from ._inputs import load_target_prices, write_json
 from ._report import interval_answer_of, money, name_states, number_states, percent
+from ._report_net import ask, report_net
 from ._route import RouteResult, evaluate_route, load_route, route_actions
 from ._shares import weight_share
 from ._start_report import first_step_document
@@ -360,22 +361,15 @@ def benchmark_main(
         budget = _run_budget(config) if args.net else None
         entries = []
         used_prices: PriceFile | None = None
+        machine = machine_info(root)
+        keep = _Keep(out_dir / FILE_NAME, machine, budget, entries, prices)  # a route's record, written as soon as its plan is made (#1381)
         with imprints_held_at_most(config.max_imprints):  # the setting `max_imprints` for every plan of the run (#223)
             for bench in BENCHMARKS:
-                entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy, budget=budget)
+                entry, loaded = run_route(bench, game, root, config, prices, today, heavy=args.heavy, budget=budget, keep=keep)
                 entries.append(entry)
                 used_prices = used_prices or loaded
-        document = {
-            "format": FORMAT,
-            "machine": machine_info(root),
-            "ran_at": datetime.now(UTC).isoformat(timespec="seconds"),
-            "prices": None
-            if used_prices is None
-            else {"league": used_prices.league, "fetched_at": used_prices.fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ")},
-            "budget": None if budget is None else {"aim_seconds": budget.aim_seconds, "seconds": budget.seconds, "memory_mb": budget.memory_mb},
-            "plan": GUIDED_PLAN if budget is None else SITE_PLAN,
-            "routes": entries,
-        }
+                keep.used = used_prices
+        document = benchmark_document(machine, budget, entries, used_prices)
         write_json(out_dir / FILE_NAME, document)
         print(render_summary(document))
         print(f"Benchmark written to {out_dir / FILE_NAME}")
@@ -383,6 +377,34 @@ def benchmark_main(
         print(f"Error: {error}", file=sys.stderr)
         return 1
     return 0
+
+
+def benchmark_document(machine: dict, budget: Budget | None, routes: list[dict], used: PriceFile | None) -> dict:
+    """The document `benchmark.json` holds: the machine, the time of the run, the prices, the budget, how the plans were made and the routes."""
+    return {
+        "format": FORMAT,
+        "machine": machine,
+        "ran_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "prices": None if used is None else {"league": used.league, "fetched_at": used.fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ")},
+        "budget": None if budget is None else {"aim_seconds": budget.aim_seconds, "seconds": budget.seconds, "memory_mb": budget.memory_mb},
+        "plan": GUIDED_PLAN if budget is None else SITE_PLAN,
+        "routes": routes,
+    }
+
+
+@dataclass
+class _Keep:
+    """Write `benchmark.json` with the routes done and the one whose plan was just made (#1381): what follows a plan (the published odds, the
+    guide's route) may be stopped at the memory net or killed, and the plan's record is then on disk already."""
+
+    path: Path
+    machine: dict
+    budget: Budget | None
+    entries: list[dict]
+    used: PriceFile | None
+
+    def __call__(self, entry: dict) -> None:
+        write_json(self.path, benchmark_document(self.machine, self.budget, [*self.entries, entry], self.used))
 
 
 def _run_budget(config: Config) -> Budget:
@@ -428,6 +450,7 @@ def run_route(
     *,
     heavy: bool = False,
     budget: Budget | None = None,
+    keep: Callable[[dict], None] | None = None,
 ) -> tuple[dict, PriceFile | None]:
     """The entry of one benchmark route, and the price file it was run on (None when none was loaded).
 
@@ -493,29 +516,37 @@ def run_route(
         if budget is not None:
             entry["record"] = _record(plan, entry["solver"]["mean"], shift)
         timings["solver"], timings["risk_evaluate"] = plan.solve_seconds, plan.risk_seconds
-        entry["published_odds"] += published_odds(data, plan, bench)
-        answer = interval_answer_of(plan, data)
-        if answer is not None:  # a plan that reads a rule axis (a recombinator, #225): approximate, with its cost at every reading and the route without it
-            entry["interval"] = {"approximate": True, **answer.document()}
+        if keep is not None:
+            keep(entry)  # the plan's record is written before anything optional is built (#1381)
+        with report_net(None if budget is None else budget.memory_mb):  # what follows the plan asks the run's memory net (#1381)
+            ask(fresh=True)
+            entry["published_odds"] += published_odds(data, plan, bench)
+            ask(fresh=True)
+            answer = interval_answer_of(plan, data)
+            if answer is not None:  # a plan that reads a rule axis (a recombinator, #225): approximate, with its cost at every reading and the route without it
+                entry["interval"] = {"approximate": True, **answer.document()}
 
-        if bench.route is not None:
-            route = load_route(root / bench.route, plan, data)
-            result = evaluate_route(plan, route, data)
-            entry["given_route"] = _given_route(
-                plan, result, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio, _reviewing(bench, bench.route, GUIDE, root, config)
-            )
-            timings["route_evaluate"] = result.seconds
-            entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
-            if bench.completed is not None:
-                again = evaluate_route(plan, load_route(root / bench.completed, plan, data), data)
-                entry["completed_route"] = _given_route(
-                    plan, again, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio,
-                    _reviewing(bench, bench.completed, COMPLETED, root, config),
+            if bench.route is not None:
+                route = load_route(root / bench.route, plan, data)
+                result = evaluate_route(plan, route, data)
+                ask(fresh=True)
+                entry["given_route"] = _given_route(
+                    plan, result, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio, _reviewing(bench, bench.route, GUIDE, root, config)
                 )
-                timings["completed_route_evaluate"] = again.seconds
-                entry["solver_not_dearer_than_completed"] = _not_dearer(entry["solver"]["mean"], entry["completed_route"]["mean"])
+                timings["route_evaluate"] = result.seconds
+                entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
+                if bench.completed is not None:
+                    again = evaluate_route(plan, load_route(root / bench.completed, plan, data), data)
+                    entry["completed_route"] = _given_route(
+                        plan, again, data, shift, entry["solver"]["mean"], config.benchmark_review_ratio,
+                        _reviewing(bench, bench.completed, COMPLETED, root, config),
+                    )
+                    timings["completed_route_evaluate"] = again.seconds
+                    entry["solver_not_dearer_than_completed"] = _not_dearer(entry["solver"]["mean"], entry["completed_route"]["mean"])
     except _Skipped:
         pass
+    except BudgetExceeded as stop:  # the memory net, met after the plan: the record is kept and the stop is said (#1381)
+        entry["error"] = stop.binding.words()
     except ROUTE_ERRORS as error:
         entry["error"] = _without_root(str(error), root)
     timings["total"] = time.perf_counter() - began

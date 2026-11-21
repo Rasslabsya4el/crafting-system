@@ -55,6 +55,8 @@ from ._marking import (
 from ._price_marks import PriceUse, price_lines, price_uses
 from ._route_card import leaf_sides
 from ._reach import policy_states, reach_probabilities
+from ._report_net import ask
+from ._route_chain import chain_of_plan
 from ._shares import WeightShare, start_shares
 from ._start_report import first_step_document, first_step_lines, start_document, start_lines
 from ._start_step import FirstStep, first_step
@@ -369,12 +371,14 @@ def build_report(plan: Plan, data: GameData) -> Report:
             f"{plan.foresight.saving:,.2f} Chaos of the mean), and the report cannot show a Lock step yet. "
             "To see the best plan without the Lock, name the methods to use in the run's setting (`--methods`) without `hinekora-lock`"
         )
+    ask(fresh=True)  # the report's memory net, read at the report's start (#1381)
     order = policy_states(plan.start, plan.view_policy, plan.is_goal)
     ids = number_states(plan)
     reach = reach_probabilities(plan.start, plan.view_policy, plan.is_goal)
 
     states = []
     for state in order:
+        ask()  # the report's memory net (#1381)
         action = plan.view_policy.get(state)
         if plan.is_goal(state) or action is None:
             continue
@@ -404,7 +408,7 @@ def build_report(plan: Plan, data: GameData) -> Report:
     from ._report_steps import report_steps  # it reads the route page's model, which imports this module
 
     steps, step_of = report_steps(plan, data)
-    uses = price_uses(plan, plan.view_policy)
+    uses = price_uses(plan, plan.view_policy, chain=chain_of_plan(plan))  # the visits the page solves on item states, not a dense solve of the view (#1381)
     report = Report(
         plan, ids, tuple(states), tuple((share, _leaf_chance(plan, share)) for share in shares),
         approximate_inputs(plan, plan.view_policy, data, uses),
@@ -734,6 +738,46 @@ def _free_totals(plan: Plan, risk) -> dict:
         "free_action_allowance": _number(risk.grid.free_allowance),
         "free_action_tail": _number(risk.grid.free_tail),
         "free_action_cvar_allowance": _number(risk.grid.free_cvar_allowance),
+    }
+
+
+RECORD = "plan_record"  # the key of the record written before the report (#1381): what the plan is, from the plan alone
+
+
+def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None) -> dict:
+    """The plan's record, made from the plan alone and written before anything else is built (#1381): the totals, the start, the
+    requirements, the prices and the limits of the JSON policy, without the states, the shares or the steps, which need the report.
+
+    A run writes it where the JSON policy goes, and the JSON policy replaces it once the report is built. `stopped` says why the report was
+    not built (the binding of `_report_net`); None while it is being built. Nothing here solves or walks anything: a plan that its report
+    would take past the memory net still leaves this (OR-13, OR-56).
+    """
+    shift = plan.start_price.chaos
+    divine = plan.prices.chaos_per_divine
+    return {
+        "format": FORMAT,
+        "unit": "chaos",
+        RECORD: {"report_built": False, "stopped": stopped},
+        "answer": marking_document(plan.approximation, shift),
+        "target": target_name,
+        "requirements": requirements_document(plan),
+        "prices": {
+            "league": plan.prices.league,
+            "fetched_at": plan.prices.fetched_at.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "chaos_per_divine": divine,
+        },
+        "start": {
+            "price_name": plan.start_price.name,
+            "price_chaos": shift,
+            "price_source": plan.start_price.source,
+            **({"price_mark": plan.start_price.mark} if plan.start_price.mark else {}),
+            "given": plan.start_price.given,
+        },
+        "limits": [limit_document(limit) for limit in ordered(plan.limits)],
+        "offered_actions": [priced.label for priced in plan.offers],
+        "states_solved": len(plan.solution.values),
+        "totals": _totals(plan, shift, divine),
+        "timings_seconds": {"solver": plan.solve_seconds, "risk_evaluate": None if plan.risk is None else plan.risk_seconds},
     }
 
 

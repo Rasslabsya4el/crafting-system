@@ -31,6 +31,7 @@ from crafting_system.actions import Action
 from crafting_system.items import Influence
 from crafting_system.items.words import mod_text
 
+from ._report_net import ask
 from ._route_card import _hashes, page_tiers
 
 
@@ -155,6 +156,7 @@ def tier_lines(
     seen: dict[Hashable, dict[str, Fraction]] = {}
     always: set[str] | None = None  # the mods the action forces at every state taken so far (None: no state yet)
     for state, weight in zip(states, weights, strict=True):
+        ask()  # the report's memory net (#1381): a step of thousands of states asks the game data for each
         if weight <= 0.0:
             continue
         try:  # the policy takes this action at this state, so the game does not refuse it here: a refusal would be a defect, not a state to skip

@@ -72,6 +72,7 @@ from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
 from ._price_marks import price_uses, use_line
 from ._report import Report
+from ._report_net import ask
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
 from ._route_chain import chain_of_packed_policy
@@ -694,6 +695,7 @@ class _View:
         return StepRow(1, title, fields, self.start_card(), self.anchor(1), final, price.chaos)
 
     def step_row(self, step: Step) -> StepRow:
+        ask()  # the report's memory net (#1381)
         number = step.number + 1
         action = step.action
         if action is None:
@@ -775,7 +777,7 @@ class _View:
         p90 = said if said is not None else f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
         success = risk.success_probability.value
         interval = self.inp.interval
-        uses = price_uses(plan, self.inp.policy, risk.mean.value)  # each price the policy buys with, its source and marks (#616, OR-7, OR-23)
+        uses = price_uses(plan, self.inp.policy, risk.mean.value, chain=self.chain)  # each price the policy buys with, its source and marks (#616, OR-7, OR-23)
         if interval is None:
             approximate = approximate_page_lines(approximate_inputs(plan, self.inp.policy, self.data, uses))
             rule = ()
@@ -1030,6 +1032,7 @@ def route_page(
     The page makes no request: the trade link is built from `buy_spec` and the stat list in
     `<cache_dir>/trade/stats.json` when that exists.
     """
+    ask(fresh=True)  # the report's memory net, read at the page's start (#1381)
     plan = report.plan
     buy = None
     if buy_spec is not None:

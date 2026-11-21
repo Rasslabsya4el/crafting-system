@@ -40,7 +40,7 @@ from datetime import UTC, date, datetime
 from pathlib import Path
 
 from crafting_system.actions import NotApplicableError, OutOfScopeError, imprints_held_at_most
-from crafting_system.budget import PROOF_GAP, Budget, default_memory_mb
+from crafting_system.budget import PROOF_GAP, Budget, BudgetExceeded, default_memory_mb
 from crafting_system.config import MEMORY_SHARE_SETTING, NO_LIMIT, PRICE_SOURCES, Config, load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
@@ -50,7 +50,8 @@ from crafting_system.planner import BUDGET_SECONDS, SOLVERS, PlanError, PlanSett
 
 from ._benchmark import benchmark_main
 from ._inputs import load_target_prices, write_json
-from ._report import build_report, policy_document, render_text
+from ._report import build_report, plan_record, policy_document, render_text
+from ._report_net import report_net
 from ._route import evaluate_route, load_route, route_actions
 from ._route_report import render_route_text, route_document
 from ._route_view import write_route_page
@@ -220,37 +221,55 @@ def main(
         if plan.approximation is not None and args.route:
             raise PlanError("--route is not available for an approximate answer yet; run again with --exact to get an exact one")
         stage(f"plan made: mean {plan.mean_remaining:,.4f} Chaos, {len(plan.solution.values):,} states solved")
-        report = build_report(plan, game)
-        stage(f"report built: {len(report.states):,} states")
-        route_path = Path(args.route) if args.route else None
-        route = load_route(route_path, plan, game) if route_path is not None else None
-        given = evaluate_route(plan, route, game) if route is not None else None
-        if given is not None:
-            stage(f"given route evaluated: {len(given.gaps):,} gaps, mean {given.risk.mean.value:,.4f}")
-        check = verify(game, plan, runs=args.runs, seed=args.seed) if args.verify else None
-        if check is not None:
-            stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
-
         name = target_path.name
-        print(render_text(report, check, target_name=name), end="")
-        stage("text written")
-        document = policy_document(report, check, target_name=name)
-        if route_path is not None and route is not None and given is not None:
-            print()
-            print(render_route_text(report, route, given, game, file_name=route_path.name), end="")
-            document["given_route"] = route_document(report, route, given, game, file_name=route_path.name)
         out = Path(args.json) if args.json else config.output_dir / f"{target_path.stem}.policy.json"
-        write_json(out, document)
-        print(f"JSON policy written to {out}")
-        if plan.approximation is not None:
-            print("Route view not written: it is not built for an approximate answer yet.")
-        else:
-            spec = buy_spec_of(game, target) if target.start is StartKind.BOUGHT else None  # computed from the target: the buy step's link and filter
-            page = write_route_page(
-                out.parent / f"{target_path.stem}.route.html", report, game, route=route, given=given,
-                buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
-            )  # fmt: skip
-            print(f"Route view written to {page}")
+        write_json(out, plan_record(plan, target_name=name))  # the plan's record first: what follows may stop at the memory net, the plan is kept (#1381)
+        written = printed = False  # whether the JSON policy has replaced the record, and whether the text report was printed
+        check = None
+        page_path = out.parent / f"{target_path.stem}.route.html"
+        try:
+            with report_net(settings.budget.memory_mb if settings.budget is not None else None):  # the report and the page ask the run's memory net (#1381)
+                report = build_report(plan, game)
+                stage(f"report built: {len(report.states):,} states")
+                route_path = Path(args.route) if args.route else None
+                route = load_route(route_path, plan, game) if route_path is not None else None
+                given = evaluate_route(plan, route, game) if route is not None else None
+                if given is not None:
+                    stage(f"given route evaluated: {len(given.gaps):,} gaps, mean {given.risk.mean.value:,.4f}")
+                check = verify(game, plan, runs=args.runs, seed=args.seed) if args.verify else None
+                if check is not None:
+                    stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
+
+                print(render_text(report, check, target_name=name), end="")
+                printed = True
+                stage("text written")
+                document = policy_document(report, check, target_name=name)
+                if route_path is not None and route is not None and given is not None:
+                    print()
+                    print(render_route_text(report, route, given, game, file_name=route_path.name), end="")
+                    document["given_route"] = route_document(report, route, given, game, file_name=route_path.name)
+                write_json(out, document)
+                written = True
+                print(f"JSON policy written to {out}")
+                if plan.approximation is not None:
+                    print("Route view not written: it is not built for an approximate answer yet.")
+                else:
+                    spec = buy_spec_of(game, target) if target.start is StartKind.BOUGHT else None  # computed from the target: the buy step's link and filter
+                    page = write_route_page(
+                        page_path, report, game, route=route, given=given,
+                        buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
+                    )  # fmt: skip
+                    print(f"Route view written to {page}")
+        except BudgetExceeded as stop:  # the memory net, met while the outputs of a finished plan were built: said, and the record kept (#1381)
+            words = stop.binding.words()
+            page_path.unlink(missing_ok=True)  # a page of an earlier run would stand beside this plan's record
+            if written:
+                print(f"Route view not written: {words}.")
+            else:
+                write_json(out, plan_record(plan, target_name=name, stopped=words))
+                print(f"{'JSON policy and route view not written' if printed else 'Report not built'}: {words}.")
+                print(f"The plan's record (its cost, odds, start and limits) is written to {out}")
+            return 2 if check is not None and not check.agrees else 0
     except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
         print(f"Error: {error}", file=sys.stderr)
         return 1
