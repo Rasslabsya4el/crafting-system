@@ -162,6 +162,9 @@ CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers b
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
+# how often a round's walk of its tips says where it is (#1076: R12's round 4 walked 20,858 tips for 6 minutes, grew the process from 0.7 to
+# 12.6 GB and was stopped by the memory net with no line said): the pace of the log, never a limit
+SAY_SECONDS = 60.0
 # Whether every kernel the search shares by its key is built again and compared (`Search._kernel`). Off in a run: equal keys give equal kernels at
 # any two states by construction (`Abstraction.kernel_key`, its three steps, #886), so no check is owed; the tests turn it on over small
 # worlds (`tests/test_planner_blocking_crafts.py`: an Exalted Orb with bench crafts; R12 with its essences and Harvest reforges), where it compares
@@ -1275,6 +1278,14 @@ class Search[S]:
                 return f"the process held {used:,.0f} MB, the limit is {net.memory_mb:,.0f} MB"
         return None
 
+    def _held_words(self) -> str:
+        """What the process holds now, as a round's line says it (`resident_mb`, read in full), and how many label distributions its
+        abstraction keeps (`Problem.memos`, when the problem says)."""
+        used = resident_mb()
+        memos = getattr(self.p, "memos", None)
+        kept = memos() if memos is not None else None
+        return ("memory not read" if used is None else f"{used:,.0f} MB held") + ("" if kept is None else f", {kept:,} label distributions kept")
+
     def _give_way(self) -> str | None:
         """The caller's reason to stop where the search stands now (`Net.give_way`), or None."""
         return self.net.give_way(self.standing) if self.net.give_way is not None and self.standing is not None else None
@@ -1478,7 +1489,7 @@ class Search[S]:
             if stopped is not None:
                 break
             mark = time.perf_counter()
-            polled = mark
+            polled = said = mark
             tips = fake.tolist()
             self.ahead.making = 0.0
             count = 0 if self.counted else self.ahead.workers_for(len(tips))
@@ -1509,6 +1520,9 @@ class Search[S]:
                         stopped = self._net(began, states=self.net.seconds is not None or self.net.memory_mb is not None)
                         if stopped is not None:
                             break
+                        if polled - said >= SAY_SECONDS:
+                            said = polled
+                            self.say(f"  round {self.stats.rounds + 1}: {walked:,} of {len(tips):,} tips walked, {len(self.states):,} known, {self._held_words()} ({polled - began:.0f} s)")
             except MemoryNet as stop:
                 stopped = str(stop)
                 self.kernels.room = None  # the stop's own plan is solved over what the search holds
@@ -1522,6 +1536,8 @@ class Search[S]:
                 self.ahead.end_round(walked)
             self.stats.expand_seconds += time.perf_counter() - mark
             if stopped is not None:
+                # said, as every other stop is: the round's walk ends here and the plan of the rounds before it is the search's (#1076)
+                self.say(f"  round {self.stats.rounds + 1}: its walk stopped after {walked:,} of {len(tips):,} tips, {len(self.states):,} known, {self._held_words()}: {stopped}")
                 break
         self.stats.touched = len(self.states)
         if not self.stats.rounds:
