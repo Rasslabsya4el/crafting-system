@@ -79,6 +79,10 @@ class CraftingProblem:
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
         self.holds = bound.holds  # an offer of the model held at some keys only has no abstract action at the others (#1325)
         self.tip = [not built for built in model.expanded] if model.expanded else [False] * len(model.keys)  # keys the build did not reach
+        # the state of the ruined keys, once built with its restart row (`abstraction._pattern`, "The ruined keys", #1367): a state of it is offered the
+        # restart alone, exactly (no plan from it reaches the goal without the restart, and the restart at once costs its value)
+        ruined = model.ruined
+        self.ruined = ruined if ruined is not None and not self.tip[ruined] and model.actions[ruined] else None
         if goal is not None:
             self.tip = [tip or is_goal for tip, is_goal in zip(self.tip, model.goal)]
         raw = np.asarray(bound.value, dtype=np.float64)
@@ -220,6 +224,8 @@ class CraftingProblem:
             restart = isinstance(action, BuyStartItem)
             if priced.label == RESTART and state == self.start:
                 continue
+            if k is not None and k == self.ruined and not restart:
+                continue  # a ruined key: every other offer leads to the restart all the same, at a cost (its value is the restart's backup)
             if self.prune_corrupting and corrupting_offer_pruned(self.ab, priced, state):
                 self.ab.prunings.note(priced.label, PRUNED_CORRUPTING)
                 continue

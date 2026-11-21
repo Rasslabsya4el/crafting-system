@@ -245,6 +245,25 @@ Every concrete action is so matched by an offered one with the same pushed kerne
 its imprints, `min(LB(s), c + LB(h))`, is not one: an item at its own snapshot holds the beast's price more than its value (the toy loop of
 ADR-0060: `V(h, {h}) = V(h, {}) - beast`), and a gamble from `h` is worth less with `h` held than without it.
 
+**The ruined keys (#1367, research note 2026-11-20-proof-size-root, Proposal A).** A fractured mod is never removed and its values never
+change: every action keeps the fractured mods it was given (`Adds.erases_fractured` False: the contract suite checks that their ids stay)
+unless it declares otherwise, and no action changes their values (a Divine Orb, the one reroll of values, leaves them, `divine_orb.fractured_mods_stay`;
+an Orb of Dominance and an Awakener's Orb refuse a fractured item). If a key's fractured mods leave no assignment of the target's leaves to an item (`Ruin`:
+each fractured mod takes a slot of its side and its families, a leaf it passes is met; the other leaves of some set that meets every
+requirement, a target with alternatives included, need mods of families no fractured mod holds, in the free slots of their sides), then no
+plan from a member of the key reaches the goal without the restart, the only row that replaces the item (an opened item takes no draw of a
+listing, and a result of another base is no state of the model). Its value is then exactly `c_r + V(start)`: any plan from it takes the
+restart at some time, at cost at least `c_r`, and from the start costs at least `V(start)`; restarting at once costs exactly that. The test
+reads the fractured mods alone, and is weaker than the game (it allows a leaf any mod the leaf accepts, wherever it spawns, at any roll), so
+a key it calls ruined is ruined; one it does not call ruined is built as before. So every such key is one state of the model, `PatternModel.
+ruined`, whose row is the restart alone and which no member, offer or kernel of a ruined key is ever made for (OR-12: the work is not done,
+nothing is dropped). The model with the state is a lower bound by the argument of the first paragraph: the value of the model on all offers at
+a ruined key is `c_r` plus its value at the start, which is at least the restart row's backup here. On all its offers the model has the same
+value at every key with the state as without it. A model built on part of the offers (`_pattern_bound`, the offers' floors) gave a ruined key
+the floor of the offers left out where that was lower; it now gives it its exact value, so a value there, and one that leans on it, can only
+rise, and stays a lower bound. The test is off when an offer may take
+the fractured mods off (a corrupting brick at Craft of Exile's reading) or takes an input item (a recombinator), and with no restart offered.
+
 **The Eldritch implicits (#835, ADR-0025).** The key holds the item state beyond the mods exactly (`held`), and with it the pair of a state that
 keeps the implicits (`CompressedState.implicits`): the grade of each side, what its implicit gives each implicit wanted (its roll included),
 and its line where a requirement names one (`ImplicitSide`). Every member of a key holds the key's pair, so the dominant side, a function of
@@ -333,13 +352,13 @@ from typing import NamedTuple
 from crafting_system import budget
 from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
-from crafting_system.items import Item, ItemError, Metamod, Rarity, Side
+from crafting_system.items import Item, ItemError, Metamod, Rarity, Side, capacity
 from crafting_system.items.model import VEILED_DOMAIN
 
 from ._goal import Status
 from ._kernel import Abstraction
 from ._relaxed import ChoiceNode, relaxed_draw
-from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, kind_families, kind_tags, protected_tags
+from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, held_families, kind_families, kind_tags, protected_tags
 from ._rolls import is_rollable
 from ._recent import Recent, kept_entries
 from ._state import CompressedState, Slot, best_of
@@ -375,6 +394,9 @@ SHARE_KEPT = True  # an action that erases the ordinary mods is asked once for e
 SHARE_VIEWS = True  # an action that tells ordinary slots apart by what the key reads of them alone is asked once for each multiset of those views at a key (`Pattern.views_only`, #1338); False: at every member
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
+RUIN_KEYS = True  # a key whose fractured mods leave the goal no room is the one ruined state, never worked out (`Ruin`, #1367); False: built as any key
+RUIN_CHOICES = 64  # the most combinations of families a key's test tries for its fractured mods of a family type (one family set per mod); past it the test blocks no family for them, so fewer keys are called ruined (the test only gets weaker)
+RUIN_STEPS = 100_000  # the steps the search of one fractured set's assignment may take; past them the key is not called ruined (built as before)
 IMPRINTS = 3  # where the imprints are in `CompressedState.held` (implicits, quality, offer, imprints, strands, replaced)
 NOTHING = "nothing"  # what `Pattern.alike_of` says of a side whose pure junk an action reads by its count and class alone
 COUNT_ONLY = Reads(junk=True, families=frozenset())  # what an action reads of the junk when it reads its count alone (Remove Crafted Mods, and a Divine Orb besides the rolls)
@@ -401,6 +423,149 @@ class PatternKey(NamedTuple):
     counts: tuple  # the ordinary (not crafted, not veiled) slots per side: (prefix, suffix)
     tags: tuple | None  # ((side index, protected tags), count) of the ordinary slots, or None when the key carries no tags
     veiled: tuple = ()  # the veiled placeholder and the mods unveiled from the pool, as slots, exactly (#828): never a member's choice
+
+
+class Ruin:
+    """Whether a key is ruined: its fractured mods leave no item that meets the goal (module docstring, "The ruined keys", #1367).
+
+    Made by `Ruin.of`, which says None where the lemma does not hold for the offers. Called with a key, it reads the flags, the fractured mods
+    and the imprints held, and answers once for each set of fractured mods (`_memo`).
+    """
+
+    def __init__(self, abstraction: Abstraction) -> None:
+        self.ab = abstraction
+        self.data = abstraction.data
+        self.goal = abstraction.goal
+        rarities = (Rarity.MAGIC, Rarity.RARE)  # the most of each side an item of the base can hold, whatever its rarity
+        self.room = {side: max(capacity(self.data, abstraction.base_id, rarity).of(side) for rarity in rarities) for side in SIDES}
+        self.width = len(self.goal.leaves)
+        # what each leaf accepts (its tier read), and the mods that can meet it: (mod id, side or None for a mod of neither, families)
+        self.accepted = [leaf.tier_ok if leaf.tier_ok is not None else leaf.mod_ids for leaf in self.goal.leaves]
+        self.mods_of: list[list[tuple[str, Side | None, frozenset[str]]]] = []
+        for accepted in self.accepted:
+            found = []
+            for mod_id in sorted(accepted):
+                mod = self.data.mods.get(mod_id)
+                if mod is not None:  # a mod the data does not know is on no item
+                    found.append((mod_id, _side_of(mod), frozenset(held_families(mod))))
+            self.mods_of.append(found)
+        self._memo: dict[tuple, bool] = {}
+        self.steps = 0  # the steps of the searches done, for the tests
+
+    @classmethod
+    def of(cls, abstraction: Abstraction, offers: Sequence["PatternOffer"]) -> "Ruin | None":
+        """The test for a model of `offers`, or None where the lemma does not hold: no restart, or an offer that may take a fractured mod off
+        (`Adds.erases_fractured`, or one that takes an input item: a recombinator may keep the donor's mods and not the item's)."""
+        if not RUIN_KEYS or not any(offer.action is None for offer in offers):
+            return None
+        for offer in offers:
+            action = offer.action
+            if action is None:
+                continue
+            if type(action).inputs is not Action.inputs or action.adds(abstraction.data).erases_fractured:
+                return None
+        return cls(abstraction)
+
+    def __call__(self, key: "PatternKey") -> bool:
+        if not key.fractured or getattr(key.flags, "unopened", False) or key.held[IMPRINTS]:
+            return False
+        memo = (key.flags.influences, key.fractured)
+        found = self._memo.get(memo)
+        if found is None:
+            found = self._memo[memo] = self._ruined(key.flags.influences, key.fractured)
+        return found
+
+    def _ruined(self, influences: frozenset, fractured: tuple) -> bool:
+        """Whether no item holding `fractured` meets the goal. A fractured family type ("~n", a Fracturing Orb is offered) names no family:
+        where it gives a leaf something its mod is one the leaf names, so its families are those of one such mod of its side, each tried
+        (`_type_families`); where it gives none, it is taken to hold no family a leaf needs (weaker than the game, never stronger)."""
+        free = dict(self.room)
+        blocked: set[str] = set()
+        met = [False] * self.width
+        choices: list[list[frozenset[str]]] = []  # for each fractured family type that gives a leaf something: the families its mod may hold
+        for entry in fractured:
+            mod = self.data.mods.get(entry.mod_id)
+            if mod is not None:
+                side = _side_of(mod)
+                blocked |= held_families(mod)
+            elif entry.mod_id.startswith(TYPE_PREFIX):
+                side = self.ab._context(influences).kinds.side_of(entry.mod_id)
+                if side is not None and any(status is not Status.ABSENT for status in entry.contribution):
+                    choices.append(self._type_families(side, entry.contribution))
+            else:
+                return False  # nothing known of it: never called ruined
+            if side is None:
+                return False
+            free[side] -= 1
+            for j, status in enumerate(entry.contribution):
+                if status is Status.PASSING:
+                    met[j] = True
+        combinations = 1
+        for options in choices:
+            combinations *= len(options)
+        if combinations > RUIN_CHOICES:
+            choices = []  # too many to try: no family of a type is taken (weaker, never stronger)
+        return all(self._no_room(free, blocked.union(*chosen), met) for chosen in product(*choices))
+
+    def _type_families(self, side: Side, contribution: tuple) -> list[frozenset[str]]:
+        """The families a fractured mod of a family type may hold, given what it gives each leaf (something to one leaf at least): those of a
+        mod of `side` that every leaf it gives something names, since a leaf gives ABSENT to a mod it does not name (`status_of`)."""
+        named = [self.goal.leaves[j].mod_ids for j, status in enumerate(contribution) if status is not Status.ABSENT]
+        found = {
+            frozenset(held_families(mod))
+            for mod_id in set.intersection(*(set(ids) for ids in named))
+            if (mod := self.data.mods.get(mod_id)) is not None and _side_of(mod) is side
+        }
+        return sorted(found, key=sorted) or [frozenset()]
+
+    def _no_room(self, free: dict, blocked: set[str], met: list[bool]) -> bool:
+        """Whether no set of mods of families not `blocked`, in the `free` slots, meets the leaves not `met` that the goal needs."""
+        open_ = [j for j in range(self.width) if not met[j]]
+        profiles: dict[tuple, None] = {}  # (side, families, leaves met) of each mod that could meet an open leaf
+        for j in open_:
+            for mod_id, side, families in self.mods_of[j]:
+                if families & blocked or (side is not None and free[side] <= 0):
+                    continue
+                profiles[(side, families, frozenset(i for i in open_ if mod_id in self.accepted[i]))] = None
+        ranked = list(profiles)
+        base = [Status.PASSING if passing else Status.ABSENT for passing in met]
+        steps = 0
+
+        def meets(served: frozenset) -> bool:
+            statuses = list(base)
+            for j in served:
+                statuses[j] = Status.PASSING
+            return self.goal.is_met(statuses)
+
+        def search(at: int, served: frozenset, used: frozenset, room: tuple) -> bool:
+            """Whether the profiles from `at` on, each meeting a leaf not met yet, complete `served` to a set that meets the goal (True too once
+            the search ran past `RUIN_STEPS`: not called ruined). A set of mods that meets the goal stays one when every mod that meets no new
+            leaf in this order is dropped, so the search misses none."""
+            nonlocal steps
+            steps += 1
+            if steps > RUIN_STEPS or meets(served):
+                return True
+            for n in range(at, len(ranked)):
+                side, families, serves = ranked[n]
+                if serves <= served or families & used:
+                    continue
+                left = room
+                if side is not None:
+                    if room[SIDES.index(side)] == 0:
+                        continue
+                    left = tuple(count - (s is side) for s, count in zip(SIDES, room))
+                if search(n + 1, served | serves, used | families, left):
+                    return True
+            return False
+
+        feasible = search(0, frozenset(), frozenset(), tuple(max(0, free[side]) for side in SIDES))
+        self.steps += steps
+        return not feasible
+
+
+def _side_of(mod: Mod) -> Side | None:
+    """The side a mod takes a slot of, None for a mod of neither."""
+    return Side(mod.generation_type) if mod.generation_type in (Side.PREFIX.value, Side.SUFFIX.value) else None
 
 
 @dataclass(frozen=True)
@@ -580,6 +745,7 @@ class PatternStats:
     view_pairs: int = 0  # pairs answered by the pair of a member with the same views of its ordinary slots (`Pattern.views_only`, #1338)
     kept_pairs: int = 0  # pairs answered by the pair of a member with the same ordinary slots on the sides a lock keeps (`Pattern.kept_sides`, #1352)
     fallbacks: int = 0  # compositions whose lightest (or heaviest) fill was no item: offered at every fill, or under `ANY` and `ONE` at one that is (#1192)
+    ruined_keys: int = 0  # keys found ruined, all held by the one ruined state (`Ruin`, `PatternModel.ruined`, #1367)
 
 
 @dataclass
@@ -595,6 +761,7 @@ class PatternModel:
     expanded: list[bool] = field(default_factory=list)  # key -> whether its actions were built; a key the build did not reach is a tip (no actions, not a dead end)
     stopped: str | None = None  # why the build ended before every key was expanded (a net), None for a complete model
     narrow: dict[int, frozenset[int]] = field(default_factory=dict)  # an offer built at some keys only (#1325): offer index -> those keys; at any other key it is not built
+    ruined: int | None = None  # the number of the one state of every ruined key (`Ruin`, #1367): `index` sends each of them to it; its row is the restart alone, and `keys` holds the first met
 
 
 def pattern_refusal(abstraction: Abstraction) -> str | None:
@@ -1408,7 +1575,9 @@ def build_pattern_model(
     non-negative function of the successors is then at most the exact one, so a model built so is a lower bound of the model built exactly, and it differs
     from it by about 1e-9 of a value.
     """
-    return PatternBuilder(abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop, approximate=approximate).extend(offers)
+    return PatternBuilder(
+        abstraction, start, tags=tags, progress=progress, max_keys=max_keys, stop=stop, approximate=approximate, ruin=Ruin.of(abstraction, offers)
+    ).extend(offers)
 
 
 LATE = 1.0  # a nearly done build may go past its net by at most this many times the net (`Growth`, #1135): one more share, no more (a
@@ -1616,7 +1785,9 @@ class PatternBuilder:
         grow: bool = False,
         approximate: bool = False,
         tally: "Tally | None" = None,
+        ruin: Ruin | None = None,
     ) -> None:
+        self.ruin = ruin  # the test of a ruined key (`Ruin.of` on every offer the builder may be given), None: no key is ruined
         self.tally = tally  # a build counted in pieces of work (`Tally`): each (member, offer) pair adds one, and the net is asked at every offer, never on the clock
         self.approximate = approximate  # the kernels are made in floats, shrunk and completed with the sink (see `_lowered`): a lower bound of the exact model
         self.grow = grow  # the builder will be extended: the members of a key are kept (they are made again for each offer added otherwise, and cost most of a round)
@@ -1665,12 +1836,24 @@ class PatternBuilder:
         self.remade: dict[int, int] = {}  # key number -> how many times the universe's growth made it again (`_begin_again`): its older lists hold other members
         self.relaxed: dict[tuple, int] = {}  # (member, action) -> the kernel id of the row that enters its relaxed draw (`_relaxed_rows`)
         self.relaxed_made = 0  # how many relaxed draws were made: each one's name, kept across `_begin_again` so no two choice nodes are equal
+        self.ruined: int | None = None  # the number of the ruined state, once a ruined key is met (`Ruin`, #1367)
         self.pattern.note(self.start)
         self.start_id = self._intern(self.start)
 
     def _intern(self, state: CompressedState) -> int:
         key = self.pattern.key(state)
         found = self.index.get(key)
+        if found is None and self.ruin is not None and self.keys and self.ruin(key) and not self.ab.is_goal(state):
+            self.stats.ruined_keys += 1  # one state for every ruined key, never worked out (module docstring, "The ruined keys")
+            if self.ruined is not None:
+                found = self.index[key] = self.ruined
+                return found
+            self.ruined = self.index[key] = len(self.keys)
+            self.keys.append(key)
+            self.goal.append(False)
+            self.rows.append([])
+            self.expanded.append(False)
+            return self.ruined
         if found is None:
             found = self.index[key] = len(self.keys)
             self.keys.append(key)
@@ -1754,7 +1937,7 @@ class PatternBuilder:
         grown, pattern = self.pattern.grown, self.pattern
         again = {
             i for i, key in enumerate(self.keys)
-            if self.expanded[i] and not isinstance(key, ChoiceNode) and any(pattern.may_hold(key, influences, slot) for influences, slot in grown)
+            if self.expanded[i] and i != self.ruined and not isinstance(key, ChoiceNode) and any(pattern.may_hold(key, influences, slot) for influences, slot in grown)
         }
         self.relaxed = {}  # a relaxed draw reads the universe's classes: the keys made again make theirs again
         for i in again:
@@ -1780,7 +1963,7 @@ class PatternBuilder:
         stats.modes = Counter(self.stats.modes)
         return PatternModel(
             list(self.keys), list(self.goal), [list(row) for row in self.rows], list(self.kernels), stats, dict(self.index), list(self.expanded), stopped,
-            {oi: frozenset(keys) for oi, keys in self.narrow.items()},
+            {oi: frozenset(keys) for oi, keys in self.narrow.items()}, self.ruined,
         )
 
     def _pass(self) -> str | None:
@@ -1829,6 +2012,14 @@ class PatternBuilder:
             if self.stop is not None and (reason := self.stop()) is not None:
                 return reason
             if isinstance(self.keys[i], ChoiceNode):  # a node of a relaxed draw: its rows were made with it
+                self.expanded[i] = True
+                i += 1
+                continue
+            if i == self.ruined:  # the ruined state: the restart alone, no member and no other offer (module docstring, "The ruined keys")
+                for oi in self._given(i):
+                    if offers[oi].action is None:
+                        self.rows[i].append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
+                self.pending.pop(i, None)
                 self.expanded[i] = True
                 i += 1
                 continue
@@ -2289,4 +2480,4 @@ def _kernel_id(ids: dict[tuple, int], kernels: list, pushed: dict[int, Fraction]
     return found
 
 
-__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "OUTRUN", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "SHARE", "Tally", "build_pattern_model"]
+__all__ = ["CHOICE", "ChoiceNode", "Growth", "LATE", "Mode", "OUTRUN", "PACE", "Pace", "Pattern", "PatternBuilder", "PatternKey", "PatternModel", "PatternOffer", "PatternStats", "QUARTER", "Room", "Ruin", "SHARE", "Tally", "build_pattern_model"]
