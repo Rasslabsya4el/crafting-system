@@ -34,7 +34,7 @@ The bound may exceed `tolerance` when the values are large next to the cheapest 
 `accept_bound`, 1e-6) is corrected (`corrected`: one step of iterative refinement, its residual taken with every sum rounded once, at most
 `CORRECTIONS` times) and measured again (#867). What is still above `accept_bound` raises `ConvergenceError`, unless the caller takes every
 value with its certified error and passed `refuse_above` (a search that stops at a gap): then only a bound above that is refused. A solve
-refused so is solved again in rational numbers when its exact quotient is small (`_exact_solve`, #1380): a plan of 10^14 attempts (R17's
+refused so is solved again in rational numbers when its exact quotient is small (`_packed_exact`, #1380): a plan of 10^14 attempts (R17's
 Alchemy round, 2.26e16 c) merges into 3 classes, and its optimum is then exact, where float64 certified it only to 0.18.
 """
 
@@ -53,7 +53,7 @@ from . import _packed_linear
 from ._packed_chain import ChainSolver
 from ._packed_linear import DENSE_LIMIT, backward_error  # noqa: F401  (DENSE_LIMIT: the default of `solve_graph`, read by callers; backward_error: by tests)
 from ._packed_merge import exact_classes, identity_classes, quotient
-from ._exact_solve import exact_quotient
+from ._packed_exact import exact_quotient
 
 EPS = sys.float_info.epsilon
 INF = math.inf
@@ -76,7 +76,7 @@ class Certificate:
     window: int = 0  # the steps of the cost ahead that the bound given is measured against (0: each state's own cost; -1: the operator with the self-loops divided out, `_divided`)
     rounded_once: bool = False  # the bound given is measured with every Bellman sum rounded once (`_packed.kernel_sums_rounded_once`, #867), not once a term
     term_bound: float | None = None  # with `rounded_once`: the bound of the measure with a rounding a term, which the caller did not accept
-    exact: bool = False  # the values are the exact optimum rounded once to float64 (`_exact_solve`, #1380): `bound` is that rounding
+    exact: bool = False  # the values are the exact optimum rounded once to float64 (`_packed_exact`, #1380): `bound` is that rounding
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -871,7 +871,7 @@ def solve_graph(
 
 
 def _exact(graph: PackedGraph, inside: np.ndarray, info: dict) -> Core | None:
-    """The `Core` of `_exact_solve.exact_quotient` (the exact optimum over the proper states, its values rounded once), or None when it
+    """The `Core` of `_packed_exact.exact_quotient` (the exact optimum over the proper states, its values rounded once), or None when it
     does not apply (a quotient of more than `EXACT_CLASSES` classes)."""
     found = exact_quotient(graph, inside)
     if found is None:

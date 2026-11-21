@@ -107,7 +107,7 @@ def test_an_action_that_is_not_block_invariant_leaves_no_level_so_a_small_query_
     assert "was run in full" in decision.message
 
 
-def test_an_action_that_is_not_block_invariant_refuses_a_query_past_what_the_exact_solver_has_run_on():
+def test_an_action_that_is_not_block_invariant_refuses_a_query_past_what_the_packed_exactr_has_run_on():
     decision = choose(BIG, R_KERNEL, R_SOLVE, 60.0, levels=LEVELS, refusal="Annulment is not declared block-invariant")
 
     assert decision.action == "refused"

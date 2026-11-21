@@ -23,7 +23,7 @@ import pytest
 
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 from crafting_system.solver import _packed_linear as lin
-from crafting_system.solver import _exact_solve
+from crafting_system.solver import _packed_exact
 from crafting_system.solver import _packed_solve as ps
 from crafting_system.solver._packed_chain import CyclesTooTangled
 from crafting_system.solver._packed_solve import Certificate, Work, certify, evaluate_policy, lift_policy, proper_states, solve_graph
@@ -319,7 +319,7 @@ def tangled(*_arguments, **_keywords):
     raise CyclesTooTangled("putting back 3 distinct cut rows of 5 states needs 123 cells, past the 100 the memory of a run allows")
 
 
-def test_a_policy_whose_true_residual_stays_large_is_never_returned_when_the_exact_solve_cannot_be_made(monkeypatch):
+def test_a_policy_whose_true_residual_stays_large_is_never_returned_when_the_packed_exact_cannot_be_made(monkeypatch):
     work, leave = prepared(LINE)
     monkeypatch.setattr(ps, "policy_solver", tangled)  # the cycles do not fit in the memory of the run
     monkeypatch.setattr(lin, "bicgstab", lambda matvec, b, x0, tol, max_iter=None: (x0 + 1e6, 0.5, 1, False))  # an iterate far from the answer
@@ -361,7 +361,7 @@ def test_above_the_dense_limit_bicgstab_alone_solves_a_small_system_without_the_
     assert 1 <= info["linear_iterations"] <= 10 and info["linear_residual"] < 1e-12  # a few steps
 
 
-def test_the_exact_solve_by_the_cycles_takes_over_when_bicgstab_cannot_reach_its_residual(monkeypatch):
+def test_the_packed_exact_by_the_cycles_takes_over_when_bicgstab_cannot_reach_its_residual(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)  # one step: not enough
@@ -373,7 +373,7 @@ def test_the_exact_solve_by_the_cycles_takes_over_when_bicgstab_cannot_reach_its
     assert info["linear_iterations"] == 1  # no restart: the exact solve was made at once (#671)
 
 
-def test_after_the_exact_solve_replaces_an_iterate_the_residual_reported_is_that_of_the_values_taken(monkeypatch):
+def test_after_the_packed_exact_replaces_an_iterate_the_residual_reported_is_that_of_the_values_taken(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)  # one step: far from the answer
@@ -384,7 +384,7 @@ def test_after_the_exact_solve_replaces_an_iterate_the_residual_reported_is_that
     assert info["linear_residual"] <= 1e-14 and info["linear_backward_error"] <= 1e-14  # the exact values taken: not the iterate's residual
 
 
-def test_a_policy_whose_exact_solve_does_not_fit_and_whose_true_residual_is_large_is_refused_not_returned(monkeypatch):
+def test_a_policy_whose_packed_exact_does_not_fit_and_whose_true_residual_is_large_is_refused_not_returned(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
@@ -396,7 +396,7 @@ def test_a_policy_whose_exact_solve_does_not_fit_and_whose_true_residual_is_larg
     assert "linear_cycles" not in info and info["linear_backward_error"] > ps.ACCEPT_BOUND  # a garbage iterate is never handed to the policy improvement (#584)
 
 
-def test_a_policy_whose_exact_solve_does_not_fit_keeps_an_iterate_whose_true_residual_is_small_and_says_why(monkeypatch):
+def test_a_policy_whose_packed_exact_does_not_fit_keeps_an_iterate_whose_true_residual_is_small_and_says_why(monkeypatch):
     work, leave = prepared(LINE)
     info = {}
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
@@ -420,7 +420,7 @@ def test_no_count_of_states_decides_whether_a_stiff_evaluation_is_solved_or_refu
     assert info["linear_cycles"] == 1 and values == pytest.approx([10.0, 8.0, 6.0, 4.0, 2.0, 0.0], rel=1e-13)
 
 
-def test_the_exact_solve_is_used_when_the_forward_estimate_is_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
+def test_the_packed_exact_is_used_when_the_forward_estimate_is_above_its_threshold_and_not_when_at_or_below_it(monkeypatch):
     work, leave = prepared(LINE)
     policy = np.array([0, 1, 2, 3, 4, -1])
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
@@ -732,7 +732,7 @@ def stub_bicgstab(monkeypatch, scale):
 
 
 @pytest.mark.parametrize("scale,exact", [(1.0, False), (1.0 + 1e-9, False), (1.0 + 1e-5, True), (2.0, True)])
-def test_the_exact_solve_is_made_for_an_iterate_whose_error_estimate_is_above_its_threshold_and_not_otherwise(monkeypatch, scale, exact):
+def test_the_packed_exact_is_made_for_an_iterate_whose_error_estimate_is_above_its_threshold_and_not_otherwise(monkeypatch, scale, exact):
     # the iterate is the values of LINE off by a known relative amount: up to 1e-6 (`ACCEPT_ERROR`) it is taken, above it the cycles are solved
     work, leave = prepared(LINE)
     calls = stub_bicgstab(monkeypatch, scale)
@@ -749,7 +749,7 @@ def test_the_exact_solve_is_made_for_an_iterate_whose_error_estimate_is_above_it
         assert info["linear_forward"] >= abs(scale - 1.0) and values[:5].tolist() == (LINE_VALUES * scale).tolist()  # the stub's iterate, kept
 
 
-def test_a_stagnated_iterate_is_run_again_from_its_best_only_when_the_exact_solve_cannot_be_made(monkeypatch):
+def test_a_stagnated_iterate_is_run_again_from_its_best_only_when_the_packed_exact_cannot_be_made(monkeypatch):
     work, leave = prepared(LINE)
     calls = stub_bicgstab(monkeypatch, 2.0)
     monkeypatch.setattr(ps, "policy_solver", tangled)
@@ -781,7 +781,7 @@ ACCEPTED = 0.5  # a power of two, so that "just above" is one step of the float 
 )
 def test_solve_graph_accepts_a_bound_up_to_the_one_accepted_and_refuses_the_next_float(monkeypatch, bound, accepted):
     stub_certify(monkeypatch, bound, 0.0)
-    monkeypatch.setattr(_exact_solve, "EXACT_CLASSES", 0)  # the refusal of the float64 certificate alone, with no exact solve after it (#1380)
+    monkeypatch.setattr(_packed_exact, "EXACT_CLASSES", 0)  # the refusal of the float64 certificate alone, with no exact solve after it (#1380)
 
     if accepted:
         assert solve_graph(GEO, accept_bound=ACCEPTED).certificate.bound == bound

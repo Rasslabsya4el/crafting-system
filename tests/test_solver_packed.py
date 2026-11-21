@@ -273,9 +273,9 @@ def test_a_bound_the_certificate_cannot_show_raises_instead_of_being_returned():
 
     assert solve_packed_model(loop, ["a"]).values["a"] == pytest.approx(4.0)
     with pytest.MonkeyPatch.context() as patch:  # float64 alone: the refusal (the exact solve of #1380 turned off)
-        from crafting_system.solver import _exact_solve
+        from crafting_system.solver import _packed_exact
 
-        patch.setattr(_exact_solve, "EXACT_CLASSES", 0)
+        patch.setattr(_packed_exact, "EXACT_CLASSES", 0)
         with pytest.raises(ConvergenceError):
             solve_packed_model(leaky, ["a"])
     # #1380: its 3 classes are then solved in rational numbers: V(b) = 1 + q (1 + V(b)) with q = 10^15 / (10^15 + 1), so V(b) = 2 10^15 + 1

@@ -20,7 +20,7 @@ import pytest
 from test_solver_packed_long_sum_certificate import build
 
 from crafting_system.solver import ConvergenceError
-from crafting_system.solver import _exact_solve
+from crafting_system.solver import _packed_exact
 from crafting_system.solver._packed_solve import solve_graph, solve_packed
 
 EPS = sys.float_info.epsilon
@@ -40,7 +40,7 @@ def alchemy(reroll: bool = False):
 
 @pytest.fixture
 def float_only(monkeypatch):
-    monkeypatch.setattr(_exact_solve, "EXACT_CLASSES", 0)
+    monkeypatch.setattr(_packed_exact, "EXACT_CLASSES", 0)
 
 
 def test_float64_alone_cannot_certify_the_alchemy_round(float_only):
@@ -82,17 +82,17 @@ def test_the_merged_solve_keeps_the_exact_certificate_on_the_whole_graph():
 def test_a_quotient_above_the_exact_size_is_still_refused():
     # a chain of more classes than `EXACT_CLASSES` (each state pays its own cost, so none merges) before the long draw: float64 refuses it as
     # before, and the rational solve is not tried
-    k = _exact_solve.EXACT_CLASSES + 1
+    k = _packed_exact.EXACT_CLASSES + 1
     chain = [(False, [(float(i + 1), [(i + 1, 1)])]) for i in range(k - 1)]
     last = (False, [(1.0, [(k, 1), (0, W - 1)])])
     with pytest.raises(ConvergenceError):
         solve_graph(build(*chain, last, (True, [])))
 
 
-def test_a_graph_no_policy_of_which_reaches_the_goal_gives_no_exact_solve():
+def test_a_graph_no_policy_of_which_reaches_the_goal_gives_no_packed_exact():
     # the rational solve answers only where a proper policy exists over the states it is given
     graph = build((False, [(1.0, [(1, 1)])]), (False, [(1.0, [(0, 1)])]), (True, []))
-    assert _exact_solve.exact_quotient(graph, np.array([True, True, False])) is None
+    assert _packed_exact.exact_quotient(graph, np.array([True, True, False])) is None
 
 
 def test_a_quotient_of_very_large_weights_is_not_solved_exactly_and_the_refusal_says_so():
@@ -100,6 +100,6 @@ def test_a_quotient_of_very_large_weights_is_not_solved_exactly_and_the_refusal_
     # are past `EXACT_WORK` and refused as before; R17's refused rounds (at most 9 classes of 126 bits, 4 of 3,113) are not
     hit, miss = 2**299940 + 1, 2**300000 - 1  # a chance of about 2^-60 of the goal, in weights of 300,000 bits that share no factor
     graph = build((False, [(1.0, [(1, hit), (2, miss)])]), (True, []), (False, [(533.0, [(0, 1)])]))
-    assert 3**3 * (3 * 300061) ** 1.5 > _exact_solve.EXACT_WORK >= max(9**3 * (9 * 126) ** 1.5, 4**3 * (4 * 3113) ** 1.5)
+    assert 3**3 * (3 * 300061) ** 1.5 > _packed_exact.EXACT_WORK >= max(9**3 * (9 * 126) ** 1.5, 4**3 * (4 * 3113) ** 1.5)
     with pytest.raises(ConvergenceError, match="the exact solve in rational numbers did not apply"):
         solve_graph(graph)

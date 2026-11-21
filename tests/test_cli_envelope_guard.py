@@ -206,9 +206,9 @@ def test_a_cost_ratio_of_1e14_between_the_cheapest_action_and_the_values_is_a_co
     graph.costs = [cost * (1e-7 if offer % 2 else 1e7) / 6 for offer, cost in enumerate(graph.costs)]
     value, _ = dense_optimum(graph)
     with monkeypatch.context() as patch:  # float64 alone (the exact solve of #1380 turned off)
-        from crafting_system.solver import _exact_solve
+        from crafting_system.solver import _packed_exact
 
-        patch.setattr(_exact_solve, "EXACT_CLASSES", 0)
+        patch.setattr(_packed_exact, "EXACT_CLASSES", 0)
         with pytest.raises(ConvergenceError, match="certifies only a relative bound"):
             Search(ExplicitProblem(graph, value, 1.0)).run()
     # #1380: the graph's few classes are solved again in rational numbers, and the search ends exact at the dense optimum

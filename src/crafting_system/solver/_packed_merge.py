@@ -161,7 +161,7 @@ def exact_classes(
     graph: PackedGraph, progress: Callable[[str], None] | None = None, max_rounds: int = 10_000, most: int | None = None
 ) -> Classes | None:
     """The coarsest exact partition of `graph` (see the module docstring); with `most`, None as soon as it has more classes than that (a round
-    only splits classes, so the count of a round is at most the final count: `_exact_solve` asks for a small quotient, #1380)."""
+    only splits classes, so the count of a round is at most the final count: `_packed_exact` asks for a small quotient, #1380)."""
     say = progress or (lambda _text: None)
     began = time.perf_counter()
     n = graph.n

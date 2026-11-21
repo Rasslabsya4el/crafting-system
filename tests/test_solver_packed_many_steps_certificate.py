@@ -15,8 +15,8 @@ LONG: state 0 pays 1 and reaches the goal (2) with weight 1 of `N = 2^32`, else 
 `V(1) = 2 N`: 8.6e9 steps. `4 eps V = 7.6e-6` of a step.
 
 Since #1380 a solve the float64 certificate refuses is solved again exactly in rational numbers when its quotient is small
-(`_exact_solve`), and LONG's quotient is 3 classes: the tests here of what float64 alone certifies and refuses turn that off (`float_only`);
-`test_solver_exact_quotient.py` holds the exact solve.
+(`_packed_exact`), and LONG's quotient is 3 classes: the tests here of what float64 alone certifies and refuses turn that off (`float_only`);
+`test_solver_packed_exact.py` holds the exact solve.
 """
 
 import sys
@@ -37,10 +37,10 @@ LONG_VALUE = np.array([2.0 * N - 1.0, 2.0 * N, 0.0])
 
 @pytest.fixture
 def float_only(monkeypatch):
-    """The solve with no exact fallback (`_exact_solve.EXACT_CLASSES` 0): what float64 alone certifies and refuses (#1380)."""
-    from crafting_system.solver import _exact_solve
+    """The solve with no exact fallback (`_packed_exact.EXACT_CLASSES` 0): what float64 alone certifies and refuses (#1380)."""
+    from crafting_system.solver import _packed_exact
 
-    monkeypatch.setattr(_exact_solve, "EXACT_CLASSES", 0)
+    monkeypatch.setattr(_packed_exact, "EXACT_CLASSES", 0)
 
 
 def long_graph():

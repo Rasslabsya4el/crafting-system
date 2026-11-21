@@ -412,7 +412,7 @@ def test_above_the_dense_limit_the_iterate_is_taken_when_its_forward_estimate_is
     assert 1 <= found.iterations <= 10 and not found.stagnated
 
 
-def test_an_iterate_whose_forward_estimate_is_above_the_tolerance_goes_to_the_exact_solve_at_once(monkeypatch):
+def test_an_iterate_whose_forward_estimate_is_above_the_tolerance_goes_to_the_packed_exact_at_once(monkeypatch):
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)  # one step: far from the answer
 
     found = lin.solve(DenseTerms(line(5)), np.ones(5), dense_limit=4)
@@ -421,7 +421,7 @@ def test_an_iterate_whose_forward_estimate_is_above_the_tolerance_goes_to_the_ex
     assert found.iterations == 1 and found.iterate is not None and found.iterate[2] > lin.ACCEPT_ERROR  # no restart: the exact solve was made at once
 
 
-def test_when_the_exact_solve_does_not_fit_its_cost_is_said_and_the_best_iterate_is_returned_not_taken(monkeypatch):
+def test_when_the_packed_exact_does_not_fit_its_cost_is_said_and_the_best_iterate_is_returned_not_taken(monkeypatch):
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
 
     found = lin.solve(DenseTerms(line(5), tangled=True), np.ones(5), dense_limit=4)
@@ -430,7 +430,7 @@ def test_when_the_exact_solve_does_not_fit_its_cost_is_said_and_the_best_iterate
     assert found.cost == {"rows": 3, "cells": 123, "allowed": 100}
 
 
-def test_a_stagnated_iterate_with_no_exact_solve_goes_on_from_its_best_iterate(monkeypatch):
+def test_a_stagnated_iterate_with_no_packed_exact_goes_on_from_its_best_iterate(monkeypatch):
     real = lin.bicgstab
     first = []
 
@@ -448,7 +448,7 @@ def test_a_stagnated_iterate_with_no_exact_solve_goes_on_from_its_best_iterate(m
     assert "no exact solve" in found.why and found.iterations >= 3  # the stagnated run's two steps and the run that went on
 
 
-def test_a_run_whose_recurrence_drifted_from_its_true_residual_is_started_again_not_sent_to_the_exact_solve(monkeypatch):
+def test_a_run_whose_recurrence_drifted_from_its_true_residual_is_started_again_not_sent_to_the_packed_exact(monkeypatch):
     # the first run stops by its recurrence (no stagnation) with a TRUE residual of 1e-6, far above ten times the aim of 1e-13: the drift of #584.
     # Main restarted such a run, and R04 and R14 reach 1e-16 so; sending it to the exact solve instead cost R14 20 s an evaluation (heavy run 43371506754)
     real = lin.bicgstab
@@ -525,7 +525,7 @@ def two_loops_and_a_dear_state(rounds: int, dear_cost: float):
     return builder.build(), np.array([0, 1, 2, -1])
 
 
-def test_an_iterate_with_a_residual_of_1e_10_on_a_system_whose_answer_is_1e10_times_its_right_hand_side_goes_to_the_exact_solve(monkeypatch):
+def test_an_iterate_with_a_residual_of_1e_10_on_a_system_whose_answer_is_1e10_times_its_right_hand_side_goes_to_the_packed_exact(monkeypatch):
     """#699: the residual is 1e-10 of the largest right-hand side and the iterate is 1e-5 off; its residual alone would have taken it."""
     rounds, dear = 10**10, 1e5
     graph, policy = two_loops_and_a_dear_state(rounds, dear)
@@ -574,7 +574,7 @@ def stiff_rings(blocks: int, ring_weight: int):
     return builder.build(), np.append(np.arange(4 * blocks), -1)
 
 
-def test_a_stiff_policy_of_100000_states_reaches_the_exact_solve_at_the_first_stagnation_of_the_iteration():
+def test_a_stiff_policy_of_100000_states_reaches_the_packed_exact_at_the_first_stagnation_of_the_iteration():
     """#671: one run of BiCGSTAB, stopped where it first stagnates; before, 4,000 iterations a run and three restarts were spent first."""
     graph, policy = stiff_rings(25_000, 10**13)
     work = ps.Work(graph)
