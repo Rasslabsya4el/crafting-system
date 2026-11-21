@@ -219,7 +219,7 @@ def test_a_stop_removes_the_page_an_earlier_run_left_beside_the_record(tmp_path,
 
     assert code == 0 and read_json(out)[RECORD]["stopped"] == words()
     assert not stale.exists()
-    assert not out.with_name(out.name + ".partial").exists()  # the JSON is written whole, then put in place
+    assert not list(tmp_path.glob("*.partial"))  # the JSON is written whole, then put in place
 
 
 def test_the_site_s_work_past_the_net_after_the_plan_gives_the_record_and_no_page(monkeypatch):
