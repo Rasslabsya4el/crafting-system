@@ -486,6 +486,7 @@ def _doubled(needs: dict, holders: "Held | dict[int, set[int]]", keys_of, candid
     offers_added: list[np.ndarray] = []
     ranked: dict[int, tuple[np.ndarray, list[tuple[float, int]]]] = {}
     first_low: dict[int, float] = {}
+    extra: dict[int, np.ndarray] = {}  # a key -> the offers this call gave it: a key in two classes is not given an offer twice (as one pair at a time)
     for klass, keys in keys_of.items():
         if klass in (INSIDE, OUTSIDE):  # the start's shape: the floors are strong and `needed` names the few offers that could lower a key's value
             continue  # (R24, doubled there too: 21 offers needed at 18,385 keys became 367,700 pairs, the whole join again in a few rounds)
@@ -498,10 +499,12 @@ def _doubled(needs: dict, holders: "Held | dict[int, set[int]]", keys_of, candid
         offers, order = ranked[klass]
         low_in = dict((p, low) for low, p in order)
         for k in short:
-            want = count(held, k) - count(given, k)
-            taken = np.concatenate((holders.offers_at(k), asking.offers_at(k)))
+            before = extra.get(k, np.empty(0, dtype=np.int64))  # what this call gave the key already, under another class
+            want = count(held, k) - count(given, k)  # (as before #1366: counted from what the key was given before the call)
+            taken = np.concatenate((holders.offers_at(k), asking.offers_at(k), before))
             chosen = offers[~np.isin(offers, taken)][:want]  # the least floors the key neither holds nor is given
             if len(chosen):
+                extra[k] = np.concatenate((before, chosen))
                 keys_added.append(np.full(len(chosen), k, dtype=np.int64))
                 offers_added.append(chosen)
                 for p in chosen.tolist():  # the floor an offer is ranked by is that of the first class it was added in, as it was one pair at a time

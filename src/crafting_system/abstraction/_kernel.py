@@ -136,6 +136,9 @@ DISTRIBUTION_SHARE, DISTRIBUTION_BYTES = 1 / 16, 500  # each of the label distri
 # the walk made the kernels of the fossil sets at its chain's states, and the two memos grew by about 1 KB an outcome (3.3 million outcomes,
 # 635 distributions after 296 kernels; a Tangled Fossil set adds about 169 distributions of 650,000 outcomes) until the 12 GB net cut the chain.
 # Kept whole, they grow with every state the search reads; a distribution let go is made again when it is asked again, the same.
+# A search counted in states (#1105) counts the outcomes of a distribution each time it is made, a remake too: where such a run stops may then
+# depend on the net, a setting of the machine, as with `_pattern.LISTS_SHARE`; below a generation (about 800,000 outcomes at a 12 GB net) nothing is
+# remade and the count is the count of a whole memo.
 DISTRIBUTIONS_KEPT: int | None = None  # a generation of each, in outcomes, set by hand (the tests); None: from the net
 
 
@@ -1526,7 +1529,7 @@ class Abstraction:
 
     def memo_count(self) -> int:
         """How many label distributions this abstraction keeps, exact and in floats (`_cache`): what `release_memos` drops."""
-        return len(self._cache) + len(self._approx[0])
+        return sum(memo.distinct() if isinstance(memo, Recent) else len(memo) for memo in (self._cache, self._approx[0]))
 
     def release_memos(self) -> int:
         """Drop every memo of the kernels: the prepared pairs (`release_prepared`), the label distributions and their reading in state terms

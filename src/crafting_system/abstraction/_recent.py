@@ -112,6 +112,11 @@ class Recent(Generic[V]):
 
     __hash__ = None  # a memo changes: it is no key
 
+    def distinct(self) -> int:
+        """The keys held, each once (an entry read back from the old generation is in both)."""
+        young = self.young
+        return len(young) + sum(1 for key in self.old if key not in young)
+
     def __len__(self) -> int:
         """The entries held (an entry read from the old generation is in both and counted twice)."""
         return len(self.young) + len(self.old)

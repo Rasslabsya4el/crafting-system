@@ -31,7 +31,8 @@ from crafting_system.budget import Budget
 from crafting_system.planner import PlanSettings, _offers, plan_target
 from crafting_system.planner._envelope_plan import CraftingProblem
 from crafting_system.planner._plan import PlanError
-from crafting_system.planner._pattern_bound import pattern_lower_bound
+from crafting_system.planner._offer_floor import OTHER, UNOPENED
+from crafting_system.planner._pattern_bound import _doubled, pattern_lower_bound
 
 
 def test_rows_answer_what_the_lists_answered():
@@ -79,6 +80,22 @@ def _old_lowest(problem: CraftingProblem, bound, expected: list[float], finite: 
                 found[position] = q
         out.append(found)
     return out
+
+
+def test_a_key_in_two_classes_is_given_an_offer_once_as_one_pair_at_a_time():
+    # `_doubled` makes its pairs in arrays (#1366); one pair at a time, a key found in two classes was given the next least floors in each, and
+    # never an offer twice. Key 0 holds 2 offers of some keys only (8, 9) and is given 1 (offer 0): it is given 1 more in each class, 1 then 2.
+    class Floors:
+        def lower(self, p, klass):
+            return 1.0 + p
+
+    needs = {0: np.array([0], dtype=np.int64)}
+    found = [(1.0, 0)]
+    keys_of = {OTHER: np.array([0], dtype=np.int64), UNOPENED: np.array([0], dtype=np.int64)}
+    added = _doubled(needs, {8: {0}, 9: {0}}, keys_of, [0, 1, 2, 3], Floors(), found)
+    assert added == 2
+    assert {p: np.asarray(keys).tolist() for p, keys in needs.items()} == {0: [0], 1: [0], 2: [0]}
+    assert sorted(found) == [(1.0, 0), (2.0, 1), (3.0, 2)]
 
 
 def test_the_backups_read_off_the_packed_rows_are_the_dicts_the_search_held(world, floors_on):  # noqa: F811
@@ -184,12 +201,14 @@ def test_a_search_keeps_the_label_distributions_read_lately_and_plans_the_same(d
     from crafting_system.abstraction._recent import Recent
 
     held = []
+    made: dict = {}  # a key -> the distributions written for it (held, so that no two are the same object by a reused id)
     real = Recent.__setitem__
 
     def write(self, key, value):
         real(self, key, value)
         if self.size is _kernel._distributions_kept:  # a memo of label distributions
             held.append(len(self.young) + len(self.old))
+            made.setdefault((id(self), key), {})[id(value)] = value
 
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     whole = _belt(data, target, None)
@@ -198,3 +217,4 @@ def test_a_search_keeps_the_label_distributions_read_lately_and_plans_the_same(d
     small = _belt(data, target, None)
     assert small.mean_remaining == whole.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     assert held and max(held) <= 2  # the young generation and the old one, one distribution each
+    assert any(len(values) > 1 for values in made.values())  # a distribution let go was asked again and made again

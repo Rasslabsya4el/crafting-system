@@ -107,8 +107,8 @@ class CraftingProblem:
         self.rows = model.actions
         self.position_of = np.asarray(bound.positions, dtype=np.int64)  # the model's offer index -> its position in `offers`
         self.cost_of = np.array([self.offers[position].cost for position in bound.positions], dtype=np.float64)  # and its cost
-        self.expected = _expected(model, values)
-        self._lowest: tuple | None = None  # the last key `lowest` read, with what it read it under, and its answer  # the lowered value of each pushed kernel of the model, in expectation
+        self.expected = _expected(model, values)  # the lowered value of each pushed kernel of the model, in expectation
+        self._lowest: tuple | None = None  # the last key `lowest` read, with what it read it under, and its answer
         self.restart = next((p for p, priced in enumerate(self.offers) if isinstance(priced.offer.action, BuyStartItem)), None)
         self.start_lower = float(values[0])  # key 0 is the start's
         self.keys_missing = 0
