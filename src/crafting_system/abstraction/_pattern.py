@@ -2459,7 +2459,7 @@ class PatternBuilder:
         """What a worker's members and states are made of besides the keys it is sent: the universe's growth (`Pattern.grew`) and the family types
         numbered (`TypeNumbers`, shared with the twin; a type is numbered when the first item of an influence set is met, and its number names
         slots in states and kernel keys)."""
-        return (self.pattern.grew, len(self.ab._kinds._numbers._numbers))
+        return (self.pattern.grew, self.ab.types_numbered())
 
     def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
         """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does

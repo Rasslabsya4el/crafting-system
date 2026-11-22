@@ -198,15 +198,13 @@ class KeysAhead:
             tally = self.builder.tally  # the net on the clock, asked while this process waits as it is asked between two offers (a count is not)
             results = self.pool.gather(futures, stop=self.builder.stop if tally is None else tally.then)
         except parallel.MemoryNetReached as reached:  # the workers' memory passed the net: they are stopped, and no pool forks again in this build
-            self.stopped = str(reached)
-            self._drop()
+            self._stop(str(reached))
             return
         except (parallel.Stopped, budget.BudgetExceeded):  # a net was met while waiting: this process goes on alone and meets it itself
             self._drop()
             return
         except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
-            self.stopped = f"the pool of the keys failed: {failed!r}"
-            self._drop()
+            self._stop(f"the pool of the keys failed: {failed!r}")
             return
         self.waited += time.perf_counter() - mark
         for pid, made, seconds in results:
@@ -218,6 +216,13 @@ class KeysAhead:
                     self.memo[k] = (pid, row)
                 else:
                     self.left += 1
+
+    def _stop(self, reason: str) -> None:
+        """No pool again in this build: the build says why, and goes on in this process alone."""
+        self.stopped = reason
+        self._drop()
+        if self.builder.progress is not None:
+            self.builder.progress(f"keys' workers: stopped ({reason}); the build goes on in one process")
 
     def _drop(self) -> None:
         pool, self.pool = self.pool, None
