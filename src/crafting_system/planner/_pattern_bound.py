@@ -258,7 +258,10 @@ def pattern_lower_bound(
             outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
             floor = _floor_of(floors, outside, priced, holders) if floors is not None else _tip_floor(priced)
             graph = pack_pattern_model(model, [all_offers[p] for p in order], floor)
-            if kept is not None and stop is not None and (reason := stop()) is not None:  # the solve cannot be interrupted: the net is asked before it
+            if kept is not None and stop is not None and (reason := stop()) is not None and builder.ahead.open:  # the idle keys' workers go first (#1384)
+                builder.close()
+                reason = stop()
+            if kept is not None and stop is not None and reason is not None:  # the solve cannot be interrupted: the net is asked before it
                 say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
                 model, value, error, order, narrow = kept
                 return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)

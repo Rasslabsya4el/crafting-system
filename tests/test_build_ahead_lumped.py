@@ -35,8 +35,8 @@ def pooled(monkeypatch):
     assert _pattern.LUMP_ERASING
 
 
-def _build(data, ab, start, workers: int):
-    builder = PatternBuilder(ab, ab.compress(build(data, BOW, STARTS[start])), tags=True, workers=workers)
+def _build(data, ab, start, workers: int, grow: bool = False):
+    builder = PatternBuilder(ab, ab.compress(build(data, BOW, STARTS[start])), tags=True, workers=workers, grow=grow)
     return builder.extend(broad_offers()), builder
 
 
@@ -61,7 +61,8 @@ def test_with_the_twin_a_model_built_with_workers_is_the_model_of_one_process(wo
     assert np.array_equal(solve_packed(pack_pattern_model(ahead, offers)).value, solve_packed(pack_pattern_model(alone, offers)).value)
 
 
-def test_a_universe_that_grows_inside_a_pass_leaves_the_key_here_and_the_model_is_the_model_of_one_process(world, pooled, monkeypatch):  # noqa: F811
+@pytest.mark.parametrize("grow", [False, True], ids=["pool-a-pass", "pool-kept"])
+def test_a_universe_that_grows_inside_a_pass_leaves_the_key_here_and_the_model_is_the_model_of_one_process(world, pooled, monkeypatch, grow):  # noqa: F811
     # Every slot a kernel produces counts as growth the first time a process meets it: a worker that meets one leaves the key, this process
     # grows its universe there, the pool goes, and the pass begins again with a pool forked from the grown universe
     data, ab, _ = world
@@ -74,12 +75,16 @@ def test_a_universe_that_grows_inside_a_pass_leaves_the_key_here_and_the_model_i
         return grew or met[slot] == 1
 
     monkeypatch.setattr(_pattern._Universe, "note", note)
-    alone, one = _build(data, ab, 0, 1)
+    # a pool forked past the first keys, after the growth of the pass: the pass ends, the keys the slot may be in are made again
+    # (`_begin_again`), and a pool kept for the next pass would hold their old members (the checker of #1384)
+    monkeypatch.setattr(_build_ahead.KeysAhead, "_pays", lambda self, i: self.workers > 1 and i >= 30)
+    alone, one = _build(data, ab, 0, 1, grow)
     met.clear()
-    ahead, builder = _build(data, ab, 0, 3)
+    ahead, builder = _build(data, ab, 0, 3, grow)
+    builder.close()
     assert alone.stats.universe_growth > 0
     assert _model(ahead) == _model(alone)
-    assert builder.ahead.pools > 1 and builder.ahead.taken > 0  # pools closed by the growth, and forked again
+    assert builder.ahead.taken > 0 and (grow or builder.ahead.pools > 1)  # a pool a pass: closed by the growth, and forked again
 
 
 def test_through_the_planners_entry_counted_in_states_with_the_twin_the_plan_with_workers_is_the_plan_of_one_process(coarse, pooled, monkeypatch):  # noqa: F811

@@ -1974,6 +1974,7 @@ class PatternBuilder:
         keys = {self.keys[i] for i in again}
         self.gaps = {found: value for found, value in self.gaps.items() if found[0] not in keys}
         self.stats.restarted_keys += len(again)
+        self.ahead.close()  # the workers hold these keys' members and gaps as they were before (the checker of #1384)
         self.grown_total += pattern.grew
         pattern.grew = 0
         pattern.grown = []
@@ -2465,10 +2466,11 @@ class PatternBuilder:
         return pushed
 
     def version(self) -> tuple:
-        """What a worker's members and states are made of besides the keys it is sent: the universe's growth (`Pattern.grew`) and the family types
+        """What a worker's members and states are made of besides the keys it is sent: the universe's growth (`Pattern.grew`), the keys made again
+        after a growth (`restarts`: their members and gaps are made anew, `_begin_again`) and the family types
         numbered (`TypeNumbers`, shared with the twin; a type is numbered when the first item of an influence set is met, and its number names
         slots in states and kernel keys)."""
-        return (self.grown_total + self.pattern.grew, self.ab.types_numbered())
+        return (self.grown_total + self.pattern.grew, self.restarts, self.ab.types_numbered())
 
     def close(self) -> None:
         """End the keys' pool kept from pass to pass (`_build_ahead`): the build is done with."""

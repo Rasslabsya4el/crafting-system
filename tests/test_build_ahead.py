@@ -193,3 +193,21 @@ def test_the_rule_forks_no_pool_with_one_worker_or_before_a_key_was_measured(wor
     builder.keys_to_expand = lambda i: 1  # one key of 0.1 s left: 0.075 s saved, four forks cost more
     builder.ahead.fork = 0.05
     assert not builder.ahead._pays(0)
+
+
+def test_a_growing_builder_keeps_its_pool_from_pass_to_pass_until_offers_join_and_closes_it_at_the_end(world, pooled):  # noqa: F811
+    offers = pattern_offers(world[2])
+    models = []
+    for workers in (1, 3):
+        fresh = abstraction()
+        builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=workers, grow=True)
+        first = builder.extend(offers[:2])
+        pools = builder.ahead.pools
+        assert builder.ahead.open == (workers > 1)  # kept after the pass, for the next one
+        second = builder.extend(offers[2:])  # offers join: the workers do not hold them, so a new pool is forked from this process
+        assert builder.ahead.pools == pools + (workers > 1)
+        builder.close()
+        assert not builder.ahead.open
+        models.append((first, second))
+    for one, other in zip(*models):
+        assert _model(other) == _model(one)
