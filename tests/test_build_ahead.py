@@ -111,7 +111,8 @@ def test_a_pool_that_meets_the_memory_net_is_dropped_and_the_build_goes_on_alone
     alone, _ = _grown(1, offers=offers)
     ahead, builder = _grown(3, offers=offers)
     _same_bound(alone, ahead)
-    assert builder.ahead.stopped is not None and builder.ahead.pools == 1 and builder.ahead.taken == 0  # one pool, dropped: none again
+    # a pool of three met the net: one of two forked next, met it too: none again
+    assert builder.ahead.stopped is not None and builder.ahead.pools == 2 and builder.ahead.count == 1 and builder.ahead.taken == 0
 
 
 def test_a_row_made_on_a_universe_that_grew_since_the_fork_is_not_taken(world, pooled, monkeypatch):  # noqa: F811

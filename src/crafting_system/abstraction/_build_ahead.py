@@ -36,7 +36,9 @@ reads of a pass never push out what the fork gave). A pass's workers together ma
 share of the keys, and the pool closes at the pass end; what comes back is the rows and the outcomes of the kernels made, never a memo. (With
 each memo cut to `1/workers` of its size, the reads of a pass pushed the inherited entries out: on R04's spread pass of model 10, 229 s with
 six workers where one process took 123 s, its kernels made again.) The wait on the workers reads this process's and their memory against the run's
-net (`parallel.WorkerPool.gather`); once it is reached the workers are stopped and no pool forks again in this build.
+net (`parallel.WorkerPool.gather`); once it is reached the workers are stopped, and the next pool forks one worker fewer (`_cut`): a worker
+holds what it copied of this process's pages (a fork shares them until either side writes, and reading an object writes its count) and what
+it made, so where the net is near fewer of them fit. Below two workers no pool forks again in this build.
 """
 
 import os
@@ -76,7 +78,8 @@ class KeysAhead:
 
     def __init__(self, builder: object, workers: int, *, poll: float = 0.5) -> None:
         self.builder = builder
-        self.workers = workers
+        self.workers = workers  # the machine's setting (`CRAFTING_WORKERS`)
+        self.count = workers  # the workers a pool forks: one fewer each time a pool met the memory net, none below two (`_cut`)
         self.poll = poll
         self.stopped: str | None = None  # the memory net a pool met: no pool again in this build
         self.fork: float | None = None  # seconds of the fork of one worker, at the last pool (its first `submit`, over its workers)
@@ -131,7 +134,7 @@ class KeysAhead:
 
     def _pays(self, i: int) -> bool:
         """Whether a pool forked now saves time, by this build's measures (the module's note); asked once a poll of work done here."""
-        if self.workers < 2 or self.stopped is not None:
+        if self.count < 2 or self.stopped is not None:
             return False
         if ALWAYS:
             return True
@@ -142,7 +145,7 @@ class KeysAhead:
         per_key = self.spent / self.keys
         fork = FORK_PRIOR if self.fork is None else self.fork
         lost = self.lost / self.lost_keys if self.lost_keys else 0.0
-        return per_key * left * (1.0 - 1.0 / self.workers) > fork * self.workers + lost * left
+        return per_key * left * (1.0 - 1.0 / self.count) > fork * self.count + lost * left
 
     def _fork(self, i: int) -> None:
         net = parallel.active_memory_net()
@@ -150,18 +153,18 @@ class KeysAhead:
         if net is not None and held is not None and held >= net:  # no room for the workers' own memory: they would be stopped at once
             return
         builder = self.builder
-        self.pool = parallel.WorkerPool(_hold, (builder, self.workers), workers=self.workers)
+        self.pool = parallel.WorkerPool(_hold, (builder, self.count), workers=self.count)
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
 
     def _size(self) -> int:
-        least = self.workers * CHUNKS
+        least = self.count * CHUNKS
         per_key = self.spent / self.keys if self.keys else None
         if per_key is None or per_key <= 0.0:
             return least
-        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.workers / per_key)))
+        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.count / per_key)))
 
     def _send(self, i: int) -> bool:
         builder = self.builder
@@ -170,7 +173,7 @@ class KeysAhead:
         if not tasks:
             self.next = max(self.next, end)
             return False
-        step = max(1, -(-len(tasks) // (self.workers * CHUNKS)))
+        step = max(1, -(-len(tasks) // (self.count * CHUNKS)))
         mark = time.perf_counter()
         try:
             futures = [self.pool.submit(_rows, tasks[at : at + step]) for at in range(0, len(tasks), step)]
@@ -179,7 +182,7 @@ class KeysAhead:
             return False
         if not self.forked:  # the workers are forked at the first submit
             self.forked = True
-            self.fork = (time.perf_counter() - mark) / self.workers
+            self.fork = (time.perf_counter() - mark) / self.count
         self.pending.append((start, end, futures))
         self.next = end
         self.sent += len(tasks)
@@ -191,10 +194,10 @@ class KeysAhead:
         try:
             tally = self.builder.tally  # the net on the clock, asked while this process waits as it is asked between two offers (a count is not)
             results = self.pool.gather(futures, stop=self.builder.stop if tally is None else tally.then)
-        except parallel.MemoryNetReached as reached:  # the workers' memory passed the net: they are stopped, and no pool forks again in this build
-            self._stop(str(reached))
+        except (parallel.MemoryNetReached, budget.BudgetExceeded) as reached:  # the workers' memory passed the net (or the run's net was met):
+            self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
             return
-        except (parallel.Stopped, budget.BudgetExceeded):  # a net was met while waiting: this process goes on alone and meets it itself
+        except parallel.Stopped:  # the build's net was met while waiting: this process goes on alone and meets it itself
             self._drop()
             return
         except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
@@ -210,6 +213,18 @@ class KeysAhead:
                     self.memo[k] = (pid, row)
                 else:
                     self.left += 1
+
+    def _cut(self, reason: str) -> None:
+        """A pool met the memory net: the next forks one worker fewer, and below two none forks again in this build. A worker's own memory is
+        what it copied of this process's pages and what it made in its pass (R04, 12 GB net: six workers took about 1.2 GB each beside this
+        process's 4.8 GB, #1384), so fewer of them fit where the net is near."""
+        self.count = min(self.count, self.pool.workers if self.pool is not None else self.count) - 1
+        if self.count < 2:
+            self._stop(reason)
+            return
+        self._drop()
+        if self.builder.progress is not None:
+            self.builder.progress(f"keys' workers: stopped ({reason}); the next pool forks {self.count}")
 
     def _stop(self, reason: str) -> None:
         """No pool again in this build: the build says why, and goes on in this process alone."""
@@ -237,7 +252,7 @@ class KeysAhead:
         self.pending.clear()
         self.memo.clear()
         if self.sent:
-            self.lost += max(0.0, self.waited - self.useful / self.workers)
+            self.lost += max(0.0, self.waited - self.useful / self.count)
             self.lost_keys += self.sent
         self.waited = self.useful = 0.0
         self.sent = 0
