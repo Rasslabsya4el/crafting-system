@@ -267,8 +267,10 @@ def test_a_pool_whose_rows_cost_here_what_a_worker_spends_is_idle(world):  # noq
     fresh = abstraction()
     ahead = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=4).ahead
     ahead.worker_keys, ahead.useful = 100, 1.0  # 10 ms a key in a worker
-    ahead.replayed, ahead.replay = 50, 0.5  # 10 ms a row here: more than the 7.5 ms four workers save
+    ahead.replayed, ahead.replay = 50, 0.5  # 10 ms a row here: as slow as one process
     assert ahead._idle()
+    ahead.replay = 0.4  # 8 ms a row here: the pool still goes at this process's pace, faster than one process
+    assert not ahead._idle()
     ahead.replay = 0.1  # 2 ms a row here
     assert not ahead._idle()
     ahead.replayed, ahead.replay = 8, 0.5  # fewer rows than a window: not yet told

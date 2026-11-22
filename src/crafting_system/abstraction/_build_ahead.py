@@ -277,8 +277,9 @@ class KeysAhead:
         self.renew = self._grown()
 
     def _idle(self) -> bool:
-        """Whether this pool's rows cost this process about what they saved: once a window's worth of its rows were taken, the seconds taking a
-        row took here are at least the seconds a worker took to make one, less its share (`1 - 1/workers`). On R17's keys of 100,000 kernels,
+        """Whether this pool's rows cost this process what they save: once a window's worth of its rows were taken, the seconds taking a row
+        took here are at least the seconds a worker took to make one (the workers make rows while this process takes them, so a pool goes at
+        the pace of the slower: R04's new keys, about 3 ms a row here against 7 ms a key in a worker, went 3.5 times one process's pace). On R17's keys of 100,000 kernels,
         taking a row (its kernels' outcomes numbered here) cost what making it did, and the keys after the pool made again here the label
         distributions the workers had made (#1384)."""
         taken = self.replayed - self.replayed_at_fork
@@ -287,7 +288,7 @@ class KeysAhead:
             return False
         replay = (self.replay - self.replay_at_fork) / taken
         worker = self.useful / made
-        return replay >= worker * (1.0 - 1.0 / self.count)
+        return replay >= worker  # the workers make rows while this process takes them: a pool's pace is the slower of the two
 
     def _retire(self) -> None:
         """Let the workers go now, with the windows in flight; the rows already in stay (`_fill`)."""
