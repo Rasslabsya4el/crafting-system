@@ -137,9 +137,14 @@ def test_a_caller_that_presents_nothing_says_so_and_gets_the_other_limits(monkey
 NAMED = ("chaos-orb", "harvest-reforge")  # the methods a file of R12 once named (#405: a target names none)
 
 
-def test_a_target_is_planned_with_every_beta_method_and_a_methods_setting_restricts_the_run_to_its_methods(tmp_path):
+def test_a_target_is_planned_with_every_beta_method_and_a_methods_setting_restricts_the_run_to_its_methods(tmp_path, monkeypatch):
     """Done when of #405: a target whose file named only some kinds (`NAMED`) is refused with its key, planned with every beta method
-    without it, and planned with those kinds alone when the run's setting names them; the answer says which methods it left out."""
+    without it, and planned with those kinds alone when the run's setting names them; the answer says which methods it left out. What a run
+    considered is read off the plan's offers, those of the round that made it: so the rounds here are main's widening alone, whose every
+    round holds the rounds before it (the plan-led growth, #1414, holds the plan's support and the offers it names instead)."""
+    from crafting_system.planner import _growth
+
+    monkeypatch.setattr(_growth, "GROWS", False)
     keyed = tmp_path / R12.name
     keyed.write_text(R12.read_text(encoding="utf-8") + f"\nactions: [{', '.join(NAMED)}]\n", encoding="utf-8")
     with pytest.raises(TargetError, match="a target no longer names the methods the planner may use"):

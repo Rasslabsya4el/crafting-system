@@ -33,6 +33,14 @@ from crafting_system.planner._envelope_plan import CraftingProblem
 from crafting_system.planner._plan import PlanError
 from crafting_system.planner._offer_floor import OTHER, UNOPENED
 from crafting_system.planner._pattern_bound import _doubled, pattern_lower_bound
+from crafting_system.planner import _growth
+
+@pytest.fixture(autouse=True)
+def _widening_alone(monkeypatch):
+    """These tests are of the widening rounds' own mechanism (their shares, set-asides, give-way and words): the plan-led growth that runs
+    before them (`_growth`, #1414) is off here; `tests/test_growth.py` tests it through the entry."""
+    monkeypatch.setattr(_growth, "GROWS", False)
+
 
 
 def test_rows_answer_what_the_lists_answered():
