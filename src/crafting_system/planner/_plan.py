@@ -57,7 +57,7 @@ from ._packed import SOLVERS, PackedResult, packed_result
 from ._pattern_bound import MIN_OFFERS, offers_floor
 from ._presenter import presenter_limits
 from ._price_cut import price_cut_limit, restart_dominated
-from . import _rounds
+from . import _growth, _rounds
 from ._rounds import RoundCall
 from ._prune import chosen_offers, solver_actions
 from ._start_types import StartChoice
@@ -847,9 +847,12 @@ def _make_plan(
         grouped = tuple(p.offer for p in priced if id(p.offer) in own)
         groups = offer_groups(data, goal, target, grouped, route_actions or ())
         if len(groups) > 1:  # the offers refine the model in more than one way: they are searched in rounds (#1069)
+            # the rounds grow from the plan in hand first (`_growth`, #1414): its table reads the offers with their costs, in the rounds' order
+            grower = rounds_grower(data, goal, target, tuple(p for p in priced if id(p.offer) in own), listing, route_actions or ())
             return widened_plan(
                 data, target, prices, groups, grouped, limits, aim=aim, rates=rates, strands=strands, price_of_start=price_of_start,
                 price_source=price_source, solver=solver, with_risk=with_risk, clock=clock, watch=watch, foresee=foresee, route_actions=route_actions,
+                grower=grower,
             )  # fmt: skip
     if round_call is not None and round_call.upper is not None and price_cut_applies(data, target, priced, price_of_start, solve_it=solve_it, judged=judged):
         # cut against the plan in hand (`_rounds`); a judged route's offers are kept, since the route is read on the plan's offers (#1110)
@@ -1188,6 +1191,22 @@ def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Of
     return _rounds.round_groups(offers, (*(target.actions or ()), *route), added)
 
 
+def rounds_grower(
+    data: GameData, goal: Goal, target: Target, priced: Sequence[PricedOffer], listing: Item | None, route: Sequence[str] = ()
+) -> _growth.Grower | None:
+    """The plan-led growth of the rounds (`_growth`, #1414) over `priced` (the rounds' offers with their costs, in their order): the table of
+    what each offer declares, and the positions of the run's named offers (the target's actions and a judged route's labels, as
+    `_rounds.round_groups` names them), which every round holds. None when no wanted mod is open at the start (nothing to grow)."""
+    if not _growth.GROWS:
+        return None
+    names = {*(target.actions or ()), *route}
+    table = _growth.growth_table(data, goal, target, priced, listing, ask=checkpoint)
+    if not table.open:
+        return None
+    asked = [i for i, p in enumerate(priced) if p.offer.label in names or (p.offer.kind in names and p.offer.blocks is None)]
+    return _growth.Grower(table, asked)
+
+
 def round_end(plan: Plan) -> tuple[str, str]:
     """How a round's plan ended (`_rounds.widen`): closed (exact, or a walk), within the gap, or stopped, with the reason."""
     info = plan.search
@@ -1212,7 +1231,8 @@ def release_round(plan: Plan) -> None:
 
 def widened_plan(
     data: GameData, target: Target, prices: PriceFile, groups: Sequence[_rounds.Group], grouped: tuple[Offer, ...], limits: tuple[Limit, ...], *,
-    price_of_start: StartPrice, clock: Clock | None, with_risk: bool, watch, foresee: bool, route_actions: tuple[str, ...] | None = None, **kwargs,
+    price_of_start: StartPrice, clock: Clock | None, with_risk: bool, watch, foresee: bool, route_actions: tuple[str, ...] | None = None,
+    grower: _growth.Grower | None = None, **kwargs,
 ) -> Plan:
     """The plan of `groups` of `grouped` searched in rounds (`_rounds`, #1069): the cheapest plan of every round, with the Lock foreseen and its
     risk, and the answer says over which methods it is proved and which rounds were set aside or not tried (OR-13). `limits` are what the choice
@@ -1249,7 +1269,7 @@ def widened_plan(
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
         left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=meter,
-        gap=0.0 if clock is None else clock.budget.gap, floor=floor, release=release_round,
+        gap=0.0 if clock is None else clock.budget.gap, floor=floor, release=release_round, grow=grower,
     )  # fmt: skip
     if widened.plan is None:
         said = _rounds.no_plan_words(widened.records)

@@ -28,6 +28,14 @@ from crafting_system.planner import PlanError, PlanSettings, _offers, _pattern_b
 from crafting_system.planner import _plan as planner_plan
 from crafting_system.planner._offer_floor import INSIDE, OTHER, OUTSIDE, OfferFloors
 from crafting_system.planner._offer_kinds import REFUSED, REROLL, RESTART_KIND, _Entry, best_first_rho
+from crafting_system.planner import _growth
+
+@pytest.fixture(autouse=True)
+def _widening_alone(monkeypatch):
+    """These tests are of the widening rounds' own mechanism (their shares, set-asides, give-way and words): the plan-led growth that runs
+    before them (`_growth`, #1414) is off here; `tests/test_growth.py` tests it through the entry."""
+    monkeypatch.setattr(_growth, "GROWS", False)
+
 
 STAND_IN = ("1e+300", "9.99999999999e+299", "999,999,999,999", "inf")  # every way the stand-in, or its overflow, was printed
 

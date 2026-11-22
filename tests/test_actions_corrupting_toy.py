@@ -38,6 +38,14 @@ from crafting_system.planner._prune import corrupting_offer_pruned, solver_actio
 from crafting_system.data import GameData, Weight
 from crafting_system.items import ImplicitMod, Item, Rarity
 from crafting_system.solver import solve
+from crafting_system.planner import _growth
+
+@pytest.fixture(autouse=True)
+def _widening_alone(monkeypatch):
+    """These tests are of the widening rounds' own mechanism (their shares, set-asides, give-way and words): the plan-led growth that runs
+    before them (`_growth`, #1414) is off here; `tests/test_growth.py` tests it through the entry."""
+    monkeypatch.setattr(_growth, "GROWS", False)
+
 
 TOY_ORB = "Toy Corruption Orb"
 TOY_IMPLICIT = "ContractToyCorruptedImplicit"

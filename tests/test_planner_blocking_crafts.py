@@ -33,6 +33,14 @@ from crafting_system.prices import PriceFile
 from crafting_system.prices.price_file import PriceEntry
 from crafting_system.prices.provenance import EXCHANGE, Provenance
 from crafting_system.targets import load_target
+from crafting_system.planner import _growth
+
+@pytest.fixture(autouse=True)
+def _widening_alone(monkeypatch):
+    """These tests are of the widening rounds' own mechanism (their shares, set-asides, give-way and words): the plan-led growth that runs
+    before them (`_growth`, #1414) is off here; `tests/test_growth.py` tests it through the entry."""
+    monkeypatch.setattr(_growth, "GROWS", False)
+
 
 ALTERATION = "Metadata/Items/Currency/CurrencyRerollMagic"
 FILLER, FILLER_TWO = "TestMasterFiller", "TestMasterFillerTwo"

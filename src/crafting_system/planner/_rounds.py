@@ -92,6 +92,7 @@ from ._limits import Limit, WITHIN_GAP
 FIRST_ROUND = frozenset({"junk"})  # the features an offer of the first round may add: counting the junk per side is what every reroll needs
 
 CLOSED, WITHIN, BEATEN, NONE, STOPPED, REFUSED, UNTRIED = "closed", "within", "beaten", "no plan", "stopped", "refused", "not tried"
+GROWTH_SHARES = 2  # a growth round shares the time left with what comes after it: half each (`widen`, #1414)
 GAVE_WAY = "gave way"  # a round that began with no plan in hand, made one, and had used its share: it gives the rest of the time back (#1080)
 
 
@@ -145,6 +146,9 @@ class RoundRecord:
     features: tuple[str, ...] = ()  # what its group's offers add to the model (`Abstraction.features`): with the kinds, what names the group
     carried: bool = True  # False: a round before the last that could not beat the plan in hand, whose group later rounds did not hold (`widen`)
     states: int | None = None  # the states its search knew, when the run counts in states (`StatesMeter`): the answer names them, not the seconds
+    # a round of the plan-led growth (`_growth`, #1414): why it holds what it holds. Its `kinds` are then its offers' labels, and its proof covers
+    # them alone (they are not the methods of every round before it), so the whole proof never rests on it (`all_closed`)
+    growth: str | None = None
 
     @property
     def closed(self) -> bool:
@@ -156,7 +160,7 @@ class RoundRecord:
         return {
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
             "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
-            "carried": self.carried, **({} if self.states is None else {"states": self.states}),
+            "carried": self.carried, **({} if self.states is None else {"states": self.states}), **({} if self.growth is None else {"growth": self.growth}),
         }  # fmt: skip
 
 
@@ -312,6 +316,7 @@ def widen(
     gap: float = 0.0,
     floor: Callable[[tuple, RoundCall], float | None] | None = None,
     release: Callable[[object], None] | None = None,
+    grow=None,
 ) -> Widened:
     """Run the rounds of `groups` over `offers` (see the module text). `run(round_offers, call)` makes a round's plan (raising what `_make_plan`
     raises, or `Beaten`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and reason;
@@ -334,6 +339,95 @@ def widen(
     closing: int | None = None  # the place in the queue of the last round that holds the set-aside groups again, once it is added
     gave_way: list[tuple[int, Group]] = []  # the rounds with no plan in hand that gave way on a bound not complete (#1268): record's place, group
     again: set[int] = set()  # the places in the queue of the rounds that run them again (no plan in hand once the queue ended)
+
+    def attempt(chosen: tuple, call: RoundCall, give_way: Share | None):
+        """One round's search over `chosen`: its plan (None when it raised), status, reason, lower and upper figures, the gap it closed
+        within, the states it knew, and the error it raised (a stop or a refusal) or its proof that no plan of its offers reaches the target."""
+        plan, status, reason, lower, upper, within, touched, failed, shown = None, REFUSED, "", None, None, None, None, None, None
+        try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
+            plan = run(chosen, call)
+        except Beaten as beaten:
+            status, lower, within = BEATEN, beaten.lower, beaten.within
+            touched = getattr(beaten, "states", None)
+            reason = (
+                "no plan with these methods costs less than the plan in hand"
+                + (f" (to within the gap of {beaten.within:.2%} this run allows)" if beaten.within is not None else "")
+            )
+        except BudgetExceeded as stop:
+            status, reason = STOPPED, stop.binding.words()
+            failed = _bare(stop)
+        except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next round widens them
+            status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
+            shown = _bare(none.__cause__ or none)  # what the run says when every round showed no plan (the last held every offer)
+        except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
+            status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
+            failed = _bare(stop.__cause__ or stop)
+        except ValueError as refusal:  # a `PlanError`: the round's offers reach no plan, or the search refused them
+            status, reason, touched = REFUSED, str(refusal), states_of(refusal)
+            failed = _bare(refusal)
+        if plan is not None:
+            status, reason = ended(plan)
+            if give_way is not None and status == STOPPED and reason.startswith(give_way.said):  # (a counted run may add its build's stop after it)
+                status = GAVE_WAY
+            search = getattr(plan, "search", None)
+            lower, upper = getattr(search, "lower", None), mean_of(plan)
+            within = getattr(search, "within", None) if status == WITHIN else None
+            touched = getattr(search, "touched", None)
+        return plan, status, reason, lower, upper, within, touched, failed, shown
+
+    grown = False  # the plan-led growth ran (`grow`): the rounds below widen the base of its plan's support
+    if grow is not None:
+        unit = "seconds" if meter is None else meter.unit
+        step = grow.seed()
+        while step is not None:
+            positions, why = step
+            if (time_left := left()) is not None and time_left <= 0.0:
+                break
+            grown = True
+            chosen = tuple(offers[i] for i in positions)
+            grow.say(f"growth round {len(records) + 1}: {why}: {len(chosen)} offers: {sorted({getattr(o, 'label', str(o)) for o in chosen})}")
+            began = clock_now()
+            counted = began if meter is None else measure()
+            held = best is not None and not walked(best)
+            cut = best_upper
+            # a growth round's share is half the time left: this round, and every round after it (OR-40: a share of the net, no count)
+            give_way = None if best is not None or time_left is None else Share(time_left, GROWTH_SHARES, counted, measure, unit, gap)
+            searches = GROWTH_SHARES if best is not None else 1
+            asked = give_way if meter is None else _seen_by(meter, give_way)
+            call = RoundCall(searches, best_upper, best is None, asked, None if meter is None else meter.net(searches), held, best is not None and not held,
+                             blind=GROWTH_SHARES if best is None else None)  # fmt: skip
+            plan, status, reason, lower, upper, within, touched, failed, shown = attempt(chosen, call, give_way)
+            error, proof = error or failed, proof or shown
+            improved = False
+            if plan is not None:
+                if best is None or _cheaper(upper, upper_of(plan), best_mean, best_upper):
+                    best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
+                if release is not None:
+                    release(plan)
+            ends = status not in (CLOSED, WITHIN, BEATEN, NONE, REFUSED)
+            built = plan is None or getattr(getattr(plan, "search", None), "bound_stopped", None) is None
+            if ends:
+                # a round that did not finish within its share ends the growth (#1414, OR-40): the sets the plan names are past what its share
+                # builds and searches; its plan is kept when cheaper, and the rounds of the remaining groups have the time left
+                reason += ("; " if reason else "") + "the growth of the methods ended here: this round did not finish within its share" + (
+                    "" if built else " (its bound's build did not complete)")
+            known = None if meter is None else meter.ended(touched)
+            labels = tuple(sorted({getattr(offer, "label", str(offer)) for offer in chosen}))
+            records.append(RoundRecord(labels, len(chosen), status, reason, _stated(lower, cut), upper, clock_now() - began, within, (), states=known, growth=why))
+            grow.say(f"growth round {len(records)}: {status}, plan {upper}, lower {lower}, best {best_mean} ({clock_now() - began:.1f} s){'; ' + reason if reason else ''}")
+            grow.ran(positions, best, improved)
+            plan = None
+            gc.collect()
+            step = None if ends else grow.next()
+        grown = best is not None  # (with no plan in hand the rounds below are main's, from their first)
+        if best is not None:
+            base = sorted(grow.support(best) | grow.asked)
+            queue = [Group(tuple(i for i in g.positions if i not in set(base)), g.kinds, g.features) for g in queue]
+            queue = [g for g in queue if g.positions]
+            if floor is not None and len(queue) >= 2 and not ((still := left()) is not None and still <= 0.0):
+                order = FloorsPass(floor, len(queue), best_upper, left, clock_now, meter)
+                queue = by_floor(queue, lambda g: order.figure(tuple(offers[i] for i in sorted({*base, *g.positions}))))
+
     for k, group in _growing(queue):
         ahead = len(queue) - k  # the rounds of the queue from this one on
         # the last round that holds the set-aside groups again is owed while every round so far closed: it is counted among the rounds left,
@@ -349,7 +443,6 @@ def widen(
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
         counted = began if meter is None else measure()
-        plan, status, reason, lower, upper, within, touched = None, REFUSED, "", None, None, None, None
         # a plan in hand when the round began; the round's own plan became it. A plan a stopped search walked to (#1142) is executable but proved
         # near nothing: it does not count as held, so the round's build keeps the room for its search a round with no plan keeps (#1099), as
         # before the walk (R13: a walked plan in hand gave the metamod round's build its whole share and its search 0 seconds, 32,813 c for 11,246)
@@ -362,36 +455,13 @@ def widen(
         # no plan in hand and other rounds left: a bound's build that ends before it is complete keeps the round to its share (#1268); a round
         # run again once the queue ended with no plan has all the time left, as the last round has
         blind = rest if best is None and rest > 1 and k not in again else None
-        try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
-            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches), held, best is not None and not held, blind=blind))
-        except Beaten as beaten:
-            status, lower, within = BEATEN, beaten.lower, beaten.within
-            touched = getattr(beaten, "states", None)
-            reason = (
-                "no plan with these methods costs less than the plan in hand"
-                + (f" (to within the gap of {beaten.within:.2%} this run allows)" if beaten.within is not None else "")
-            )
-        except BudgetExceeded as stop:
-            status, reason = STOPPED, stop.binding.words()
-            error = error or _bare(stop)
-        except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next round widens them
-            status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
-            proof = proof or _bare(none.__cause__ or none)  # what the run says when every round showed no plan (the last held every offer)
-        except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
-            status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
-            error = error or _bare(stop.__cause__ or stop)
-            if blind is not None and stop.reason.startswith(YIELDED):
-                gave_way.append((-1, group))  # (its record's place is set below)
-        except ValueError as refusal:  # a `PlanError`: the round's offers reach no plan, or the search refused them
-            status, reason, touched = REFUSED, str(refusal), states_of(refusal)
-            error = error or _bare(refusal)
+        cut = best_upper  # the figure this round is cut against (`_price_cut`): it proves no more than that
+        call = RoundCall(searches, best_upper, k == 0 and not grown, asked, None if meter is None else meter.net(searches), held, best is not None and not held, blind=blind)
+        plan, status, reason, lower, upper, within, touched, failed, shown = attempt(chosen, call, give_way)
+        error, proof = error or failed, proof or shown
+        if status == STOPPED and blind is not None and reason.startswith(YIELDED):
+            gave_way.append((-1, group))  # (its record's place is set below)
         if plan is not None:
-            status, reason = ended(plan)
-            if give_way is not None and status == STOPPED and reason.startswith(give_way.said):  # (a counted run may add its build's stop after it)
-                status = GAVE_WAY
-            search = getattr(plan, "search", None)
-            lower, upper = getattr(search, "lower", None), mean_of(plan)
-            within = getattr(search, "within", None) if status == WITHIN else None
             if best is None or _cheaper(upper, upper_of(plan), best_mean, best_upper):
                 best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
             if release is not None:
@@ -399,11 +469,7 @@ def widen(
                 # next round): what its search made on the way (its abstraction's memos) would otherwise stay with the plan in hand through
                 # every later round and count against their memory net
                 release(plan)
-        if lower is not None and best_upper is not None and k > 0:
-            lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
-        if lower is not None and not math.isfinite(lower):
-            lower = None  # a round with no plan states no figure (the JSON holds no infinity)
-        touched = getattr(getattr(plan, "search", None), "touched", None) if plan is not None else touched
+        lower = _stated(lower, cut)
         known = None if meter is None else meter.ended(touched)  # a round that raised is counted at the states its search knew when it ended
         records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known))
         place = len(records) - 1
@@ -425,7 +491,7 @@ def widen(
             # built each until the runner died
             records[place] = replace(records[place], carried=False)
             set_aside.append((place, group))
-        elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) or (first and improved):
+        elif (k == 0 and not grown) or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) or (first and improved):
             # the first round is the base whatever its end, a refused one too: every later round widens it. So is the round that made the
             # first plan, whatever its end (#1135): the plan in hand is made of its offers, and a later round that cannot hold them cannot
             # widen that plan (R11: the essence round gave way at 52 s, its plan 597.28 c, on 2 of 9 runners, and the Exalted round, without
@@ -521,6 +587,14 @@ def by_floor(groups: Sequence[Group], figure: Callable[[Group], float | None]) -
     return [groups[n] for n in order]
 
 
+def _stated(lower: float | None, cut: float | None) -> float | None:
+    """The figure a round states: no more than the plan in hand it was cut against (`_price_cut`), and none when it is not finite (a round
+    with no plan; the JSON holds no infinity)."""
+    if lower is not None and cut is not None:
+        lower = min(lower, cut)
+    return lower if lower is not None and math.isfinite(lower) else None
+
+
 def _all_ended(records: Sequence[RoundRecord]) -> bool:
     """Every round so far closed (exactly, within the gap, beaten, or with no plan): only then is the last round that holds the set-aside
     groups again due."""
@@ -587,7 +661,10 @@ def _growing(queue: list[Group]):
 
 
 def all_closed(records: Sequence[RoundRecord]) -> bool:
-    return all(record.closed for record in records)
+    """Every round of the widening closed, so its last round held every offer (module text). A round of the plan-led growth proves only its own
+    offers and counts for nothing here; a run whose growth was all it did (no widening round) proved nothing over every method."""
+    wide = [record for record in records if record.growth is None]
+    return bool(wide) and all(record.closed for record in wide)
 
 
 def _figure(value: float | None) -> str:
@@ -609,7 +686,10 @@ def round_line(n: int, record: RoundRecord) -> str:
 
 def _round_line(n: int, record: RoundRecord) -> str:
     spent = f"{record.seconds:,.0f} s" if record.states is None else f"{record.states:,} states"  # a run counted in states names no seconds
-    head = f"round {n} ({group_name(record)}; {record.offers:,} actions offered, {spent})"
+    if record.growth is not None:  # a round of the plan-led growth (#1414): why it holds what it holds, and its offers
+        head = f"round {n} (grown from the plan in hand, {record.growth}: {', '.join(record.kinds)}; {record.offers:,} actions offered, {spent})"
+    else:
+        head = f"round {n} ({group_name(record)}; {record.offers:,} actions offered, {spent})"
     if record.status == CLOSED:
         return f"{head}: finished, its best plan costs {_figure(record.upper)}"
     if record.status == WITHIN:
@@ -651,14 +731,27 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     open_rounds = [(n, record) for n, record in enumerate(records, start=1) if not record.closed]
     net = "the states or the memory" if any(record.states is not None for record in records) else "the time or memory"  # `StatesMeter`
     proved = "; ".join(closed) if closed else "no method"
+    if any(record.growth is not None for record in records):  # the plan-led growth (#1414, the note's section 7): each round proves its own
+        guarantee = (
+            "This plan is the cheapest only of the methods searched with it. Each round that finished proved that no plan made only of its own "
+            "methods (listed with it) costs less than the figure stated for it"
+            + (f", to within {within:.2%}" if within else "")
+            + ": the rounds grown from the plan in hand held its methods and those its dearest steps named, not every method of the rounds "
+            "before them. The rounds that did not finish, or were not reached, are listed as not tried: a plan that uses their methods with the "
+            "plan's was not ruled out, and may cost less."
+        )
+    else:
+        guarantee = (
+            f"No plan made only of the methods of the rounds that finished ({proved}) costs less than this plan"
+            + (f", to within {within:.2%}" if within else "")
+            + ". The rounds that did not finish are listed as not tried: a plan that uses their methods was not ruled out, and may cost less."
+        )
     return (
         Limit(
             _limits.ROUNDS,
             "The methods were searched in rounds, and not every round finished",
             "the search widened its methods round by round: {names}",
-            f"No plan made only of the methods of the rounds that finished ({proved}) costs less than this plan"
-            + (f", to within {within:.2%}" if within else "")
-            + ". The rounds that did not finish are listed as not tried: a plan that uses their methods was not ruled out, and may cost less.",
+            guarantee,
             names=lines,
         ),
         Limit(
@@ -678,7 +771,7 @@ def no_plan_words(records: Sequence[RoundRecord]) -> str | None:
     every round that did not finish, with the net that stopped it; and what the user can do. None when no round was stopped or left untried:
     every round then showed no plan (the last held every offer: a proof over every method offered) or was refused (the refusal says itself),
     and none either when the last round showed no plan, which is the same proof."""
-    if not any(record.status in (STOPPED, UNTRIED) for record in records) or (records and records[-1].status == NONE):
+    if not any(record.status in (STOPPED, UNTRIED) for record in records) or (records and records[-1].status == NONE and records[-1].growth is None):
         return None  # (a last round that showed no plan held every offer: the proof, whatever stopped a round before it)
     proved = [group_name(record) for record in records if record.status == NONE]
     shown = (
