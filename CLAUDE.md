@@ -54,6 +54,15 @@ Everything this repo needs lives inside this folder: worktrees in `.claude/workt
 
 The main folder (`/root/projects/crafting system` on the owner's server, where the chats work since 2026-11-17; before that `C:\Coding\Crafting system` on his PC) stays on the branch `main`, because every new chat reads this file and `.claude/agents/` from it: a chat never checks out another branch or commit there (it reads one with `git show` or works in a worktree), and after merging a PR it runs `git pull --ff-only` there. From 2026-11-07 to 2026-11-10 it sat on an old commit, and new chats kept the coder helpers this file had already dropped (#722).
 
+## The whole picture
+
+The owner, 2026-11-22: «за неделю как будто вообще не было такого что ты оборачиваешься назад и смотришь на картину целиком... Ты просто бурился в одно место пока я не вмешался» ("in a week it never happened that you turned round and looked at the whole picture... you just drilled one place until I stepped in"). So the dispatcher chat keeps one board, issue #1434: the hypotheses on why planning is slow or wrong and how to fix it, each with its cheap test, its ticket, its state and its result. The rules of the board:
+
+- The dispatcher chat reads the research notes and the results itself, not only the agents' summaries, and rewrites the board at least twice a day and after every result. A result that changes the picture changes the order of the work the same hour.
+- Work on speed, memory or proof is a test of a hypothesis on the board, or it is not started. A hypothesis gets a hand test of hours before any code; several are tested at once on the server.
+- A line of work with no gain on the scoreboard of the reference crafts after a day is stopped or re-argued on the board, in writing.
+- The `auditor` checks the board at each look: its age, a running ticket tied to no hypothesis, a hypothesis with no test, a result the order of work ignored.
+
 ## Heavy runs
 
 **Heavy runs go on the owner's server** (owner, 2026-11-17): the machine the chats work on, Ubuntu 24.04 with 24 cores and 60 GB. A sweep, a solve, a measurement, a benchmark, a golden re-record or the full suite runs there from the ticket's worktree, as a background command of the main chat (its exit is the notification), with its output under `.claude/scratch/`. Nothing heavy runs on the owner's own PC. A server run keeps these rules:
