@@ -41,7 +41,7 @@ def _settings(states: int | None, methods: tuple[str, ...] = ("exalted-orb", "be
 def _by_hand(monkeypatch, *, exalted: bool):
     """Round 1 the fillers alone; round 2 adds the Exalted Orb (`exalted`), or nothing (no round reaches the goal: the last holds every offer)."""
 
-    def groups(data, goal, target, grouped, route):
+    def groups(data, goal, target, grouped, route, priced=()):
         fills = tuple(i for i, offer in enumerate(grouped) if offer.kind == "bench-craft" and "Fill" in offer.label)
         exalts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "exalted-orb")
         assert fills and exalts
@@ -69,7 +69,7 @@ def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_th
     assert "The rounds that finished showed only that no plan made only of bench-craft reaches the target" in said
     assert "round 1 (" not in said  # a round that finished with no plan is named by what it showed, not listed as not finished
     if states == 1:
-        assert "round 2 (exalted-orb; 1 actions offered, 0 states): not tried, the run's states net was used up before this round" in said
+        assert "round 2 (exalted-orb; 1 actions offered, 0 states): not tried, the run's states net was used up before this step" in said
     else:
         assert "round 2 (exalted-orb; 2 actions offered, 2 states): stopped (2 states were known, the limit is 3" in said
         assert "no plan with them costs less than 133.00 Chaos" in said
@@ -78,7 +78,7 @@ def test_through_the_entry_rounds_a_net_stops_say_no_plan_found_yet_and_never_th
 def test_through_the_entry_a_net_that_stops_the_first_round_says_no_round_finished(tmp_path, data, monkeypatch):
     # the rounds the other way round: round 1 the Exalted Orb (it can reach the goal, so its bound is finite and the net can stop it), round 2
     # the fillers; 3 states stop both before a plan, and nothing is shown about any method
-    def groups(data, goal, target, grouped, route):
+    def groups(data, goal, target, grouped, route, priced=()):
         fills = tuple(i for i, offer in enumerate(grouped) if offer.kind == "bench-craft" and "Fill" in offer.label)
         exalts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "exalted-orb")
         return (_rounds.Group(exalts, ("exalted-orb",), frozenset()), _rounds.Group(fills, ("bench-craft",), frozenset()))

@@ -1,79 +1,54 @@
-"""Widening the offers in rounds, never losing the plan in hand (#1069, OR-12, OR-13, OR-33, OR-39, OR-40).
+"""Widening the offers in steps, never losing the plan in hand: scheme S (#1276; #1069, OR-12, OR-13, OR-33, OR-38, OR-39, OR-40).
 
 An offer can make the model of the item finer on every state: a metamod craft makes it keep the junk by family type and tags, an Exalted Orb
 by pool weight, a fracturing orb the fractured marks (`Abstraction.features`). One search over every offer then pays that fineness for every
-offer on every state, and on a route whose plan takes seconds it can meet the net with no plan. So the planner searches in rounds:
+offer on every state, and its bound's build does not complete (research note 2026-11-18-rounds-design, probes e2 and e4: killed at 16 GB). So
+the planner searches in steps. What decides a step is whether its bound's build completes: on a complete bound the search's first plan is
+the cheapest of its offers within the gap in seconds, on a stopped one it is blind and its first plan can be absurd (the note's probes e6
+and e10: the same R04 methods give 32,192.94 c on 7 offers, 898,973,434,471 c on 19).
 
-* **Groups.** An offer adds to the model the features beyond the target's own that a model of that offer alone has (`Abstraction.features`).
-  When no offer adds more than the junk count (`FIRST_ROUND`), the offers are one group and one search, as before the rounds (every benchmark
-  route on main's default methods). Otherwise each offer is in the group of its kind and the features it adds, and the target's named offers
-  join the first group (so do the actions of a route judged against the plan, #1110: `judged_route_limit`); the groups go by the features they add beyond `FIRST_ROUND` (the junk count every reroll needs is no refinement here,
-  as in the test for one group), then by their number of offers, then by their kinds' names. So the rounds grow from the offers that refine the
-  model least and are fewest, and a kind of thousands of offers (the fossil sets) comes after the small kinds that refine the model as little:
-  the plan of the cheap rounds is in hand in seconds. Once the first plan is in hand, the rounds left go by the cheapest a plan of their
-  offers with the base can be, from the offers' floors alone, lowest first (`by_floor`, #1135); that pass takes at most one round's share
-  (`FloorsPass`, #1241), and a group it did not reach goes after those with a figure. The order decides only when a group is tried and with
-  what share of the time; it drops no offer and no group, and changes nothing the answer proves: a group a run did not reach is listed as not
-  tried, with what the plan is proved against without it (OR-13). No kind is named and no count is a cut.
-* **Rounds.** Round 1 is the first group. Each later round is the offers of every round that closed before it, plus its own group. It is cut
-  against the best plan so far: the exact price cut (`_price_cut`) with that plan's certified upper figure, and the search ends at once when its
-  lower figure reaches that figure (`_envelope.Beaten`). A round that closes (exact, within the gap, or shown to reach no plan) with a plan
-  cheaper than the plan in hand (beyond the error of either figure), or with no plan in hand when it began, or as the last round, joins
-  the base of the next rounds (one that closes with no cheaper plan is set aside: below), and so does one a refusal ended (a solve that failed proves nothing against its offers and took no time from the
-  others: a wider round may solve them); one that its share of the time or the memory net stopped is set aside, and its plan is kept if it is
-  cheaper. The round that made the first plan joins the base whatever its end (#1135): the plan in hand is made of its offers, and a round
-  that cannot hold them cannot widen it (R11's essence round gave way on 2 of 9 runners, and its Exalted round then reached no plan). Until a plan is in hand, a round may take all the time left (the answer must hold a plan, OR-33)
-  as long as its bound's build completes: a later round was taken not to give a plan sooner than the rounds before it, and R04 showed it
-  can (#1268). A round with no plan in hand and other rounds after it (`RoundCall.blind`) whose build ends before it is complete has a
-  bound that does not show its search the way: the build keeps its quarter (R10's and R13's first plans come from such a build), and the
-  search gives way once it has used its share of the time (the time left over the rounds left) with no plan in hand (`_envelope.YIELDED`). Its
-  group is set aside like a stopped one, and runs again after the last round, with all the time left, when no round after it made a plan;
-  once a round after it makes the first plan, it runs again after the rounds left, under its share like them (its group is in no later round).
-  R04's site plan: its bench crafts' round, then (after #973) its fossil sets' round, took every second left with no plan, and the rounds
-  of the guide's methods (essences, the Exalted and the Fracturing Orb) were never tried. Once a plan is in hand, the share of a round is the run's time left over the rounds left
-  (`_plan.search_net`), so time a round does not use goes to the rounds after it; and a round that began with no plan in hand is held to that
-  share too once its own search holds a plan: it gives way there, with its plan, unless its last search round still lowered that plan by more
-  than the run's gap (`Share`, #1080, #1094), so every group is tried once a plan exists. The rounds left are the groups not yet tried and,
-  once a group is set aside and every round so far closed, the last round that holds the set-aside groups again (#1095): that round, owed for the whole proof, keeps its share, where counting only the groups left it no time when the others used theirs.
-  Two refusals in a row set the first refused group aside (it would refuse every round after it). A round that begins with a plan in hand
-  needs no room kept in its share for its search to make one, so its bound's build may take the whole share, not the quarter a search
-  with no plan keeps it to (`RoundCall.held`, `_plan.search_net`, #1099): a short share otherwise cut the build before it was complete,
-  and the round stopped on a weak lower figure (R11's Exalted round: a share of about 20 s, a build of about 6 s, cut at 5 s, where the
-  complete bound's first plan costs 188.03 c against the 617.28 c in hand). The share itself is unchanged. A build that the share ends
-  nearly done finishes, to at most twice the share, and its search makes its first plan (#1135, `abstraction._pattern.Growth`): R11's
-  Exalted round builds in 24 to 28 s on a runner against a share of 26 to 27 s, and cut there it kept 617.28 c on 3 of 4 runners. The time
-  past the share comes off the rounds after it; a build far from done stops at the share as before. What decides the build's room past a
-  quarter of the share is whether it will end in it (#1224, `abstraction._pattern.Pace`): once its model has grown, the pace it grows at,
-  kept to its last offer, must end within that room, or it stops there and leaves its search the rest of the share; one that grows its
-  model and has not grown yet stops at the quarter (a build of one model keeps the whole share) (R13's round 2, #1142: its first model held 49 of 51 offers, the model adding the rest never
-  ended, and with the whole share its search had none). A plan a stopped search walked to (#1142, `walked`) is in hand like any other. On R11's site plan every plan in hand was walked, and every
-  round's build was cut at its quarter: the Exalted round's at 7 of its 27 s, on a pace that ends at about 38 s.
+* **The steps** (`round_groups`). When no offer adds more to the model than the junk count (`FIRST_ROUND`), the offers are one step and one
+  search, as before the rounds. Otherwise step 1 is the *seed*: the target's named actions (and a judged route's, #1110), and for every wanted
+  mod not on the start item the offers of least cost over their chance of giving it (`_offer_kinds.leaf_providers`). Every other offer is in
+  one *family*, fixed by what its action declares to the model (`Abstraction.features`) and by its kind, never by a route: the single orbs
+  that refine nothing or add by pool weight (rerolls, moves, additions); the single offers that read only the junk (removals); then one
+  family for each rung of `LADDER` (fractures, metamods, a second item, imprints, veiled mods, the swaps and draws by tag or level, and
+  every other refinement); then each kind of many offers that refines nothing, the fewest first (the essences, the bench crafts, the fossil
+  sets last). Seed and families are the steps, in that order, the same for every target: a step's place can be said before a run. The order
+  decides only when a family is tried and with what share; no offer is dropped and no count is a cut.
+* **A step** is the offers accepted so far plus one family. Its share of the run's time is the time left over the steps left, this one
+  included, never all the time left (`_plan.search_net`), and its bound's build may take the whole share (`Net.step`): a step is accepted only
+  when its build completes, so a build cut at a quarter to leave room for a search is the build it would then undo. A step whose build
+  completes searches and its family is **accepted**: it stays in every later step, whether its plan was cheaper or not. A step that began
+  with a plan in hand and whose build did not complete is **undone** with no search (`_envelope.Incomplete`): the offers accepted before it
+  stand, and its family is named in the answer as not finished. A step with no plan in hand searches on the bound it has (the answer must
+  hold a plan, OR-33): a plan its search makes on a stopped bound is kept when it is the cheapest, said to be unproved, and the step is undone
+  all the same. The seed is the base of every later step whatever its end. A step stopped by its share, or refused, is undone too. Time a step
+  does not use goes to the steps after it.
+* **A family that cannot beat the plan in hand is set aside** (#1080, #1091, #1097): a step that began with a plan in hand and ended beaten,
+  closed with no cheaper plan, or closed with no plan at all proved only that no plan of its offers with the base costs less than the plan in
+  hand. Carrying it would grow every later step by it (R05's 1,192 fossil sets grew the solve after the net by 1 GB a minute, #1091). A plan in
+  hand of 10 that adds mods A and B together; family G adds A for 1, family H adds B for 1, the base has no other way to either: G with the
+  base costs 11 and H with the base costs 11, both beaten, while G and H together cost 2 (#1389). So:
+* **The second pass.** When the steps are done and time is left, the families set aside or undone are tried once more, in their order, each
+  over the offers accepted by then; in this pass a step whose build completes joins whatever its end (nothing is set aside again), so G's step
+  holds the base and H's holds G too, and the plan of 2 is found. A refused family is tried there again (#1088). One pass, no loop.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
-  #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
-  less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
-  states its search knew where it would read the clock. Nothing in the rounds reads the clock, so the same target under the same net gives the
-  same plan and the same answer on every machine (a round's line names its states, not its seconds).
-* **A group that cannot beat the plan in hand is not carried** (#1080, #1091). A round before the last that began with a plan in hand and
-  ended beaten, closed (exactly or within the gap) with no cheaper plan, or closed with no plan at all (#1097), proved only that no plan of its offers with the base costs less
-  than the plan in hand ("beaten" below covers both); no exact rule lets a later round leave it out and keep the optimum. A plan in hand of 10 that adds mods A
-  and B together; group G adds A for 1, group H adds B for 1, the base has no other way to either: G with the base costs 11 and H with the
-  base costs 11, both beaten, while G and H together cost 2. "Beaten" says nothing of the plans that join a later group, and no test of
-  whether a later group's offers change what its offers do is exact on an item whose every action reads and changes the same affixes. Carrying
-  it keeps the proof, at the cost of every later round holding it and of the plan's offers holding it: R05's 1,192 fossil sets, whose round
-  closed at the cost of the plan in hand in 2 s, then grew the solve after the net by about 1 GB a minute until the runner died (#1091). So a group beaten before the last round is
-  set aside like a stopped one: the rounds after it do not hold it, and the answer names it, with its lower figure over the base it was
-  searched with, among the rounds that do not make the plan the cheapest of every method (`RoundRecord.closed`). A beaten last round has no
-  round after it and still closes. The proof comes back in one place: when every round closed and groups were set aside so, one last round
-  holds them with the base, that is every offer; if it closes the set-aside groups count as closed again and the plan is the cheapest of
-  every method, as when they were carried. That round runs only when the whole proof is in reach; its offers become the plan's only when it
-  makes a cheaper plan, which then needs them.
-* **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
-  then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
-  figure no plan of its offers costs less than (OR-13). When no round made a plan, the answer says that no plan of the offered methods
-  reaches the target only when every round finished with none (the last then held every offer); when a net stopped a round or left one
-  untried, it says no plan was found yet, what the finished rounds showed and what stopped the others (`no_plan_words`, #1168: R13's round 1
-  showed no plan of its own methods, the rest were stopped, and the run said no plan of any method reaches the goal).
-  A main tree whose every benchmark route has one group never enters the rounds.
+  #886). The steps count their work in the states their searches knew, never in seconds (`StatesMeter`): a step searches with a states net of
+  its share of the states left, and its build has the pieces of that whole share. Nothing here reads the clock, so the same target under the
+  same net gives the same plan on every machine (a step's line names its states, not its seconds).
+* **The answer** is the cheapest plan of every step. It is proved the cheapest over every offer only when the last step held every offer and
+  closed (`RoundRecord.covered`); otherwise it is proved only against the methods of the steps that closed, and each family set aside, undone,
+  stopped or not tried is named with its reason and the figure no plan of its offers costs less than (OR-13, OR-38). A plan of a step whose
+  bound did not complete is said to be unproved even among its own offers (OR-39). When no step made a plan, the answer says that no plan of
+  the offered methods reaches the target only when the last step held every offer and showed none; otherwise it says no plan was found yet,
+  and what stopped the steps (`no_plan_words`, #1168).
+  A main tree whose every benchmark route has one step never enters the steps.
+
+Dropped with the rounds of one kind (#1276, the note's section 5): the groups ordered by features, a round with no plan in hand taking all the
+time left (#1268), `Share`'s give-way, the floors' order pass (#1135, #1241), the late room of a nearly done build (#1135, #1175, #1176, #1180),
+the quarter of a round's build (#1099), the two-refusals rule (#1088) and the closing round's share (#1095, #1149): each is replaced by the step
+accepted or undone by its build, its share of the time left, and the one second pass.
 """
 
 from __future__ import annotations
@@ -86,18 +61,31 @@ from dataclasses import dataclass, replace
 from crafting_system.budget import BudgetExceeded
 
 from . import _limits
-from ._envelope import YIELDED, Beaten
+from ._envelope import Beaten, Incomplete
 from ._limits import Limit, WITHIN_GAP
 
 FIRST_ROUND = frozenset({"junk"})  # the features an offer of the first round may add: counting the junk per side is what every reroll needs
+SECOND_ITEM = "second item"  # what an offer that reads a second item adds (an Awakener's Orb: its donor is planned in its step, `_awakener`)
+# the rungs of the families of offers that refine the model, least first (`round_groups`): a family is the highest rung of what its offers add
+# beyond the junk, and a feature on no rung is of the rung after the last. Fixed by the model's features, the same for every target (#1276)
+LADDER: tuple[frozenset[str], ...] = (
+    frozenset({"pool weights"}),
+    frozenset({"fractures"}),
+    frozenset({"metamods"}),
+    frozenset({SECOND_ITEM}),
+    frozenset({"imprints"}),
+    frozenset({"veiled mods", "unveil offer"}),
+    frozenset({"families by mod", "draw levels", "draw tags"}),
+)
 
 CLOSED, WITHIN, BEATEN, NONE, STOPPED, REFUSED, UNTRIED = "closed", "within", "beaten", "no plan", "stopped", "refused", "not tried"
-GAVE_WAY = "gave way"  # a round that began with no plan in hand, made one, and had used its share: it gives the rest of the time back (#1080)
+UNDONE = "undone"  # a step whose bound's build did not complete: its family is not accepted (#1276)
+ENDED = (CLOSED, WITHIN, BEATEN, NONE)  # a step that closed: exactly, within the gap, beaten, or with no plan of its offers
 
 
 @dataclass(frozen=True)
 class Group:
-    """Offers searched in one round: their positions among the offers, their catalog kinds and the features they add."""
+    """Offers searched in one step: their positions among the offers, their catalog kinds and the features they add."""
 
     positions: tuple[int, ...]
     kinds: tuple[str, ...]
@@ -106,32 +94,25 @@ class Group:
 
 @dataclass(frozen=True)
 class RoundCall:
-    """What a round's plan is made with (`_plan._make_plan(round_call=...)`): the share of the run's time (`searches` rounds left, this one
+    """What a step's plan is made with (`_plan._make_plan(round_call=...)`): the share of the run's time (`searches` steps left, this one
     included), the certified upper figure of the plan in hand, and whether the run's watcher sees it. The upper figure, never the plan's mean,
-    is what the round is cut against (`_price_cut`) and what its search ends at (`_envelope.Beaten`): the plan in hand costs at most that, so a
-    round whose lower figure reaches it can save nothing, to the solver's certified precision (OR-32)."""
+    is what the step is cut against (`_price_cut`) and what its search ends at (`_envelope.Beaten`): the plan in hand costs at most that, so a
+    step whose lower figure reaches it can save nothing, to the solver's certified precision (OR-32). `held`: a plan in hand when the step
+    began, so a build that does not complete undoes the step with no search (`Net.step`, `_envelope.Incomplete`)."""
 
     searches: int
     upper: float | None
     watched: bool
-    give_way: Callable[[object], str | None] | None = None  # asked after each step of the round's search (`Progress`): its reason to yield, or None
-    states: int | None = None  # the round's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
-    # a plan in hand when the round began, other than one a stopped search walked to (`walked`, #1142): its bound's build may take the
-    # round's whole share (`_plan.search_net`, #1099); past a quarter of it, only at a pace that ends within its room once its model grew (#1224)
+    give_way: Callable[[object], str | None] | None = None  # asked after each round of the step's search (`StatesMeter` reads its states there)
+    states: int | None = None  # the step's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
     held: bool = False
-    # a plan in hand that a stopped search walked to (#1142): its bound's build keeps a quarter of the share for the search unless the pace its
-    # model grows at ends within the round's room (`_envelope_plan.BuildStop`, #1224)
-    walked: bool = False
-    floors: bool = False  # only the figure of the group's offers' floors is asked (`Floor`, raised by `_make_plan`): the order of the rounds (#1135)
-    # no plan in hand and other rounds left: the rounds left, this one included. Should its bound's build end before it is complete, the round
-    # keeps to its share and gives way with no plan (`_envelope.Net.blind`, `_envelope.YIELDED`, #1268); None: all the time left
-    blind: int | None = None
-    seconds: float | None = None  # a floors call's net on the clock: what is left of the order pass's share (`FloorsPass`, #1241); None: its own
+    first_any: bool = False  # the first step with no plan in hand: its first plan's chain may run on a bound not built whole (OR-33)
+    first_states: int | None = None  # counted in states: the states the steps have left, what a step's first plan's chain may know (`Net.first_states`)
 
 
 @dataclass(frozen=True)
 class RoundRecord:
-    """One round as the answer states it (OR-13): its group's kinds, its offers, how it ended, the figure no plan of its offers costs less than,
+    """One step as the answer states it (OR-13): its family's kinds, its offers, how it ended, the figure no plan of its offers costs less than,
     the cost of its own plan (after the start item), and its seconds."""
 
     kinds: tuple[str, ...]
@@ -142,14 +123,17 @@ class RoundRecord:
     upper: float | None
     seconds: float
     within: float | None = None  # the gap it closed within, when it closed only within one (the run's gap, OR-32)
-    features: tuple[str, ...] = ()  # what its group's offers add to the model (`Abstraction.features`): with the kinds, what names the group
-    carried: bool = True  # False: a round before the last that could not beat the plan in hand, whose group later rounds did not hold (`widen`)
+    features: tuple[str, ...] = ()  # what its family's offers add to the model (`Abstraction.features`): with the kinds, what names the family
+    carried: bool = True  # False: its family was not in the steps after it (set aside, undone, or a plan of a stopped bound, `widen`)
     states: int | None = None  # the states its search knew, when the run counts in states (`StatesMeter`): the answer names them, not the seconds
+    covered: bool = False  # a later step held every offer and closed: its proof covers this step's offers too (`widen`)
+    unproved: bool = False  # its plan came from a search on a bound whose build did not complete (OR-39: not proved even among its offers)
 
     @property
     def closed(self) -> bool:
-        """It closed, and every round after it held its group: only then does the last round's proof cover its offers too."""
-        return self.status in (CLOSED, WITHIN, BEATEN, NONE) and self.carried
+        """It closed and every step after it held its family, or a later step that held every offer closed: only then does the last step's proof
+        cover its offers too."""
+        return self.covered or (self.status in ENDED and self.carried)
 
     def document(self) -> dict:
         """The record as the JSON says it."""
@@ -157,6 +141,7 @@ class RoundRecord:
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
             "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
             "carried": self.carried, **({} if self.states is None else {"states": self.states}),
+            **({"covered": True} if self.covered else {}), **({"unproved": True} if self.unproved else {}),
         }  # fmt: skip
 
 
@@ -164,41 +149,54 @@ def kind_of(offer) -> str:
     return offer.kind or offer.label
 
 
-def round_groups(offers: Sequence, named: Sequence[str], added: Callable[[object], frozenset[str]]) -> tuple[Group, ...]:
-    """The groups of `offers` in the order the rounds add them (see the module text). `named` are the run's methods (`PlanSettings.methods`, #405); `added(offer)` the
-    features the offer adds to the target's own model. An offer is named by its label, or by its kind when no rule offered it unasked
-    (`Offer.blocks`).
+def rung(features: frozenset[str]) -> int:
+    """The rung of `LADDER` of an offer that adds `features` beyond the junk (none: -1): the highest of its features' rungs, a feature on no rung
+    counting as the rung after the last."""
+    found = -1
+    for feature in features:
+        at = next((n for n, step in enumerate(LADDER) if feature in step), len(LADDER))
+        found = max(found, at)
+    return found
 
-    One group, every offer, when the offers refine the model in one way only (each adds no feature beyond `FIRST_ROUND`): the search is one
-    search, as before the rounds. Otherwise the target's named offers lead the first group, and every other offer is in the group of its kind
-    and the features it adds; the groups go by the features they add beyond `FIRST_ROUND`, then by their number of offers, then by their kinds'
-    names, so the rounds grow from the offers that refine the model least and are fewest. No kind is named and no count is a cut: every group gets its round."""
+
+def round_groups(
+    offers: Sequence, named: Sequence[str], added: Callable[[object], frozenset[str]], seed: Sequence[int] | Callable[[], Sequence[int]] = ()
+) -> tuple[Group, ...]:
+    """The steps of `offers` (see the module text): one step of every offer when no offer adds a feature beyond `FIRST_ROUND`; otherwise the seed
+    (the offers the run names, `named`: `PlanSettings.methods`, #405, by label, or by kind when no rule offered it unasked, `Offer.blocks`; and the
+    positions `seed`, `_offer_kinds.leaf_providers`, or a function that gives them, asked only when there are steps), then the families.
+    `added(offer)` is what the offer adds to the target's own model."""
     names = set(named or ())
     features = [added(offer) for offer in offers]
     if all(found <= FIRST_ROUND for found in features):
         return (Group(tuple(range(len(offers))), tuple(sorted({kind_of(offer) for offer in offers})), frozenset().union(*features)),) if offers else ()
-    asked = [offer.label in names or (offer.kind in names and offer.blocks is None) for offer in offers]
-    by_key: dict[tuple, list[int]] = {}
+    first = {i for i, offer in enumerate(offers) if offer.label in names or (offer.kind in names and offer.blocks is None)}
+    first |= set(seed() if callable(seed) else seed)
+    sizes: dict[str, int] = {}
+    for offer in offers:
+        sizes[kind_of(offer)] = sizes.get(kind_of(offer), 0) + 1
+    families: dict[tuple, list[int]] = {}
     for i, offer in enumerate(offers):
-        if not asked[i]:
-            by_key.setdefault((kind_of(offer), features[i]), []).append(i)
-    groups = [Group(tuple(positions), (kind,), found) for (kind, found), positions in by_key.items()]
-    groups.sort(key=lambda group: (len(group.features - FIRST_ROUND), sorted(group.features - FIRST_ROUND), len(group.positions), sorted(group.features), group.kinds))
-    first = [i for i in range(len(offers)) if asked[i]]
-    if first:  # the named offers are searched from the first round
-        head = groups.pop(0) if groups else Group((), (), frozenset())
-        positions = tuple(sorted({*first, *head.positions}))
-        groups.insert(0, Group(positions, tuple(sorted({kind_of(offers[i]) for i in positions})), frozenset().union(*(features[i] for i in positions))))
-    return tuple(groups)
+        if i in first:
+            continue
+        beyond = features[i] - FIRST_ROUND
+        kind = kind_of(offer)
+        if beyond and beyond <= LADDER[0] or (not beyond and sizes[kind] == 1 and "junk" not in features[i]):
+            key = (0, 0, "")  # the single orbs that reroll, move or add by pool weight
+        elif not beyond and sizes[kind] == 1:
+            key = (1, 0, "")  # the single offers that read the junk and add nothing: removals
+        elif beyond:
+            key = (2 + rung(beyond), 0, "")
+        else:
+            key = (3 + len(LADDER), sizes[kind], kind)  # a kind of many offers that refines nothing: its own family, the fewest first
+        families.setdefault(key, []).append(i)
+    steps = [_group(offers, features, sorted(first))] if first else []
+    steps += [_group(offers, features, positions) for _key, positions in sorted(families.items(), key=lambda item: item[0])]
+    return tuple(steps)
 
 
-class Floor(Exception):
-    """Raised by `_make_plan` for a `RoundCall.floors` call: the figure no plan of the round's offers costs less than, from their floors alone
-    (`_pattern_bound.offers_floor`), None when a net ended it."""
-
-    def __init__(self, figure: float | None) -> None:
-        super().__init__(figure)
-        self.figure = figure
+def _group(offers: Sequence, features: Sequence[frozenset[str]], positions: Sequence[int]) -> Group:
+    return Group(tuple(positions), tuple(sorted({kind_of(offers[i]) for i in positions})), frozenset().union(*(features[i] for i in positions)))
 
 
 class NoPlan(Exception):
@@ -217,42 +215,9 @@ class Stopped(Exception):
         self.lower = lower if lower is not None and math.isfinite(lower) else None
 
 
-class Share:
-    """The time rule of a round that begins with no plan in hand (#1080, OR-33, OR-40): it may take all the time left until its search holds a
-    plan (the answer must hold one), and from then on it is a round like the others, whose share is the time left at its start over the rounds
-    left, this one included (`_plan.search_net`). Its search asks this after each of its own rounds (`_envelope.Net.give_way`): once it holds a
-    plan, the round has used that share, and the search's last round did not lower its plan by more than the run's gap (`gap`, OR-39: a fall
-    the run would not tell from a plan proved within its gap; with no gap, by nothing), the search stops there with its plan, and what is left
-    goes to the rounds after it. Counted in its rounds, not in seconds: a plan that keeps falling by a cent a search round (a trickle, #1094)
-    gives way, where under "no cheaper plan" it took every second left. Without it one slow round took every
-    second left after its first plan and the rounds after it were never tried (R10: a first plan at 147 s, then 440 s with no cheaper plan, and
-    19 rounds not tried; R13 and R09 the same with 2 rounds). A plan still falling is not cut: R11's essences made a first plan of 7,817 c and
-    the next search round one of 597 c (a fall of 92%, far above a gap of 1%), and a rule that gave way at the first plan answered 7,837 c on a
-    slower runner. No figure here is a count or a cut, and the gap is the run's own (`Budget.gap`): the share is the one every round with a plan in hand gets, and the clock is the run's (`left`, `clock_now`); what stays
-    time-dependent is only when the share is used, as for every round."""
-
-    def __init__(self, left: float, rounds: int, began: float, clock_now: Callable[[], float], unit: str = "seconds", gap: float = 0.0) -> None:
-        self.share, self.began, self.clock_now, self.gap = left / max(rounds, 1), began, clock_now, max(gap, 0.0)
-        self.upper: float | None = None  # the cheapest plan its search held when it last asked
-        whole = "the time" if unit == "seconds" else f"the {unit}"  # `StatesMeter`: the run's net is in states, and so is the share
-        fell = "made no cheaper plan" if self.gap == 0.0 else f"lowered its plan by no more than the run's gap of {self.gap:.2%}"
-        self.said = (
-            f"its search made a plan, it had used its share of {whole} ({self.share:,.0f} {unit}, {whole} left over the rounds left), and its "
-            f"last search round {fell}: the rest went to the rounds after it"
-        )
-
-    def __call__(self, standing) -> str | None:
-        """The reason to stop at this standing of the search (`_envelope.Standing`), or None to go on."""
-        upper = standing.upper if standing.upper is not None and math.isfinite(standing.upper) else None
-        fell = upper is not None and (self.upper is None or upper < self.upper * (1.0 - self.gap))  # by more than the gap: still falling
-        if upper is not None and (self.upper is None or upper < self.upper):
-            self.upper = upper
-        return self.said if upper is not None and not fell and self.clock_now() - self.began >= self.share else None
-
-
 class StatesMeter:
     """The rounds' clock when the run counts its work in states (`Budget.in_states`: a states net and no time net, #886): the states the rounds'
-    searches knew, never the seconds, so the rounds' shares and `Share`'s rule give the same rounds on every machine. `given` is the run's states
+    searches knew, never the seconds, so the steps' shares give the same steps on every machine. `given` is the run's states
     net; the states a round knows are read from its search's standing after each of its search rounds (`saw`) and, once it ends, from its plan's
     count when it has one (`ended`). A round's net is its share of the states left (`net`); nothing here reads the clock."""
 
@@ -296,6 +261,7 @@ class Widened:
     plan: object | None
     records: tuple[RoundRecord, ...]
     error: BaseException | None
+    unproved: bool = False  # the plan came from a search on a bound not built whole (OR-39)
 
 
 def widen(
@@ -309,61 +275,50 @@ def widen(
     left: Callable[[], float | None],
     clock_now: Callable[[], float],
     meter: StatesMeter | None = None,
-    gap: float = 0.0,
-    floor: Callable[[tuple, RoundCall], float | None] | None = None,
+    complete: Callable[[object], bool] = lambda plan: True,
     release: Callable[[object], None] | None = None,
 ) -> Widened:
-    """Run the rounds of `groups` over `offers` (see the module text). `run(round_offers, call)` makes a round's plan (raising what `_make_plan`
-    raises, or `Beaten`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and reason;
-    `left()` the run's seconds left (None: no net), `clock_now()` the time. With `meter` the run counts in states (`StatesMeter`): the rounds'
-    shares, `Share` and the rounds not tried read it, never `left` or the clock (the clock only times each round for the JSON). `gap` is the
-    run's proof gap (`Budget.gap`, OR-39), the fall of a plan `Share` still counts as falling. `floor(round_offers, call)`, when given, is the
-    figure no plan of those offers costs less than from their floors alone (`Floor`), or None: once the first plan is in hand, the rounds left go
-    by it (`by_floor`). `release(plan)`, when given, is called on each finished round's plan before the next round: it lets go of what the
-    plan holds and no later round, nor the answer, needs (#1076: `_plan`'s drops the memos of the plan's abstraction)."""
+    """Run the steps of `groups` over `offers` (see the module text). `run(step_offers, call)` makes a step's plan (raising what `_make_plan`
+    raises, `Beaten`, or `Incomplete`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and
+    reason, `complete(plan)` whether its search's bound was built whole; `left()` the run's seconds left (None: no net), `clock_now()` the time.
+    With `meter` the run counts in states (`StatesMeter`): the steps' shares and the steps not tried read it, never `left` or the clock (the clock
+    only times each step for the JSON). `release(plan)`, when given, is called on each finished step's plan before the next step: it lets go of
+    what the plan holds and no later step, nor the answer, needs (#1076: `_plan`'s drops the memos of the plan's abstraction)."""
     if meter is not None:
-        left, measure = meter.left, meter.now
-    else:
-        measure = clock_now
-    best, best_upper, best_mean, error, proof = None, None, None, None, None
+        left = meter.left
+    best, best_upper, best_mean, error, proof, best_unproved = None, None, None, None, None, False
     base: list[int] = []
     records: list[RoundRecord] = []
-    refused_last: tuple[int, tuple[int, ...]] | None = None  # the last round, when a refusal ended it: its record's place and its group's offers
     queue = list(groups)
-    set_aside: list[tuple[int, Group]] = []  # the groups not carried (could not beat the plan in hand): their record's place and the group
-    closing: int | None = None  # the place in the queue of the last round that holds the set-aside groups again, once it is added
-    gave_way: list[tuple[int, Group]] = []  # the rounds with no plan in hand that gave way on a bound not complete (#1268): record's place, group
-    again: set[int] = set()  # the places in the queue of the rounds that run them again (no plan in hand once the queue ended)
+    first_pass = len(queue)  # the steps of the first pass; those after it are the second pass (`again`)
+    again: list[tuple[int, Group, list[int], str]] = []  # the families set aside or undone in the first pass: their record's place, the family, the offers its step held, how it ended
+    retry: dict[int, tuple[int, list[int], str]] = {}  # the place in the queue of a family tried again -> its first record's place, offers and end
     for k, group in _growing(queue):
-        ahead = len(queue) - k  # the rounds of the queue from this one on
-        # the last round that holds the set-aside groups again is owed while every round so far closed: it is counted among the rounds left,
-        # so the rounds before it keep it its share (#1095)
-        owed = closing is None and bool(set_aside) and _all_ended(records)
-        rest = ahead + (1 if owed else 0)
-        out_of_time = (time_left := left()) is not None and time_left <= 0.0
-        if out_of_time:
+        second = k >= first_pass
+        rest = len(queue) - k  # the steps of the queue from this one on: the share is the time left over them
+        if (time_left := left()) is not None and time_left <= 0.0:
             used = "the run's time was used up" if meter is None else "the run's states net was used up"
-            records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, f"{used} before this round", None, None, 0.0, states=None if meter is None else 0) for g in queue[k:])
+            records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, f"{used} before this step", None, None, 0.0, features=tuple(sorted(g.features)), carried=False, states=None if meter is None else 0) for g in queue[k:])
             break
         positions = sorted({*base, *group.positions})
+        earlier = retry.get(k)
+        if earlier is not None and earlier[1] == positions and earlier[2] in ENDED:
+            # the second pass, over the very offers its first step held, which closed: it joins with no search (its proof is the same)
+            records[earlier[0]] = replace(records[earlier[0]], reason=records[earlier[0]].reason + "; it joined the second pass with no new search (the same methods)")
+            base = positions
+            if k == len(queue) - 1 and len(positions) == len(offers):  # that closed step held every offer and is the last: the whole proof
+                records = [replace(record, covered=True) for record in records]
+            continue
         chosen = tuple(offers[i] for i in positions)
         began = clock_now()
-        counted = began if meter is None else measure()
-        plan, status, reason, lower, upper, within, touched = None, REFUSED, "", None, None, None, None
-        # a plan in hand when the round began; the round's own plan became it. A plan a stopped search walked to (#1142) is executable but proved
-        # near nothing: it does not count as held, so the round's build keeps the room for its search a round with no plan keeps (#1099), as
-        # before the walk (R13: a walked plan in hand gave the metamod round's build its whole share and its search 0 seconds, 32,813 c for 11,246)
-        held, improved = best is not None and not walked(best), False
-        first = best is None  # no plan at all in hand: a plan this round makes is the run's first (#1135), a walked one included
-        unit = "seconds" if meter is None else meter.unit
-        give_way = None if best is not None or time_left is None or rest == 1 else Share(time_left, rest, counted, measure, unit, gap)  # the last round has all the time left
-        searches = rest if best is not None else 1
-        asked = give_way if meter is None else _seen_by(meter, give_way)  # counted in states: every round's search reports the states it knows
-        # no plan in hand and other rounds left: a bound's build that ends before it is complete keeps the round to its share (#1268); a round
-        # run again once the queue ended with no plan has all the time left, as the last round has
-        blind = rest if best is None and rest > 1 and k not in again else None
-        try:  # no plan in hand: all the time left until its search holds a plan, then its share (`Share`)
-            plan = run(chosen, RoundCall(searches, best_upper, k == 0, asked, None if meter is None else meter.net(searches), held, best is not None and not held, blind=blind))
+        plan, status, reason, lower, upper, within, touched, unproved = None, REFUSED, "", None, None, None, None, False
+        held, improved = best is not None, False
+        asked = None if meter is None else _seen_by(meter)  # counted in states: every step's search reports the states it knows
+        try:
+            plan = run(chosen, RoundCall(
+                rest, best_upper, k == 0, asked, None if meter is None else meter.net(rest), held, first_any=k == 0 and not held,
+                first_states=None if meter is None else max(int(meter.left()), 1),
+            ))  # fmt: skip
         except Beaten as beaten:
             status, lower, within = BEATEN, beaten.lower, beaten.within
             touched = getattr(beaten, "states", None)
@@ -371,160 +326,71 @@ def widen(
                 "no plan with these methods costs less than the plan in hand"
                 + (f" (to within the gap of {beaten.within:.2%} this run allows)" if beaten.within is not None else "")
             )
+        except Incomplete as stop:  # a plan in hand and a bound not built whole: undone with no search (`Net.step`)
+            status, lower = UNDONE, stop.lower
+            reason = f"its count of the cheapest possible cost did not finish in its share ({stop.expanded:,} of {stop.keys:,} cases worked out: {stop.reason}), so it was not searched"
         except BudgetExceeded as stop:
             status, reason = STOPPED, stop.binding.words()
             error = error or _bare(stop)
-        except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next round widens them
+        except NoPlan as none:  # proved: no plan of these offers alone reaches the target; the next step widens them
             status, reason, lower, touched = NONE, str(none), math.inf, states_of(none)
-            proof = proof or _bare(none.__cause__ or none)  # what the run says when every round showed no plan (the last held every offer)
-        except Stopped as stop:  # the round's share of the net ended its search before a plan closed: stopped, not refused
+            proof = proof or _bare(none.__cause__ or none)  # what the run says when every step showed no plan (the last held every offer)
+        except Stopped as stop:  # the step's share of the net ended its search before a plan closed: stopped, not refused
             status, reason, lower, touched = STOPPED, stop.reason, stop.lower, states_of(stop)
             error = error or _bare(stop.__cause__ or stop)
-            if blind is not None and stop.reason.startswith(YIELDED):
-                gave_way.append((-1, group))  # (its record's place is set below)
-        except ValueError as refusal:  # a `PlanError`: the round's offers reach no plan, or the search refused them
+        except ValueError as refusal:  # a `PlanError`: the step's offers reach no plan, or the search refused them
             status, reason, touched = REFUSED, str(refusal), states_of(refusal)
             error = error or _bare(refusal)
         if plan is not None:
             status, reason = ended(plan)
-            if give_way is not None and status == STOPPED and reason.startswith(give_way.said):  # (a counted run may add its build's stop after it)
-                status = GAVE_WAY
+            unproved = not complete(plan)
             search = getattr(plan, "search", None)
             lower, upper = getattr(search, "lower", None), mean_of(plan)
             within = getattr(search, "within", None) if status == WITHIN else None
             if best is None or _cheaper(upper, upper_of(plan), best_mean, best_upper):
-                best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
+                best, best_upper, best_mean, improved, best_unproved = plan, upper_of(plan), upper, True, unproved
             if release is not None:
-                # a finished round holds its plan and its figures only (#1076), before anything after it runs (the floors' order pass, the
-                # next round): what its search made on the way (its abstraction's memos) would otherwise stay with the plan in hand through
-                # every later round and count against their memory net
+                # a finished step holds its plan and its figures only (#1076), before the next step runs: what its search made on the way (its
+                # abstraction's memos) would otherwise stay with the plan in hand through every later step and count against their memory net
                 release(plan)
-        if lower is not None and best_upper is not None and k > 0:
-            lower = min(lower, best_upper)  # a round cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
+            if unproved:  # a plan of a search on a bound not built whole: kept when cheapest, the step undone (OR-39)
+                status, reason = UNDONE, "its count of the cheapest possible cost did not finish in its share, so its plan is not proved even among its own methods" + (f" ({reason})" if reason else "")
+        if lower is not None and best_upper is not None and held:
+            lower = min(lower, best_upper)  # a step cut against the plan in hand proves no more than that plan's figure (`_price_cut`)
         if lower is not None and not math.isfinite(lower):
-            lower = None  # a round with no plan states no figure (the JSON holds no infinity)
+            lower = None  # a step with no plan states no figure (the JSON holds no infinity)
         touched = getattr(getattr(plan, "search", None), "touched", None) if plan is not None else touched
-        known = None if meter is None else meter.ended(touched)  # a round that raised is counted at the states its search knew when it ended
-        records.append(RoundRecord(group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)), states=known))
-        place = len(records) - 1
-        if gave_way and gave_way[-1][0] == -1:
-            gave_way[-1] = (place, gave_way[-1][1])
-        if status == REFUSED and k > 0 and refused_last is not None:
-            # two refusals in a row: the group of the round before, which joined the base on its refusal, is set aside and the round after
-            # this one widens what the base held before it (#1080): a group whose offers make every solve refuse would refuse every round after
-            earlier_place, earlier = refused_last
-            base = sorted(set(base) - set(earlier))
-            positions = sorted({*base, *group.positions})
-            records[earlier_place] = replace(records[earlier_place], reason=records[earlier_place].reason + "; set aside, since the round after it was refused too")
-        refused_last = (place, group.positions) if status == REFUSED and k > 0 else None
-        if held and not improved and status in (CLOSED, WITHIN, BEATEN, NONE) and ahead > 1:
-            # proved unable to beat the plan in hand (beaten, closed with no cheaper plan, or closed with no plan at all): its group is not carried
-            # into the rounds after it (#1080, #1091, #1097). Its proof covers its offers with the base only, not with a later group's, so the
-            # answer no longer counts it as closed (`RoundRecord.closed`) and names it with its lower figure. Carrying it kept R05's 1,192 fossil
-            # sets (their round closed at the plan in hand's cost) in every later round and in the plan's offers, and the solve after the net
-            # built each until the runner died
-            records[place] = replace(records[place], carried=False)
-            set_aside.append((place, group))
-        elif k == 0 or status in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) or (first and improved):
-            # the first round is the base whatever its end, a refused one too: every later round widens it. So is the round that made the
-            # first plan, whatever its end (#1135): the plan in hand is made of its offers, and a later round that cannot hold them cannot
-            # widen that plan (R11: the essence round gave way at 52 s, its plan 597.28 c, on 2 of 9 runners, and the Exalted round, without
-            # the essences, reached no plan: the answer kept 617.28 c where essences then an Exalted Orb cost 188.03 c)
+        known = None if meter is None else meter.ended(touched)  # a step that raised is counted at the states its search knew when it ended
+        whole = len(positions) == len(offers) and status in ENDED  # it held every offer and closed: nothing is left to try again
+        if k == 0 or whole:
+            accepted = True  # the seed is the base of every later step, whatever its end
+        elif plan is not None and not unproved and status in (CLOSED, WITHIN, STOPPED):
+            # built whole: accepted, unless it closed with no cheaper plan than the one in hand (it proved its family cannot beat it)
+            accepted = second or improved or not held or status == STOPPED
+        else:
+            accepted = second and status in (BEATEN, NONE) or status == NONE and not held  # the second pass sets nothing aside (G and H)
+        if not accepted and not second:
+            again.append((len(records), group, positions, status))  # set aside (it cannot beat the plan in hand) or undone: tried once more in the second pass
+            if status in ENDED:
+                reason = (reason + "; " if reason else "") + "it cannot beat the plan in hand with the methods before it, so it was set aside"
+        records.append(RoundRecord(
+            group.kinds, len(chosen), status, reason, lower, upper, clock_now() - began, within, tuple(sorted(group.features)),
+            carried=accepted, states=known, unproved=unproved,
+        ))  # fmt: skip
+        if accepted:
             base = positions
-        if improved and first and gave_way:
-            # the first plan is in hand, and rounds before it gave way with no plan on a bound not complete (#1268): each runs again after the
-            # rounds left, with the base the first plan's round closed into and its share of the time, as every round with a plan in hand has.
-            # Not run again, their groups would be in no later round's offers (a round that gave way is not in the base)
-            for aside, group_again in gave_way:
-                queue.append(group_again)
-                records[aside] = replace(records[aside], reason=records[aside].reason + "; a round after it made the first plan, so it ran again after the rounds left")
-            gave_way = []
-        if floor is not None and improved and first and len(queue) - k - 1 >= 2 and not ((still := left()) is not None and still <= 0.0):
-            # the first plan is in hand: the rounds left (two or more) go by the cheapest a plan of their offers with the base can be, lowest
-            # first (#1135), the whole pass within one round's share (#1241: `FloorsPass`)
-            order = FloorsPass(floor, len(queue) - k - 1, best_upper, left, clock_now, meter)
-            queue[k + 1 :] = by_floor(queue[k + 1 :], lambda g: order.figure(tuple(offers[i] for i in sorted({*base, *g.positions}))))
-        if k == len(queue) - 1 and closing is None and set_aside and _all_ended(records):
-            # every round closed, some groups were set aside: one last round holds them with the base, which is then every offer, so
-            # the last round again holds every offer and its proof is the whole one (a plan joining a set-aside group with a later one is in it)
-            queue.append(Group(tuple(sorted({i for _, g in set_aside for i in g.positions})), tuple(sorted({kind for _, g in set_aside for kind in g.kinds})),
-                               frozenset().union(*(g.features for _, g in set_aside))))  # fmt: skip
-            closing = len(queue) - 1
-        if k == len(queue) - 1 and best is None and gave_way and not ((still := left()) is not None and still <= 0.0):
-            # the queue ended with no plan in hand, and rounds gave way on a bound not complete (#1268): each runs again, in its order, with the
-            # base the rounds after it closed into and all the time left (OR-33: the answer must hold a plan), as it had before the rounds after it
-            for aside, group_again in gave_way:
-                queue.append(group_again)
-                again.add(len(queue) - 1)
-                records[aside] = replace(records[aside], reason=records[aside].reason + "; the rounds after it made no plan, so it ran again after the last")
-            gave_way = []
-        if k == closing and records[place].closed:
-            for aside, _ in set_aside:
-                records[aside] = replace(records[aside], carried=True, reason=records[aside].reason + "; the last round held them again, with every method")
+        if k == first_pass - 1 and again:
+            # the first pass is done: the families set aside or undone are tried once more, in their order, over the offers accepted by then
+            for place, family, searched, ended_as in again:
+                retry[len(queue)] = (place, searched, ended_as)
+                queue.append(family)
+                records[place] = replace(records[place], reason=records[place].reason + "; tried again in the second pass")
+        if k == len(queue) - 1 and status in ENDED and len(positions) == len(offers):
+            # the last step held every offer and closed: its proof is the whole one, and covers every step before it (OR-38)
+            records = [replace(record, covered=True) for record in records]
         plan = None
-        gc.collect()  # the round's model goes before the next one is built (memory)
-    return Widened(best, tuple(records), error or proof)
-
-
-class FloorsPass:
-    """The order pass's net (#1241): the whole pass takes at most one round's share, the share the round after it would have (the time
-    left over the `searches` rounds left), since it is a heuristic over the rounds' time and must not eat theirs. On the clock each group's
-    floors are asked with what is left of that share as their net (`RoundCall.seconds`), and once it is used the groups not asked have no
-    figure and go after those with one, in their order (`by_floor`); a group's setup before its floors' own net (its offers and their
-    model) counts too, read on the run's clock. Counted in states (`StatesMeter`), each group has an equal part of that share's states
-    (its pieces of work follow from them, `_plan.search_net`), so where the pass stops is the same on every machine. Before #1241 each group
-    had a whole share and its setup had none: on R20's site plan the pass took 228 s of the 600 s net (16 groups, 5 to 35 s each)."""
-
-    def __init__(self, floor, searches: int, upper: float | None, left: Callable[[], float | None], clock_now: Callable[[], float], meter: StatesMeter | None) -> None:
-        self.floor, self.left, self.clock_now = floor, left, clock_now
-        self.groups = max(searches, 1)
-        time_left = None if meter is not None else left()
-        self.seconds = None if time_left is None else time_left / self.groups  # one round's share
-        self.began = clock_now()
-        states = None if meter is None else max(meter.net(searches) // self.groups, 1)
-        self.call = RoundCall(searches, upper, False, None, states, True, floors=True)
-
-    def figure(self, chosen: tuple) -> float | None:
-        """The floor figure of `chosen` within what is left of the pass's share, or None once it is used (`figure_of`)."""
-        if self.seconds is None:
-            return figure_of(self.floor, chosen, self.call, self.left)
-        rest = self.seconds - (self.clock_now() - self.began)
-        if rest <= 0.0:
-            return None
-        return figure_of(self.floor, chosen, replace(self.call, seconds=rest), self.left)
-
-
-def figure_of(floor: Callable[[tuple, RoundCall], float | None], chosen: tuple, call: RoundCall, left: Callable[[], float | None]) -> float | None:
-    """The floor figure of `chosen` (`widen`'s `floor`), or None: when the run's time or states are used up (nothing is asked), or when the
-    floors pass was refused (a `PlanError` or any model refusal, a `ValueError`: the abstraction of these offers cannot be built, as a round
-    records) or a net ended it first (`BudgetExceeded`, `NoPlan`, `Stopped`). The round itself says why when it runs; the order only puts the
-    group after those with a figure (#1135)."""
-    if (still := left()) is not None and still <= 0.0:
-        return None
-    try:
-        return floor(chosen, call)
-    except (ValueError, BudgetExceeded, NoPlan, Stopped):
-        return None
-
-
-def by_floor(groups: Sequence[Group], figure: Callable[[Group], float | None]) -> list[Group]:
-    """`groups` ordered by `figure` (the cheapest a plan of the group's offers with the base can be, from their floors alone), lowest first; a
-    group with no figure (a net ended its floors) after those with one, and ties in their order (#1135).
-
-    Once a plan is in hand, a round can only matter by a cheaper plan, and the group whose floors allow the cheapest one is the likeliest to hold
-    it; a round run after the rounds that cannot beat the plan in hand keeps a share they did not take. R11 without the guide: the Exalted Orb's
-    round (its floor 9.64 c over the essences) was the tenth after the essences', behind rounds whose floors were the essences' own (75.2 c):
-    those took their whole share and more, and the Exalted round's share fell from 40 s to 20 s, too short for its bound (probe 44104520931,
-    runner 5: 617.28 c where its first plan costs 188.03 c). The order changes when a group is tried, never what the answer proves (OR-13)."""
-    figures = [figure(group) for group in groups]
-    order = sorted(range(len(groups)), key=lambda n: (figures[n] is None, figures[n] if figures[n] is not None else 0.0, n))
-    return [groups[n] for n in order]
-
-
-def _all_ended(records: Sequence[RoundRecord]) -> bool:
-    """Every round so far closed (exactly, within the gap, beaten, or with no plan): only then is the last round that holds the set-aside
-    groups again due."""
-    return all(record.status in (CLOSED, WITHIN, BEATEN, NONE) for record in records)
+        gc.collect()  # the step's model goes before the next one is built (memory)
+    return Widened(best, tuple(records), error or proof, best_unproved)
 
 
 def _bare(error: BaseException) -> BaseException:
@@ -556,13 +422,13 @@ def states_of(error: BaseException) -> int | None:
     return None
 
 
-def _seen_by(meter: StatesMeter, give_way: Share | None) -> Callable[[object], str | None]:
-    """The rule a round's search asks after each of its rounds when the run counts in states: the meter first reads the states it knows, then
-    `Share` (when the round has one) decides on that count."""
+def _seen_by(meter: StatesMeter) -> Callable[[object], str | None]:
+    """The rule a step's search asks after each of its rounds when the run counts in states: the meter reads the states it knows; it never
+    stops the search (the step's states net does)."""
 
     def asked(standing) -> str | None:
         meter.saw(standing)
-        return give_way(standing) if give_way is not None else None
+        return None
 
     return asked
 
@@ -579,7 +445,7 @@ def _cheaper(mean: float, upper: float | None, best_mean: float, best_upper: flo
 
 
 def _growing(queue: list[Group]):
-    """The rounds of `queue` with their place, reading it as it grows (`widen` adds the last round once it knows it is due)."""
+    """The steps of `queue` with their place, reading it as it grows (`widen` adds the second pass once the first is done)."""
     k = 0
     while k < len(queue):
         yield k, queue[k]
@@ -602,9 +468,9 @@ def group_name(record: RoundRecord) -> str:
 
 
 def round_line(n: int, record: RoundRecord) -> str:
-    """One round as the answer says it."""
+    """One step as the answer says it."""
     line = _round_line(n, record)
-    return line if record.carried else line + " (with the methods of the rounds before it; the rounds after it did not hold them)"
+    return line if record.carried or record.covered else line + " (with the methods of the rounds before it; the rounds after it did not hold them)"
 
 
 def _round_line(n: int, record: RoundRecord) -> str:
@@ -622,22 +488,21 @@ def _round_line(n: int, record: RoundRecord) -> str:
         plan = f", its plan so far costs {_figure(record.upper)}" if record.upper is not None else ", with no plan"
         low = f"; no plan with them costs less than {_figure(record.lower)}" if record.lower is not None else ""
         return f"{head}: stopped ({record.reason}){plan}{low}"
-    if record.status == GAVE_WAY:
+    if record.status == UNDONE:
+        plan = f", its plan costs {_figure(record.upper)} (not proved)" if record.upper is not None else ""
         low = f"; no plan with them costs less than {_figure(record.lower)}" if record.lower is not None else ""
-        return f"{head}: gave way ({record.reason}), its plan costs {_figure(record.upper)}{low}"
+        return f"{head}: not finished ({record.reason}){plan}{low}"
     if record.status == REFUSED:
         return f"{head}: no plan ({record.reason})"
     return f"{head}: not tried, {record.reason}"
 
 
-def walked(plan) -> bool:
-    """Whether a round's plan is one its stopped search walked to toward the goal (a `REACHED` limit, `_envelope_plan.reached_limits`, #1142)."""
-    return any(getattr(limit, "kind", None) == _limits.REACHED for limit in getattr(plan, "limits", ()))
-
-
-def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | None) -> tuple[Limit, ...]:
-    """What the answer says of its rounds (OR-13): one limit listing every round and what the plan is proved against, and, when a round did not
-    close, one limit of the methods set aside or not tried, each with its reason and its lower figure."""
+def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | None, unproved: bool = False) -> tuple[Limit, ...]:
+    """What the answer says of its steps (OR-13, OR-38): one limit listing every step and what the plan is proved against, and, when a step did
+    not close, one limit of the methods set aside, not finished or not tried, each with its reason and its lower figure. `unproved`: the plan
+    came from a search whose bound was not built whole, so it is not proved even among its own methods (OR-39)."""
+    if unproved:
+        return _unproved_limits(records)
     lines = tuple(round_line(n, record) for n, record in enumerate(records, start=1))
     closed = [group_name(record) for record in records if record.closed]
     if all_closed(records):
@@ -672,13 +537,38 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     )
 
 
+def _unproved_limits(records: Sequence[RoundRecord]) -> tuple[Limit, ...]:
+    """The answer of steps whose cheapest plan came from a search on a bound not built whole (OR-39): its cost is exact, its optimality is not
+    claimed even among its own methods, and every step that did not close is named."""
+    lines = tuple(round_line(n, record) for n, record in enumerate(records, start=1))
+    open_rounds = [(n, record) for n, record in enumerate(records, start=1) if not record.closed]
+    return (
+        Limit(
+            _limits.ROUNDS,
+            "The methods were searched in steps, and the plan shown is not proved",
+            "the search widened its methods step by step: {names}",
+            "The plan shown came from a search whose count of the least possible cost did not finish: its cost is what it says, but nothing "
+            "is proved of it beyond that, not even against its own methods. A plan that uses any of the methods may cost less.",
+            names=lines,
+        ),
+        Limit(
+            _limits.UNTRIED,
+            "Not finished",
+            "these steps did not finish, were set aside or were not reached: {names}",
+            "These methods may still give a cheaper plan, at no less than the figure stated for each.",
+            labels=tuple(sorted({kind for _, record in open_rounds for kind in record.kinds})),
+            names=tuple(round_line(n, record) for n, record in open_rounds),
+        ),
+    )
+
+
 def no_plan_words(records: Sequence[RoundRecord]) -> str | None:
     """What a run whose rounds made no plan says when a net stopped a round or left one untried (#1168, OR-13, OR-33, OR-40): it found no plan
     yet, which does not show that none exists; what the rounds that finished did show (no plan of their methods alone reaches the target);
     every round that did not finish, with the net that stopped it; and what the user can do. None when no round was stopped or left untried:
     every round then showed no plan (the last held every offer: a proof over every method offered) or was refused (the refusal says itself),
     and none either when the last round showed no plan, which is the same proof."""
-    if not any(record.status in (STOPPED, UNTRIED) for record in records) or (records and records[-1].status == NONE):
+    if not any(record.status in (STOPPED, UNTRIED, UNDONE) for record in records) or (records and records[-1].status == NONE):
         return None  # (a last round that showed no plan held every offer: the proof, whatever stopped a round before it)
     proved = [group_name(record) for record in records if record.status == NONE]
     shown = (
@@ -720,6 +610,7 @@ def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
 
 
 __all__ = [
-    "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "StatesMeter", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
-    "judged_route_limit", "no_plan_words", "round_groups", "round_line", "rounds_limits", "widen",
+    "BEATEN", "CLOSED", "FIRST_ROUND", "Group", "LADDER", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "SECOND_ITEM", "STOPPED", "StatesMeter",
+    "Stopped", "UNDONE", "UNTRIED", "WITHIN", "Widened", "all_closed", "judged_route_limit", "no_plan_words", "round_groups", "round_line", "rounds_limits",
+    "widen",
 ]  # fmt: skip

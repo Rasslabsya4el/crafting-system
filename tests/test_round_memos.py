@@ -37,8 +37,8 @@ def rounds(monkeypatch):
     with the memory read as the test's figure. Returns what each round's search saw held by the plans of the rounds before it."""
     real_groups, real_make, real_widen = _rounds.round_groups, planner_plan._make_plan, _rounds.widen
 
-    def named_alone(offers, named, added):
-        head, *rest = real_groups(offers, named, added)
+    def named_alone(offers, named, added, seed=()):
+        head, *rest = real_groups(offers, named, added, seed)
         asked = tuple(i for i in head.positions if offers[i].blocks is None)
         fillers = tuple(i for i in head.positions if i not in asked)
         return (_rounds.Group(asked, (), frozenset()), _rounds.Group(fillers, ("bench-craft",), head.features), *rest)
@@ -110,7 +110,7 @@ def test_what_a_finished_round_holds_is_its_plan_not_its_memos(data, target, rou
     monkeypatch.setattr(planner_plan, "release_round", lambda plan: None)  # the rounds before #1076
     plan = _belt(data, target)
     second = plan.search.widening[1]
-    assert rounds[1] > 0 and second.status == "stopped" and "the limit is 500 MB" in second.reason
+    assert rounds[1] > 0 and second.status == "undone" and "the limit is 500 MB" in second.reason  # its build stopped: undone (#1276)
     assert plan.mean_remaining == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9)
 
 

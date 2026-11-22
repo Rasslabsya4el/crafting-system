@@ -258,19 +258,14 @@ class Net:
     # how many times its seconds (or its pieces) a nearly done bound's build of a search with a plan in hand (held or walked) may go past them
     # (`abstraction._pattern.Growth`, #1135); set by `_plan.search_net`, 0 for none
     late: float = 0.0
-    # a round of the planner's widening that began with no plan in hand while other rounds are left (`_rounds`, #1268): the rounds left, this
-    # one included. Should its bound's build end before it is complete, its search keeps to its share of the net (the net over `blind`) and
-    # gives way with no plan, so the rounds after it are tried (`_envelope_plan._envelope_run`, `YIELDED`); None: the whole net
-    blind: int | None = None
-    # (seconds, states) set by `_envelope_plan` for such a round once its build ended before it was complete: the search gives way once it has
-    # used them with no plan in hand (`YIELDED`); either None when the net has no such figure
-    yield_at: tuple[float | None, int | None] | None = None
+    # a step of the planner's widening (`_rounds`, scheme S, #1276): its bound's build may take the step's whole net, since a step is accepted only
+    # when its build completes; with a plan in hand (`held`) a build that ends before it is complete ends the step with no search (`Incomplete`)
+    step: bool = False
+    # the states the first plan's chain may know when they are more than `states`: a step whose bound's build completed (`Net.step`), whose first
+    # plan comes from that bound in a few states, or the first step with no plan in hand (`first_any`); None: `states` holds (as `first` on the clock)
+    first_states: int | None = None
+    first_any: bool = False  # the first plan's chain of a step keeps `first` and `first_states` on a bound not built whole too (the seed, OR-33)
 
-
-YIELDED = (
-    "its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left "
-    "over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan"
-)  # the words of a round with no plan in hand that gave way (`Net.blind`, `Net.yield_at`, `_rounds.widen`, #1268)
 
 
 @dataclass
@@ -765,8 +760,11 @@ class Search[S]:
         (#1105): the making counts its outcomes as it makes them (`budget.Allowance`) and stops past the allowance, and a kernel made whole is
         still refused when its new states would take the search past its net. Either way the kernel is left unmade and `_Cut` says so: the
         search ends there as at its states net, so it never knows more than its net of states. Raises `Refused` as `kernel` does."""
-        left = self.net.states - len(self.states)
-        known = f"{len(self.states):,} states were known, the limit is {self.net.states:,}"
+        cap = self.net.states
+        if self.net.first_states is not None and self.upper is None:  # a step's first plan's chain (`Net.first_states`, #1276)
+            cap = max(cap, self.net.first_states)
+        left = cap - len(self.states)
+        known = f"{len(self.states):,} states were known, the limit is {cap:,}"
         try:
             with budget.counting(left):
                 weights = self.p.kernel(state, position)
@@ -948,7 +946,7 @@ class Search[S]:
                 self._round.at(place, i)
             # the clock at every state; the state net waits for the first round, so the chain is whole, except in a run counted in states (#1101):
             # there it is the only net, and a chain over a blind bound walks tens of thousands of states, so the count is asked at every state
-            stopped = self._net(began, memory=poll, states=self.net.pieces is not None, seconds=self.net.first)
+            stopped = self._net(began, memory=poll, states=self.net.pieces is not None, seconds=self.net.first, known=self.net.first_states)
             if stopped is not None:
                 return stopped
             if not self.expanded[i]:
@@ -1253,25 +1251,20 @@ class Search[S]:
 
     # ---- the rounds ---------------------------------------------------------------------------------------------
 
-    def _net(self, began: float, memory: bool = True, states: bool = True, seconds: float | None = None) -> str | None:
+    def _net(self, began: float, memory: bool = True, states: bool = True, seconds: float | None = None, known: int | None = None) -> str | None:
         """The reason a net is reached now, or None; `memory` False leaves the memory unread (reading it costs too much to do at every state),
         `states` False leaves the count of states unasked (the first plan's chain and inside a round: the state net is asked between rounds, except
         in a run counted in states, `Net.pieces` set, where it is asked at every state of the chain and of a round). `seconds`, when given, is
-        the time limit in place of the net's (`Net.first`, the first plan's chain)."""
+        the time limit in place of the net's (`Net.first`, the first plan's chain), and `known` the states limit (`Net.first_states`)."""
         net = self.net
-        if net.yield_at is not None and self.upper is None:  # a round with no plan in hand on a bound not complete (`Net.blind`, #1268)
-            after, known = net.yield_at
-            if after is not None and time.perf_counter() - began >= after:
-                return f"{YIELDED} ({after:g} seconds)"
-            if known is not None and states and len(self.states) >= known:
-                return f"{YIELDED} ({len(self.states):,} states known)"
         limit = net.seconds if seconds is None else seconds
         if limit is not None and time.perf_counter() - began >= limit:
             if seconds is None and net.first is not None:  # the search after a bound's build that went past the round's share (#1135)
                 return f"the time limit of {limit:g} seconds was reached: the bound's build, nearly done at the round's share, had gone on past it to finish"
             return f"the time limit of {limit:g} seconds was reached"
-        if states and net.states is not None and len(self.states) >= net.states:
-            return f"{len(self.states):,} states were known, the limit is {net.states:,}"
+        cap = net.states if known is None else known
+        if states and cap is not None and len(self.states) >= cap:
+            return f"{len(self.states):,} states were known, the limit is {cap:,}"
         if memory and net.memory_mb is not None:
             used = resident_mb(under=net.memory_mb)
             if used is not None and used >= net.memory_mb:
@@ -1613,7 +1606,20 @@ class Beaten(Exception):
         self.states: int | None = None  # the states the search knew when it ended, set where it is raised
 
 
+class Incomplete(Exception):
+    """A step of the planner's widening (`Net.step`, `_rounds`, scheme S, #1276) that began with a plan in hand and whose bound's build ended
+    before it was complete: the step is undone with no search, since a search on a bound that does not show it the way cannot be told from
+    one that makes an absurd plan, and its time goes to the steps after it. `reason` is what stopped the build; `lower` the figure its stopped
+    model still proves (no plan of the step's offers costs less), `keys` and `expanded` the build's cases found and worked out."""
+
+    def __init__(self, reason: str, lower: float | None, keys: int = 0, expanded: int = 0) -> None:
+        super().__init__(reason)
+        self.reason, self.keys, self.expanded = reason, keys, expanded
+        self.lower = lower if lower is not None and math.isfinite(lower) else None
+        self.states: int | None = None  # a step that searched nothing knew no state
+
+
 __all__ = [
-    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "MemoryNet", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
+    "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "Incomplete", "MemoryNet", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
     "resident_mb",
 ]  # fmt: skip

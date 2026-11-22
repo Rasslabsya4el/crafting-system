@@ -23,7 +23,6 @@ from dataclasses import dataclass, replace
 from fractions import Fraction
 
 from crafting_system import parallel
-from crafting_system.abstraction import _pattern
 from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
@@ -40,7 +39,7 @@ from crafting_system.targets import KOfN, PlainQualityRequirement, Requirement, 
 from ._approx import Approximation, climb
 from ._awakener import Donor, awakener_offers, donor_base_cost, donor_limits, fold, solve_donors, whole_info
 from ._axes import axis_what
-from ._offer_kinds import merge_twins
+from ._offer_kinds import leaf_providers, merge_twins
 from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from . import _implicit_finish, _quality_finish
@@ -52,9 +51,9 @@ from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit,
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
-from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, build_stop, certified_upper, envelope_limits, envelope_result
+from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, certified_upper, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
-from ._pattern_bound import MIN_OFFERS, offers_floor
+from ._pattern_bound import MIN_OFFERS
 from ._presenter import presenter_limits
 from ._price_cut import price_cut_limit, restart_dominated
 from . import _rounds
@@ -586,29 +585,25 @@ RISK_KEPT = "the figures of the coarser step already worked out are kept, or non
 
 
 def search_net(
-    clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False, walked: bool = False, blind: int | None = None
+    clock: Clock | None, searches: int = 1, give_way=None, states: int | None = None, held: bool = False, step: bool = False, first_any: bool = False,
+    first_states: int | None = None,
 ) -> Net | None:
-    """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: an
-    Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no net. `states`, when
-    given, is the search's own states net in place of the budget's (a round's share of a run counted in states, `_rounds.StatesMeter`).
+    """The envelope search's net from the run's clock: the time left (an equal share of it when `searches` searches are still to run: the steps
+    of `_rounds` left, an Awakener's Orb's donors and then the target, #832), and the memory and state nets as they are; None when the run has no
+    net. `states`, when given, is the search's own states net in place of the budget's (a step's share of a run counted in states,
+    `_rounds.StatesMeter`).
 
     A run counted in states (`Budget.in_states`, #1101) shares its states as the time net shares its seconds: a search's net is the states left
     on the run's account (`Clock.spend`), an equal share of them when `searches` are still to run, and at least one (a search given one state
     makes its first plan and stops, as one given no time left does); its bound's build may do `Budget.build_per_state` pieces of work per state
     of that net (`Net.pieces`).
 
-    `held` (#1099): the search begins with a plan in hand (a round of `_rounds` after the first plan), so the answer already holds a plan
-    (OR-33) and its bound's build keeps no room for the search to make one: on the clock it may take the search's whole net
-    (`_envelope_plan.build_stop`), and counted in states it is given the pieces of that whole net, `1 + SEARCH_PER_BUILD` times the quarter
-    `build_per_state` stands for. Without it a round's short share cut its build at a quarter: R11's Exalted round had about 20 s, its build
-    needs about 6 s, and the round stopped on a weak lower figure with no plan, where the complete bound's first plan costs 188.03 c (#1086).
-    Such a build that its share ends nearly done may go past it by `Net.late` times it (#1135, `abstraction._pattern.Growth`): at most
-    `LATE`, and at most half of the time the `searches - 1` rounds after it have, so the last round (all the time left) goes past nothing
-    and the run keeps its net (OR-40). `walked` (#1224): the plan in hand is one a stopped search walked to (#1142); its build has the same
-    net and room, and keeps a quarter of it for the search unless the pace its model grows at ends within that room
-    (`abstraction._pattern.Pace.verdict`). `blind` (#1268): the search begins with no plan in hand and `blind` rounds are left, this one
-    included: should its bound's build end before it is complete, its search keeps to its share of the net and gives way with no plan
-    (`Net.blind`, `_envelope_plan.YIELDED`)."""
+    `step` (#1276): the search is a step of `_rounds` (scheme S), accepted only when its bound's build completes, so the build may take the
+    step's whole net (`Net.step`, `_envelope_plan.room_of`): on the clock its whole share, counted in states the pieces of that whole share,
+    `1 + SEARCH_PER_BUILD` times the quarter `build_per_state` stands for. `held`: the step began with a plan in hand, so a build that does not
+    complete ends it with no search (`_envelope.Incomplete`). Its first plan's chain may take what the run has left (`Net.first`; counted in
+    states `first_states`, the states the steps have left) once its bound is built whole, or on any bound when `first_any` (the first step with
+    no plan in hand: the answer must hold a plan, OR-33)."""
     if clock is None:
         return None
     given: Budget = clock.budget
@@ -619,11 +614,11 @@ def search_net(
     if given.counted:
         if states is None:
             states = max(int(clock.states_left() or 0) // max(searches, 1), 1)
-        pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if held or walked else 1.0) * states), 1)
+        pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if step else 1.0) * states), 1)
     return Net(
         seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
-        give_way=give_way, pieces=pieces, held=held, walked=walked and not held, late=min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held or walked else 0.0,
-        blind=None if held or walked or blind is None or blind <= 1 else blind,
+        give_way=give_way, pieces=pieces, held=held and step, step=step, first=left if step else None, first_states=first_states if step else None,
+        first_any=first_any and step,
     )  # fmt: skip
 
 
@@ -845,7 +840,7 @@ def _make_plan(
     if round_call is None and chosen_here and rounds_apply(data, target, priced, solve_it=solve_it, judged=unknown_route, solver=solver):
         own = {id(offer) for offer in offers}
         grouped = tuple(p.offer for p in priced if id(p.offer) in own)
-        groups = offer_groups(data, goal, target, grouped, route_actions or ())
+        groups = offer_groups(data, goal, target, grouped, route_actions or (), priced)
         if len(groups) > 1:  # the offers refine the model in more than one way: they are searched in rounds (#1069)
             return widened_plan(
                 data, target, prices, groups, grouped, limits, aim=aim, rates=rates, strands=strands, price_of_start=price_of_start,
@@ -912,12 +907,6 @@ def _make_plan(
 
     abstraction = model()
     start = abstraction.compress(listing or target.start_item)
-    if round_call is not None and round_call.floors:  # only the figure the rounds order the groups by (`_rounds.by_floor`, #1135)
-        # asked before the finish is solved (the floors need no finish): its net is what is left of the order pass's share (#1241)
-        net = search_net(clock, round_call.searches, states=round_call.states, held=True)
-        if net is not None and net.seconds is not None and round_call.seconds is not None:
-            net = replace(net, seconds=min(net.seconds, round_call.seconds))
-        raise _rounds.Floor(offers_floor(abstraction, start, priced, target.start_item, build_stop(net, time.perf_counter()), None if net is None else net.pieces))
     finish = None
     if target.sockets is not None and solve_it:  # the finish is solved on its own and added to every goal state (ticket #231, ADR-0045)
         try:
@@ -939,9 +928,10 @@ def _make_plan(
         # a donor stops as the target does (past the aim, at a proved gap) on its share of the net; its [lower, upper] goes into `whole_lower`
         # in a round of a run counted in states the donors share the round's own share of the states with its search (#1101)
         share = None if round_call is None or round_call.states is None else round_call.states
+        steps = 1 if round_call is None else max(round_call.searches, 1)  # a step's donors share its share of the time (#1276), not the run's
         spent_before = 0 if clock is None else clock.spent
         donors, left_out = solve_donors(
-            abstraction, awakened, priced, net=lambda searches: search_net(clock, searches, states=None if share is None else max(share // searches, 1)),
+            abstraction, awakened, priced, net=lambda searches: search_net(clock, searches * steps, states=None if share is None else max(share // searches, 1)),
             stop=lambda: search_gap(clock), spend=None if clock is None else clock.spend,
         )  # fmt: skip
         if share is not None and clock is not None:
@@ -1034,7 +1024,7 @@ def _make_plan(
         if twins:
             limits += (twins_limit(twins),)  # G17: the dearer twins are left out of the search and the walk
         if envelope:
-            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held, round_call.walked, round_call.blind) if round_call is not None else search_net(clock)
+            net = search_net(clock, round_call.searches, round_call.give_way, round_call.states, round_call.held, step=True, first_any=round_call.first_any, first_states=round_call.first_states) if round_call is not None else search_net(clock)
             try:
                 with stage(SEARCH_STAGE, SEARCH_KEPT, stops=False):  # the search stops at its own net (`search_net`) and keeps its plan
                     gap, gap_after = search_gap(clock)
@@ -1141,21 +1131,27 @@ def plan_fallback(solution: Solution, offered: Sequence[PricedOffer]) -> tuple[P
 
 
 def rounds_apply(data: GameData, target: Target, priced: Sequence[PricedOffer], *, solve_it: bool, judged: bool, solver: str) -> bool:
-    """Whether the offers may be searched in rounds (`_rounds`, #1069): a plan the envelope search solves, of one reading (no rule axis), with no
-    offer that searches a second item (an Awakener's Orb's donor, an offer that takes donors), and no route judged against it whose actions are
-    not known (`judged`: such a route, or an incumbent, is a fixed policy that may name any offer; a route whose actions are known leads the
-    first round instead, #1110)."""
+    """Whether the offers may be searched in steps (`_rounds`, #1069, #1276): a plan the envelope search solves, of one reading (no rule axis),
+    with no offer that takes donors, and no route judged against it whose actions are not known (`judged`: such a route, or an incumbent, is a
+    fixed policy that may name any offer; a route whose actions are known leads the first step instead, #1110). An Awakener's Orb is a family
+    of its own (`_rounds.SECOND_ITEM`): its donors are planned in its step and in the steps after it, on their share (#1276: before, a target
+    offered one was one search over every offer on the ninth of the net its donors left, R14)."""
     if not solve_it or judged or solver not in ("auto", "envelope"):
         return False
-    if interval_axes(data, priced) or awakener_offers(priced):
+    if interval_axes(data, priced):
         return False
-    return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem))
+    awakened = {id(p) for p in awakener_offers(priced)}
+    return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem) and id(p) not in awakened)
 
 
-def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Offer], route: Sequence[str] = ()) -> tuple[_rounds.Group, ...]:
-    """The groups of `offers` by the features each adds to the target's own model (`Abstraction.features`, `_rounds.round_groups`). An offer
-    that reads neither the junk nor the item's state is never in the model (`_make_plan`'s `enabled`) and adds nothing. `route` are the
-    labels a judged route names (#1110): they lead the first group with the target's named actions."""
+def offer_groups(
+    data: GameData, goal: Goal, target: Target, offers: Sequence[Offer], route: Sequence[str] = (), priced: Sequence[PricedOffer] = ()
+) -> tuple[_rounds.Group, ...]:
+    """The steps of `offers` (`_rounds.round_groups`): the seed, then the families by the features each offer adds to the target's own model
+    (`Abstraction.features`). An offer that reads neither the junk nor the item's state is never in the model (`_make_plan`'s `enabled`) and
+    adds nothing; an Awakener's Orb adds a second item (`_rounds.SECOND_ITEM`). `route` are the labels a judged route names (#1110): they lead
+    the seed with the target's named actions. `priced` are the offers with their costs (the restart among them): the seed's offers of least
+    cost over chance on each wanted mod are read from them (`_offer_kinds.leaf_providers`)."""
     holds = bool(target.start_item.metamods(data) & BLOCKING)
 
     def model(actions) -> Abstraction:
@@ -1165,27 +1161,49 @@ def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Of
 
     own = model(()).features()
     known: dict = {}
+    orbs = {id(p.offer) for p in awakener_offers(priced)}
 
     def added(offer: Offer) -> frozenset[str]:
+        second = frozenset({_rounds.SECOND_ITEM}) if id(offer) in orbs else frozenset()
         reads = offer.action.reads(data)
         if not (reads.junk or reads.item_state):
-            return frozenset()
+            return second
         try:
             key = (reads, offer.action.adds(data))
             hash(key)
         except TypeError:
             key = None
         if key is not None and key in known:
-            return known[key]
+            return known[key] | second
         try:
             found = model((offer.action,)).features() - own
         except (ValueError, OutOfScopeError) as error:  # a model of this offer alone is refused (an unveil offer needs a junk reader): a group of its own
             found = frozenset({f"refused alone: {error}"[:120]})
         if key is not None:
             known[key] = found
-        return found
+        return found | second
 
-    return _rounds.round_groups(offers, (*(target.actions or ()), *route), added)
+    return _rounds.round_groups(offers, (*(target.actions or ()), *route), added, lambda: seed_positions(data, goal, target, offers, priced))
+
+
+def seed_positions(data: GameData, goal: Goal, target: Target, offers: Sequence[Offer], priced: Sequence[PricedOffer]) -> tuple[int, ...]:
+    """The positions in `offers` of the seed's offers of least cost over chance on each wanted mod not on the start item
+    (`_offer_kinds.leaf_providers`, #1276), read on the abstraction of every offer, after the twins (a dearer twin gives the same, so the
+    cheaper one is the one ranked)."""
+    where = {id(offer): position for position, offer in enumerate(offers)}
+    mine = [p for p in priced if id(p.offer) in where]
+    if not mine:
+        return ()
+    kept = merge_twins(data, target.start_item, mine)[0]
+    enabled = [p.offer.action for p in kept if (reads := p.offer.action.reads(data)).junk or reads.item_state]
+    holds = bool(target.start_item.metamods(data) & BLOCKING)
+    abstraction = Abstraction(
+        data, goal, target.base_id, target.item_level, enabled, metamods=holds, enchantment=target.start_item.enchantment, allow_inputs=True
+    )  # fmt: skip
+    listing = unopened_listing(data, target.start_item) if any(isinstance(p.offer.action, BuyStartItem) for p in priced) else None
+    start = abstraction.compress(listing or target.start_item)
+    chosen = leaf_providers(abstraction, start, kept, target.start_item)
+    return tuple(sorted(where[id(kept[position].offer)] for position in chosen))
 
 
 def round_end(plan: Plan) -> tuple[str, str]:
@@ -1238,18 +1256,11 @@ def widened_plan(
                 raise _rounds.NoPlan(str(error)) from error
             raise
 
-    def floor(chosen: tuple[Offer, ...], call: RoundCall) -> float | None:
-        try:
-            run(chosen, call)
-        except _rounds.Floor as figure:
-            return figure.figure
-        return None  # (a refusal or a net before the floors is `_rounds.figure_of`'s: the group then has no figure)
-
     meter = states_meter(clock)
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
         left=(lambda: None) if clock is None else clock.left, clock_now=time.perf_counter if clock is None else clock.elapsed, meter=meter,
-        gap=0.0 if clock is None else clock.budget.gap, floor=floor, release=release_round,
+        complete=lambda plan: plan.search is None or plan.search.bound_stopped is None, release=release_round,
     )  # fmt: skip
     if widened.plan is None:
         said = _rounds.no_plan_words(widened.records)
@@ -1281,7 +1292,7 @@ def widened_plan(
             info, exact=exact, within=proved_within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records
         )  # fmt: skip
     judged = () if route_actions is None else (_rounds.judged_route_limit(sorted({o.label for o in grouped} & set(route_actions)), records[0]),)
-    plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within), *judged))
+    plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within, widened.unproved), *judged))
     if foresee:
         offered = merge_twins(data, target.start_item, plan.offers)[0] if PRUNE_BOUND and len(plan.offers) >= MIN_OFFERS else plan.offers
         fallback = plan_fallback(plan.solution, offered)

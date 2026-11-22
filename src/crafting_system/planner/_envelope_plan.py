@@ -41,7 +41,7 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
 from . import _limits
-from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb
+from ._envelope import ACCEPT_BOUND, BoundError, Incomplete, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -345,15 +345,10 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
     model not solved, or its growth has added no offer) has nothing that shows it will end, and stops at the quarter, whatever the plan in hand (R13's round
     2, #1142; R17's site plan, whose rounds' first models were unsolved after their whole share).
 
-    **A round with no plan in hand and others after it (`Net.blind`, #1268)** builds as any round with no plan in hand does (its quarter of
-    the time left). Should its build end before it is complete, its search has the round's share of the time (the time left over the rounds
-    left), counted from the search's own start, to make a plan; with none by then the round gives way (`_envelope.YIELDED`, `Net.yield_at`),
-    and the rounds after it are tried; a search that holds a plan by then goes on as any round's does once its search holds one
-    (`_rounds.Share`). R04's site plan: its fossil sets' round built for its quarter and was not complete, and its search took the 321 s left
-    with no plan, so the rounds that hold the guide's methods (essences, the Exalted and the Fracturing Orb) were never tried (#1135, #1193,
-    #1256, #1268). The build itself is not cut shorter: R10's and R13's first plans come from a bound not complete that took its whole
-    quarter (149 s and 146 s) and then held the plan in seconds; a build cut to the round's share left R10 and R13 with no plan (#1268's
-    measurements).
+    **A step of scheme S (`Net.step`, `_rounds`, #1276)** is accepted only when its bound's build completes, so its build may take the step's
+    whole net (`room_of`: no quarter kept, no pace, no going past it): a build cut at a quarter to leave room for a search is the build the
+    step then undoes (R24's build on its guide's ten offers needs 163 s, 13 s past the quarter of a 600 s net, research note 2026-11-18-rounds-design,
+    section 4 F). Its search has what the build left of the net; a search after a complete bound makes its first plan whatever is left.
     """
     if net is None or (net.seconds is None and net.states is None and net.memory_mb is None):
         return None
@@ -362,6 +357,8 @@ def build_stop(net: Net | None, began: float) -> Callable[[], str | None] | None
 
 def room_of(net: Net | None) -> Room | None:
     """What a build with a plan in hand may take (`abstraction._pattern.Room`, #1224), None for a build with no plan in hand."""
+    if net is not None and net.step:
+        return Room(late=0.0, quarter=1.0)  # the step's whole net, and no more (`Pace.verdict`: before the whole of it the build goes on)
     if net is None or not (net.held or net.walked):
         return None
     return Room(late=net.late, quarter=1.0 / (1.0 + SEARCH_PER_BUILD))
@@ -551,21 +548,26 @@ def _envelope_run(
         f"{bound.start_value!r} ({built - began:.0f} s)" + ("" if bound.share is None else f", {bound.pieces:,} of {bound.share:,} pieces of work")
         + ("" if bound.complete else f"; STOPPED in the {bound.phase} phase: {bound.stopped}")
     )
+    if net is not None and net.step and net.held and not bound.complete:
+        # a step of scheme S with a plan in hand whose build did not complete (#1276): undone with no search (`Incomplete`); the plan in hand stands
+        raise Incomplete(bound.stopped or "its build was stopped", bound.lower, bound.model.stats.keys, expanded)
     problem = CraftingProblem(abstraction, start, offers, bound, prune_corrupting=prune_corrupting, goal=goal)
     ready = time.perf_counter()
     if problem.closed_start is not None:
         say(f"first plan's order: the count solved on what it finished, the start at {problem.closed_start!r} ({ready - built:.1f} s)")
     # the search has what the build and the problem left of the time (OR-40), and the aim is of the whole plan (OR-33): both count, the closed solve
     # of a stopped build (#948) included, which is one more solve of the model the build already solved and so of the same order as its own
-    # a round with no plan in hand and others left whose build ended before it was complete (`Net.blind`, #1268): its search, on a bound that
-    # does not show it the way, gives way once it has used the round's share with no plan in hand, counted from its own start (`Net.yield_at`)
-    if net is not None and net.blind is not None and net.blind > 1 and not (net.held or net.walked) and not bound.complete:
+    if net is not None and net.step:
+        # a step of scheme S (#1276): its search has what the build left of its share, and its first plan's chain what the run has left
+        # (`Net.first`, `Net.first_states`) when the bound was built whole, which leads it to its first plan in a few states (the note's e6:
+        # 3 to 5 s), or for the first step with no plan in hand on any bound (`Net.first_any`, OR-33)
+        keep = bound.complete or net.first_any
+        spent = ready - began
         net = dataclasses.replace(
-            net, yield_at=(
-                None if net.seconds is None else net.seconds / net.blind, None if net.states is None else max(net.states // net.blind, 1)
-            ),
+            net, seconds=None if net.seconds is None else max(net.seconds - spent, 0.0),
+            first=max(net.first - spent, 0.0) if keep and net.first is not None else None, first_states=net.first_states if keep else None,
         )  # fmt: skip
-    if net is not None and net.seconds is not None:
+    elif net is not None and net.seconds is not None:
         late = (1.0 + net.late) * net.seconds - (ready - began)  # a nearly done build went past the share (`BuildStop`): the first plan has what is left of its room
         net = dataclasses.replace(net, seconds=max(net.seconds - (ready - began), 0.0), first=max(late, 0.0) if bound.late and bound.complete else net.first)
     if gap_after is not None:

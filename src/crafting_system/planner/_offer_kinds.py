@@ -173,7 +173,7 @@ reforge, whose kept mods are the same `kept_by_reroll`; #1243 tracks it); an add
 import heapq
 import math
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
 
 from crafting_system.abstraction import (
@@ -191,7 +191,7 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError, holds_p
 from crafting_system.data import GameData
 from crafting_system.items import Item
 
-from ._offers import BuyStartItem, PricedOffer
+from ._offers import BuyStartItem, PricedOffer, reached_by
 
 ZERO, ONE = Fraction(0), Fraction(1)
 
@@ -647,3 +647,84 @@ def _kind_of(data, item: Item, offer: PricedOffer) -> tuple[str, frozenset[str]]
     ):
         return ADD, frozenset()  # one drawn mod added to the mods kept (see THE NUMBER pbar); what it does at the bare item is checked when it is raised
     return TERMINAL, frozenset()
+
+
+SEED_PER_LEAF = 2  # the offers of least cost over chance a wanted mod brings into the seed (`leaf_providers`, #1276): an order, never a cut
+
+
+def leaf_providers(
+    abstraction: Abstraction, start: CompressedState, priced: Sequence[PricedOffer], item: Item, per_leaf: int = SEED_PER_LEAF,
+    ask: Callable[[], None] | None = None,
+) -> tuple[int, ...]:
+    """The positions in `priced` of the seed of the planner's steps (`_rounds`, scheme S, #1276; research note 2026-11-18-rounds-design, section 5):
+    for every leaf of the goal not PASSING at the start (a necessary one or a member of a k-of-n), the `per_leaf` offers of least cost over their
+    chance of making THAT leaf PASSING in one use, read at the bare item of each shape the offers turn the start item into (`reached_by`, the
+    largest chance of the shapes taken). The chance is the floors' own (THE NUMBER pbar, for the one leaf): 1 for a craft, a veiled choice or a
+    veil that names a mod passing the leaf (`finishes`); the class's declared bound, else `reach_bound`, for an erasing reroll; `add_bound` (or
+    the declared draw's) for an addition; and none for any other kind (a tool: it passes no leaf alone). An offer whose chance cannot be read at
+    a shape (refused there, or out of the data's scope) has none there.
+
+    It decides only which offers the first step searches: every other offer has a later step (OR-12). The counted test of the note (section 3)
+    shows what it cannot do: a guide's tools (an Annulment, a metamod craft, an imprint) pass no leaf and are never in it. `ask` is a net, asked
+    between two offers' chances."""
+    data, goal = abstraction.data, abstraction.goal
+    shape = abstraction.compress(item) if getattr(start.flags, "unopened", False) else start
+    open_leaves = [index for index in range(len(goal.leaves)) if shape.status[index] is not Status.PASSING]
+    if not open_leaves:
+        return ()
+    actions = [p.offer.action for p in priced if not isinstance(p.offer.action, BuyStartItem) and not getattr(p.offer.action, "opens_listing", False)]
+    items = [item, *(reached for reached in reached_by(data, item, lambda _item: actions)[1:] if not getattr(abstraction.compress(reached).flags, "unopened", False))]
+    best: dict[tuple[int, int], Fraction] = {}  # (leaf, position) -> the largest chance over the shapes
+    for view in items:
+        bare = replace(abstraction.compress(view), slots=())
+        rerolls: dict[type, list[int]] = {}
+        for position, offer in enumerate(priced):
+            if ask is not None and position % 256 == 0:
+                ask()
+            action = offer.offer.action
+            try:
+                kind, named = _kind_of(data, view, offer)
+                if kind in FINISHING:
+                    made = bool(action.adds(data, view).crafted)
+                    for leaf in open_leaves:
+                        if finishes(goal.leaves[leaf], named, made):
+                            best[(leaf, position)] = ONE
+                elif kind == ADD:
+                    declared = action.added_draw(data, view) is not None
+                    for leaf in open_leaves:
+                        chance = declared_add_bound(abstraction, action, view, (leaf,)) if declared else add_bound(abstraction, bare, action, (leaf,))
+                        _keep(best, leaf, position, chance)
+                elif kind == REROLL:
+                    adds = action.adds(data, view)
+                    if not (adds.fractures or adds.keeps_crafted or action.reads(data).needs_crafted):
+                        rerolls.setdefault(type(action), []).append(position)
+            except (NotApplicableError, OutOfScopeError, ValueError):  # refused at this shape, or out of the data's scope: no chance read here
+                continue
+        for positions in rerolls.values():  # a class answers for its own actions at once (`declared_bounds`, #1073), the rest one by one
+            if ask is not None:
+                ask()
+            for leaf in open_leaves:
+                try:
+                    declared = declared_bounds(abstraction, bare, [priced[position].offer.action for position in positions], (leaf,))
+                except (NotApplicableError, OutOfScopeError, ValueError):
+                    declared = [None] * len(positions)
+                for position, bound in zip(positions, declared):
+                    if bound is None:
+                        try:
+                            bound = reach_bound(abstraction, bare, priced[position].offer.action, (leaf,))
+                        except (NotApplicableError, OutOfScopeError, ValueError):
+                            continue
+                    _keep(best, leaf, position, bound)
+    chosen: set[int] = set()
+    for leaf in open_leaves:
+        ranked = sorted(
+            ((float(Fraction(priced[position].cost) / chance), position) for (at, position), chance in best.items() if at == leaf and chance > 0),
+        )
+        chosen.update(position for _ratio, position in ranked[:per_leaf])
+    return tuple(sorted(chosen))
+
+
+def _keep(best: dict, leaf: int, position: int, chance: Fraction | None) -> None:
+    """Keep `chance` for (leaf, position) when it is the largest read so far (`leaf_providers`); None reads as no chance."""
+    if chance is not None and chance > best.get((leaf, position), ZERO):
+        best[(leaf, position)] = chance

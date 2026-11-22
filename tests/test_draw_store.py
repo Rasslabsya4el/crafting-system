@@ -98,7 +98,7 @@ def _rounds_by_hand(monkeypatch):
     other bench crafts. Each round is a `_make_plan` of its own, with a model of its own. Returns the stores the plans opened, and the
     switch that plans with no store."""
 
-    def groups(data, goal, target, grouped, route):
+    def groups(data, goal, target, grouped, route, priced=()):
         crafts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "bench-craft")
         exalts = tuple(i for i, offer in enumerate(grouped) if offer.kind == "exalted-orb")
         assert len(crafts) >= 2 and exalts
