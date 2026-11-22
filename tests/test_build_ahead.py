@@ -13,7 +13,7 @@ import pytest
 from test_cli_envelope_build import START_ITEM, abstraction, floors_on, world  # noqa: F401  (fixtures)
 from test_planner_blocking_crafts import S, _prices, data, target  # noqa: F401  (the fixtures)
 
-from crafting_system import parallel
+from crafting_system import budget, parallel
 from crafting_system.abstraction import _build_ahead
 from crafting_system.abstraction._pattern import PatternBuilder
 from crafting_system.budget import Budget
@@ -246,3 +246,17 @@ def test_workers_grown_past_half_the_room_are_made_afresh_and_the_model_is_the_m
     ahead, builder = _grown(3, offers=offers)
     _same_bound(alone, ahead)
     assert builder.ahead.renewed > 0 and builder.ahead.taken > 0
+
+
+def test_workers_are_not_made_afresh_where_only_the_resident_sizes_say_they_grew(world, monkeypatch):  # noqa: F811
+    # The resident sizes count the pages a fork shares once for each worker: where they alone say the workers hold half the room, the
+    # proportional sizes are read, and they decide (round 5 of #1384's checker: on a machine with no group to read, every pool renewed)
+    fresh = abstraction()
+    builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=4)
+    monkeypatch.setattr(parallel, "active_memory_net", lambda: 1000.0)
+    monkeypatch.setattr(budget, "process_mb", lambda pid=None: 100.0)
+    monkeypatch.setattr(parallel, "own_mb", lambda under=None: 100.0)
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 900.0 if under is not None else 300.0)
+    assert not builder.ahead._grown()  # resident 800 MB beside 100, proportional 200: under half the 900 MB of room
+    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 900.0 if under is not None else 700.0)
+    assert builder.ahead._grown()
