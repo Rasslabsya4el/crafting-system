@@ -111,17 +111,54 @@ def test_an_imprint_is_named_only_where_it_can_be_made():
 def test_the_cleaners_and_narrowers_of_the_adders():
     table = _table(
         _entry("add A", 1.0, chance={A: 1}),
-        _entry("craft B", 1.0, kind="craft", chance={B: 1}, crafted=True),
-        _entry("craft A", 1.0, kind="craft", chance={A: 1}, crafted=True),
+        _entry("add B", 1.0, chance={B: 1}),
         _entry("annul", 2.0, kind="craft", removes=True),
         _entry("dear annul", 9.0, kind="craft", removes=True),
         _entry("remove crafted", 1.0, kind="craft", removes=True, needs_crafted=True),
-        _entry("no caster", 5.0, kind="craft", keeps_out=frozenset({"caster"})),
-        _entry("no attack", 5.0, kind="craft", keeps_out=frozenset({"attack"})),  # A carries the attack tag: keeping it out would lose A
+        _entry("no caster", 5.0, kind="craft", keeps_out=frozenset({"caster"}), crafted=True),
+        _entry("no attack", 5.0, kind="craft", keeps_out=frozenset({"attack"}), crafted=True),  # A carries the attack tag
         _entry("more crafted", 7.0, kind="craft", more_crafted=True),
     )
+    # the adders draw A and B: the caster tag is kept out, the attack tag never (keeping it out would keep A from coming); one crafted mod
+    # held (the caster narrower) names RCM but no multimod
     named = _names(table, table.roles({A, B}, set(), frozenset({MAGIC}), False, frozenset(), frozenset()))
-    assert {"annul", "remove crafted", "no caster", "more crafted"} <= named and not named & {"dear annul", "no attack"}
+    assert {"annul", "remove crafted", "no caster"} <= named and not named & {"dear annul", "no attack", "more crafted"}
+
+
+def test_a_narrower_reads_the_tags_of_the_wanted_mods_the_adders_must_draw():
+    """#1423, worked by hand. A (a prefix with the attack tag) and B (a suffix, no tag) are open; "no attack" keeps the attack tag out.
+
+    1. The step waits for A and B, and A comes only from an addition (it is drawn): the attack tag is kept, "no attack" is not named.
+    2. The round holds "craft A", a bench craft that gives A (R04's Attack Speed craft, made after the slam): A is not drawn, so the attack
+       tag may be kept out of B's draws and "no attack" is named; it and "craft A" are two crafted mods held, so the multimod is named too.
+    3. A passes at every state where the step acts (R14's Attack Speed at the Regal step): the step draws B alone, "no attack" is named,
+       though A's only adder draws; it is the one crafted mod held, so no multimod.
+    """
+    table = _table(
+        _entry("add A", 1.0, chance={A: 1}),
+        _entry("add B", 1.0, chance={B: 1}),
+        _entry("craft A", 3.0, kind="craft", chance={A: 1}, crafted=True),
+        _entry("no attack", 5.0, kind="craft", keeps_out=frozenset({"attack"}), crafted=True),
+        _entry("more crafted", 7.0, kind="craft", more_crafted=True),
+    )
+    add_a, add_b, craft_a = 0, 1, 2
+    assert not _names(table, table.roles({A, B}, set(), frozenset({MAGIC}), False, frozenset({craft_a}), frozenset({add_a, add_b}))) & {"no attack", "more crafted"}
+    assert table.narrowers({A, B}, {add_a, add_b}) == set()
+    named = _names(table, table.roles({B}, set(), frozenset({RARE}), False, frozenset(), frozenset({add_a, add_b, craft_a}), {A, B}))
+    assert {"no attack", "more crafted"} <= named
+    assert _names(table, table.narrowers({A, B}, {add_a, add_b, craft_a})) == {"no attack"}
+    named = _names(table, table.roles({B}, set(), frozenset({RARE}), False, frozenset({craft_a}), frozenset({add_a, add_b}), {B}))
+    assert "no attack" in named and "more crafted" not in named
+
+
+def test_the_mods_a_step_waits_on_are_those_not_passing_where_it_acts():
+    passing, failing = Status.PASSING, Status.ABSENT
+    acts = [
+        (SimpleNamespace(status=(passing, failing)), None, 2.0),
+        (SimpleNamespace(status=(passing, passing)), None, 1.0),
+        (SimpleNamespace(status=(failing, failing)), None, 0.0),  # a state the plan never visits reads nothing
+    ]
+    assert _growth.pending_at(acts, 2) == {B}
 
 
 def test_the_dependencies_a_pick_brings_the_unveil_the_veiled_sources_and_every_pick_and_a_restore_its_imprint():
@@ -170,6 +207,36 @@ def test_the_dearest_step_is_read_on_the_plan_s_chain_and_what_it_waits_for_and_
     assert shares[0][1] == pytest.approx(10.0) and shares[1][1] == pytest.approx(6.0)  # the start is visited twice: 2 crafts at 3
     waits, risks, shapes, fractured = read_step(shares[0][2], 2)
     assert waits == {B} and risks == {A} and shapes == {MAGIC} and not fractured
+
+
+def test_the_narrowers_of_a_drawing_adder_are_read_at_each_state_where_it_acts_from_what_it_waits_for_there():
+    """#1423, R04's shape, worked by hand. A (a prefix with the attack tag: R04's extra Arrow) and B (a suffix with no tag: Life, Bow Damage).
+
+    The plan exalts (a drawing addition) at two states: `none`, where it waits for A and B, and `has A`, where A passes and it waits for B
+    alone. Read as one step it waits for A and B, so the attack tag is kept; read at `has A` it waits for B alone, so "no attack" is named
+    there, and with it the multimod: "no attack" and "craft C" (a crafted mod the plan holds) are two crafted mods held. A state the plan
+    never visits, and a step that is no drawing addition (the craft), name nothing.
+    """
+    table = _table(
+        _entry("exalt", 1.0, chance={A: Fraction(1, 4), B: Fraction(1, 4)}),
+        _entry("craft C", 2.0, kind="craft", crafted=True),
+        _entry("no attack", 5.0, kind="craft", keeps_out=frozenset({"attack"}), crafted=True),
+        _entry("more crafted", 7.0, kind="craft", more_crafted=True),
+    )
+    absent, passing = Status.ABSENT, Status.PASSING
+    none, has_a, has_b, goal = _State("none", (absent, absent)), _State("has A", (passing, absent)), _State("has B", (absent, passing)), _State("goal", (passing, passing))
+    exalt_none = Action("exalt", 1.0, (Outcome(has_a, 1), Outcome(has_b, 1), Outcome(none, 2)))
+    exalt_has_a = Action("exalt", 1.0, (Outcome(goal, 1), Outcome(has_a, 3)))
+    craft = Action("craft C", 2.0, (Outcome(none, 1),))
+    grower = Grower(table, ())
+    one_step = [("exalt", 9.0, [(none, exalt_none, 2.0), (has_a, exalt_has_a, 1.0)]), ("craft C", 2.0, [(none, craft, 1.0)])]
+    assert read_step(one_step[0][2], 2)[0] == {A, B}  # the step's own reading keeps the attack tag
+    assert _names(table, grower.state_narrowers(one_step, frozenset({0, 1}))) == {"no attack"}
+    assert _names(table, table.crafted_roles(frozenset({0, 1, 2}))) == {"more crafted"}
+    unvisited = [("exalt", 9.0, [(none, exalt_none, 2.0), (has_a, exalt_has_a, 0.0)])]
+    assert grower.state_narrowers(unvisited, frozenset({0, 1})) == set()
+    crafts_only = [("craft C", 2.0, [(has_a, Action("craft C", 2.0, (Outcome(goal, 1),)), 1.0)])]
+    assert grower.state_narrowers(crafts_only, frozenset({0, 1})) == set()
 
 
 class _Plan(SimpleNamespace):

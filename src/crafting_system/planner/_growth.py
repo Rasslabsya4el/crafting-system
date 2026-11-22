@@ -25,7 +25,15 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     cheapest imprint that can be made at `D`'s shape (its outcomes are read there);
   - **cleaners and narrowers** for the adders: the cheapest craft that adds no mod and needs no crafted one (it removes a mod), the crafts that
     add no mod and need a crafted one when the round holds a crafted mod, and, among the offers that draw no mod, the cheapest that keeps each
-    tag out of the draws that no wanted mod carries, and the cheapest of more crafted mods when the round holds two crafted mods.
+    tag out of the draws that no wanted mod the adders must draw carries, and the cheapest of more crafted mods when the round holds two
+    crafted mods (#1423). The mods the adders must draw are those of `W`, and the other wanted mods not passing at some state where `D` acts,
+    less every one an offer of the round gives by a finishing kind (a bench craft, a veiled choice, a veil: it is not drawn, so a tag it
+    carries may be kept out of the draws before it is made); a mod passing at every state where `D` acts is not drawn either (a tag kept out
+    removes no mod the item holds). A narrower is a crafted mod held: it counts towards the crafted mods of the two rules after it.
+  - **the narrowers of each state** (`Grower.state_narrowers`): at every state where a drawing addition of the plan in hand acts (an
+    Exalted Orb and the like), the narrowers of the wanted mods it waits for at that state, by the rule above, with the crafted roles they
+    bring. A step read whole waits for the union of its states' mods: R04's Exalted Orb waits for the extra Arrow (tagged `attack`) at the
+    states that lack it and for Life and Bow Damage alone at the others, where the guide keeps the attack tag out (#1423).
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
@@ -225,16 +233,36 @@ class OfferTable:
         sides = {self.data.mods[mod_id].generation_type for mod_id in self.goal.leaves[leaf].mod_ids if mod_id in self.data.mods} & _SIDES
         return next(iter(sides)) if len(sides) == 1 else None
 
-    def tags_of_wanted(self) -> frozenset[str]:
-        return frozenset(tag for leaf in self.goal.leaves for mod_id in leaf.mod_ids if mod_id in self.data.mods for tag in self.data.mods[mod_id].implicit_tags)
+    def tags_of(self, leaves) -> frozenset[str]:
+        """The tags the wanted mods `leaves` carry (any mod that can pass each)."""
+        mods = self.data.mods
+        return frozenset(tag for leaf in leaves for mod_id in self.goal.leaves[leaf].mod_ids if mod_id in mods for tag in mods[mod_id].implicit_tags)
+
+    def given(self, leaf: int, holding) -> bool:
+        """Whether an offer of `holding` gives the wanted mod `leaf` by a finishing kind (a craft, a veiled choice, a veil): it is not drawn."""
+        return any(self.entries[position].kinds.get(shape) in FINISHING for position in holding for (shape, each) in self.entries[position].chance if each == leaf)
+
+    def narrowers(self, pending: set[int], holding) -> set[int]:
+        """The cheapest offer that draws no mod and keeps each tag out of the draws, for every tag no wanted mod of `pending` the adders must
+        draw carries (module text): a mod an offer of `holding` gives by a finishing kind is not drawn, so its tags may be kept out."""
+        drawn = {leaf for leaf in pending if not self.given(leaf, holding)}
+        kept = self.tags_of(drawn)
+        named = set()
+        for tag in sorted({tag for entry in self.entries for tag in entry.keeps_out} - kept):
+            narrower = self.cheapest(lambda entry, tag=tag: tag in entry.keeps_out and not entry.draws)
+            if narrower is not None:
+                named.add(narrower)
+        return named
 
     def cheapest(self, allowed: Callable[[Entry], bool], held: frozenset[int] = frozenset()) -> int | None:
         found = [(entry.cost, entry.position) for entry in self.entries if entry.position not in held and allowed(entry)]
         return min(found)[1] if found else None
 
-    def roles(self, waits: set[int], risks: set[int], shapes: frozenset[Rarity], fractured: bool, held: frozenset[int], current: frozenset[int]) -> set[int]:
+    def roles(self, waits: set[int], risks: set[int], shapes: frozenset[Rarity], fractured: bool, held: frozenset[int], current: frozenset[int],
+              pending: set[int] | None = None) -> set[int]:  # fmt: skip
         """The offers named for a step that waits for `waits` and can lose `risks` at `shapes` (module text). `held` are the offers the round
-        that made the plan held (adders are named among the others); `current` the offers the next round already holds."""
+        that made the plan held (adders are named among the others); `current` the offers the next round already holds; `pending` the wanted
+        mods not passing at some state where the step acts (the mods open at the start when None)."""
         named: set[int] = set()
         adders: list[tuple[int, Rarity | None]] = []
         for leaf in sorted(waits):
@@ -261,18 +289,19 @@ class OfferTable:
             cleaner = self.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
             if cleaner is not None:
                 named.add(cleaner)
-            crafted = [position for position in holding if self.entries[position].crafted]
-            if crafted:
-                named.update(entry.position for entry in self.entries if entry.removes and entry.needs_crafted)
-            if len(crafted) >= 2:
-                more = self.cheapest(lambda entry: entry.more_crafted and not entry.draws)
-                if more is not None:
-                    named.add(more)
-            wanted_tags = self.tags_of_wanted()
-            for tag in sorted({tag for entry in self.entries for tag in entry.keeps_out} - wanted_tags):
-                narrower = self.cheapest(lambda entry, tag=tag: tag in entry.keeps_out and not entry.draws)
-                if narrower is not None:
-                    named.add(narrower)
+            named |= self.narrowers(set(waits) | set(self.open if pending is None else pending), holding)
+            named |= self.crafted_roles(current | named)
+        return named
+
+    def crafted_roles(self, holding) -> set[int]:
+        """The crafts that add no mod and need a crafted one when `holding` holds a crafted mod, and the cheapest of more crafted mods when
+        it holds two (module text): a narrower counts, it is a crafted mod held."""
+        crafted = sum(1 for position in holding if self.entries[position].crafted)
+        named = {entry.position for entry in self.entries if entry.removes and entry.needs_crafted} if crafted else set()
+        if crafted >= 2:
+            more = self.cheapest(lambda entry: entry.more_crafted and not entry.draws)
+            if more is not None:
+                named.add(more)
         return named
 
     def moves(self, shapes: frozenset[Rarity], to: Rarity) -> set[int]:
@@ -392,6 +421,12 @@ def read_step(acts: Sequence[tuple[CompressedState, object, float]], leaves: int
     return waits, risks, frozenset(shapes), fractured
 
 
+def pending_at(acts: Sequence[tuple[CompressedState, object, float]], leaves: int) -> set[int]:
+    """The wanted mods not passing at some state where a step acts (`acts` as `read_step` reads them): a mod passing at every one of them is
+    not drawn by the step, so a tag it carries may be kept out of the draws (a tag kept out removes no mod the item holds)."""
+    return {leaf for state, _action, visits in acts if visits > 0.0 for leaf in range(leaves) if state.status[leaf] is not Status.PASSING}
+
+
 class Grower:
     """The growth of the rounds (module text): asked by `_rounds.widen` for the seed, then for the next round's offers after each round.
 
@@ -450,19 +485,45 @@ class Grower:
                 return tuple(sorted(chosen)), f"no plan yet, so methods named at the start item (it waits for {self._names(waits)}; at risk: {self._names(risks)})"
             return None
         support = self.support(plan)
-        for label, share, acts in step_shares(plan):
+        shares = step_shares(plan)
+        for label, share, acts in shares:
             if label in self.diagnosed or label not in self.by_label:
                 continue
             self.diagnosed.add(label)
             waits, risks, shapes, fractured = read_step(acts, len(table.goal.leaves))
             current = frozenset(support | self.asked)
-            named = table.roles(waits, risks, shapes, fractured, self.plan_set, current)
+            named = table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending_at(acts, len(table.goal.leaves)))
+            narrowers = self.state_narrowers(shares, current | named)
+            if narrowers - named:
+                named |= narrowers | table.crafted_roles(current | named | narrowers)
             chosen = table.closure(set(current) | named)
             if named - current and self._new(chosen):
                 return tuple(sorted(chosen)), (
                     f"the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}"
                 )
         return None
+
+    def state_narrowers(self, shares, holding) -> set[int]:
+        """The narrowers of each state where a drawing adder of the plan in hand acts (module text, #1423): from the wanted mods it waits for
+        at that state, not at the step's other states (R04's Exalted Orb waits for the Arrow at some states, for Life and Bow Damage alone at
+        others: there the attack tag may be kept out)."""
+        table, leaves = self.table, len(self.table.goal.leaves)
+        drawn: set[frozenset[int]] = set()
+        for label, _share, acts in shares:
+            position = self.by_label.get(label)
+            if position is None:
+                continue
+            entry = table.entries[position]
+            if not (entry.draws and ADD in entry.kinds.values()):
+                continue
+            for act in acts:
+                waits = read_step([act], leaves)[0]
+                if waits:
+                    drawn.add(frozenset(waits))
+        named: set[int] = set()
+        for waits in drawn:
+            named |= table.narrowers(set(waits), holding)
+        return named
 
     def _start_reading(self, held: set[int]) -> tuple[set[int], set[int]]:
         """`W` and `K` with no plan in hand (module text): the wanted mods whose providers among `held` all reroll, and, when one mod's only
@@ -502,4 +563,4 @@ def growth_table(data: GameData, goal, target, priced: Sequence[PricedOffer], li
     return OfferTable(data, abstraction, start, target.start_item, priced, ask)
 
 
-__all__ = ["Grower", "OfferTable", "PER_ROLE", "growth_table", "read_step", "step_shares"]
+__all__ = ["Grower", "OfferTable", "PER_ROLE", "growth_table", "pending_at", "read_step", "step_shares"]
