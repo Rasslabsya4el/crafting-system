@@ -351,12 +351,13 @@ from typing import NamedTuple
 
 import numpy as np
 
-from crafting_system import budget
+from crafting_system import budget, parallel
 from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
 from crafting_system.items import Item, ItemError, Metamod, Rarity, Side, capacity
 from crafting_system.items.model import VEILED_DOMAIN
 
+from ._build_ahead import KeysAhead
 from ._goal import Status
 from ._kernel import Abstraction
 from ._relaxed import ChoiceNode, relaxed_draw
@@ -1789,6 +1790,7 @@ class PatternBuilder:
         approximate: bool = False,
         tally: "Tally | None" = None,
         ruin: Ruin | None = None,
+        workers: int | None = None,
     ) -> None:
         self.ruin = ruin  # the test of a ruined key (`Ruin.of` on every offer the builder may be given), None: no key is ruined
         self.tally = tally  # a build counted in pieces of work (`Tally`): each (member, offer) pair adds one, and the net is asked at every offer, never on the clock
@@ -1804,6 +1806,10 @@ class PatternBuilder:
         self.restarts = 0
         self.began = time.perf_counter()
         self.dead = False
+        # the keys of a pass expanded ahead in forked workers (`_build_ahead`, #1384): the worker count is the machine's (`CRAFTING_WORKERS`, OR-40),
+        # none where there is no fork (OR-57)
+        self.ahead = KeysAhead(self, (parallel.worker_count() if workers is None else workers) if parallel.can_inherit() else 1)
+        self.recording: "_Recorder | None" = None  # in a worker of `_build_ahead`: what the key being expanded made, for the parent
         self._reset()
 
     def _reset(self) -> None:
@@ -1976,6 +1982,8 @@ class PatternBuilder:
             except budget.NetReached as reached:  # inside a making: the key's row is whole or untouched, as at a stop between two offers
                 self._release()
                 return reached.reason
+            finally:
+                self.ahead.close()  # the pool of this pass, if one was forked: its workers hold this pass's universe
 
     def _pass_keys(self) -> str | None:
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
@@ -2023,13 +2031,17 @@ class PatternBuilder:
             if not self.goal[i]:
                 given = self._given(i)
                 if given:
-                    firsts = None
-                    if not self.expanded[i]:  # a key expanded before had a member: the universe only grows
-                        firsts = (pattern.members(self.keys[i], Mode.ANY), pattern.grew)
-                        if not firsts[0]:
-                            raise _no_member(self.keys[i])
+                    made = self.ahead.take(i)  # the key's row made ahead in a worker (`_build_ahead`), or None
                     try:
-                        self._offers_of_key(i, given, tick, firsts)
+                        if made is None or not self._apply(i, given, made, tick):
+                            mark = time.perf_counter()
+                            firsts = None
+                            if not self.expanded[i]:  # a key expanded before had a member: the universe only grows
+                                firsts = (pattern.members(self.keys[i], Mode.ANY), pattern.grew)
+                                if not firsts[0]:
+                                    raise _no_member(self.keys[i])
+                            self._offers_of_key(i, given, tick, firsts)
+                            self.ahead.alone(time.perf_counter() - mark)
                     except _Stopped as reached:
                         self._release()
                         return reached.reason
@@ -2092,6 +2104,7 @@ class PatternBuilder:
         offers of policy `ANY` take them while the universe has not grown since (#1256: each key made them twice, 7 s of R04's round 8); they are
         the list `members` would make again, so the build is the same."""
         pattern, ab, stats, offers = self.pattern, self.ab, self.stats, self.offers
+        rec = self.recording  # a worker of `_build_ahead` records what the parent must do again (None in the parent)
         key = self.keys[i]
         by_mode: dict[tuple[Mode, frozenset[str], tuple | None], list[CompressedState]] = {}  # this key's lists while it is given its offers
         kept = self.members_kept if self.grow else None
@@ -2118,17 +2131,22 @@ class PatternBuilder:
         for n, oi in enumerate(given):
             offer = offers[oi]
             tick(oi)
-            if n % PRIME_CHUNK == 0 and len(given) >= PRIME_FROM:
+            if n % PRIME_CHUNK == 0 and len(given) >= PRIME_FROM and rec is None and not self.ahead.open:  # (no pool in a worker, nor beside the keys' pool)
                 self._prime(key, given[n : n + PRIME_CHUNK], members_for, lambda: tick(oi, True))
             if offer.action is None:
                 if i != self.start_id:
-                    added.append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
+                    kid = _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})
+                    if rec is not None:
+                        rec.event(RESTART, kid)
+                    added.append((oi, kid))
                 continue
             if _refused_by_key(pattern, offer.action, key):
                 continue
             move = offer.action.imprint_move()
             if move is not None:  # an imprint or a restore: one certain successor key, the same at every member that takes it (#833)
                 stats.modes[("move", offer.label)] += 1
+                if rec is not None:
+                    rec.modes.append((rec.at, ("move", offer.label)))
                 kid = self._move(key, offer, move)
                 if kid is not None:
                     added.append((oi, kid))
@@ -2136,6 +2154,8 @@ class PatternBuilder:
             policy = pattern.asked(offer.action, key)
             members = members_for(policy)
             stats.modes[(policy[0].value + ("+named" if policy[1] else ""), offer.label)] += 1
+            if rec is not None:
+                rec.modes.append((rec.at, (policy[0].value + ("+named" if policy[1] else ""), offer.label)))
             certain = SHARE_ADDITIONS and pattern.adds_only_named(offer.action)
             classed = ab.refusal_class_of(offer.action) if SHARE_REFUSED else None
             keyed = SHARE_KEY_REFUSALS and classed is not None and ab.refusal_names_no_junk(offer.action)
@@ -2232,6 +2252,8 @@ class PatternBuilder:
                     stats.kernels += 1
                     if lumped:
                         pattern.note_lumped()
+                    if rec is not None:
+                        rec.made = (oi, member, lumped, list(exact.items()))
                     pushed: dict[int, Fraction] = defaultdict(Fraction)
                     for successor, chance in exact.items():
                         if not lumped:  # a lumped outcome holds no slot the universe lacks (`LUMP_ERASING`), and its kinds are the twin's
@@ -2242,12 +2264,166 @@ class PatternBuilder:
                     if self.parts_of != self.computed.generation:  # the keys that held the parts are going: the parts go with them (#1335)
                         self.parts, self.parts_of = {}, self.computed.generation
                     kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
+                    if rec is not None:
+                        rec.event(MADE, kid, *rec.made)
                 if view is not None:
                     by_view[view] = kid
                 if kid not in seen:
                     seen.add(kid)
                     added.append((oi, kid))
+        if rec is not None:  # a worker of `_build_ahead`: the row goes to the parent, which adds it (`_apply`)
+            rec.added = added
+            return
         self.rows.extend(i, added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
+
+    def memos(self) -> list[Recent]:
+        """The memos a worker of `_build_ahead` keeps a share of: the kernel keys, the members kept and their feasibility, the distributions."""
+        found = [self.computed, self.members_kept, self.pattern._feasible]
+        for ab in (self.ab, self.pattern._twin):
+            if ab is not None:
+                found.extend(memo for memo in (ab._cache, ab._expanded, *ab._approx[:2]) if isinstance(memo, Recent))
+        return found
+
+    def _workable(self, j: int) -> bool:
+        """Whether the pass expands key number `j` with `_offers_of_key`: not a goal, a choice node nor the ruined state, and given an offer."""
+        return not self.goal[j] and j != self.ruined and not isinstance(self.keys[j], ChoiceNode) and bool(self._given(j))
+
+    def keys_to_expand(self, i: int) -> int:
+        """About how many keys from number `i` on the pass is still to expand: those not expanded, and those with offers pending."""
+        left = len(self.keys) - i - sum(self.expanded[i:])
+        if self.pending:
+            counts = self.pending.counts()
+            left += int(np.count_nonzero(counts[i:])) if i < len(counts) else 0
+        return left
+
+    def tasks_from(self, start: int, size: int) -> tuple[list[tuple], int]:
+        """The next `size` keys from number `start` on that the pass expands, as a worker of `_build_ahead` is sent them, and the number after the
+        last key looked at."""
+        tasks = []
+        j = start
+        while j < len(self.keys) and len(tasks) < size:
+            if self._workable(j):
+                tasks.append((j, self.keys[j], tuple(self._given(j)), self.expanded[j]))
+            j += 1
+        return tasks, j
+
+    def row_ahead(self, task: tuple) -> tuple | None:
+        """In a worker of `_build_ahead`: the row of the key of `task` (its number in the parent, the key, the offers it is given, whether the
+        parent expanded it before) as `_offers_of_key` makes it here, with what it made that the parent must make again (`_Recorder`), or None
+        where the parent is to expand the key itself: this worker's universe grew (it is no longer the parent's), the key has no member, a relaxed
+        draw, or any error (the parent meets it in its own order)."""
+        _, key, given, expanded = task
+        pattern = self.pattern
+        if pattern.grew != self.ahead.fork_grew:
+            return None
+        j = self.index.get(key)
+        if j is None:  # a key the parent found after the fork: its number here is this worker's own (its rows and kernels name keys by state)
+            j = self.index[key] = len(self.keys)
+            self.keys.append(key)
+            self.goal.append(False)
+            self.rows.append()
+            self.expanded.append(False)
+        rec = self.recording = _Recorder(self)
+        try:
+            firsts = None
+            if not expanded:
+                firsts = (pattern.members(key, Mode.ANY), pattern.grew)
+                if not firsts[0]:
+                    return None
+            self._offers_of_key(j, given, rec.tick, firsts)
+        except Exception:  # noqa: BLE001  (left to the parent, which meets it at this key and raises it there in its own order)
+            return None
+        finally:
+            self.recording = None
+            self._release()
+        if pattern.grew != self.ahead.fork_grew:  # a slot this key's kernels found: the parent finds it and begins again from there
+            return None
+        return rec.result()
+
+    def _apply(self, i: int, given: Sequence[int], made: tuple, tick) -> bool:
+        """Add to key number `i` the row a worker made of it (`row_ahead`), doing here what the worker made that this process must make in
+        its own order (`_replay`): False when it cannot be taken, and nothing is changed then (the caller expands the key itself).
+
+        The same as `_offers_of_key` here, by construction (the module of `_build_ahead` gives the argument): the net is asked at each offer as
+        there (`tick`, a count where it stops one process), the pieces of work and the counts of each offer are added once its question is
+        passed, and a kernel the worker made is made again here only where this process has none of its kernel key."""
+        pid, (added, events, steps, modes) = made
+        ahead = self.ahead
+        if self.pattern.grew != ahead.fork_grew:  # this process's universe grew since the fork: the workers' members are not its own
+            return False
+        table = ahead.tables.setdefault(pid, {})
+        base = ahead.base
+        own = {event[2] for event in events}
+        if any(kid >= base and kid not in table and kid not in own for _, kid in added):  # a kernel made in that worker that this process has not taken
+            return False
+        stats, pattern, ab = self.stats, self.pattern, self.ab
+        by_offer: dict[int, list] = defaultdict(list)
+        for event in events:
+            by_offer[event[0]].append(event)
+        mode_of: dict[int, list] = defaultdict(list)
+        for at, mode in modes:
+            mode_of[at].append(mode)
+        self._count(steps[0])  # what the key's first members counted before its first offer
+        for n, oi in enumerate(given):
+            tick(oi)
+            for event in by_offer.get(n, ()):
+                table[event[2]] = self._replay(event)
+            for mode in mode_of.get(n, ()):
+                stats.modes[mode] += 1
+            self._count(steps[n + 1])
+        self.rows.extend(i, [(oi, kid if kid < base else table[kid]) for oi, kid in added])
+        ahead.taken += 1
+        return True
+
+    def _count(self, step: tuple) -> None:
+        """Add one offer's counts made in a worker (`_Recorder.COUNTS`): its pieces of work first, as the worker added them."""
+        done, members, pairs, shared, refused, views, kept, gaps, fallbacks, refusals = step
+        if self.tally is not None:
+            self.tally.done += done
+        stats = self.stats
+        stats.members += members
+        stats.pairs += pairs
+        stats.shared_pairs += shared
+        stats.refused_pairs += refused
+        stats.view_pairs += views
+        stats.kept_pairs += kept
+        stats.gap_pairs += gaps
+        self.pattern.fallbacks += fallbacks
+        self.ab.refusals_shared += refusals
+
+    def _replay(self, event: tuple) -> int:
+        """Make here what a worker made at a key (`_Recorder.event`), as `_offers_of_key` makes it, and return its kernel id in this process."""
+        kind, rest = event[1], event[3:]
+        if kind == RESTART:
+            return _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})
+        pattern, stats = self.pattern, self.stats
+        if kind == MOVE:
+            (items,) = rest
+            stats.kernels += 1
+            pushed: dict[int, Fraction] = defaultdict(Fraction)
+            for successor, chance in items:
+                pattern.note(successor)
+                pushed[self._intern(successor)] += chance
+            return _kernel_id(self.kernel_ids, self.kernels, pushed)
+        oi, member, lumped, items = rest
+        ck = self.ab.kernel_key(member, self.offers[oi].action)  # this process's own key: a key names the abstraction's numbers (`_pool_types`)
+        kid = self.computed.get(ck)
+        if kid is not None:  # a kernel this process had: `_offers_of_key` would have taken it here
+            return kid
+        stats.kernels += 1
+        if lumped:  # its slots: the worker's universe did not grow, and it is this process's (`_apply`), so `note_lumped` would add none
+            pass
+        pushed = defaultdict(Fraction)
+        for successor, chance in items:
+            if not lumped:
+                pattern.note(successor)
+            pushed[self._intern(successor)] += chance
+        if self.approximate:
+            pushed = _lowered(pushed)
+        if self.parts_of != self.computed.generation:
+            self.parts, self.parts_of = {}, self.computed.generation
+        kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
+        return kid
 
     def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
         """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does
@@ -2276,6 +2452,8 @@ class PatternBuilder:
                     raise _gap(offer, key, gap) from gap
                 if draw is None:
                     return None
+                if self.recording is not None:  # a relaxed draw adds choice nodes, numbered in the order the build makes them: the parent makes them
+                    raise _Unpooled("a relaxed draw")
                 owner = self.relaxed_made
                 self.relaxed_made += 1
                 ids = []
@@ -2341,7 +2519,10 @@ class PatternBuilder:
         for successor, chance in exact.items():
             pattern.note(successor)
             pushed[self._intern(successor)] += chance
-        return _kernel_id(self.kernel_ids, self.kernels, pushed)
+        kid = _kernel_id(self.kernel_ids, self.kernels, pushed)
+        if self.recording is not None:
+            self.recording.event(MOVE, kid, list(exact.items()))
+        return kid
 
 
 def _then_all(pattern: Pattern, key: PatternKey, firsts: Sequence[CompressedState], stats: PatternStats) -> Iterator[CompressedState]:
@@ -2364,6 +2545,56 @@ def _refused_by_key(pattern: Pattern, action: Action, key: PatternKey) -> bool:
     if bool(getattr(action, "opens_listing", False)) != bool(getattr(key.flags, "unopened", False)):
         return True
     return pattern.reads(action).needs_veiled and not pattern.holds_placeholder(key)
+
+
+RESTART, MADE, MOVE = 0, 1, 2  # what a worker of `_build_ahead` made at a key that the parent makes again (`_Recorder.event`)
+
+
+class _Recorder:
+    """What a worker of `_build_ahead` made at one key that its parent must make again, in the order it made it (`PatternBuilder.row_ahead`).
+
+    `events`: (offer position, kind, kernel id here, ...): the restart's kernel (`RESTART`), an imprint move's (`MOVE`, its outcomes), and each
+    kernel made here because this worker's `computed` lacked its key (`MADE`: the offer, the member, whether the twin made it, its outcomes).
+    `steps`: the counts each offer added (`COUNTS`), the counts before the first offer first; `modes`: the mode each offer was expanded in.
+    `added`: the row, with this worker's kernel ids."""
+
+    COUNTS = ("done", "members", "pairs", "shared_pairs", "refused_pairs", "view_pairs", "kept_pairs", "gap_pairs", "fallbacks", "refusals_shared")
+
+    def __init__(self, builder: "PatternBuilder") -> None:
+        self.builder = builder
+        self.events: list[tuple] = []
+        self.modes: list[tuple[int, tuple]] = []
+        self.marks: list[tuple] = [self._counts()]
+        self.added: list[tuple[int, int]] = []
+        self.made: tuple = ()
+
+    @property
+    def at(self) -> int:
+        """The position of the offer being expanded."""
+        return len(self.marks) - 2
+
+    def _counts(self) -> tuple:
+        b = self.builder
+        s = b.stats
+        done = b.tally.done if b.tally is not None else 0
+        return (done, s.members, s.pairs, s.shared_pairs, s.refused_pairs, s.view_pairs, s.kept_pairs, s.gap_pairs, b.pattern.fallbacks, b.ab.refusals_shared)
+
+    def tick(self, oi: int, inner: bool = False) -> None:
+        """The build's tick in a worker: it asks no net (the parent asks between keys and while it waits), and marks where an offer begins."""
+        if not inner:
+            self.marks.append(self._counts())
+
+    def event(self, kind: int, kid: int, *rest) -> None:
+        self.events.append((self.at, kind, kid, *rest))
+
+    def result(self) -> tuple:
+        marks = [*self.marks, self._counts()]
+        steps = [tuple(b - a for a, b in zip(before, after)) for before, after in zip(marks, marks[1:])]
+        return self.added, self.events, steps, self.modes
+
+
+class _Unpooled(Exception):
+    """In a worker of `_build_ahead`: the key makes something only the parent can number (a relaxed draw's choice nodes); it is left to the parent."""
 
 
 class _Stopped(Exception):
