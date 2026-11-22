@@ -75,7 +75,7 @@ def test_a_grown_model_built_with_workers_is_the_model_of_one_process_and_its_ro
     _same_bound(alone, ahead)
     assert alone.rounds > 1
     assert one.ahead.pools == 0 and one.ahead.taken == 0
-    assert other.ahead.pools >= alone.rounds and other.ahead.taken > 0  # a pool at each pass, and rows taken from it
+    assert other.ahead.pools >= alone.rounds and other.ahead.taken > 0 and other.ahead.left == 0  # a pool at each pass, and rows taken from it
 
 
 def test_a_build_counted_in_pieces_stops_where_one_process_stops_with_workers(world, floors_on, pooled):  # noqa: F811
@@ -97,7 +97,7 @@ def test_a_model_built_at_once_with_workers_is_the_model_of_one_process(world, p
         models.append((builder.extend(pattern_offers(offers)), builder))
     assert _model(models[1][0]) == _model(models[0][0])
     assert _counts(models[1][0].stats) == _counts(models[0][0].stats)
-    assert models[1][1].ahead.taken > 0
+    assert models[1][1].ahead.taken > 0 and models[1][1].ahead.left == 0  # every key sent came back with its row
 
 
 def test_a_pool_that_meets_the_memory_net_is_dropped_and_the_build_goes_on_alone(world, floors_on, pooled, monkeypatch):  # noqa: F811

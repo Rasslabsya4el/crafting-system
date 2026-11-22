@@ -91,6 +91,7 @@ class KeysAhead:
         self.tables: dict[int, dict[int, int]] = {}  # worker pid -> its kernel ids -> this process's, of the kernels taken from it (`_apply`)
         self.fork_grew = 0  # the universe's growth count at the fork (`Pattern.grew`): a worker's rows hold while both are at it
         self.base = 0  # the kernels this process had at the fork: a worker's kernel ids below it are this process's
+        self.keys_base = 0  # and the keys: a worker's key numbers below it are this process's
         self.waited = 0.0
         self.useful = 0.0  # the workers' seconds of the keys this process took from them
         self.forked = False
@@ -98,6 +99,7 @@ class KeysAhead:
         self.pools = 0  # pools forked in this build
         self.taken = 0  # rows taken from the workers (`PatternBuilder._apply`)
         self.sent = 0  # keys sent to them
+        self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
 
     @property
     def open(self) -> bool:
@@ -149,7 +151,7 @@ class KeysAhead:
             return
         builder = self.builder
         self.pool = parallel.WorkerPool(_hold, (builder, self.workers), workers=self.workers)
-        self.fork_grew, self.base = builder.pattern.grew, len(builder.kernels)
+        self.fork_grew, self.base, self.keys_base = builder.pattern.grew, len(builder.kernels), len(builder.keys)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -204,6 +206,8 @@ class KeysAhead:
             for k, row in made:
                 if row is not None:
                     self.memo[k] = (pid, row)
+                else:
+                    self.left += 1
 
     def _drop(self) -> None:
         pool, self.pool = self.pool, None

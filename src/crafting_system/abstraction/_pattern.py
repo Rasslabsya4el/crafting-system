@@ -1849,9 +1849,21 @@ class PatternBuilder:
         self.start_id = self._intern(self.start)
 
     def _intern(self, state: CompressedState) -> int:
+        return self._intern_key(self.pattern.key(state), state)
+
+    def _intern_out(self, state: CompressedState, outs: list, chance) -> int:
+        """In a worker of `_build_ahead`: `_intern`, and the outcome noted for the parent: a key it had at the fork by its number, another by
+        itself and whether it is a goal (the parent numbers it), and a ruined key by itself (the parent sends it to its ruined state)."""
         key = self.pattern.key(state)
+        j = self._intern_key(key, state)
+        outs.append((j if j < self.ahead.keys_base and j != self.ruined else (key, j != self.ruined and self.goal[j]), chance))
+        return j
+
+    def _intern_key(self, key: "PatternKey", state: CompressedState | None = None, goal: bool | None = None) -> int:
+        """The number of `key`, a key read off `state` (or one that is a goal or not, `goal`): a new key is added, a ruined one is sent to the ruined state."""
         found = self.index.get(key)
-        if found is None and self.ruin is not None and self.keys and self.ruin(key) and not self.ab.is_goal(state):
+        is_goal = (lambda: self.ab.is_goal(state)) if goal is None else (lambda: goal)
+        if found is None and self.ruin is not None and self.keys and self.ruin(key) and not is_goal():
             self.stats.ruined_keys += 1  # one state for every ruined key, never worked out (module docstring, "The ruined keys")
             if self.ruined is not None:
                 found = self.index[key] = self.ruined
@@ -1865,7 +1877,7 @@ class PatternBuilder:
         if found is None:
             found = self.index[key] = len(self.keys)
             self.keys.append(key)
-            self.goal.append(self.ab.is_goal(state))
+            self.goal.append(is_goal())
             self.rows.append()
             self.expanded.append(False)
             if self.max_keys is not None and len(self.keys) > self.max_keys:
@@ -2015,8 +2027,13 @@ class PatternBuilder:
                 )
 
         while i < len(self.keys):
-            if self.stop is not None and (reason := self.stop()) is not None:
-                return reason
+            # the net at every key; while the keys' pool is open, on the clock once a poll as `tick` asks it: it reads the workers' memory too
+            # (#1384: asked at every key it took 43% of this process's time on R13 with six workers)
+            if self.stop is not None and (self.tally is not None or not self.ahead.open or (now := time.perf_counter()) - polled >= POLL_SECONDS):
+                if self.ahead.open and self.tally is None:
+                    polled = now
+                if (reason := self.stop()) is not None:
+                    return reason
             if isinstance(self.keys[i], ChoiceNode):  # a node of a relaxed draw: its rows were made with it
                 self.expanded[i] = True
                 i += 1
@@ -2256,20 +2273,19 @@ class PatternBuilder:
                     stats.kernels += 1
                     if lumped:
                         pattern.note_lumped()
-                    if rec is not None:
-                        rec.made = (oi, member, lumped, list(exact.items()))
                     pushed: dict[int, Fraction] = defaultdict(Fraction)
+                    outs = [] if rec is not None else None  # in a worker: the outcomes as the parent numbers them (`_intern_out`)
                     for successor, chance in exact.items():
                         if not lumped:  # a lumped outcome holds no slot the universe lacks (`LUMP_ERASING`), and its kinds are the twin's
                             pattern.note(successor)
-                        pushed[self._intern(successor)] += chance
+                        pushed[self._intern(successor) if outs is None else self._intern_out(successor, outs, chance)] += chance
                     if self.approximate:
                         pushed = _lowered(pushed)
                     if self.parts_of != self.computed.generation:  # the keys that held the parts are going: the parts go with them (#1335)
                         self.parts, self.parts_of = {}, self.computed.generation
                     kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
                     if rec is not None:
-                        rec.event(MADE, kid, *rec.made)
+                        rec.event(MADE, kid, oi, member, lumped, outs)
                 if view is not None:
                     by_view[view] = kid
                 if kid not in seen:
@@ -2353,7 +2369,7 @@ class PatternBuilder:
         passed, and a kernel the worker made is made again here only where this process has none of its kernel key."""
         pid, (added, events, steps, modes) = made
         ahead = self.ahead
-        if self.pattern.grew != ahead.fork_grew:  # this process's universe grew since the fork: the workers' members are not its own
+        if self.pattern.grew != ahead.fork_grew or len(steps) != len(given) + 1:  # this process's universe grew since the fork: the workers' members are not its own
             return False
         table = ahead.tables.setdefault(pid, {})
         base = ahead.base
@@ -2402,32 +2418,32 @@ class PatternBuilder:
             return _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})
         pattern, stats = self.pattern, self.stats
         if kind == MOVE:
-            (items,) = rest
+            (outs,) = rest
             stats.kernels += 1
-            pushed: dict[int, Fraction] = defaultdict(Fraction)
-            for successor, chance in items:
-                pattern.note(successor)
-                pushed[self._intern(successor)] += chance
-            return _kernel_id(self.kernel_ids, self.kernels, pushed)
-        oi, member, lumped, items = rest
+            return _kernel_id(self.kernel_ids, self.kernels, self._outcomes(outs))
+        oi, member, _lumped, items = rest
         ck = self.ab.kernel_key(member, self.offers[oi].action)  # this process's own key: a key names the abstraction's numbers (`_pool_types`)
         kid = self.computed.get(ck)
         if kid is not None:  # a kernel this process had: `_offers_of_key` would have taken it here
             return kid
         stats.kernels += 1
-        if lumped:  # its slots: the worker's universe did not grow, and it is this process's (`_apply`), so `note_lumped` would add none
-            pass
-        pushed = defaultdict(Fraction)
-        for successor, chance in items:
-            if not lumped:
-                pattern.note(successor)
-            pushed[self._intern(successor)] += chance
+        pushed = self._outcomes(items)
         if self.approximate:
             pushed = _lowered(pushed)
         if self.parts_of != self.computed.generation:
             self.parts, self.parts_of = {}, self.computed.generation
         kid = self.computed[_shared_parts(self.parts, ck) if SHARE_KEY_PARTS else ck] = _kernel_id(self.kernel_ids, self.kernels, pushed)
         return kid
+
+    def _outcomes(self, outs: list) -> dict[int, Fraction]:
+        """A worker's outcomes of a kernel (`_intern_out`) pushed onto this process's keys, the keys new here numbered in the order the worker met
+        them, as `_offers_of_key` numbers them. Nothing is noted in the universe: the worker noted each outcome on a universe that did not grow
+        and is this process's (`_apply`), so every slot is in it, and a kernel of the twin is not noted (its `note_lumped` adds none here, by the
+        same argument)."""
+        pushed: dict[int, Fraction] = defaultdict(Fraction)
+        for ref, chance in outs:
+            pushed[ref if isinstance(ref, int) else self._intern_key(ref[0], goal=ref[1])] += chance
+        return pushed
 
     def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
         """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does
@@ -2520,12 +2536,13 @@ class PatternBuilder:
             raise _gap(offer, key, gap) from gap
         stats.kernels += 1
         pushed: dict[int, Fraction] = defaultdict(Fraction)
+        outs = [] if self.recording is not None else None
         for successor, chance in exact.items():
             pattern.note(successor)
-            pushed[self._intern(successor)] += chance
+            pushed[self._intern(successor) if outs is None else self._intern_out(successor, outs, chance)] += chance
         kid = _kernel_id(self.kernel_ids, self.kernels, pushed)
         if self.recording is not None:
-            self.recording.event(MOVE, kid, list(exact.items()))
+            self.recording.event(MOVE, kid, outs)
         return kid
 
 
@@ -2570,7 +2587,6 @@ class _Recorder:
         self.modes: list[tuple[int, tuple]] = []
         self.marks: list[tuple] = [self._counts()]
         self.added: list[tuple[int, int]] = []
-        self.made: tuple = ()
 
     @property
     def at(self) -> int:
