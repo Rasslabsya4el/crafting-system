@@ -186,10 +186,9 @@ class KeysAhead:
         per_key = self.spent / self.keys
         fork = FORK_PRIOR if self.fork is None else self.fork
         lost = self.lost / self.lost_keys if self.lost_keys else 0.0
-        # what this process spends to take a worker's row (its kernels made again: on R17's keys of 100,000 kernels, about what one
-        # process spends to make the row, #1384)
-        replay = self.replay / self.replayed if self.replayed else 0.0
-        return (per_key * (1.0 - 1.0 / self.count) - replay) * left > fork * self.count + lost * left
+        # (what taking a worker's row costs here is asked of each pool once a window of its rows was taken, `_idle`: a figure of the whole
+        # build kept pools from R04's later passes, whose rows cost little, after model 2's new keys, whose rows cost more)
+        return per_key * left * (1.0 - 1.0 / self.count) > fork * self.count + lost * left
 
     def _fork(self, i: int) -> None:
         net = parallel.active_memory_net()
