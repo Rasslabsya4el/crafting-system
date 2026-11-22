@@ -211,3 +211,25 @@ def test_a_growing_builder_forks_a_pool_a_pass_and_closes_it_at_the_pass_end(wor
         models.append((first, second))
     for one, other in zip(*models):
         assert _model(other) == _model(one)
+
+
+def test_a_net_reached_only_with_the_workers_alive_stops_the_workers_and_not_the_build(world, pooled, monkeypatch):  # noqa: F811
+    # The build's net reads the workers' memory too: where it is reached with a pool open, the pool goes (one worker fewer next time) and
+    # the net is asked again (R17: a bound one process built whole was stopped at 12,543 MB with six workers beside it, #1384)
+    from crafting_system.abstraction import _pattern
+
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)  # the net asked at every key and offer, never on the clock's pace
+    offers = pattern_offers(world[2])
+    built = []
+
+    def stop():
+        return "the process held 13,000 MB, the limit is 12,288 MB" if built and built[0].ahead.open else None
+
+    fresh = abstraction()
+    alone = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=1).extend(offers)
+    fresh = abstraction()
+    builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=3, stop=stop)
+    built.append(builder)
+    model = builder.extend(offers)
+    assert model.stopped is None and _model(model) == _model(alone)
+    assert builder.ahead.pools >= 1 and builder.ahead.count < 3

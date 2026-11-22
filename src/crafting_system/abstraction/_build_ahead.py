@@ -197,8 +197,8 @@ class KeysAhead:
         except (parallel.MemoryNetReached, budget.BudgetExceeded) as reached:  # the workers' memory passed the net (or the run's net was met):
             self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
             return
-        except parallel.Stopped:  # the build's net was met while waiting: this process goes on alone and meets it itself
-            self._drop()
+        except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): stopped as in `asked`
+            self._cut(f"the build's net was reached with the workers alive: {reached}")
             return
         except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
             self._stop(f"the pool of the keys failed: {failed!r}")
@@ -213,6 +213,16 @@ class KeysAhead:
                     self.memo[k] = (pid, row)
                 else:
                     self.left += 1
+
+    def asked(self, stop) -> str | None:
+        """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first (one
+        worker fewer next time, `_cut`) and the net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the
+        one process built whole was stopped at 12,543 MB with six workers beside it, #1384)."""
+        reason = stop()
+        if reason is not None and self.pool is not None:
+            self._cut(f"the build's net was reached with the workers alive: {reason}")
+            reason = stop()
+        return reason
 
     def _cut(self, reason: str) -> None:
         """A pool met the memory net: the next forks one worker fewer, and below two none forks again in this build. A worker's own memory is

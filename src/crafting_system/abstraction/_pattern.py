@@ -2033,7 +2033,7 @@ class PatternBuilder:
                     return
                 polled = now
             if self.stop is not None:
-                reason = self.stop()
+                reason = self.ahead.asked(self.stop)
                 if reason is not None:
                     raise _Stopped(reason)
             if progress is not None and now - last >= 30:
@@ -2048,7 +2048,7 @@ class PatternBuilder:
             if self.stop is not None and (self.tally is not None or not self.ahead.open or (now := time.perf_counter()) - polled >= POLL_SECONDS):
                 if self.ahead.open and self.tally is None:
                     polled = now
-                if (reason := self.stop()) is not None:
+                if (reason := self.ahead.asked(self.stop)) is not None:
                     return reason
             if isinstance(self.keys[i], ChoiceNode):  # a node of a relaxed draw: its rows were made with it
                 self.expanded[i] = True
