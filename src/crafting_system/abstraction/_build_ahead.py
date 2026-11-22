@@ -106,6 +106,7 @@ class KeysAhead:
         self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
         self.renew = False  # the workers grew past their share of the room: the pool is closed once its windows are in (`_grown`)
         self.renewed = 0  # pools closed so (each forked again from this process)
+        self.scale = 1.0  # the windows' share of their size by the pace (`_size`): halved each time workers grew past half the room within one
         self.gathered = 0
 
     @property
@@ -185,7 +186,7 @@ class KeysAhead:
         per_key = self.spent / self.keys if self.keys else None
         if per_key is None or per_key <= 0.0:
             return least
-        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.count / per_key)))
+        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.count / per_key * self.scale)))
 
     def _send(self, i: int) -> bool:
         builder = self.builder
@@ -224,7 +225,12 @@ class KeysAhead:
             self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
             return
         except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): stopped as in `asked`
-            if str(reached) == GROWN and self.gathered:  # the workers grew past half the room: let go now, with the window in flight (`_fill`)
+            if str(reached) == GROWN and (self.gathered or self._size() > self.count * CHUNKS):
+                # the workers grew past half the room: let go now, with the window in flight (`_fill`); grown so before a window came back, the
+                # windows are halved (R17: six workers grew past half the room within one window, pool after pool), and the pool is cut only
+                # once a window is its least, a chunk of one key for each worker
+                if not self.gathered:
+                    self.scale /= 2
                 self.pool = None  # (the pool's workers were killed by the wait)
                 self.pending.clear()
                 self._renewed()
