@@ -546,3 +546,21 @@ bound built: 67,855 keys (67,855 expanded), 21 of 21 offers in the model, start 
   error: no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start)
 exit 0 end 13:39:26 load 8.91
 keys found 67,695 expanded 63,088 kernels 74,357 members 2,605,309
+=== PL3-R24
+start 13:46:00 load 7.92 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence 
+TRACE ONLY: 21 of 10955 offers kept; labels not found: []
+bound built: 36,974 keys (36,974 expanded), 19 of 19 offers in the model, start value 12519.265088055266 (187 s)
+stop: the plan costs at most 14472.391765814904, no plan costs less than 14387.31024550786: proved within 1.000%
+bound built: 69,271 keys (69,271 expanded), 22 of 22 offers in the model, start value 2455.005024202002 (272 s)
+stop: the plan costs at most 2491.526755089466, no plan costs less than 2467.7483420815297: proved within 1.000%
+TRACE PLAN made in 1827.1 s: mean_remaining 2,491.5266
+TRACE STEP 2: Deafening Essence of Torment | uses 560.01 | 1,131.23 c | items 4568 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill
+TRACE STEP 5: Benchcraft: Suffixes Cannot Be Changed | uses 3.10 | 1,094.91 c | items 33 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+TRACE STEP 3: Orb of Annulment | uses 12.01 | 152.95 c | items 597 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+TRACE STEP 6: Veiled Chaos Orb | uses 3.10 | 57.29 c | items 33 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+TRACE STEP 4: Exalted Orb | uses 40.55 | 55.14 c | items 168 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+TRACE STEP 10: Restart: buy Murder Boots, item level 86-100, fractured +(69-73) to maximum Mana again | uses 0.00 | 0.01 c | items 6 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKi
+TRACE STEP 7: Unveil | uses 3.07 | 0.00 c | items 21 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+TRACE STEP 8: Pick 1 | uses 2.00 | 0.00 c | items 51 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+TRACE STEP 9: Pick 3 | uses 1.07 | 0.00 c | items 66 | rare; fractured +# to maximum Mana; has family IncreasedMana, mod IncreasedMana12; lacks family MovementVelocity, mod JunMasterVeiledMovementVelocityAndOnslaughtOnKill; has family ReducedShockChance, 
+exit 0 end 14:16:54 load 3.01
