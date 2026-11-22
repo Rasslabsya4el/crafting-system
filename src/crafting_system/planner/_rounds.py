@@ -22,7 +22,8 @@ and e10: the same R04 methods give 32,192.94 c on 7 offers, 898,973,434,471 c on
   completes searches and its family is **accepted**: it stays in every later step, whether its plan was cheaper or not. A step that began
   with a plan in hand and whose build did not complete is **undone** with no search (`_envelope.Incomplete`): the offers accepted before it
   stand, and its family is named in the answer as not finished. A step with no plan in hand searches on the bound it has, its first
-  plan's chain past its share if it must (the answer must hold a plan, OR-33): a plan its search makes on a stopped bound is kept when it is the cheapest, said to be unproved, and the step is undone
+  plan's chain past its share if it must, bounded only by the run's net (OR-33: the answer must hold a plan; a step before the first plan may
+  so take what is left, #1401): a plan its search makes on a stopped bound is kept when it is the cheapest, said to be unproved, and the step is undone
   all the same. The seed is the base of every later step whatever its end. A step stopped by its share, or refused, is undone too. Time a step
   does not use goes to the steps after it.
 * **A family that cannot beat the plan in hand is set aside** (#1080, #1091, #1097): a step that began with a plan in hand and ended beaten,
@@ -48,7 +49,7 @@ and e10: the same R04 methods give 32,192.94 c on 7 offers, 898,973,434,471 c on
   A main tree whose every benchmark route has one step never enters the steps.
 
 Dropped with the rounds of one kind (#1276, the note's section 5): the groups ordered by features, a round with no plan in hand taking all the
-time left (#1268), `Share`'s give-way, the floors' order pass (#1135, #1241), the late room of a nearly done build (#1135, #1175, #1176, #1180),
+time left for its build and search (#1268; only the first plan's chain keeps it, above), `Share`'s give-way, the floors' order pass (#1135, #1241), the late room of a nearly done build (#1135, #1175, #1176, #1180),
 the quarter of a round's build (#1099), the two-refusals rule (#1088) and the closing round's share (#1095, #1149): each is replaced by the step
 accepted or undone by its build, its share of the time left, and the one second pass.
 """
