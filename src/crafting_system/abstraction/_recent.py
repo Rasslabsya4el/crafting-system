@@ -40,7 +40,7 @@ _MISSING = object()
 class Recent(Generic[V]):
     """A dict-like memo of the entries written or read in the last `size` to `2 * size` writes (module docstring)."""
 
-    __slots__ = ("size", "young", "old", "generation", "dropped", "weigh", "weight")
+    __slots__ = ("size", "young", "old", "generation", "dropped", "weigh", "weight", "refresh")
 
     def __init__(self, size: "int | Callable[[], int]", weigh: Callable[[V], int] | None = None) -> None:
         if not callable(size) and size < 1:
@@ -52,6 +52,7 @@ class Recent(Generic[V]):
         self.weight = 0  # the weight written into the young generation: it is full at `size`
         self.generation = 0  # how many times the old generation was let go
         self.dropped = 0  # how many entries were let go
+        self.refresh = True  # an entry read from the old generation is written into the young one (a forked worker's copy does not, `_build_ahead`)
 
     def get(self, key: Hashable, default=None):
         found = self.young.get(key, _MISSING)
@@ -60,7 +61,8 @@ class Recent(Generic[V]):
         found = self.old.get(key, _MISSING)
         if found is _MISSING:
             return default
-        self[key] = found  # asked again: it stays one generation more
+        if self.refresh:
+            self[key] = found  # asked again: it stays one generation more
         return found
 
     def __getitem__(self, key: Hashable) -> V:

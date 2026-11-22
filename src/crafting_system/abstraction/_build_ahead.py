@@ -30,9 +30,12 @@ per worker, cut in `CHUNKS` chunks per worker; two windows are in flight while t
 route (OR-12): the worker count and the memory net are the machine's settings (OR-40). The rule decides only when work is done, never a result.
 
 Memory. The workers are forked: they share this process's pages until they write them (`parallel.WorkerPool` freezes the objects for the fork,
-#1345), and what they make is their own. Each worker's memos (`computed`, the members kept, the members' feasibility, the label distributions)
-keep `1/workers` of the share of the net this process's memos keep, so the pool's memos hold the share one process holds; what comes back is
-the rows and the outcomes of the kernels made, never a memo. The wait on the workers reads this process's and their memory against the run's
+#1345), and what they make is their own. A worker's memos (`computed`, the members kept, the members' feasibility, the label distributions)
+keep what they held at the fork and grow only by what that worker makes (`Recent.refresh` off: an entry read is not written again, so the
+reads of a pass never push out what the fork gave). A pass's workers together make about what one process makes in that pass, each its
+share of the keys, and the pool closes at the pass end; what comes back is the rows and the outcomes of the kernels made, never a memo. (With
+each memo cut to `1/workers` of its size, the reads of a pass pushed the inherited entries out: on R04's spread pass of model 10, 229 s with
+six workers where one process took 123 s, its kernels made again.) The wait on the workers reads this process's and their memory against the run's
 net (`parallel.WorkerPool.gather`); once it is reached the workers are stopped and no pool forks again in this build.
 """
 
@@ -42,7 +45,6 @@ from concurrent.futures import Future
 
 from crafting_system import budget, parallel
 
-from ._recent import FEWEST_KEPT, Recent
 
 CHUNKS = 4  # the chunks of a window per worker: a slow chunk holds one worker for a part of the window (speed only, never a result)
 WINDOW = 4  # the polls of work per worker a window holds (`POLL_SECONDS` of `_pattern`): the nets are asked between two windows too
@@ -52,18 +54,10 @@ ALWAYS = False  # a pool at every pass with keys to send, whatever the measures 
 
 
 def _hold(builder: object, workers: int) -> object:
-    """In a worker, once: its memos keep `1/workers` of what this process's keep (the module's note)."""
+    """In a worker, once: its memos keep what they held at the fork, and grow only by what this worker makes (the module's note)."""
     for memo in builder.memos():
-        _share(memo, workers)
+        memo.refresh = False
     return builder
-
-
-def _share(memo: Recent, workers: int) -> None:
-    size = memo.size
-    if callable(size):
-        memo.size = lambda size=size: max(FEWEST_KEPT, size() // workers)
-    else:
-        memo.size = max(FEWEST_KEPT, size // workers)
 
 
 def _rows(tasks: list[tuple]) -> tuple[int, list[tuple[int, tuple | None]], float]:

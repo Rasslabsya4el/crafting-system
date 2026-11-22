@@ -2313,7 +2313,8 @@ class PatternBuilder:
         self.rows.extend(i, added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
 
     def memos(self) -> list[Recent]:
-        """The memos a worker of `_build_ahead` keeps a share of: the kernel keys, the members kept and their feasibility, the distributions."""
+        """The memos a worker of `_build_ahead` keeps as the fork gave them (`Recent.refresh` off): the kernel keys, the members kept and their
+        feasibility, the distributions."""
         found = [self.computed, self.members_kept, self.pattern._feasible]
         for ab in (self.ab, self.pattern._twin):
             if ab is not None:

@@ -170,3 +170,18 @@ def test_a_bound_that_begins_again_on_a_grown_universe_with_its_keys_members_let
         assert float(by_grown[grown.index[key]]) == pytest.approx(float(by_whole[k]), rel=1e-9), key
     if lists is not None:
         assert builder.members_kept.generation > 0  # lists were let go
+
+
+def test_a_memo_that_does_not_refresh_keeps_what_it_held_until_its_own_writes_fill_a_generation():
+    # a forked worker's memos (`_build_ahead`): the reads of a pass do not push out what the fork gave them (#1384)
+    from crafting_system.abstraction._recent import Recent
+
+    memo = Recent(4)
+    for key in range(6):
+        memo[key] = key  # 0..3 rotated into the old generation, 4 and 5 young
+    memo.refresh = False
+    for _ in range(10):
+        assert memo.get(0) == 0  # read again and again, never written: nothing rotates
+    assert memo.generation == 1 and 0 in memo
+    memo[6], memo[7] = 6, 7  # its own writes fill the young generation: the old one goes
+    assert 0 not in memo and memo.get(4) == 4
