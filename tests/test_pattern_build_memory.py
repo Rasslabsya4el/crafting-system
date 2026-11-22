@@ -39,6 +39,7 @@ def test_a_memo_keeps_what_was_used_in_the_last_generation():
     memo["a"] = 1
     memo["b"] = 2  # the young generation is full: it becomes the old one
     assert memo.generation == 1 and memo.get("a") == 1  # read from the old generation: written into the young one again
+    assert len(memo) == 3 and memo.distinct() == 2  # "a" is in both generations: held twice, one key (`Abstraction.memo_count`, #1366)
     memo["c"] = 3  # full again: "b", read in no generation since, is let go with the old one
     assert "a" in memo and "c" in memo and "b" not in memo and memo.get("b") is None
     assert memo.generation == 2 and memo.dropped == 2  # "a" and "b" were in the old generation; "a" stays in the young one

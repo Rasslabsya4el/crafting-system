@@ -63,6 +63,7 @@ from crafting_system.items.words import base_words, mod_words, mod_words_of
 from ._gaps import ModelGaps, Prunings
 from ._goal import Goal, Status
 from ._inputs import input_kernel
+from ._recent import Recent, kept_entries
 from ._kinds import GENERIC_PLACEHOLDER_IDS, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, Kinds, TypeNumbers, base_kind, held_families, protected_tags, unraised
 from ._rolls import Cells, RollLaw, implicit_roll_law, implicit_values_for, is_rollable, multinomial, roll_law
 from ._state import (
@@ -129,6 +130,25 @@ SHARED_PAIRS = 4_096  # the prepared pairs kept from state to state (`Abstractio
 # of a cache, the same for every route: a pair holds an item, its splits and, for each part, a tuple of the families of its pool. Those are the
 # families of the pool table (`actions.pool._Table`), shared by every pair, unless the action reweighs the pool (a fossil set), which makes about
 # 120 small objects a part: some kilobytes to some tens of kilobytes a pair, so at most a few hundred megabytes at the cap
+
+DISTRIBUTION_SHARE, DISTRIBUTION_BYTES = 1 / 16, 500  # each of the label distributions' memos (`_cache`, `_expanded`) may hold this share of the
+# memory net, in outcomes of about this many bytes (`_recent.kept_entries`, #1366). R04's first plan, on main 8a350184 (`.claude/scratch/t1366/p6-R04`):
+# the walk made the kernels of the fossil sets at its chain's states, and the two memos grew by about 1 KB an outcome (3.3 million outcomes,
+# 635 distributions after 296 kernels; a Tangled Fossil set adds about 169 distributions of 650,000 outcomes) until the 12 GB net cut the chain.
+# Kept whole, they grow with every state the search reads; a distribution let go is made again when it is asked again, the same.
+# A search counted in states (#1105) counts the outcomes of a distribution each time it is made, a remake too: where such a run stops may then
+# depend on the net, a setting of the machine, as with `_pattern.LISTS_SHARE`; below a generation (about 800,000 outcomes at a 12 GB net) nothing is
+# remade and the count is the count of a whole memo.
+DISTRIBUTIONS_KEPT: int | None = None  # a generation of each, in outcomes, set by hand (the tests); None: from the net
+
+
+def _distributions_kept() -> int:
+    return DISTRIBUTIONS_KEPT or kept_entries(DISTRIBUTION_SHARE, DISTRIBUTION_BYTES)
+
+
+def _distribution_memo() -> Recent:
+    """A memo of label distributions keyed by pool signature, weighed by their outcomes, its generation a share of the net when it is written."""
+    return Recent(_distributions_kept, weigh=len)
 
 
 class _View(NamedTuple):
@@ -335,9 +355,9 @@ class Abstraction:
         self.project = True  # False: every action is prepared on the whole state (the reference the projection is tested against)
         self.outcome_calls = 0  # how many times an action was asked for its outcomes (`_outcomes`)
         self._has_partners: bool | None = None  # whether the pool of an empty rare item has a family with mods on both sides
-        self._cache: dict[Hashable, dict[Hashable, Fraction]] = {}
+        self._cache: Recent[dict[Hashable, Fraction]] = _distribution_memo()  # signature -> its label distribution, the ones read lately (#1366)
         self._input_kernels: dict[Hashable, dict[CompressedState, Fraction]] = {}  # the kernels averaged over the names of an input (`_inputs.py`)
-        self._expanded: dict[Hashable, Expanded] = {}
+        self._expanded: Recent[Expanded] = _distribution_memo()  # signature -> that distribution in state terms, the ones read lately (#1366)
         self._types_of: dict[tuple, tuple[object, int]] = {}  # (id of a pool family, tag, influences, blocked tags, lucky) -> (the family, the number of its type)
         self._type_numbers: dict[FamilyType, int] = {}  # a family type -> its number in the pool signatures of this abstraction
         self._signatures: dict[Hashable, Hashable] = {}  # one object per equal pool signature, so a lookup by it is an identity hit
@@ -348,7 +368,7 @@ class Abstraction:
         self._unrolled: set[Hashable] = set()  # signatures of fracturing pools that hold no rollable mod
         self._kernels = 0
         self._hits = 0
-        self._approx: tuple[dict, dict, dict, dict] = ({}, {}, {}, {})  # the caches of the distributions made in floats (`approximate`)
+        self._approx: tuple = (_distribution_memo(), _distribution_memo(), {}, {})  # the caches of the distributions made in floats (`approximate`)
 
     @contextmanager
     def approximate(self):
@@ -1509,7 +1529,7 @@ class Abstraction:
 
     def memo_count(self) -> int:
         """How many label distributions this abstraction keeps, exact and in floats (`_cache`): what `release_memos` drops."""
-        return len(self._cache) + len(self._approx[0])
+        return sum(memo.distinct() if isinstance(memo, Recent) else len(memo) for memo in (self._cache, self._approx[0]))
 
     def release_memos(self) -> int:
         """Drop every memo of the kernels: the prepared pairs (`release_prepared`), the label distributions and their reading in state terms

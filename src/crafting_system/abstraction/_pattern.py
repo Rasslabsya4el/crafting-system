@@ -349,6 +349,8 @@ from itertools import product
 from math import gcd, lcm
 from typing import NamedTuple
 
+import numpy as np
+
 from crafting_system import budget
 from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, Action, NotApplicableError, OutOfScopeError, Reads, allowed_by_tags, partners
 from crafting_system.data import Mod
@@ -360,6 +362,7 @@ from ._kernel import Abstraction
 from ._relaxed import ChoiceNode, relaxed_draw
 from ._kinds import ALIKE, MOD_PREFIX, TYPE_PREFIX, UNVEILED_PREFIX, held_families, kind_families, kind_tags, protected_tags
 from ._rolls import is_rollable
+from ._packed_rows import Held, Rows, RowStore
 from ._recent import Recent, kept_entries
 from ._state import CompressedState, Slot, best_of
 
@@ -754,13 +757,13 @@ class PatternModel:
 
     keys: list[PatternKey]
     goal: list[bool]
-    actions: list[list[tuple[int, int]]]
+    actions: Rows  # packed (`_packed_rows`, #1366): `actions[k]` is the list of `(offer index, kernel id)` of key `k`
     kernels: list[tuple[tuple[int, ...], tuple[int, ...]]]  # (successor keys, integer weights)
     stats: PatternStats
     index: dict[PatternKey, int]
     expanded: list[bool] = field(default_factory=list)  # key -> whether its actions were built; a key the build did not reach is a tip (no actions, not a dead end)
     stopped: str | None = None  # why the build ended before every key was expanded (a net), None for a complete model
-    narrow: dict[int, frozenset[int]] = field(default_factory=dict)  # an offer built at some keys only (#1325): offer index -> those keys; at any other key it is not built
+    narrow: Held = field(default_factory=Held)  # an offer built at some keys only (#1325): offer index -> those keys (sorted, `_packed_rows.Held`); at any other key it is not built
     ruined: int | None = None  # the number of the one state of every ruined key (`Ruin`, #1367): `index` sends each of them to it; its row is the restart alone, and `keys` holds the first met
 
 
@@ -1816,7 +1819,7 @@ class PatternBuilder:
         self.index: dict[PatternKey, int] = {}
         self.keys: list[PatternKey] = []
         self.goal: list[bool] = []
-        self.rows: list[list[tuple[int, int]]] = []
+        self.rows = RowStore()  # key number -> its actions, packed (`_packed_rows`, #1366)
         self.expanded: list[bool] = []
         self.kernel_ids: dict[tuple, int] = {}
         self.kernels: list[tuple[tuple[int, ...], tuple[int, ...]]] = []
@@ -1826,9 +1829,8 @@ class PatternBuilder:
         self.gaps: dict = {}  # (key, offer index) -> whether no member of the key can take the action (see `_gap_everywhere`)
         self.done = 0  # the number of offers every expanded key has been given (each built there unless it is held at some keys only)
         self.wide: list[int] = []  # the offers built at every key, in order
-        self.narrow: dict[int, set[int]] = {}  # an offer built only at some keys (#1325): offer number -> the numbers of those keys
-        self.at_key: dict[int, list[int]] = {}  # key number -> the offers held at it only (`narrow`)
-        self.pending: dict[int, list[int]] = {}  # an expanded key -> the offers of `narrow` it is to be given at the next pass
+        self.narrow = Held()  # an offer built only at some keys (#1325): offer number -> the numbers of those keys (and by key: `Held.offers_at`)
+        self.pending = Held()  # the offers of `narrow` an expanded key is to be given at the next pass, by offer (a pass gives them all)
         # (key number, the times it was made again, policy) -> the key's members of the policy, of the keys expanded lately (#1341). Kept whole, they held
         # 3,515 MB of R04's 1,245-offer bound once its 625,547 keys were expanded, the most of any part, where the offers that join later are built
         # at a few thousand keys. A list let go is made again where an offer is built at its key later: the same members, so the same model.
@@ -1851,14 +1853,14 @@ class PatternBuilder:
             self.ruined = self.index[key] = len(self.keys)
             self.keys.append(key)
             self.goal.append(False)
-            self.rows.append([])
+            self.rows.append()
             self.expanded.append(False)
             return self.ruined
         if found is None:
             found = self.index[key] = len(self.keys)
             self.keys.append(key)
             self.goal.append(self.ab.is_goal(state))
-            self.rows.append([])
+            self.rows.append()
             self.expanded.append(False)
             if self.max_keys is not None and len(self.keys) > self.max_keys:
                 raise RuntimeError(f"more than {self.max_keys} keys")
@@ -1895,7 +1897,7 @@ class PatternBuilder:
                 self.dead = True
                 if self.pattern.grew:
                     self.expanded = [False] * len(self.keys)
-                    self.rows = [[] for _ in self.keys]
+                    self.rows = RowStore(len(self.keys))
                 return self._snapshot(stopped)
             if not self.pattern.grew:
                 return self._snapshot(None)
@@ -1904,32 +1906,28 @@ class PatternBuilder:
 
     def _place(self, first: int, at, spread) -> None:
         """Record where the offers from number `first` on are built (`extend`), and give each expanded key the ones it is to be given."""
+        expanded = np.fromiter(self.expanded, dtype=bool, count=len(self.expanded))
         for n, oi in enumerate(range(first, len(self.offers))):
             keys = None if at is None else at[n]
             if keys is None:
                 self.wide.append(oi)
             else:
-                self.narrow[oi] = set()
-                self._hold(oi, keys)
+                self._hold(oi, keys, expanded)
         for oi, keys in (spread or {}).items():
-            self._hold(oi, keys)
+            self._hold(oi, keys, expanded)
 
-    def _hold(self, oi: int, keys: Iterable[int]) -> None:
-        holders = self.narrow[oi]
-        for k in keys:
-            if k in holders:
-                continue
-            holders.add(k)
-            self.at_key.setdefault(k, []).append(oi)
-            if self.expanded[k]:
-                self.pending.setdefault(k, []).append(oi)
+    def _hold(self, oi: int, keys: Iterable[int], expanded: np.ndarray) -> None:
+        """Hold offer number `oi` at `keys` too; an expanded key among the new ones is to be given it at the next pass."""
+        fresh = self.narrow.add(oi, keys)
+        if len(fresh):
+            self.pending.add(oi, fresh[expanded[fresh]])
 
     def _given(self, i: int) -> list[int]:
         """The offers key number `i` is to be given at this pass: all it holds when it is not expanded, else the ones added since."""
         if not self.expanded[i]:
-            return sorted([*self.wide, *self.at_key.get(i, ())]) if self.narrow else self.wide
+            return sorted([*self.wide, *self.narrow.offers_at(i).tolist()]) if self.narrow else self.wide
         new = self.wide[bisect_left(self.wide, self.done) :]
-        pending = self.pending.get(i)
+        pending = self.pending.offers_at(i).tolist() if self.pending else None
         return sorted([*new, *pending]) if pending else new
 
     def _begin_again(self) -> None:
@@ -1941,10 +1939,9 @@ class PatternBuilder:
         }
         self.relaxed = {}  # a relaxed draw reads the universe's classes: the keys made again make theirs again
         for i in again:
-            self.rows[i] = []
-            self.expanded[i] = False
+            self.rows.clear(i)
+            self.expanded[i] = False  # made again from the start: it is given all it holds (`_given`), whatever it has pending
             self.remade[i] = self.remade.get(i, 0) + 1  # its lists kept go stale: they age out of `members_kept`
-            self.pending.pop(i, None)  # made again from the start: it is given all it holds
         keys = {self.keys[i] for i in again}
         self.gaps = {found: value for found, value in self.gaps.items() if found[0] not in keys}
         self.stats.restarted_keys += len(again)
@@ -1957,13 +1954,14 @@ class PatternBuilder:
         stats.goal_keys = sum(self.goal)
         stats.fallbacks = self.pattern.fallbacks
         stats.universe_growth = self.restarts
-        stats.abstract_actions = sum(len(row) for row in self.rows)
-        stats.abstract_edges = sum(len(self.kernels[kid][0]) for row in self.rows for _, kid in row)
+        rows = self.rows.frozen()
+        stats.abstract_actions = rows.entries
+        sizes = np.fromiter((len(successors) for successors, _ in self.kernels), dtype=np.int64, count=len(self.kernels))
+        stats.abstract_edges = int(sizes[rows.kernel].sum()) if rows.entries else 0
         stats.seconds = time.perf_counter() - self.began
         stats.modes = Counter(self.stats.modes)
         return PatternModel(
-            list(self.keys), list(self.goal), [list(row) for row in self.rows], list(self.kernels), stats, dict(self.index), list(self.expanded), stopped,
-            {oi: frozenset(keys) for oi, keys in self.narrow.items()}, self.ruined,
+            list(self.keys), list(self.goal), rows, list(self.kernels), stats, dict(self.index), list(self.expanded), stopped, self.narrow.copy(), self.ruined,
         )
 
     def _pass(self) -> str | None:
@@ -2018,8 +2016,7 @@ class PatternBuilder:
             if i == self.ruined:  # the ruined state: the restart alone, no member and no other offer (module docstring, "The ruined keys")
                 for oi in self._given(i):
                     if offers[oi].action is None:
-                        self.rows[i].append((oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)})))
-                self.pending.pop(i, None)
+                        self.rows.add(i, oi, _kernel_id(self.kernel_ids, self.kernels, {self.start_id: Fraction(1)}))
                 self.expanded[i] = True
                 i += 1
                 continue
@@ -2037,7 +2034,6 @@ class PatternBuilder:
                         self._release()
                         return reached.reason
                     self._release()
-            self.pending.pop(i, None)
             self.expanded[i] = True
             i += 1
             now = time.perf_counter()
@@ -2045,6 +2041,7 @@ class PatternBuilder:
                 last = now
                 progress(f"keys found {len(self.keys):,} expanded {i:,} kernels {stats.kernels:,} members {stats.members:,}")
         self.done = len(offers)
+        self.pending = Held()  # every expanded key was given what it had pending
         return None
 
     def _release(self) -> None:
@@ -2250,7 +2247,7 @@ class PatternBuilder:
                 if kid not in seen:
                     seen.add(kid)
                     added.append((oi, kid))
-        self.rows[i].extend(added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
+        self.rows.extend(i, added)  # the row of a key is whole or untouched: a stop in the middle leaves it as it was
 
     def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
         """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does
@@ -2286,7 +2283,7 @@ class PatternBuilder:
                     ids.append(len(self.keys))
                     self.keys.append(ChoiceNode(owner, at))
                     self.goal.append(False)
-                    self.rows.append([])
+                    self.rows.append()
                     self.expanded.append(True)
                 for node, kernels in zip(ids, draw.nodes):
                     for kernel in kernels:
@@ -2297,7 +2294,7 @@ class PatternBuilder:
                             else:
                                 pattern.note(target)
                                 pushed[self._intern(target)] += chance
-                        self.rows[node].append((CHOICE, _kernel_id(self.kernel_ids, self.kernels, pushed)))
+                        self.rows.add(node, CHOICE, _kernel_id(self.kernel_ids, self.kernels, pushed))
                         stats.kernels += 1
                 kid = self.relaxed[cache] = _kernel_id(self.kernel_ids, self.kernels, {ids[0]: Fraction(1)})
             found.append(kid)
