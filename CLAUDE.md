@@ -56,10 +56,10 @@ The main folder (`/root/projects/crafting system` on the owner's server, where t
 
 ## The whole picture
 
-The owner, 2026-11-22: «за неделю как будто вообще не было такого что ты оборачиваешься назад и смотришь на картину целиком... Ты просто бурился в одно место пока я не вмешался» ("in a week it never happened that you turned round and looked at the whole picture... you just drilled one place until I stepped in"). So the dispatcher chat keeps one board, issue #1434: the hypotheses on why planning is slow or wrong and how to fix it, each with its cheap test, its ticket, its state and its result. The rules of the board:
+The owner, 2026-11-22: «за неделю как будто вообще не было такого что ты оборачиваешься назад и смотришь на картину целиком... Ты просто бурился в одно место пока я не вмешался» ("in a week it never happened that you turned round and looked at the whole picture... you just drilled one place until I stepped in"). So the dispatcher chat keeps one board, issue #1434: the hypotheses on why planning is slow or wrong and how to fix it, each with its cheap test, its ticket, its state and its result. He asked for the look at the whole picture; the board and the four rules below are the dispatcher chat's, not his wording:
 
 - The dispatcher chat reads the research notes and the results itself, not only the agents' summaries, and rewrites the board at least twice a day and after every result. A result that changes the picture changes the order of the work the same hour.
-- Work on speed, memory or proof is a test of a hypothesis on the board, or it is not started. A hypothesis gets a hand test of hours before any code; several are tested at once on the server.
+- Work on speed, memory or proof is a test of a hypothesis on the board, or it is not started. A hypothesis gets a hand test of hours before any code; several are tested at once on the server, under the load rule of "Heavy runs".
 - A line of work with no gain on the scoreboard of the reference crafts after a day is stopped or re-argued on the board, in writing.
 - The `auditor` checks the board at each look: its age, a running ticket tied to no hypothesis, a hypothesis with no test, a result the order of work ignored.
 
