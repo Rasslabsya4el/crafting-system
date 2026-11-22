@@ -224,15 +224,6 @@ class KeysAhead:
         if self.builder.progress is not None:
             self.builder.progress(f"keys' workers: stopped ({reason}); the build goes on in one process")
 
-    def end_pass(self, keep: bool) -> None:
-        """The pass is over: its windows are gone (every key of it was taken or expanded here); the pool is kept for the next pass only with
-        `keep` (a builder that grows), else closed. The next pass begins at its first key."""
-        if self.pool is not None and keep and not self.pending:
-            self.memo.clear()
-            self.next = 0
-            return
-        self.close()
-
     def _drop(self) -> None:
         pool, self.pool = self.pool, None
         self.pending.clear()

@@ -75,8 +75,8 @@ def test_a_grown_model_built_with_workers_is_the_model_of_one_process_and_its_ro
     _same_bound(alone, ahead)
     assert alone.rounds > 1
     assert one.ahead.pools == 0 and one.ahead.taken == 0
-    # rows taken from the pools; a pool is kept from pass to pass while no offer joins (its workers' memos serve the keys again)
-    assert 1 <= other.ahead.pools < alone.rounds and other.ahead.taken > 0 and other.ahead.left == 0
+    # a pool a pass (the next forks from this process, whose `computed` holds the pass's kernel keys), and rows taken from them
+    assert other.ahead.pools >= alone.rounds and other.ahead.taken > 0 and other.ahead.left == 0
     assert not other.ahead.open  # closed once the bound was built
 
 
@@ -195,7 +195,7 @@ def test_the_rule_forks_no_pool_with_one_worker_or_before_a_key_was_measured(wor
     assert not builder.ahead._pays(0)
 
 
-def test_a_growing_builder_keeps_its_pool_from_pass_to_pass_until_offers_join_and_closes_it_at_the_end(world, pooled):  # noqa: F811
+def test_a_growing_builder_forks_a_pool_a_pass_and_closes_it_at_the_pass_end(world, pooled):  # noqa: F811
     offers = pattern_offers(world[2])
     models = []
     for workers in (1, 3):
@@ -203,10 +203,9 @@ def test_a_growing_builder_keeps_its_pool_from_pass_to_pass_until_offers_join_an
         builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=workers, grow=True)
         first = builder.extend(offers[:2])
         pools = builder.ahead.pools
-        assert builder.ahead.open == (workers > 1)  # kept after the pass, for the next one
-        second = builder.extend(offers[2:])  # offers join: the workers do not hold them, so a new pool is forked from this process
-        assert builder.ahead.pools == pools + (workers > 1)
-        builder.close()
+        assert not builder.ahead.open
+        second = builder.extend(offers[2:])
+        assert builder.ahead.pools > pools or workers == 1
         assert not builder.ahead.open
         models.append((first, second))
     for one, other in zip(*models):

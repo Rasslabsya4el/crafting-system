@@ -2008,10 +2008,10 @@ class PatternBuilder:
                 self._release()
                 return reached.reason
             finally:
-                # the pool of this pass, if one was forked: a builder that grows keeps it for its next passes, where its workers' memos (the members
-                # kept, the kernel keys) serve the keys again as this process's memos served them alone (#1384: on R04, the offers built at more keys
-                # pass after pass made every key's members again in a fresh pool); it closes once offers join, the universe grows or the build ends
-                self.ahead.end_pass(keep=self.grow)
+                # the pool of this pass, if one was forked, is closed: the next pass forks from this process, whose `computed` then holds every
+                # kernel key of the pass. A pool kept from pass to pass was slower than one process on R04's spread passes (85 s where one
+                # process took 58): each worker's `computed` lacked the kernel keys the others had made, and their kernels were made again (#1384)
+                self.ahead.close()
 
     def _pass_keys(self) -> str | None:
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
