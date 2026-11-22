@@ -233,3 +233,16 @@ def test_a_net_reached_only_with_the_workers_alive_stops_the_workers_and_not_the
     model = builder.extend(offers)
     assert model.stopped is None and _model(model) == _model(alone)
     assert builder.ahead.pools >= 1 and builder.ahead.count < 3
+
+
+def test_workers_grown_past_half_the_room_are_made_afresh_and_the_model_is_the_model_of_one_process(world, floors_on, pooled, monkeypatch):  # noqa: F811
+    # A worker keeps what it made in its pass: once the workers hold half the room the net leaves, the pool takes the windows in flight and
+    # closes, and the next forks from this process (R17, #1384). Here every gather finds them grown.
+    from crafting_system.abstraction import _build_ahead as ahead_module
+
+    monkeypatch.setattr(ahead_module.KeysAhead, "_grown", lambda self: True)
+    offers = world[2]
+    alone, _ = _grown(1, offers=offers)
+    ahead, builder = _grown(3, offers=offers)
+    _same_bound(alone, ahead)
+    assert builder.ahead.renewed > 0 and builder.ahead.taken > 0

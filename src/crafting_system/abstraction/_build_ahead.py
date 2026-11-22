@@ -103,6 +103,8 @@ class KeysAhead:
         self.taken = 0  # rows taken from the workers (`PatternBuilder._apply`)
         self.sent = 0  # keys sent to them
         self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
+        self.renew = False  # the workers grew past their share of the room: the pool is closed once its windows are in (`_grown`)
+        self.renewed = 0  # pools closed so (each forked again from this process)
 
     @property
     def open(self) -> bool:
@@ -119,6 +121,8 @@ class KeysAhead:
         if self.pool is not None and self.builder.version() != self.fork_version:  # this process's universe grew, or it numbered a family type: the workers' members are stale
             self.close()
         if self.pool is None:
+            if self.memo:  # rows of a pool closed to be made afresh (`_fill`): taken first, with that pool's numbers
+                return self.memo.pop(i, None)
             if not self._pays(i):
                 return None
             self._fork(i)
@@ -129,6 +133,12 @@ class KeysAhead:
         return self.memo.pop(i, None)
 
     def _fill(self, i: int) -> None:
+        if self.pool is not None and self.renew:  # the workers grew past their half of the room: no new window, a fresh pool once these are in
+            if not self.pending:  # the rows already in stay, with the numbers of this pool (`base`, `tables`): no pool forks before they are taken
+                pool, self.pool = self.pool, None
+                pool.close()
+                self.renewed += 1
+            return
         while self.pool is not None and len(self.pending) < 2 and self._send(i):
             pass
 
@@ -155,6 +165,7 @@ class KeysAhead:
         builder = self.builder
         self.pool = parallel.WorkerPool(_hold, (builder, self.count), workers=self.count)
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
+        self.renew = False
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -213,7 +224,19 @@ class KeysAhead:
                     self.memo[k] = (pid, row)
                 else:
                     self.left += 1
+        self.renew = self._grown()
 
+    def _grown(self) -> bool:
+        """Whether the workers hold half the room this process leaves under the run's memory net or more: a worker keeps every kernel and key it
+        made in its pass, and a fresh pool, forked from this process, which holds them all once, holds none of its own (R17: a bound of 773,092
+        kernels whose one process held 3.4 GB took six workers past the 12 GB net within minutes, again and again, #1384). Read cheaply: the
+        resident sizes (`parallel.held_mb` under the net) against this process's."""
+        net = parallel.active_memory_net()
+        if net is None:
+            return False
+        held = parallel.held_mb(under=net)
+        own = budget.process_mb()
+        return held is not None and own is not None and held - own >= (net - own) / 2
     def asked(self, stop) -> str | None:
         """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first (one
         worker fewer next time, `_cut`) and the net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the
@@ -253,6 +276,7 @@ class KeysAhead:
 
     def close(self) -> None:
         """End the pass's pool (workers still making a window are stopped) and add what it lost to the measures."""
+        self.memo.clear()  # (rows of a pool closed to be made afresh, `_fill`, too)
         if self.pool is None:
             return
         pool, self.pool = self.pool, None
@@ -261,7 +285,6 @@ class KeysAhead:
         else:
             pool.close()
         self.pending.clear()
-        self.memo.clear()
         if self.sent:
             self.lost += max(0.0, self.waited - self.useful / self.count)
             self.lost_keys += self.sent
