@@ -1259,6 +1259,8 @@ class Search[S]:
         net = self.net
         limit = net.seconds if seconds is None else seconds
         if limit is not None and time.perf_counter() - began >= limit:
+            if seconds is None and net.first is not None and net.step:  # a step whose first plan's chain had what the run has left (#1276)
+                return f"the time limit of {limit:g} seconds was reached (the step's share, after its bound's build)"
             if seconds is None and net.first is not None:  # the search after a bound's build that went past the round's share (#1135)
                 return f"the time limit of {limit:g} seconds was reached: the bound's build, nearly done at the round's share, had gone on past it to finish"
             return f"the time limit of {limit:g} seconds was reached"
