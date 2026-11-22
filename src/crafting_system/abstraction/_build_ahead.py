@@ -143,13 +143,7 @@ class KeysAhead:
         if self.pool is not None and self.renew:  # the workers grew past their half of the room: closed now, a fresh pool forks from here
             # the rows already in stay, with the numbers of this pool (`base`, `tables`): no pool forks before they are taken. A window still in
             # flight is let go (R17: the workers grew by about 1 GB in 30 s, past the net before the window in flight came back)
-            pool, self.pool = self.pool, None
-            if self.pending:
-                pool.abandon()
-                self.pending.clear()
-            else:
-                pool.close()
-            self._renewed()
+            self._retire()
             return
         while self.pool is not None and len(self.pending) < 2 and self._send(i):
             pass
@@ -233,12 +227,7 @@ class KeysAhead:
                 # past half the room within any window, pool after pool, and the pass ran slower than one process)
                 self.pool = None  # (the pool's workers were killed by the wait)
                 self.pending.clear()
-                if not self.gathered:
-                    self.scale /= 2
-                    self.early += 1
-                    if self.early >= 2:
-                        self.pass_off = True
-                self._renewed()
+                self._grew()
                 return
             self._cut(f"the build's net was reached with the workers alive: {reached}")
             return
@@ -257,6 +246,27 @@ class KeysAhead:
                 else:
                     self.left += 1
         self.renew = self._grown()
+
+    def _retire(self) -> None:
+        """Let the workers go now, with the windows in flight; the rows already in stay (`_fill`)."""
+        pool, self.pool = self.pool, None
+        if self.pending:
+            pool.abandon()
+            self.pending.clear()
+        else:
+            pool.close()
+        self._grew()
+
+    def _grew(self) -> None:
+        """A pool let go because its workers grew past half the room: grown so before a window came back, the windows are halved, and a second
+        time in the pass no pool forks again in it (R17: keys of 100,000 kernels each, whose workers grew past half the room within any window,
+        pool after pool, and the pass ran slower than one process)."""
+        if not self.gathered:
+            self.scale /= 2
+            self.early += 1
+            if self.early >= 2:
+                self.pass_off = True
+        self._renewed()
 
     def _renewed(self) -> None:
         self.renewed += 1
@@ -284,6 +294,8 @@ class KeysAhead:
         """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first (one
         worker fewer next time, `_cut`) and the net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the
         one process built whole was stopped at 12,543 MB with six workers beside it, #1384)."""
+        if self.pool is not None and self._grown():  # they grew past half the room while this process took their rows: let go now (`_gather`)
+            self._retire()
         reason = stop()
         if reason is not None and self.pool is not None:
             self._cut(f"the build's net was reached with the workers alive: {reason}")
