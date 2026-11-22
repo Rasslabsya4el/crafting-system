@@ -95,8 +95,8 @@ class BenchmarkRoute:
     `reference` is False for a smoke test: a target the project made up itself (V01, OR-45), run so that its machinery stays exercised,
     never a reference craft, never a verdict against a guide and never on the checkpoint list of OR-46 (`REFERENCES`, #901).
 
-    `waits` is set for a reference craft the planner cannot plan yet: what it waits for, with the open issue (R06: its route's step 4 and its
-    start price, #1232). No plan is tried, with or without --heavy; the entry's error says "not planned" and why (the published outcomes, which need no plan, are still read).
+    `waits` is set for a reference craft the planner cannot plan yet: what it waits for, with the open issue (none since R06 plans, #1267).
+    No plan is tried, with or without --heavy; the entry's error says "not planned" and why (the published outcomes, which need no plan, are still read).
     """
 
     id: str
@@ -270,15 +270,16 @@ BENCHMARKS = (
         (),
         heavy="an influenced rare helmet reforged by Harvest with the bench lock and the Wild Bristle Matron: minutes of a big machine (#150, #901)",
     ),
-    # The guide publishes no odds; the start belt has no market (#515). Its steps 2 and 3 are the route file; step 4 (catalysts, Divine and
-    # Blessed Orbs) waits for route conditions on quality and the implicit roll (#1232); the planner plans both since #159 and #1231.
+    # The guide publishes no odds; the start belt has no market (#515): its price is hand-set in its own price file (#1267, OR-44). Its steps 2
+    # and 3 are the route file; step 4 (catalysts, Divine and Blessed Orbs) waits for route conditions on quality and the implicit roll (#1232),
+    # so the guide's route has gaps there; the planner plans both as finishes since #159 and #1231.
     BenchmarkRoute(
         "R06",
         "Hunter-influenced Strength Heavy Belt with the essence Strength, catalyst quality and a 42 Strength implicit (PoE Vault guide)",
         "examples/targets/r06-strength-heavy-belt.yaml",
         "examples/routes/r06-strength-heavy-belt.yaml",
         (),
-        waits="the start belt has no price (#483, #515), the planner takes the target since #159 and #1231 but its search for the mods gives no plan within 25 minutes yet (#1267), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232)",
+        heavy="a Hunter-influenced belt whose mods search runs to the time net with every method (#1267): minutes of a big machine",
     ),
     # The guide publishes no odds; the start boots are hand-set in the route's own price file (#901). Unveil is through the one search since #828.
     BenchmarkRoute(

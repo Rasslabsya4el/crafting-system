@@ -58,7 +58,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
 OTHER_ITEM = {
     "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
-    "r06-strength-heavy-belt": "#483 the exact item has 0 listings (searched on 2026-11-06; a normal item cannot carry an influence, #515): the bought start item has no price, so none is written",
+    "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; a normal item cannot carry an influence, #515) and no file has a line for an influenced Heavy Belt: it has no body",
     "r05-strength-ring": "#483 the exact item has 0 listings: the stored price is for any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
     "r10-fractured-boots-70-life": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
@@ -174,7 +174,6 @@ def test_a_poe_ninja_price_prices_r04s_quiver_and_does_not_price_r09s_boots(data
 
 NO_PRICE = {
     "r03-avoid-shock-boots": OTHER_ITEM["r03-avoid-shock-boots"],
-    "r06-strength-heavy-belt": OTHER_ITEM["r06-strength-heavy-belt"],
 }  # bought, and the market holds fewer listings than the rail: kept bought, no price written (#505, #483)
 
 
@@ -195,7 +194,7 @@ def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_fil
         assert committed == ["vendor-v01-2026-11-01.json"]
     elif stem == "r07-minion-wand":
         assert committed == ["veiled-r24-r07-2026-11-12.json"]
-    elif stem == "r20-rf-helmet":  # R20's hand-set start helmet is in the references file only (#901)
+    elif stem in ("r20-rf-helmet", "r06-strength-heavy-belt"):  # their hand-set start items are in the references file only (#901, #1267)
         assert committed == ["references-allflame-2026-07-31.json"]
     elif stem == "r24-avoid-shock-boots":
         assert committed == ["references-allflame-2026-07-31.json", "veiled-r24-r07-2026-11-12.json"]
@@ -384,21 +383,10 @@ def test_j01_plans_from_its_example_file_as_a_given_start_item_with_no_restart(d
     assert [limit.what for limit in plan.limits if limit.kind == "start-item"] == ["The start item is given"]
 
 
-@pytest.mark.parametrize(
-    "stem",
-    [
-        pytest.param(
-            "r03-avoid-shock-boots",
-            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price (its Eldritch implicit is planned since #835)"),
-        ),
-        pytest.param(
-            "r06-strength-heavy-belt",
-            marks=pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price (its quality is planned since #159, its base implicit since #1231)"),
-        ),
-    ],
-)
-def test_r03_and_r06_plan_from_their_example_files(data, stem):
-    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICE_FILE))
+@pytest.mark.xfail(strict=True, raises=PlanError, reason="#483 the bought start item has no price (its Eldritch implicit is planned since #835)")
+def test_r03_plans_from_its_example_file(data):
+    # R06's start belt has a hand-set price since #1267; its plan takes minutes, so `tests/test_cli_r06_route.py` checks its price unsolved
+    plan = make_plan(data, load_target(TARGETS / "r03-avoid-shock-boots.yaml", data), load_price_file(PRICE_FILE))
 
     assert plan.start_price.bought and plan.start_price.chaos > 0
 

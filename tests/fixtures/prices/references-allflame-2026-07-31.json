@@ -1596,6 +1596,11 @@
       },
       "source": "poe.ninja-history"
     },
+    "Heavy Belt, normal, item level 75, Hunter influence": {
+      "chaos": 5.0,
+      "source": "hand",
+      "note": "hand-set start price of reference route R06 (#1267, OR-44): the week-one file has no line for an influenced Heavy Belt and Allflame has left the trade site; the guide buys a Hunter- or Elder-influenced Heavy Belt at item level 75 or more, of any rarity, and the key's Normal belt with an influence is no item the market sells (#515, the rule of OR-43 is #1202). 5 Chaos is the stand-in of #1231 (PR #1265), the price of a single-influence base read for R20 (#150, PR #816: no week-one source). The first Deafening Essence of Rage reforges the belt whatever its rarity and mods, and the plan and the guide's route pay the same start, so the comparison does not depend on it"
+    },
     "Hinekora's Lock": {
       "chaos": 96198.13754208753,
       "detail": {

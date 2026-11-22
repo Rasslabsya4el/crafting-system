@@ -18,8 +18,8 @@ in a start price (R08, R09), OR-7 where a stand-in stands for a trade price.
     #427  targets with no start price (J01, R03, R06): closed by #505, every target says `start: given` (J01) or `start: bought`, and a
           bought one has a key and a computed spec; the two prices that cannot be taken are #483
     #428  the spec and the price accept bases with another mod pool (rows moved to #483 and #486)
-    #483  the exact start item of R03, R05, R06, R10, R11, R12 has no trade market (R03 and R06 have no price at all, a bought start item
-          needs one, OR-6), so the committed price is for a wider item
+    #483  the exact start item of R03, R05, R06, R10, R11, R12 has no trade market (R03 has no price at all, a bought start item needs
+          one, OR-6; R06's is hand-set since #1267, OR-44), so the committed price is for a wider item
     #601  R14's start item (a magic Hunter bow, #576) has no trade market, so its committed price is for a wider item (the rest of #483 for R14)
     #486  the trade site cannot tell bases of one name apart by `type` (R04 quivers; the three Two-Toned Boots by their implicit since #474)
 
@@ -58,7 +58,8 @@ def _known(rows: dict[tuple[str, str], tuple]) -> dict[tuple[str, str], Known]:
 KNOWN: dict[tuple[str, str], Known] = _known(
     {
         ("r03-avoid-shock-boots", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage", "no entry"),
-        ("r06-strength-heavy-belt", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Heavy Belt, normal, item level 75, Hunter influence", "no entry"),
+        ("r06-strength-heavy-belt", "price.item_level"): ("#1046", "OR-3", "the hand-set week-one price records no item level: the check cannot tell (#1267)", "75", "cannot tell (label 75)"),
+        ("r06-strength-heavy-belt", "price.source"): ("#1046", "OR-44", "the start price is hand-set: no file has a line for an influenced Heavy Belt (#1267)", "trade-api", "hand"),
         ("r04-penetrating-quiver", "price.base"): ("#486", "OR-3", "the price entry is by a name that two bases share, and neither the trade site nor poe.ninja can tell them apart", f"{_QUIVER}QuiverNew5", f"{_QUIVER}Quiver12, {_QUIVER}QuiverNew5"),
         ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85 in the snapshot of 2026-10-31 and 84 in that of 2026-11-10, labelled 81", "81", "85", (("81", "84"),)),
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),

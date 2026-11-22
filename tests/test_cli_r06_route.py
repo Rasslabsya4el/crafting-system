@@ -2,10 +2,12 @@
 
 R06's target asks for the Heavy Belt's Strength implicit at its top roll and 20% Intrinsic Catalyst quality: the quality is planned since
 #159 and the implicit since #1231, both as finishes after the mods (the Blessed Orb: `+(25-35) to Strength` at 35, a chance of 1/11 a use, so
-11 orbs on average). R06 is not a planned reference yet: its start belt has no price (#483, #515), and its route file holds the guide's steps 2
-and 3; step 4 (catalysts, Divine Orb, Blessed Orb, a bench craft) waits for route conditions on quality and the implicit roll (#1232). These
-check that the missing price is now the reason R06 is not planned, that both finishes are planned, and that the written rules read against
-the target's explicit mods and the offers, so the file stays valid until it can be judged. They skip without the cached dump.
+11 orbs on average). Its start belt has no market line in any price file (#483, #515), so its own price file, the references file, holds a
+hand-set, marked price since #1267 (OR-44); the week-one file alone still refuses it. Its route file holds the guide's steps 2 and 3; step 4
+(catalysts, Divine Orb, Blessed Orb, a bench craft) waits for route conditions on quality and the implicit roll (#1232). These check that
+the week-one file refuses R06 for its start price alone, that its own file prices it, marked, that both finishes are planned, and that the
+written rules read against the target's explicit mods and the offers. Nothing is solved (R06's plan takes minutes: the heavy benchmark plans
+it). They skip without the cached dump.
 """
 
 import dataclasses
@@ -41,6 +43,16 @@ def test_r06_is_refused_only_for_its_start_price(data, target):
     assert target.implicits and target.quality is not None
     with pytest.raises(PlanError, match="no price for the start item"):  # #483, #515: the implicit and the quality are planned (#159, #1231)
         make_plan(data, target, load_price_file(PRICES), solve_it=False)
+
+
+def test_its_own_price_file_prices_the_start_belt_by_hand_and_says_so(data, target):
+    # #1267: no file has a line for an influenced Heavy Belt; the references file holds the hand-set 5 Chaos of OR-44, marked, and nothing is solved
+    assert target.price_file is not None and target.price_file.name == "references-allflame-2026-07-31.json"
+    named = ("catalyst", "blessed-orb", "exalted-orb")  # named: the classic offers of a module's tests hold neither finish's method
+    plan = make_plan(data, dataclasses.replace(target, actions=named), load_price_file(target.price_file), solve_it=False)
+    assert plan.start_price.name == "Heavy Belt, normal, item level 75, Hunter influence" and plan.start_price.bought and not plan.start_price.given and plan.start_price.chaos == 5.0
+    entry = load_price_file(target.price_file).prices["Heavy Belt, normal, item level 75, Hunter influence"]
+    assert entry.chaos == 5.0 and entry.source == "hand" and "#1267" in entry.note and "OR-44" in entry.note
 
 
 def test_with_a_start_price_r06_finishes_its_implicit_with_eleven_blessed_orbs_and_its_quality_with_catalysts(data, target):
