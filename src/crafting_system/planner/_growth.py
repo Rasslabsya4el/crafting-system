@@ -19,11 +19,12 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   - **adders** for each mod of `W`: the `PER_ROLE` offers of least cost over chance on it that keep the mods they are given (an addition, a
     craft, a veiled choice or a veil: not a reroll), at any shape, among the offers the round that made the plan did not hold;
   - **moves**: for an adder whose best shape is not one `D` acts at, the cheapest offer of each step of the rarities between them;
-  - **protectors** for each mod of `K`: every offer that fractures (when the states hold no fractured mod), the cheapest offer that adds the
-    lock of the mod's side (when no mod of `W` sits on that side), and the cheapest offer that makes an imprint at `D`'s shape;
+  - **protectors** for each mod of `K`, among the offers that draw no mod (they keep the mods they are given; a reroll that also fractures
+    keeps none of them): every one that fractures (when the states hold no fractured mod), the cheapest that adds the lock of the mod's side
+    (when no mod of `W` sits on that side), and the cheapest that makes an imprint at `D`'s shape;
   - **cleaners and narrowers** for the adders: the cheapest craft that adds no mod and needs no crafted one (it removes a mod), the crafts that
-    add no mod and need a crafted one when the round holds a crafted mod, each cheapest offer that keeps a tag out of the draws that no wanted
-    mod carries, and the cheapest offer of more crafted mods when the round holds two crafted mods.
+    add no mod and need a crafted one when the round holds a crafted mod, and, among the offers that draw no mod, the cheapest that keeps each
+    tag out of the draws that no wanted mod carries, and the cheapest of more crafted mods when the round holds two crafted mods.
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
@@ -351,7 +352,7 @@ def step_shares(plan) -> list[tuple[str, float, list[tuple[CompressedState, obje
     return sorted(((label, share, where[label]) for label, share in shares.items()), key=lambda each: (-each[1], str(each[0])))
 
 
-def read_step(abstraction_is_goal: Callable[[CompressedState], bool], acts: Sequence[tuple[CompressedState, object, float]], leaves: int) -> tuple[set[int], set[int], frozenset[Rarity], bool]:
+def read_step(acts: Sequence[tuple[CompressedState, object, float]], leaves: int) -> tuple[set[int], set[int], frozenset[Rarity], bool]:
     """`W`, `K`, the shapes and whether a fractured mod is held, at the states where a step acts (module text), from their statuses and their
     outcomes' statuses."""
     waits, risks, shapes, fractured = set(), set(), set(), False
@@ -437,7 +438,7 @@ class Grower:
             if label in self.diagnosed or label not in self.by_label:
                 continue
             self.diagnosed.add(label)
-            waits, risks, shapes, fractured = read_step(plan.abstraction.is_goal, acts, len(table.goal.leaves))
+            waits, risks, shapes, fractured = read_step(acts, len(table.goal.leaves))
             current = frozenset(support | self.asked)
             named = table.roles(waits, risks, shapes, fractured, self.plan_set, current)
             chosen = table.closure(set(current) | named)

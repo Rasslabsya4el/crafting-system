@@ -4,6 +4,13 @@ An offer can make the model of the item finer on every state: a metamod craft ma
 by pool weight, a fracturing orb the fractured marks (`Abstraction.features`). One search over every offer then pays that fineness for every
 offer on every state, and on a route whose plan takes seconds it can meet the net with no plan. So the planner searches in rounds:
 
+* **The growth first** (`_growth`, #1414; research note 2026-11-22-rounds-design-2, section 4). Before the groups below, the rounds grow from
+  the plan in hand: a seed of the offers of least cost over chance on each wanted mod, then, with a plan in hand, each round holds that plan's
+  support, the run's named offers and the offers the plan's dearest step names by role (`_growth.Grower`), never the union of the rounds
+  before it. A growth round has half the time left (`GROWTH_SHARES`: it, and everything after it), its build the whole of that share once a
+  plan is in hand; one that does not finish within it ends the growth and says so, its plan kept only when cheaper. Each growth round's proof
+  covers its own offers only (`RoundRecord.growth`), so the claim over every method rests on the rounds below alone (`all_closed`), which then
+  begin with the growth's plan in hand and its support as their base (each group less the offers the base holds).
 * **Groups.** An offer adds to the model the features beyond the target's own that a model of that offer alone has (`Abstraction.features`).
   When no offer adds more than the junk count (`FIRST_ROUND`), the offers are one group and one search, as before the rounds (every benchmark
   route on main's default methods). Otherwise each offer is in the group of its kind and the features it adds, and the target's named offers
@@ -404,13 +411,15 @@ def widen(
                     best, best_upper, best_mean, improved = plan, upper_of(plan), upper, True
                 if release is not None:
                     release(plan)
-            ends = status not in (CLOSED, WITHIN, BEATEN, NONE, REFUSED)
-            built = plan is None or getattr(getattr(plan, "search", None), "bound_stopped", None) is None
+            built = plan is not None and getattr(getattr(plan, "search", None), "bound_stopped", None) is None
+            # a round whose bound's build did not complete in its share, or that a net stopped before any plan, ends the growth (#1414, OR-12,
+            # OR-40): the sets the plan names are past what its share builds, and no size of set says so beforehand. Its plan is kept when
+            # cheaper, and the rounds of the remaining groups have the time left. A round whose build completed and whose search its share cut
+            # has a plan read on a whole bound: the growth goes on from it
+            ends = status not in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) and not built
             if ends:
-                # a round that did not finish within its share ends the growth (#1414, OR-40): the sets the plan names are past what its share
-                # builds and searches; its plan is kept when cheaper, and the rounds of the remaining groups have the time left
                 reason += ("; " if reason else "") + "the growth of the methods ended here: this round did not finish within its share" + (
-                    "" if built else " (its bound's build did not complete)")
+                    " (its bound's build did not complete)" if plan is not None else "")
             known = None if meter is None else meter.ended(touched)
             labels = tuple(sorted({getattr(offer, "label", str(offer)) for offer in chosen}))
             records.append(RoundRecord(labels, len(chosen), status, reason, _stated(lower, cut), upper, clock_now() - began, within, (), states=known, growth=why))
