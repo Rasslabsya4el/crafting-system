@@ -89,6 +89,8 @@ class KeysAhead:
         self.spent = 0.0  # seconds of work of the keys expanded so far, here or in a worker
         self.replay = 0.0  # seconds this process spent taking workers' rows (`applied`)
         self.replayed = 0
+        self.replayed_at_fork = self.keys_at_fork = 0
+        self.replay_at_fork = 0.0
         self.keys = 0  # those keys
         self.pool: parallel.WorkerPool | None = None
         self.pending: list[tuple[int, int, list[Future]]] = []  # (first key's number, the number after the last, futures of its chunks), oldest first
@@ -153,6 +155,18 @@ class KeysAhead:
             # flight is let go (R17: the workers grew by about 1 GB in 30 s, past the net before the window in flight came back)
             self._retire()
             return
+        if self.pool is not None and self._idle():
+            pool, self.pool = self.pool, None  # (the rows already in stay, as above)
+            if self.pending:
+                pool.abandon()
+                self.pending.clear()
+            else:
+                pool.close()
+            self._account()
+            self.pass_off = True
+            if self.builder.progress is not None:
+                self.builder.progress("keys' workers: let go for this pass (taking their rows here costs about what making them does)")
+            return
         while self.pool is not None and len(self.pending) < 2 and self._send(i):
             pass
 
@@ -184,6 +198,7 @@ class KeysAhead:
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
         self.renew = False
         self.gathered = 0  # windows of this pool come back: a pool grown past half the room before one did is cut, not made afresh
+        self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork = self.replayed, self.replay, self.keys  # (`_idle`)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -257,6 +272,19 @@ class KeysAhead:
                 else:
                     self.left += 1
         self.renew = self._grown()
+
+    def _idle(self) -> bool:
+        """Whether this pool's rows cost this process about what they saved: once a window's worth of its rows were taken, the seconds taking a
+        row took here are at least the seconds a worker took to make one, less its share (`1 - 1/workers`). On R17's keys of 100,000 kernels,
+        taking a row (its kernels' outcomes numbered here) cost what making it did, and the keys after the pool made again here the label
+        distributions the workers had made (#1384)."""
+        taken = self.replayed - self.replayed_at_fork
+        made = self.keys - self.keys_at_fork
+        if taken < self.count * CHUNKS or made <= 0:
+            return False
+        replay = (self.replay - self.replay_at_fork) / taken
+        worker = self.useful / made
+        return replay >= worker * (1.0 - 1.0 / self.count)
 
     def _retire(self) -> None:
         """Let the workers go now, with the windows in flight; the rows already in stay (`_fill`)."""
