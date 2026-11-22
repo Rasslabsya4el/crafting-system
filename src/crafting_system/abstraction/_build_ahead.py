@@ -52,6 +52,7 @@ CHUNKS = 4  # the chunks of a window per worker: a slow chunk holds one worker f
 WINDOW = 4  # the polls of work per worker a window holds (`POLL_SECONDS` of `_pattern`): the nets are asked between two windows too
 MOST_PER_CHUNK = 256  # the most keys a chunk holds: with keys of microseconds a window of polls would be 10^5 keys and their pickles (speed only)
 FORK_PRIOR = 0.015  # seconds the fork of one worker costs before this build measured one (`_ahead.FORK_PRIOR`, #1340); the first fork's measure replaces it
+GROWN = "the keys' workers hold half the room the memory net leaves"  # what the wait on the workers says once they grew so (`_gather`)
 ALWAYS = False  # a pool at every pass with keys to send, whatever the measures (the tests: they never read the clock)
 
 
@@ -105,6 +106,7 @@ class KeysAhead:
         self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
         self.renew = False  # the workers grew past their share of the room: the pool is closed once its windows are in (`_grown`)
         self.renewed = 0  # pools closed so (each forked again from this process)
+        self.gathered = 0
 
     @property
     def open(self) -> bool:
@@ -144,10 +146,7 @@ class KeysAhead:
                 self.pending.clear()
             else:
                 pool.close()
-            self.renewed += 1
-            self._account()
-            if self.builder.progress is not None and self.renewed in (1, 10, 100, 1000):
-                self.builder.progress(f"keys' workers: made afresh {self.renewed:,} times so far (they held half the room the memory net leaves)")
+            self._renewed()
             return
         while self.pool is not None and len(self.pending) < 2 and self._send(i):
             pass
@@ -176,6 +175,7 @@ class KeysAhead:
         self.pool = parallel.WorkerPool(_hold, (builder, self.count), workers=self.count)
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
         self.renew = False
+        self.gathered = 0  # windows of this pool come back: a pool grown past half the room before one did is cut, not made afresh
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -214,17 +214,28 @@ class KeysAhead:
         mark = time.perf_counter()
         try:
             tally = self.builder.tally  # the net on the clock, asked while this process waits as it is asked between two offers (a count is not)
-            results = self.pool.gather(futures, stop=self.builder.stop if tally is None else tally.then)
+            net = self.builder.stop if tally is None else tally.then
+
+            def asked() -> str | None:  # and whether the workers grew past half the room (`_grown`), every `WATCH_SECONDS` of the wait
+                return (net() if net is not None else None) or (GROWN if self._grown() else None)
+
+            results = self.pool.gather(futures, stop=asked)
         except (parallel.MemoryNetReached, budget.BudgetExceeded) as reached:  # the workers' memory passed the net (or the run's net was met):
             self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
             return
         except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): stopped as in `asked`
+            if str(reached) == GROWN and self.gathered:  # the workers grew past half the room: let go now, with the window in flight (`_fill`)
+                self.pool = None  # (the pool's workers were killed by the wait)
+                self.pending.clear()
+                self._renewed()
+                return
             self._cut(f"the build's net was reached with the workers alive: {reached}")
             return
         except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
             self._stop(f"the pool of the keys failed: {failed!r}")
             return
         self.waited += time.perf_counter() - mark
+        self.gathered += 1
         for pid, made, seconds in results:
             self.useful += seconds
             self.spent += seconds
@@ -235,6 +246,12 @@ class KeysAhead:
                 else:
                     self.left += 1
         self.renew = self._grown()
+
+    def _renewed(self) -> None:
+        self.renewed += 1
+        self._account()
+        if self.builder.progress is not None and self.renewed in (1, 10, 100, 1000):
+            self.builder.progress(f"keys' workers: made afresh {self.renewed:,} times so far (they held half the room the memory net leaves)")
 
     def _grown(self) -> bool:
         """Whether the workers hold half the room this process leaves under the run's memory net or more: a worker keeps every kernel and key it
