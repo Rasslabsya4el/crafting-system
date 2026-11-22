@@ -136,7 +136,11 @@ def test_the_text_report_the_json_and_the_page_say_one_gap_and_one_interval(monk
 
     monkeypatch.setattr(_envelope_plan, "solve_walked", loose_solve)
     monkeypatch.setattr(_envelope_plan.Search, "run", loose_run)
-    # R12's methods named: one search, whose stop at the gap this test reads (#886: every method on by default searches in rounds, #1103)
+    # R12's methods named and no blocking craft offered unasked: one search, whose stop at the gap this test reads (#886: every method on by
+    # default searches in steps, #1103; the blocking crafts the rule offers unasked are a step of their own since #1276)
+    from crafting_system.planner import _offers
+
+    monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", False)
     plan = make_plan(DATA, r12_named(), price_file(), solver="envelope", budget=at_once(0.2))
     found = plan.search
     assert not found.exact and found.within == 0.2 and found.mean_error == 5e-4 and found.proved_upper > found.upper * 1.0005

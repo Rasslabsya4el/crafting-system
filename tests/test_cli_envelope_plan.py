@@ -176,9 +176,11 @@ def test_a_net_that_stops_before_any_plan_exists_is_an_error_that_says_so(coarse
 
 
 def test_a_time_budget_never_makes_the_envelope_search_answer_by_the_ladder_of_coarse_levels():
-    # R12's methods named: one search, whose first plan is proved the cheapest in its first round, whatever the budget
+    # R12's methods named: whatever the budget, no ladder; the plan is exact or within the run's gap (the blocking crafts offered unasked are a
+    # step of their own since #1276, so the run's gap may stop a step past its aim of 0 seconds)
     plan = make_plan(DATA, r12_named(), price_file(), solver="envelope", budget=0.0, with_risk=False)
-    assert plan.approximation is None and plan.packed.info["envelope"].exact
+    found = plan.packed.info["envelope"]
+    assert plan.approximation is None and (found.exact or (found.within is not None and found.upper <= found.lower * (1 + found.within)))
     # every method on (#886): searched in rounds, past its aim of 0 seconds from the first, so the run's gap stops each round; still no ladder
     plan = make_plan(DATA, load_target(R12, DATA), price_file(), solver="envelope", budget=0.0, with_risk=False)
     found = plan.packed.info["envelope"]

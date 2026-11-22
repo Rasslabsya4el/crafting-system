@@ -83,11 +83,12 @@ def test_auto_is_the_envelope_search_where_the_bound_can_be_built_and_gives_the_
 
 def test_auto_never_takes_the_ladder_of_coarse_levels_where_the_envelope_search_can_be_built(packed):
     for budget in (0.0, 1e-9, 60.0):
-        # R12's methods named: one search, proved exact whatever the budget (#886: with every method on it is searched in rounds, and past
-        # its aim each round stops at the run's gap; `test_cli_envelope_plan.py` holds that case)
+        # R12's methods named: no ladder whatever the budget, the plan exact or within the run's gap (#886, #1276: the blocking crafts the
+        # rule offers unasked are a step of their own, and past its aim a step stops at the run's gap; `test_cli_envelope_plan.py` too)
         auto = make_plan(DATA, r12_named(), price_file(), budget=budget)
+        found = auto.packed.info["envelope"]
 
-        assert auto.approximation is None and auto.packed.info["envelope"].exact
+        assert auto.approximation is None and (found.exact or (found.within is not None and found.upper <= found.lower * (1 + found.within)))
         assert not [limit for limit in auto.limits if limit.what.startswith("The whole search")]
         assert auto.mean_remaining == pytest.approx(packed.mean_remaining, rel=1e-9)
 

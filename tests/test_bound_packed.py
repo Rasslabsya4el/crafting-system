@@ -194,7 +194,7 @@ def _belt(data, target, net_mb):  # noqa: F811
 def test_the_search_holds_no_python_object_a_key_for_the_bounds_rows(data, target, figure, monkeypatch):  # noqa: F811
     free = _belt(data, target, None)  # no net: the hand-worked plan, and the size of its model
     assert free.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    size = min(size for _p, _m, size in figure)  # the keys and the actions of the smallest model a search was given (15 and 24)
+    size = max(size for _p, _m, size in figure)  # the keys and the actions of the largest model a search was given (#1276: the seed's is 13)
     assert size >= 30
     net = 100.0 + size  # one Python object a key and an action of the model: more than the searches hold beside their arrays, less than a dict a key and a float an action
     figure.clear()

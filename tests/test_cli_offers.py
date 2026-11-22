@@ -179,11 +179,12 @@ def test_buying_again_gives_back_the_start_item_whatever_it_was():
     assert buy.outcomes(DATA, item(base_id=AMULET)).sample(random.Random(1)) == target.start_item
 
 
-@pytest.mark.parametrize("label", ["Chaos Orb", "Harvest Reforge Lightning"])
-def test_r12_keeps_its_two_rerolls(label):
+@pytest.mark.parametrize("label, kind", [("Chaos Orb", "chaos-orb"), ("Harvest Reforge Lightning", "harvest-reforge")])
+def test_r12_keeps_its_two_rerolls(label, kind):
     plan = make_plan(DATA, load_target(R12, DATA), price_file())
+    steps = {each for record in (plan.search.widening if plan.search else ()) for each in record.kinds}  # searched in steps (#1276)
 
-    assert label in [priced.label for priced in plan.offers]
+    assert label in [priced.label for priced in plan.offers] or kind in steps
 
 
 def test_a_target_naming_action_kinds_is_offered_those_kinds_only_and_the_rest_is_listed():

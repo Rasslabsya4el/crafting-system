@@ -404,7 +404,7 @@ def test_the_planner_offers_the_toy_to_a_target_that_allows_corruption_and_not_t
     rounds = {name: {kind for record in (plan.search.widening if plan.search else ()) for kind in record.kinds} for name, plan in plans.items()}
     assert ("Toy Corruption" in labels["allowing"] or KIND in rounds["allowing"]) and "Toy Corruption" not in labels["plain"]
     assert KIND not in rounds["plain"]
-    assert "Chaos Orb" in labels["plain"]
+    assert "Chaos Orb" in labels["plain"] or "chaos-orb" in rounds["plain"]  # (in steps, #1276: offered in a step, maybe not the plan's)
 
 
 def test_k13_a_corrupting_offer_left_out_of_a_state_is_written_so_that_the_answer_can_say_it():

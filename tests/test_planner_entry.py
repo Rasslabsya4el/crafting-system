@@ -152,7 +152,12 @@ def test_a_target_is_planned_with_every_beta_method_and_a_methods_setting_restri
 
     assert target.actions is None and every.target.actions is None and named.target.actions == NAMED
     # what each run considered: the offers it priced, and those it had to leave out for want of a price (the fixture prices few)
-    offered, restricted = (labels_of(plan.limits, "unpriced") | {priced.label for priced in plan.offers} for plan in (every, named))
+    # (searched in steps, #1276, a plan's offers are those of the step that made it; what a run searched is every step's kinds)
+    offered, restricted = (
+        labels_of(plan.limits, "unpriced") | {priced.offer.kind or priced.label for priced in plan.offers}
+        | {kind for record in (plan.search.widening if plan.search else ()) for kind in record.kinds}
+        for plan in (every, named)
+    )  # fmt: skip
     assert restricted < offered  # the setting takes methods away and adds none
     assert {"Exalted Orb", "Orb of Annulment", "Essence of Hysteria"} <= offered - restricted  # beta methods a key used to hide (OR-41)
     assert not of_kind(every.limits, "kinds-not-named")  # every beta method: nothing is said to be left out by the setting
