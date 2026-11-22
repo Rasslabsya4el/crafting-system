@@ -120,3 +120,22 @@ def test_the_twins_distributions_are_primed_in_a_pool_and_the_model_is_the_same(
     ahead, _ = _build(data, ab, 0, 1)
     assert _model(ahead) == _model(alone)
     assert any(twin and made for twin, made in primed), "no distribution of the twin was primed"
+
+
+def test_with_ruined_keys_a_model_built_with_workers_is_the_model_of_one_process(pooled, monkeypatch):
+    # A ruined key met in a worker is sent to this process as the key itself (`_intern_out`): here it is sent to the one ruined state, and the
+    # index holds it, as one process holds it (#1367)
+    from test_pattern_ruined import bound
+
+    # the pool forked at key 20, once the ruined state was met (24 ruined keys of 224 then): the ruined keys met after are sent by their keys
+    monkeypatch.setattr(_build_ahead.KeysAhead, "_pays", lambda self, i: self.workers > 1 and i >= 20)
+    models = []
+    for workers in (1, 3):
+        real = PatternBuilder.__init__
+        monkeypatch.setattr(PatternBuilder, "__init__", lambda self, *a, **k: real(self, *a, **{**k, "workers": workers}))
+        models.append(bound(True)[0])
+        monkeypatch.setattr(PatternBuilder, "__init__", real)
+    one, other = models
+    assert one.model.ruined is not None and one.model.stats.ruined_keys > 20
+    assert _model(other.model) == _model(one.model) and other.model.stats.ruined_keys == one.model.stats.ruined_keys
+    assert np.array_equal(other.value, one.value)
