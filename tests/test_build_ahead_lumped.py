@@ -96,3 +96,27 @@ def test_through_the_planners_entry_counted_in_states_with_the_twin_the_plan_wit
     assert other.solution.values == one.solution.values and other.solution.policy == one.solution.policy
     assert other.packed.info["envelope"].lower == one.packed.info["envelope"].lower
     assert taken  # rows came from the workers
+
+
+def test_the_twins_distributions_are_primed_in_a_pool_and_the_model_is_the_same(world, monkeypatch):  # noqa: F811
+    # The kernels the twin makes (an erasing draw, #1146) had no pool: R04's 1,245 fossil sets joining at one key were six minutes of the twin's
+    # walks in one process. They are primed in the twin now, which changes nothing but where they are made (`_prime`, #250)
+    from crafting_system.abstraction import _prime
+
+    data, ab, _ = world
+    alone, _ = _build(data, ab, 0, 1)
+    primed = []
+    real = _prime.prime
+
+    def counting(abstraction, requests, **kwargs):
+        made = real(abstraction, requests, **kwargs)
+        primed.append((abstraction is not ab, made))
+        return made
+
+    monkeypatch.setattr(_prime, "prime", counting)
+    monkeypatch.setattr(_prime, "WORTH", 0)
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 2)
+    monkeypatch.setenv(parallel.WORKERS_ENV, "3")
+    ahead, _ = _build(data, ab, 0, 1)
+    assert _model(ahead) == _model(alone)
+    assert any(twin and made for twin, made in primed), "no distribution of the twin was primed"

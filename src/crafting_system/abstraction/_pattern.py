@@ -2071,6 +2071,7 @@ class PatternBuilder:
         `ask` (the build's tick) is called between two pairs the chunk prepares before the pool starts, and raises when the net is reached (#1179).
         """
         requests = []
+        twins = []  # the pairs whose kernel the alike twin makes (`LUMP_ERASING`): their distributions are the twin's, primed there (#1384)
         for offer in (self.offers[oi] for oi in chunk):
             if offer.action is None or offer.action.imprint_move() is not None or _refused_by_key(self.pattern, offer.action, key):
                 continue
@@ -2088,14 +2089,17 @@ class PatternBuilder:
             asked = [
                 member
                 for member in members
-                if not (LUMP_ERASING and self.ab.lumps(member, offer.action))
                 # the pairs `_offers_of_key` skips where only the quality is left, or a catalyst before it (#159): no kernel is made for them
-                and not (self.ab.quality_offer_pruned(member, offer.action) if last else self.ab.quality_finish_only(member, offer.action))
+                if not (self.ab.quality_offer_pruned(member, offer.action) if last else self.ab.quality_finish_only(member, offer.action))
             ]
             if kept is not None:  # the build asks the first member of each multiset of the kept slots (#1352): the others make the same pair
                 asked = list({self.pattern.kept_view(member, kept): member for member in reversed(asked)}.values())
-            requests.extend((member, offer.action) for member in asked)
+            for member in asked:
+                (twins if LUMP_ERASING and self.ab.lumps(member, offer.action) else requests).append((member, offer.action))
         self.ab.prime(requests, ask=ask)
+        if twins:  # R04's 1,245 fossil sets joining at one key: 6 minutes of the twin's walks in this process, none primed (#1384)
+            with self.pattern.twin.approximate() if self.approximate else nullcontext():
+                self.pattern.twin.prime(twins, ask=ask)
 
     def _offers_of_key(self, i: int, given: Sequence[int], tick, firsts: tuple[list[CompressedState], int] | None = None) -> None:
         """Add to the row of key number `i` the abstract actions of the offers numbered `given` (one `(offer index, kernel id)` for each distinct pushed kernel).
