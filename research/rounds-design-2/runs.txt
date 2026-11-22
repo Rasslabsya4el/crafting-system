@@ -1,0 +1,548 @@
+=== G-R04
+start 12:44:00 load 8.41 head 2028e28b workers 4 LEAD=names:Essence of Insanity|Deafening Essence of Rage|Bench craft Cannot roll Attack Modifiers|Exalted Orb|Fracturing Orb|Orb of Annulment|Remove Cr
+TRACE LEAD names: first group 9 offers, features ['fractures', 'junk', 'metamods', 'pool weights'], 27 groups; labels ['Bench craft (7-12)% increased Attack Speed', 'Bench craft Cannot roll Attack Modifiers', 'Deafening Essence of Rage', 'Essence of Insanity', 'Exalted Orb', 'Fracturing Orb', 'Orb o
+model 1: 10 offers, 5,185 keys (5,185 expanded, 10,897 ruined keys held by one), 53,306 kernels, start value 35619.29517579997 (model 24.3 s, solve 0.2 s)
+bound built: 5,185 keys (5,185 expanded), 10 of 10 offers in the model, start value 35619.29517579997 (24 s)
+TRACE    -> plan 35664.9950 lower 35619.41785388024 states 14963 stopped its search made a plan, it had used its share of the time (22 seconds, the time left over the rounds left), and its last search round lowered its plan by no mor took 27.4 s
+model 1: 16 offers, 1,590 keys (272 expanded, 3,087 ruined keys held by one), 33,539 kernels, start value 0.247 (model 22.4 s, solve 0.0 s); STOPPED: the time limit of 21.8728 seconds was reached
+bound built: 1,590 keys (272 expanded), 16 of 16 offers in the model, start value 0.247 (22 s); STOPPED in the model phase: the time limit of 21.8728 seconds was reached
+model 1: 12 offers, 19,354 keys (18,636 expanded, 123 ruined keys held by one), 73,240 kernels, start value 0.247 (model 22.7 s, solve 0.2 s); STOPPED: the time limit of 21.8177 seconds was reached
+bound built: 19,354 keys (18,636 expanded), 12 of 12 offers in the model, start value 0.247 (23 s); STOPPED in the model phase: the time limit of 21.8177 seconds was reached
+model 1: 12 offers, 1,130 keys (0 expanded, 959 ruined keys held by one), 7,905 kernels, start value 0.1235 (model 21.8 s, solve 0.0 s); STOPPED: the time limit of 21.7496 seconds was reached
+bound built: 1,130 keys (0 expanded), 12 of 12 offers in the model, start value 0.1235 (22 s); STOPPED in the model phase: the time limit of 21.7496 seconds was reached
+model 1: 13 offers, 265 keys (265 expanded), 467 kernels, start value 6.802702325621798 (model 0.3 s, solve 0.0 s)
+model 2: 107 offers, 1,225 keys (1,225 expanded), 3,850 kernels, start value 6.802702331947989 (model 3.6 s, solve 0.0 s)
+model 3: 107 offers, 1,225 keys (1,225 expanded), 3,875 kernels, start value 7.023834420789489 (model 0.2 s, solve 0.0 s)
+model 4: 107 offers, 1,225 keys (1,225 expanded), 7,313 kernels, start value 7.024444444437645 (model 2.0 s, solve 0.1 s)
+model 5: 107 offers, 1,225 keys (1,225 expanded), 7,313 kernels, start value 8.989773492373962 (model 0.1 s, solve 0.1 s)
+model 6: 107 offers, 1,225 keys (1,225 expanded), 11,283 kernels, start value 9.1499999999932 (model 3.3 s, solve 0.2 s)
+model 7: 107 offers, 1,225 keys (1,225 expanded), 11,283 kernels, start value 14.1799999999932 (model 0.1 s, solve 0.3 s)
+model 8: 107 offers, 1,225 keys (1,225 expanded), 11,283 kernels, start value 20.26 (model 0.1 s, solve 0.3 s)
+bound built: 1,225 keys (1,225 expanded), 107 of 109 offers in the model, start value 20.26 (12 s)
+model 1: 11 offers, 3,731 keys (1,590 expanded, 7,393 ruined keys held by one), 33,813 kernels, start value 14.339906074873822 (model 22.6 s, solve 0.2 s); STOPPED: the time limit of 21.6288 seconds was reached
+bound built: 3,731 keys (1,590 expanded), 11 of 11 offers in the model, start value 14.339906074873822 (23 s); STOPPED in the model phase: the time limit of 21.6288 seconds was reached
+model 1: 11 offers, 4,179 keys (2,269 expanded, 9,578 ruined keys held by one), 41,905 kernels, start value 17.3527012848577 (model 21.5 s, solve 0.1 s); STOPPED: the time limit of 21.5345 seconds was reached
+bound built: 4,179 keys (2,269 expanded), 11 of 11 offers in the model, start value 17.3527012848577 (22 s); STOPPED in the model phase: the time limit of 21.5345 seconds was reached
+model 1: 11 offers, 4,342 keys (2,422 expanded, 9,768 ruined keys held by one), 42,730 kernels, start value 17.439600024154004 (model 21.5 s, solve 0.2 s); STOPPED: the time limit of 21.4882 seconds was reached
+bound built: 4,342 keys (2,422 expanded), 11 of 11 offers in the model, start value 17.439600024154004 (22 s); STOPPED in the model phase: the time limit of 21.4882 seconds was reached
+model 1: 11 offers, 4,145 keys (2,183 expanded, 9,176 ruined keys held by one), 40,304 kernels, start value 12.989657821782178 (model 21.4 s, solve 0.1 s); STOPPED: the time limit of 21.4235 seconds was reached
+bound built: 4,145 keys (2,183 expanded), 11 of 11 offers in the model, start value 12.989657821782178 (22 s); STOPPED in the model phase: the time limit of 21.4235 seconds was reached
+model 1: 11 offers, 4,405 keys (1,440 expanded, 9,529 ruined keys held by one), 41,194 kernels, start value 12.152274778917032 (model 21.4 s, solve 0.3 s); STOPPED: the time limit of 21.3729 seconds was reached
+bound built: 4,405 keys (1,440 expanded), 11 of 11 offers in the model, start value 12.152274778917032 (22 s); STOPPED in the model phase: the time limit of 21.3729 seconds was reached
+model 1: 13 offers, 3,282 keys (896 expanded, 7,729 ruined keys held by one), 37,300 kernels, start value 1.8319347637916272 (model 21.3 s, solve 0.0 s); STOPPED: the time limit of 21.2887 seconds was reached
+bound built: 3,282 keys (896 expanded), 13 of 13 offers in the model, start value 1.8319347637916272 (21 s); STOPPED in the model phase: the time limit of 21.2887 seconds was reached
+model 1: 26 offers, 3,572 keys (1,438 expanded, 6,854 ruined keys held by one), 31,851 kernels, start value 5.910203278688462 (model 21.2 s, solve 0.2 s); STOPPED: the time limit of 21.2402 seconds was reached
+bound built: 3,572 keys (1,438 expanded), 26 of 26 offers in the model, start value 5.910203278688462 (22 s); STOPPED in the model phase: the time limit of 21.2402 seconds was reached
+model 1: 60 offers, 6,966 keys (341 expanded), 6,524 kernels, start value 6.923499993660207 (model 5.2 s, solve 0.1 s); STOPPED: stopped after 5 of the 21.1454 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it 
+bound built: 6,966 keys (341 expanded), 60 of 62 offers in the model, start value 6.923499993660207 (5 s); STOPPED in the model phase: stopped after 5 of the 21.1454 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+TRACE    -> plan 18952545906301.6133 lower 6.923499975358902 states 175126 stopped the time limit of 15.6678 seconds was reached took 28.8 s
+model 1: 13 offers, 817 keys (817 expanded), 1,463 kernels, start value 6.923499993660205 (model 1.5 s, solve 0.1 s)
+bound built: 817 keys (817 expanded), 13 of 5,992 offers in the model, start value 6.923499993660205 (6 s); STOPPED in the growth phase: stopped after 6 of the 20.447 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 16 offers, 998 keys (86 expanded, 656 ruined keys held by one), 29,924 kernels, start value 0.247 (model 20.8 s, solve 0.0 s); STOPPED: the time limit of 20.3574 seconds was reached
+bound built: 998 keys (86 expanded), 16 of 16 offers in the model, start value 0.247 (21 s); STOPPED in the model phase: the time limit of 20.3574 seconds was reached
+=== G-R13
+start 12:58:47 load 14.34 head 2028e28b workers 4 LEAD=names:Bench craft (15-17)% increased Damage|Bench craft (24-32)% increased Elemental Damage with Attack Skills|Bench craft Can have up to 3 Craft
+TRACE LEAD names: first group 6 offers, features ['junk', 'pool weights'], 29 groups; labels ['Bench craft (15-17)% increased Damage', 'Bench craft (24-32)% increased Elemental Damage with Attack Skills', 'Bench craft Can have up to 3 Crafted Modifiers', 'Orb of Alchemy', 'Orb of Alteration', 'Regal
+model 1: 8 offers, 872 keys (872 expanded), 891 kernels, start value 21846.529915533218 (model 1.0 s, solve 0.0 s)
+bound built: 872 keys (872 expanded), 8 of 8 offers in the model, start value 21846.529915533218 (1 s)
+TRACE    -> plan 21846.5299 lower 21846.528690742118 states 203 stopped None took 1.2 s
+model 1: 9 offers, 1,937 keys (1,937 expanded), 1,579 kernels, start value 21846.529915533218 (model 4.8 s, solve 0.0 s)
+bound built: 1,937 keys (1,937 expanded), 9 of 9 offers in the model, start value 21846.529915533218 (5 s)
+TRACE    -> plan 21846.5299 lower 21846.528690742118 states 203 stopped None took 5.0 s
+model 1: 9 offers, 1,938 keys (1,938 expanded), 1,580 kernels, start value 21846.529915533218 (model 3.7 s, solve 0.0 s)
+bound built: 1,938 keys (1,938 expanded), 9 of 9 offers in the model, start value 21846.529915533218 (4 s)
+TRACE    -> plan 21846.5299 lower 21846.528690742118 states 203 stopped None took 3.9 s
+model 1: 9 offers, 872 keys (872 expanded), 891 kernels, start value 21845.961707483224 (model 1.1 s, solve 0.0 s)
+bound built: 872 keys (872 expanded), 9 of 9 offers in the model, start value 21845.961707483224 (1 s)
+TRACE    -> plan 21845.9617 lower 21845.947273286525 states 203 stopped None took 1.3 s
+model 1: 10 offers, 2,348 keys (2,348 expanded), 1,828 kernels, start value 21845.961707483224 (model 4.1 s, solve 0.0 s)
+bound built: 2,348 keys (2,348 expanded), 10 of 10 offers in the model, start value 21845.961707483224 (4 s)
+TRACE    -> plan 21845.9617 lower 21845.947273286525 states 203 stopped None took 4.5 s
+model 1: 10 offers, 1,060 keys (1,060 expanded), 2,003 kernels, start value 21845.961707523602 (model 1.6 s, solve 0.0 s)
+bound built: 1,060 keys (1,060 expanded), 10 of 10 offers in the model, start value 21845.961707523602 (2 s)
+TRACE    -> plan 21845.9617 lower 21845.947273286525 states 203 stopped None took 1.8 s
+model 1: 10 offers, 872 keys (872 expanded), 1,038 kernels, start value 21845.961707483224 (model 0.9 s, solve 0.0 s)
+bound built: 872 keys (872 expanded), 10 of 10 offers in the model, start value 21845.961707483224 (1 s)
+TRACE    -> plan 21845.9617 lower 21845.947273286525 states 203 stopped None took 1.0 s
+model 1: 13 offers, 1,445 keys (1,445 expanded), 1,284 kernels, start value 21845.961707483224 (model 9.7 s, solve 0.0 s)
+bound built: 1,445 keys (1,445 expanded), 13 of 13 offers in the model, start value 21845.961707483224 (10 s)
+TRACE    -> plan 21845.9617 lower 21845.947273286525 states 203 stopped None took 9.9 s
+model 1: 25 offers, 1,937 keys (1,937 expanded), 1,589 kernels, start value 21845.961707483224 (model 8.2 s, solve 0.0 s)
+bound built: 1,937 keys (1,937 expanded), 25 of 25 offers in the model, start value 21845.961707483224 (8 s)
+TRACE    -> plan 21845.9617 lower 21845.947273286525 states 203 stopped None took 8.7 s
+model 1: 46 offers, 4,790 keys (1,834 expanded), 5,036 kernels, start value 5.400876153223683 (model 6.6 s, solve 0.1 s); STOPPED: stopped after 7 of the 26.5382 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that i
+bound built: 4,790 keys (1,834 expanded), 46 of 48 offers in the model, start value 5.400876153223683 (7 s); STOPPED in the model phase: stopped after 7 of the 26.5382 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed 
+TRACE    -> plan 63978.8957 lower 5.630050059598017 states 16714 stopped the time limit of 19.6918 seconds was reached took 27.3 s
+model 1: 9 offers, 1,445 keys (1,445 expanded), 1,258 kernels, start value 5.399990144996984 (model 3.8 s, solve 0.0 s)
+bound built: 1,445 keys (1,445 expanded), 9 of 109 offers in the model, start value 5.399990144996984 (7 s); STOPPED in the growth phase: stopped after 7 of the 27.8883 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed
+TRACE    -> plan 21845.9226 lower 5.584234512186535 states 134164 stopped the time limit of 20.8601 seconds was reached took 28.7 s
+model 1: 13 offers, 569 keys (34 expanded), 84 kernels, start value 5.400876153223683 (model 6.1 s, solve 0.0 s); STOPPED: stopped after 7 of the 27.7884 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it would 
+bound built: 569 keys (34 expanded), 13 of 5,494 offers in the model, start value 5.400876153223683 (7 s); STOPPED in the model phase: stopped after 7 of the 27.7884 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+model 1: 15 offers, 872 keys (872 expanded), 891 kernels, start value 21845.961707483224 (model 1.6 s, solve 0.0 s)
+bound built: 872 keys (872 expanded), 15 of 15 offers in the model, start value 21845.961707483224 (2 s)
+stop: no plan of these offers costs less than 21845.95819369253, and the plan in hand costs at most 21845.923393928373
+model 1: 15 offers, 872 keys (872 expanded), 15,573 kernels, start value 21845.961707657763 (model 12.7 s, solve 0.0 s)
+keys found 766 expanded 366 (now offer 8 of 12 of key 366) kernels 4,588 members 7,683
+=== G-R24
+start 12:46:00 load 9.27 head 2028e28b workers 4 LEAD=names:Bench craft Suffixes Cannot Be Changed|Deafening Essence of Torment|Harvest Add Remove Fire|Orb of Annulment|Pick 1|Pick 2|Pick 3|Unveil|Vei
+TRACE LEAD names: first group 10 offers, features ['draw tags', 'junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods'], 28 groups; labels ['Bench craft Suffixes Cannot Be Changed', 'Deafening Essence of Torment', 'Harvest Add Remove Fire', 'Orb of Alteration', 'Orb of Annulment', 'Pick 1
+model 1: 11 offers, 60,904 keys (60,904 expanded), 26,183 kernels, start value 3617.644353959281 (model 140.6 s, solve 0.6 s)
+bound built: 60,904 keys (60,904 expanded), 11 of 11 offers in the model, start value 3617.644353959281 (141 s)
+stop: the plan costs at most 3658.602588645088, no plan costs less than 3629.578649704483: proved within 1.000%
+TRACE    -> plan 3658.6026 lower 3629.578649704483 states 4208 stopped None took 142.0 s
+model 1: 13 offers, 11,110 keys (10,542 expanded), 15,447 kernels, start value 2.0200001782 (model 17.3 s, solve 0.0 s); STOPPED: the time limit of 16.8214 seconds was reached
+bound built: 11,110 keys (10,542 expanded), 13 of 13 offers in the model, start value 2.0200001782 (17 s); STOPPED in the model phase: the time limit of 16.8214 seconds was reached
+model 1: 17 offers, 4,646 keys (336 expanded), 16,923 kernels, start value 15.7600001782 (model 16.8 s, solve 0.0 s); STOPPED: the time limit of 16.791 seconds was reached
+bound built: 4,646 keys (336 expanded), 17 of 17 offers in the model, start value 15.7600001782 (17 s); STOPPED in the model phase: the time limit of 16.791 seconds was reached
+model 1: 12 offers, 10,822 keys (368 expanded), 7,365 kernels, start value 15.760000178200006 (model 16.9 s, solve 0.1 s); STOPPED: the time limit of 16.7787 seconds was reached
+bound built: 10,822 keys (368 expanded), 12 of 12 offers in the model, start value 15.760000178200006 (17 s); STOPPED in the model phase: the time limit of 16.7787 seconds was reached
+model 1: 12 offers, 25,564 keys (836 expanded), 4,300 kernels, start value 18.480000413436457 (model 16.8 s, solve 0.1 s); STOPPED: the time limit of 16.7508 seconds was reached
+bound built: 25,564 keys (836 expanded), 12 of 12 offers in the model, start value 18.480000413436457 (17 s); STOPPED in the model phase: the time limit of 16.7508 seconds was reached
+model 1: 11 offers, 60,800 keys (58,669 expanded), 24,636 kernels, start value 139.7329273638682 (model 149.7 s, solve 0.9 s); STOPPED: stopped after 150 of the 598.885 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 60,800 keys (58,669 expanded), 11 of 11 offers in the model, start value 139.7329273638682 (151 s); STOPPED in the model phase: stopped after 150 of the 598.885 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE    -> plan 8142.7592 lower 139.73280215771754 states 4125 stopped its search made a plan, it had used its share of the time (21 seconds, the time left over the rounds left), and its last search round lowered its plan by no mor took 152.2 s
+model 1: 13 offers, 24,678 keys (441 expanded), 2,852 kernels, start value 15.760000178200006 (model 16.8 s, solve 0.2 s); STOPPED: the time limit of 16.7059 seconds was reached
+bound built: 24,678 keys (441 expanded), 13 of 13 offers in the model, start value 15.760000178200006 (17 s); STOPPED in the model phase: the time limit of 16.7059 seconds was reached
+model 1: 13 offers, 10,705 keys (10,137 expanded), 14,575 kernels, start value 2.0200001782 (model 16.8 s, solve 0.0 s); STOPPED: the time limit of 16.3859 seconds was reached
+bound built: 10,705 keys (10,137 expanded), 13 of 13 offers in the model, start value 2.0200001782 (17 s); STOPPED in the model phase: the time limit of 16.3859 seconds was reached
+model 1: 12 offers, 25,830 keys (1,025 expanded), 4,524 kernels, start value 18.480000415799992 (model 16.7 s, solve 0.3 s); STOPPED: the time limit of 16.6531 seconds was reached
+bound built: 25,830 keys (1,025 expanded), 12 of 12 offers in the model, start value 18.480000415799992 (17 s); STOPPED in the model phase: the time limit of 16.6531 seconds was reached
+model 1: 17 offers, 2,257 keys (317 expanded), 16,035 kernels, start value 15.760000178199995 (model 16.4 s, solve 0.0 s); STOPPED: the time limit of 16.3565 seconds was reached
+bound built: 2,257 keys (317 expanded), 17 of 17 offers in the model, start value 15.760000178199995 (16 s); STOPPED in the model phase: the time limit of 16.3565 seconds was reached
+model 1: 12 offers, 20,088 keys (427 expanded), 7,005 kernels, start value 2.7200001782000003 (model 16.7 s, solve 0.1 s); STOPPED: the time limit of 16.5839 seconds was reached
+bound built: 20,088 keys (427 expanded), 12 of 12 offers in the model, start value 2.7200001782000003 (17 s); STOPPED in the model phase: the time limit of 16.5839 seconds was reached
+model 1: 12 offers, 10,822 keys (368 expanded), 7,257 kernels, start value 15.760000178200006 (model 16.4 s, solve 0.1 s); STOPPED: the time limit of 16.3462 seconds was reached
+bound built: 10,822 keys (368 expanded), 12 of 12 offers in the model, start value 15.760000178200006 (17 s); STOPPED in the model phase: the time limit of 16.3462 seconds was reached
+model 1: 12 offers, 25,290 keys (713 expanded), 3,752 kernels, start value 14.230000178200001 (model 16.6 s, solve 0.1 s); STOPPED: the time limit of 16.5296 seconds was reached
+bound built: 25,290 keys (713 expanded), 12 of 12 offers in the model, start value 14.230000178200001 (17 s); STOPPED in the model phase: the time limit of 16.5296 seconds was reached
+model 1: 12 offers, 25,062 keys (442 expanded), 2,866 kernels, start value 15.760000178200006 (model 16.4 s, solve 0.1 s); STOPPED: the time limit of 16.3196 seconds was reached
+bound built: 25,062 keys (442 expanded), 12 of 12 offers in the model, start value 15.760000178200006 (16 s); STOPPED in the model phase: the time limit of 16.3196 seconds was reached
+model 1: 12 offers, 26,893 keys (1,897 expanded), 7,068 kernels, start value 0.7027001782 (model 16.5 s, solve 0.2 s); STOPPED: the time limit of 16.477 seconds was reached
+bound built: 26,893 keys (1,897 expanded), 12 of 12 offers in the model, start value 0.7027001782 (17 s); STOPPED in the model phase: the time limit of 16.477 seconds was reached
+model 1: 13 offers, 26,014 keys (1,184 expanded), 5,093 kernels, start value 18.480000433149293 (model 16.3 s, solve 0.3 s); STOPPED: the time limit of 16.2819 seconds was reached
+bound built: 26,014 keys (1,184 expanded), 13 of 13 offers in the model, start value 18.480000433149293 (17 s); STOPPED in the model phase: the time limit of 16.2819 seconds was reached
+model 1: 12 offers, 25,919 keys (1,085 expanded), 4,919 kernels, start value 18.48000042254948 (model 16.4 s, solve 0.2 s); STOPPED: the time limit of 16.4168 seconds was reached
+bound built: 25,919 keys (1,085 expanded), 12 of 12 offers in the model, start value 18.48000042254948 (17 s); STOPPED in the model phase: the time limit of 16.4168 seconds was reached
+model 1: 12 offers, 25,267 keys (635 expanded), 3,763 kernels, start value 18.480000356400005 (model 16.2 s, solve 0.1 s); STOPPED: the time limit of 16.2177 seconds was reached
+bound built: 25,267 keys (635 expanded), 12 of 12 offers in the model, start value 18.480000356400005 (16 s); STOPPED in the model phase: the time limit of 16.2177 seconds was reached
+keys found 54,479 expanded 43,723 kernels 18,252 members 404,157
+=== G-R17
+start 12:45:10 load 7.44 head 2028e28b workers 4 LEAD=names:Bench craft Can have up to 3 Crafted Modifiers|Bench craft Cannot roll Attack Modifiers|Bench craft Prefixes Cannot Be Changed|Exalted Orb|H
+TRACE LEAD names: first group 14 offers, features ['draw tags', 'imprints', 'junk', 'metamods', 'pool weights'], 25 groups; labels ['Bench craft Can have up to 3 Crafted Modifiers', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Prefixes Cannot Be Changed', 'Exalted Orb', 'Harvest Add Remo
+model 1: 15 offers, 16,164 keys (2,635 expanded), 139,710 kernels, start value 0.01048001048 (model 149.9 s, solve 0.3 s); STOPPED: stopped after 150 of the 598.969 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 16,164 keys (2,635 expanded), 15 of 15 offers in the model, start value 0.01048001048 (150 s); STOPPED in the model phase: stopped after 150 of the 598.969 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 16 offers, 14,636 keys (1,839 expanded), 67,354 kernels, start value 0.01048001048 (model 103.8 s, solve 0.3 s); STOPPED: stopped after 104 of the 414.527 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 14,636 keys (1,839 expanded), 16 of 16 offers in the model, start value 0.01048001048 (104 s); STOPPED in the model phase: stopped after 104 of the 414.527 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 16 offers, 14,543 keys (1,779 expanded), 50,327 kernels, start value 0.01048001048 (model 71.3 s, solve 0.4 s); STOPPED: stopped after 71 of the 284.8 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 14,543 keys (1,779 expanded), 16 of 16 offers in the model, start value 0.01048001048 (72 s); STOPPED in the model phase: stopped after 71 of the 284.8 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 16 offers, 20,026 keys (1,374 expanded), 37,228 kernels, start value 0.01048001048 (model 47.9 s, solve 0.3 s); STOPPED: stopped after 48 of the 191.535 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 20,026 keys (1,374 expanded), 16 of 16 offers in the model, start value 0.01048001048 (48 s); STOPPED in the model phase: stopped after 48 of the 191.535 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 8,859 keys (57 expanded), 17,724 kernels, start value 0.01048001048 (model 30.7 s, solve 0.1 s); STOPPED: stopped after 31 of the 122.648 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 8,859 keys (57 expanded), 19 of 19 offers in the model, start value 0.01048001048 (31 s); STOPPED in the model phase: stopped after 31 of the 122.648 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 31 offers, 8,699 keys (1 expanded), 8 kernels, start value 0.01048001048 (model 18.8 s, solve 0.0 s); STOPPED: stopped after 19 of the 74.1149 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 8,699 keys (1 expanded), 31 of 31 offers in the model, start value 0.01048001048 (19 s); STOPPED in the model phase: stopped after 19 of the 74.1149 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 82 offers, 14,303 keys (195 expanded), 5,585 kernels, start value 6.733069993732377 (model 11.0 s, solve 0.1 s); STOPPED: stopped after 11 of the 44.8438 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 14,303 keys (195 expanded), 82 of 89 offers in the model, start value 6.733069993732377 (11 s); STOPPED in the model phase: stopped after 11 of the 44.8438 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 14 offers, 2,983 keys (1,562 expanded), 3,276 kernels, start value 6.733069993732378 (model 5.3 s, solve 0.1 s); STOPPED: stopped after 7 of the 27.3908 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,983 keys (1,562 expanded), 14 of 115 offers in the model, start value 6.733069993732378 (7 s); STOPPED in the model phase: stopped after 7 of the 27.3908 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 0 offers, 1 keys (0 expanded), 0 kernels, start value 1.0479999999999999e-08 (model 0.0 s, solve 0.0 s); STOPPED: stopped after 8 of the 13.5747 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 1 keys (0 expanded), 0 of 7,084 offers in the model, start value 1.0479999999999999e-08 (8 s); STOPPED in the floors phase: stopped after 8 of the 13.5747 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 21 offers, 8,620 keys (0 expanded), 1 kernels, start value 1.0479999999999999e-08 (model 0.4 s, solve 0.0 s); STOPPED: the time limit of 0.317553 seconds was reached
+bound built: 8,620 keys (0 expanded), 21 of 21 offers in the model, start value 1.0479999999999999e-08 (0 s); STOPPED in the model phase: the time limit of 0.317553 seconds was reached
+exit 0 end 12:55:18 load 19.55
+keys found 8,849 expanded 55 (now offer 1 of 19 of key 55) kernels 17,261 members 18,192
+=== G2h-R17
+start 12:51:35 load 16.06 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-2h.toml LEAD=names:Bench craft Can have up to 3 Crafted Modifiers|Bench craf
+TRACE LEAD names: first group 14 offers, features ['draw tags', 'imprints', 'junk', 'metamods', 'pool weights'], 25 groups; labels ['Bench craft Can have up to 3 Crafted Modifiers', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Prefixes Cannot Be Changed', 'Exalted Orb', 'Harvest Add Remo
+model 1: 15 offers, 495,932 keys (62,934 expanded), 1,811,512 kernels, start value 13.110480010480002 (model 1800.0 s, solve 9.8 s); STOPPED: stopped after 1800 of the 7198.33 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 495,932 keys (62,934 expanded), 15 of 15 offers in the model, start value 13.110480010480002 (1811 s); STOPPED in the model phase: stopped after 1800 of the 7198.33 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+keys found 492,226 expanded 62,553 kernels 1,777,741 members 3,609,891
+=== G-R20
+start 13:04:04 load 12.46 head 2028e28b workers 4 LEAD=names:Beastcraft Wild Bristle Matron (add a metamod)|Bench craft Suffixes Cannot Be Changed|Essence of Horror|Harvest Reforge Fire|Harvest Reforg
+TRACE LEAD names: first group 7 offers, features ['junk', 'metamods', 'pool weights'], 28 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Suffixes Cannot Be Changed', 'Essence of Horror', 'Harvest Reforge Fire', 'Harvest Reforge Influence', 'Orb of Alchemy', 'Orb of An
+model 1: 9 offers, 2,233 keys (757 expanded), 3,873 kernels, start value 24.68553576461818 (model 150.7 s, solve 0.1 s); STOPPED: stopped after 151 of the 598.879 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,233 keys (757 expanded), 9 of 9 offers in the model, start value 24.68553576461818 (151 s); STOPPED in the model phase: stopped after 151 of the 598.879 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 10 offers, 2,195 keys (736 expanded), 2,940 kernels, start value 19.172616716989104 (model 104.7 s, solve 0.0 s); STOPPED: stopped after 105 of the 417.026 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,195 keys (736 expanded), 10 of 10 offers in the model, start value 19.172616716989104 (105 s); STOPPED in the model phase: stopped after 105 of the 417.026 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 10 offers, 2,189 keys (734 expanded), 3,097 kernels, start value 16.810723633385678 (model 73.9 s, solve 0.0 s); STOPPED: stopped after 74 of the 293.291 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,189 keys (734 expanded), 10 of 10 offers in the model, start value 16.810723633385678 (74 s); STOPPED in the model phase: stopped after 74 of the 293.291 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 10 offers, 2,190 keys (735 expanded), 3,113 kernels, start value 15.26433566848569 (model 52.4 s, solve 0.0 s); STOPPED: stopped after 52 of the 203.057 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,190 keys (735 expanded), 10 of 10 offers in the model, start value 15.26433566848569 (52 s); STOPPED in the model phase: stopped after 52 of the 203.057 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 10 offers, 2,189 keys (734 expanded), 2,825 kernels, start value 17.784562642365486 (model 33.4 s, solve 0.0 s); STOPPED: stopped after 33 of the 129.229 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,189 keys (734 expanded), 10 of 10 offers in the model, start value 17.784562642365486 (33 s); STOPPED in the model phase: stopped after 33 of the 129.229 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 10 offers, 3,790 keys (1,282 expanded), 4,547 kernels, start value 17.807166642365488 (model 21.8 s, solve 0.0 s); STOPPED: stopped after 22 of the 86.9183 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 3,790 keys (1,282 expanded), 10 of 10 offers in the model, start value 17.807166642365488 (22 s); STOPPED in the model phase: stopped after 22 of the 86.9183 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 10 offers, 2,189 keys (734 expanded), 2,751 kernels, start value 17.807166642365488 (model 14.0 s, solve 0.0 s); STOPPED: stopped after 14 of the 53.346 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,189 keys (734 expanded), 10 of 10 offers in the model, start value 17.807166642365488 (14 s); STOPPED in the model phase: stopped after 14 of the 53.346 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 12 offers, 2,169 keys (727 expanded), 4,176 kernels, start value 13.2657 (model 9.5 s, solve 0.0 s); STOPPED: stopped after 9 of the 32.1334 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,169 keys (727 expanded), 12 of 12 offers in the model, start value 13.2657 (10 s); STOPPED in the model phase: stopped after 9 of the 32.1334 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 24 offers, 480 keys (1 expanded), 4 kernels, start value 0.0247 (model 4.0 s, solve 0.0 s); STOPPED: stopped after 4 of the 14.9808 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 480 keys (1 expanded), 24 of 24 offers in the model, start value 0.0247 (4 s); STOPPED in the model phase: stopped after 4 of the 14.9808 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 0 offers, 1 keys (0 expanded), 0 kernels, start value 0.001048 (model 0.0 s, solve 0.0 s); STOPPED: stopped after 3 of the 8.82592 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 1 keys (0 expanded), 0 of 50 offers in the model, start value 0.001048 (3 s); STOPPED in the floors phase: stopped after 3 of the 8.82592 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 0 offers, 1 keys (0 expanded), 0 kernels, start value 0.0002702331961591221 (model 0.0 s, solve 0.0 s); STOPPED: the time limit of 4.19192 seconds was reached
+bound built: 1 keys (0 expanded), 0 of 109 offers in the model, start value 0.0002702331961591221 (4 s); STOPPED in the floors phase: the time limit of 4.19192 seconds was reached
+exit 0 end 13:14:09 load 15.66
+keys found 2,189 expanded 734 (now offer 2 of 10 of key 734) kernels 2,819 members 4,025
+=== G-R08
+start 13:05:12 load 10.47 head 2028e28b workers 4 LEAD=names:Fossils Dense Fossil + Shuddering Fossil
+TRACE LEAD names: first group 2 offers, features [], 37 groups; labels ['Fossils Dense Fossil + Shuddering Fossil', 'Orb of Alchemy']
+model 1: 4 offers, 10 keys (10 expanded), 2 kernels, start value 2499.3299261298907 (model 0.1 s, solve 0.0 s)
+bound built: 10 keys (10 expanded), 4 of 4 offers in the model, start value 2499.3299261298907 (0 s)
+TRACE    -> plan 2499.3299 lower 2499.3299247821633 states 10 stopped None took 0.2 s
+model 1: 5 offers, 10 keys (10 expanded), 2 kernels, start value 2499.3299261298907 (model 0.0 s, solve 0.0 s)
+bound built: 10 keys (10 expanded), 5 of 5 offers in the model, start value 2499.3299261298907 (0 s)
+TRACE    -> plan 2499.3299 lower 2499.3299247821633 states 10 stopped None took 0.0 s
+model 1: 5 offers, 10 keys (10 expanded), 2 kernels, start value 775.8271065226647 (model 0.0 s, solve 0.0 s)
+bound built: 10 keys (10 expanded), 5 of 5 offers in the model, start value 775.8271065226647 (0 s)
+TRACE    -> plan 775.8271 lower 775.827106385677 states 10 stopped None took 0.0 s
+model 1: 6 offers, 11 keys (11 expanded), 3 kernels, start value 364.49012261434723 (model 0.0 s, solve 0.0 s)
+bound built: 11 keys (11 expanded), 6 of 6 offers in the model, start value 364.49012261434723 (0 s)
+TRACE    -> plan 364.4901 lower 364.4901225839788 states 11 stopped None took 0.0 s
+model 1: 7 offers, 16 keys (16 expanded), 4 kernels, start value 364.4788206143472 (model 0.0 s, solve 0.0 s)
+bound built: 16 keys (16 expanded), 7 of 7 offers in the model, start value 364.4788206143472 (0 s)
+TRACE    -> plan 364.4788 lower 364.478820256793 states 11 stopped None took 0.0 s
+model 1: 8 offers, 16 keys (16 expanded), 5 kernels, start value 364.4788206143472 (model 0.1 s, solve 0.0 s)
+bound built: 16 keys (16 expanded), 8 of 8 offers in the model, start value 364.4788206143472 (0 s)
+TRACE    -> plan 364.4788 lower 364.478820256793 states 11 stopped None took 0.1 s
+model 1: 8 offers, 107 keys (107 expanded), 204 kernels, start value 364.4788206143787 (model 0.2 s, solve 0.0 s)
+bound built: 107 keys (107 expanded), 8 of 8 offers in the model, start value 364.4788206143787 (0 s)
+TRACE    -> plan 364.4788 lower 364.47881912254684 states 52 stopped None took 0.2 s
+model 1: 7 offers, 16 keys (16 expanded), 4 kernels, start value 364.4788206143472 (model 0.0 s, solve 0.0 s)
+bound built: 16 keys (16 expanded), 7 of 7 offers in the model, start value 364.4788206143472 (0 s)
+TRACE    -> plan 364.4788 lower 364.478820256793 states 11 stopped None took 0.0 s
+model 1: 11 offers, 16 keys (16 expanded), 5 kernels, start value 364.4788206143472 (model 0.0 s, solve 0.0 s)
+bound built: 16 keys (16 expanded), 11 of 11 offers in the model, start value 364.4788206143472 (0 s)
+TRACE    -> plan 364.4788 lower 364.478820256793 states 11 stopped None took 0.0 s
+model 1: 20 offers, 16 keys (16 expanded), 13 kernels, start value 364.4788206143472 (model 0.3 s, solve 0.0 s)
+bound built: 16 keys (16 expanded), 20 of 20 offers in the model, start value 364.4788206143472 (0 s)
+TRACE    -> plan 364.4788 lower 364.478820256793 states 11 stopped None took 0.3 s
+model 1: 70 offers, 1,032 keys (203 expanded), 983 kernels, start value 96.16002454597513 (model 5.1 s, solve 0.0 s); STOPPED: stopped after 5 of the 20.8668 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it wo
+bound built: 1,032 keys (203 expanded), 70 of 72 offers in the model, start value 96.16002454597513 (5 s); STOPPED in the model phase: stopped after 5 of the 20.8668 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+TRACE    -> plan 364.4788 lower 96.26180199708281 states 18605 stopped the time limit of 15.5978 seconds was reached took 21.4 s
+model 1: 10 offers, 11 keys (11 expanded), 4 kernels, start value 96.15924677917127 (model 0.1 s, solve 0.0 s)
+bound built: 11 keys (11 expanded), 10 of 107 offers in the model, start value 96.15924677917127 (1 s)
+TRACE    -> plan 234.3098 lower 234.30981184845015 states 16 stopped None took 2.3 s
+model 1: 10 offers, 161 keys (1 expanded, 6 ruined keys held by one), 7 kernels, start value 96.15924677917127 (model 4.0 s, solve 0.0 s); STOPPED: stopped after 6 of the 22.3609 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so noth
+bound built: 161 keys (1 expanded), 10 of 3,586 offers in the model, start value 96.15924677917127 (6 s); STOPPED in the model phase: stopped after 6 of the 22.3609 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed tha
+TRACE    -> plan 234.3098 lower 101.5972276468326 states 192 stopped the time limit of 16.6014 seconds was reached took 23.7 s
+=== T-R04
+start 12:50:44 load 16.48 head 2028e28b workers 4 LEAD=names:Wailing Essence of Suffering|Deafening Essence of Rage|Essence of Insanity|Bench craft +(29-35)% to Fire Resistance|Bench craft +(29-35)% t
+TRACE LEAD names: first group 33 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft (7-12)% increased Attack Speed', 'Bench craft +(29-35)% to Cold Resistance', 'Bench craft +(29-35)% to Fi
+model 1: 34 offers, 101,080 keys (99,487 expanded, 188 ruined keys held by one), 416,668 kernels, start value 0.01048001048 (model 150.8 s, solve 1.3 s); STOPPED: stopped after 151 of the 599.276 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as l
+bound built: 101,080 keys (99,487 expanded), 34 of 34 offers in the model, start value 0.01048001048 (152 s); STOPPED in the model phase: stopped after 151 of the 599.276 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE    -> plan 37784520555143.4531 lower 0.010480010479914512 states 246817 stopped its search made a plan, it had used its share of the time (43 seconds, the time left over the rounds left), and its last search round lowered its plan by no mor took 207.9 s
+model 1: 19 offers, 1,455 keys (338 expanded), 1,800 kernels, start value 0.7883799992747463 (model 7.5 s, solve 0.1 s); STOPPED: stopped after 8 of the 29.7373 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 1,455 keys (338 expanded), 19 of 50 offers in the model, start value 0.7883799992747463 (8 s); STOPPED in the model phase: stopped after 8 of the 29.7373 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 68 offers, 7,017 keys (303 expanded), 5,965 kernels, start value 0.7883799992747462 (model 7.3 s, solve 0.0 s); STOPPED: stopped after 7 of the 29.5296 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 7,017 keys (303 expanded), 68 of 83 offers in the model, start value 0.7883799992747462 (7 s); STOPPED in the model phase: stopped after 7 of the 29.5296 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 19 offers, 773 keys (773 expanded), 1,438 kernels, start value 0.7883799992747462 (model 2.6 s, solve 0.0 s)
+bound built: 773 keys (773 expanded), 19 of 132 offers in the model, start value 0.7883799992747462 (7 s); STOPPED in the growth phase: stopped after 7 of the 29.295 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+model 1: 19 offers, 2,375 keys (634 expanded), 2,800 kernels, start value 0.7883799992747463 (model 6.7 s, solve 0.1 s); STOPPED: stopped after 7 of the 28.9662 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 2,375 keys (634 expanded), 19 of 6,015 offers in the model, start value 0.7883799992747463 (7 s); STOPPED in the model phase: stopped after 7 of the 28.9662 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showe
+model 1: 19 offers, 1,716 keys (70 expanded), 477 kernels, start value 0.7883799992747462 (model 7.1 s, solve 0.0 s); STOPPED: stopped after 7 of the 28.7304 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it wo
+bound built: 1,716 keys (70 expanded), 19 of 40 offers in the model, start value 0.7883799992747462 (7 s); STOPPED in the model phase: stopped after 7 of the 28.7304 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+model 1: 19 offers, 3,062 keys (428 expanded), 2,106 kernels, start value 0.7883799992747462 (model 6.8 s, solve 0.0 s); STOPPED: stopped after 7 of the 27.2939 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 3,062 keys (428 expanded), 19 of 40 offers in the model, start value 0.7883799992747462 (7 s); STOPPED in the model phase: stopped after 7 of the 27.2939 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 35 offers, 19,106 keys (17,643 expanded, 28 ruined keys held by one), 72,610 kernels, start value 0.01048001048 (model 27.0 s, solve 0.2 s); STOPPED: the time limit of 26.5809 seconds was reached
+bound built: 19,106 keys (17,643 expanded), 35 of 35 offers in the model, start value 0.01048001048 (27 s); STOPPED in the model phase: the time limit of 26.5809 seconds was reached
+model 1: 36 offers, 20,086 keys (0 expanded, 27 ruined keys held by one), 71,171 kernels, start value 1.0479999999999999e-08 (model 26.4 s, solve 0.0 s); STOPPED: the time limit of 25.9118 seconds was reached
+bound built: 20,086 keys (0 expanded), 36 of 36 offers in the model, start value 1.0479999999999999e-08 (26 s); STOPPED in the model phase: the time limit of 25.9118 seconds was reached
+model 1: 19 offers, 5,834 keys (1,279 expanded), 5,697 kernels, start value 0.7883799992747463 (model 6.5 s, solve 0.0 s); STOPPED: stopped after 7 of the 25.3514 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that 
+bound built: 5,834 keys (1,279 expanded), 19 of 45 offers in the model, start value 0.7883799992747463 (7 s); STOPPED in the model phase: stopped after 7 of the 25.3514 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed
+model 1: 19 offers, 1,846 keys (116 expanded), 653 kernels, start value 0.7883799992747462 (model 6.3 s, solve 0.0 s); STOPPED: stopped after 6 of the 24.7739 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it w
+bound built: 1,846 keys (116 expanded), 19 of 40 offers in the model, start value 0.7883799992747462 (6 s); STOPPED in the model phase: stopped after 6 of the 24.7739 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 35 offers, 15,676 keys (14,213 expanded, 28 ruined keys held by one), 58,746 kernels, start value 0.01048001048 (model 24.1 s, solve 0.3 s); STOPPED: the time limit of 23.6774 seconds was reached
+bound built: 15,676 keys (14,213 expanded), 35 of 35 offers in the model, start value 0.01048001048 (24 s); STOPPED in the model phase: the time limit of 23.6774 seconds was reached
+model 1: 37 offers, 13,214 keys (11,762 expanded, 11 ruined keys held by one), 48,585 kernels, start value 0.01048001048 (model 25.1 s, solve 0.2 s); STOPPED: the time limit of 22.3335 seconds was reached
+bound built: 13,214 keys (11,762 expanded), 37 of 37 offers in the model, start value 0.01048001048 (25 s); STOPPED in the model phase: the time limit of 22.3335 seconds was reached
+model 1: 19 offers, 1,829 keys (99 expanded), 619 kernels, start value 0.7883799992747462 (model 4.6 s, solve 0.0 s); STOPPED: stopped after 5 of the 18.1505 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it wo
+bound built: 1,829 keys (99 expanded), 19 of 40 offers in the model, start value 0.7883799992747462 (5 s); STOPPED in the model phase: stopped after 5 of the 18.1505 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+TRACE PLAN made in 619.7 s: mean_remaining 37,784,520,555,143.4531
+TRACE STEP 2: Deafening Essence of Rage | uses 5,885,000,688,428.75 | 18,949,702,216,740.59 c | items 1 | normal; lacks family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks family AdditionalArrows, mod AdditionalArrowQuiver1_; lacks family IncreasedLife (t
+TRACE STEP 3: Restart: buy Penetrating Arrow Quiver (one of 2 bases of this name that play alike), normal, item level 81 again | uses 5,885,000,688,427.79 | 18,832,002,202,968.99 c | items 6308 | rare; has family Strength, mod StrengthEssence7_
+TRACE STEP 5: Fracturing Orb | uses 8,610,665.68 | 2,764,023,683.35 c | items 1 | rare; lacks family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_; has family AdditionalArrows, mod AdditionalArrowQuiver1_; has family IncreasedLife (top tier, not c
+TRACE STEP 6: Essence of Insanity | uses 1,722,133.14 | 34,890,417.34 c | items 1 | rare; fractured +# to Strength; lacks family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_; has family AdditionalArrows, mod AdditionalArrowQuiver1_; has family Incr
+TRACE STEP 4: Benchcraft: (7-12)% increased Attack Speed | uses 8,610,666.68 | 17,221,333.36 c | items 2 | rare; has family Strength, mod StrengthEssence7_; has family AdditionalArrows, mod AdditionalArrowQuiver1_; has family IncreasedLife (top tier, not crafted); has family DamageWithWeaponTypeSkil
+exit 0 end 13:02:12 load 16.97
+keys found 83,927 expanded 16 (now offer 2 of 34 of key 16) kernels 327,997 members 1,035
+=== T-R17
+start 12:51:50 load 16.88 head 2028e28b workers 4 LEAD=names:Wailing Essence of Greed|Shrieking Essence of Loathing|Orb of Alchemy|Orb of Transmutation|Orb of Augmentation|Chaos Orb|Harvest Reforge Mo
+TRACE LEAD names: first group 32 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Fracture a Talisman Modifier', 'Beastcraft Fracture two Talisman Modifiers', 'Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Cannot roll Atta
+model 1: 33 offers, 26,647 keys (17,949 expanded), 76,912 kernels, start value 0.01048001048 (model 174.6 s, solve 0.2 s); STOPPED: stopped after 175 of the 598.533 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 26,647 keys (17,949 expanded), 33 of 33 offers in the model, start value 0.01048001048 (175 s); STOPPED in the model phase: stopped after 175 of the 598.533 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE    -> plan 553501480629506.8125 lower 0.010480010479959872 states 745149 stopped its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it took 255.9 s
+model 1: 15 offers, 17,590 keys (1,324 expanded), 3,081 kernels, start value 3.124672997096568 (model 5.9 s, solve 0.1 s); STOPPED: stopped after 6 of the 24.8706 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that 
+bound built: 17,590 keys (1,324 expanded), 15 of 49 offers in the model, start value 3.124672997096568 (6 s); STOPPED in the model phase: stopped after 6 of the 24.8706 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed
+TRACE    -> plan 553501480629506.8125 lower 3.1246729999937615 states 654424 stopped the time limit of 18.477 seconds was reached took 53.4 s
+model 1: 90 offers, 16,688 keys (39 expanded), 1,154 kernels, start value 3.124672997096568 (model 5.4 s, solve 0.1 s); STOPPED: stopped after 6 of the 22.3327 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it 
+bound built: 16,688 keys (39 expanded), 90 of 108 offers in the model, start value 3.124672997096568 (6 s); STOPPED in the model phase: stopped after 6 of the 22.3327 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 15 offers, 3,306 keys (1,389 expanded), 3,380 kernels, start value 3.1246729970965674 (model 3.8 s, solve 0.1 s); STOPPED: stopped after 6 of the 22.1466 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that 
+bound built: 3,306 keys (1,389 expanded), 15 of 131 offers in the model, start value 3.1246729970965674 (6 s); STOPPED in the model phase: stopped after 6 of the 22.1466 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showe
+model 1: 15 offers, 1 keys (0 expanded), 0 kernels, start value 3.1246729999937615 (model 0.0 s, solve 0.0 s); STOPPED: stopped after 10 of the 21.8469 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it would en
+bound built: 1 keys (0 expanded), 15 of 7,102 offers in the model, start value 3.1246729999937615 (10 s); STOPPED in the model phase: stopped after 10 of the 21.8469 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed th
+TRACE    -> plan 22623639245079484.0000 lower 3.1246729999937615 states 563699 stopped the time limit of 11.695 seconds was reached took 48.2 s
+model 1: 39 offers, 17,673 keys (8,975 expanded), 38,460 kernels, start value 0.01048001048 (model 83.3 s, solve 0.2 s); STOPPED: the time limit of 18.7675 seconds was reached
+bound built: 17,673 keys (8,975 expanded), 39 of 39 offers in the model, start value 0.01048001048 (84 s); STOPPED in the model phase: the time limit of 18.7675 seconds was reached
+model 1: 39 offers, 17,673 keys (8,975 expanded), 38,460 kernels, start value 0.01048001048 (model 77.8 s, solve 0.1 s); STOPPED: the time limit of 10.1509 seconds was reached
+bound built: 17,673 keys (8,975 expanded), 39 of 39 offers in the model, start value 0.01048001048 (78 s); STOPPED in the model phase: the time limit of 10.1509 seconds was reached
+TRACE PLAN made in 617.3 s: mean_remaining 553,501,480,629,506.8125
+TRACE STEP 3: Restart: buy Croaker Talisman, normal, item level 85 again | uses 1,035,259,479,340.70 | 551,793,302,488,595.81 c | items 73760 | rare; has family CriticalStrikeChanceIncrease (top tier, not crafted)
+TRACE STEP 2: Shrieking Essence of Loathing | uses 1,035,259,479,341.70 | 1,708,178,140,913.80 c | items 1 | normal; lacks family GlobalSkillGemLevel (top tier, not crafted); lacks family GlobalDamageTypeGemLevel, mod GlobalLightningGemLevel1 (not crafted); lacks family AllAttributes (top tier, not 
+exit 0 end 13:02:12 load 16.97
+keys found 17,673 expanded 1 (now offer 2 of 33 of key 1) kernels 38,460 members 144
+=== T-R13
+start 13:03:17 load 15.04 head 2028e28b workers 4 LEAD=names:Deafening Essence of Hatred|Deafening Essence of Anger|Deafening Essence of Wrath|Bench craft (24-32)% increased Elemental Damage with Atta
+TRACE LEAD names: first group 33 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft (15-17)% increased Damage', 'Bench craft (24-32)% increased Elemental Damage with Attack Skills', 'Bench 
+model 1: 35 offers, 126,524 keys (125,539 expanded), 191,548 kernels, start value 0.19284801048 (model 155.3 s, solve 0.6 s); STOPPED: stopped after 155 of the 598.53 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 126,524 keys (125,539 expanded), 35 of 35 offers in the model, start value 0.19284801048 (156 s); STOPPED in the model phase: stopped after 155 of the 598.53 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE    -> plan 12086593.6173 lower 0.19284850906061088 states 111195 stopped its search made a plan, it had used its share of the time (43 seconds, the time left over the rounds left), and its last search round lowered its plan by no mor took 164.3 s
+model 1: 19 offers, 2,137 keys (276 expanded), 1,768 kernels, start value 1.0850870799633723 (model 8.2 s, solve 0.0 s); STOPPED: stopped after 8 of the 33.1044 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 2,137 keys (276 expanded), 19 of 51 offers in the model, start value 1.0850870799633723 (8 s); STOPPED in the model phase: stopped after 8 of the 33.1044 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+TRACE    -> plan 31900.3410 lower 1.2699619317192186 states 124452 stopped the time limit of 24.7039 seconds was reached took 36.1 s
+model 1: 58 offers, 11,771 keys (800 expanded), 11,251 kernels, start value 1.0850870799633723 (model 8.2 s, solve 0.1 s); STOPPED: stopped after 8 of the 32.7777 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that 
+bound built: 11,771 keys (800 expanded), 58 of 74 offers in the model, start value 1.0850870799633723 (8 s); STOPPED in the model phase: stopped after 8 of the 32.7777 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed 
+TRACE    -> plan 31454.0631 lower 1.2893522570767515 states 148047 stopped the time limit of 24.1853 seconds was reached took 36.2 s
+model 1: 19 offers, 4,888 keys (2,319 expanded), 7,050 kernels, start value 1.08430931305129 (model 7.9 s, solve 0.1 s); STOPPED: stopped after 8 of the 32.319 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it 
+bound built: 4,888 keys (2,319 expanded), 19 of 131 offers in the model, start value 1.08430931305129 (8 s); STOPPED in the model phase: stopped after 8 of the 32.319 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+TRACE    -> plan 143784.3723 lower 1.0864034771111384 states 203520 stopped the time limit of 23.9776 seconds was reached took 36.5 s
+model 1: 19 offers, 991 keys (43 expanded), 149 kernels, start value 1.0850870799633723 (model 6.9 s, solve 0.0 s); STOPPED: stopped after 8 of the 31.6798 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it woul
+bound built: 991 keys (43 expanded), 19 of 5,520 offers in the model, start value 1.0850870799633723 (8 s); STOPPED in the model phase: stopped after 8 of the 31.6798 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 19 offers, 7,215 keys (1,646 expanded), 7,148 kernels, start value 1.0850870799633723 (model 7.8 s, solve 0.2 s); STOPPED: stopped after 8 of the 31.3205 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that 
+bound built: 7,215 keys (1,646 expanded), 19 of 41 offers in the model, start value 1.0850870799633723 (8 s); STOPPED in the model phase: stopped after 8 of the 31.3205 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed
+TRACE    -> plan 32286.0584 lower 1.27507942986284 states 122932 stopped the time limit of 22.9562 seconds was reached took 33.5 s
+model 1: 19 offers, 2,990 keys (274 expanded), 1,867 kernels, start value 1.0850870799633723 (model 7.8 s, solve 0.0 s); STOPPED: stopped after 8 of the 30.7988 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 2,990 keys (274 expanded), 19 of 41 offers in the model, start value 1.0850870799633723 (8 s); STOPPED in the model phase: stopped after 8 of the 30.7988 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+model 1: 36 offers, 23,438 keys (22,453 expanded), 35,263 kernels, start value 0.19284801048 (model 33.5 s, solve 0.1 s); STOPPED: the time limit of 30.0819 seconds was reached
+bound built: 23,438 keys (22,453 expanded), 36 of 36 offers in the model, start value 0.19284801048 (34 s); STOPPED in the model phase: the time limit of 30.0819 seconds was reached
+model 1: 37 offers, 23,438 keys (22,453 expanded), 35,393 kernels, start value 0.19284801048 (model 34.5 s, solve 0.1 s); STOPPED: the time limit of 29.0518 seconds was reached
+bound built: 23,438 keys (22,453 expanded), 37 of 37 offers in the model, start value 0.19284801048 (35 s); STOPPED in the model phase: the time limit of 29.0518 seconds was reached
+model 1: 19 offers, 4,687 keys (819 expanded), 4,029 kernels, start value 1.0850870799633723 (model 6.8 s, solve 0.1 s); STOPPED: stopped after 7 of the 27.3778 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 4,687 keys (819 expanded), 19 of 46 offers in the model, start value 1.0850870799633723 (7 s); STOPPED in the model phase: stopped after 7 of the 27.3778 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+TRACE    -> plan 31901.2647 lower 1.27507942986284 states 123706 stopped the time limit of 20.2938 seconds was reached took 31.0 s
+model 1: 19 offers, 3,594 keys (439 expanded), 2,651 kernels, start value 1.0850870799633723 (model 6.4 s, solve 0.1 s); STOPPED: stopped after 6 of the 25.7769 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 3,594 keys (439 expanded), 19 of 41 offers in the model, start value 1.0850870799633723 (7 s); STOPPED in the model phase: stopped after 6 of the 25.7769 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+TRACE    -> plan 32286.0584 lower 1.2750794295870365 states 146692 stopped the time limit of 19.1792 seconds was reached took 28.9 s
+model 1: 36 offers, 23,438 keys (22,453 expanded), 35,263 kernels, start value 0.19284801048 (model 27.8 s, solve 0.1 s); STOPPED: the time limit of 23.9289 seconds was reached
+bound built: 23,438 keys (22,453 expanded), 36 of 36 offers in the model, start value 0.19284801048 (28 s); STOPPED in the model phase: the time limit of 23.9289 seconds was reached
+model 1: 38 offers, 14,474 keys (13,489 expanded), 24,393 kernels, start value 0.19284801048 (model 26.9 s, solve 0.1 s); STOPPED: the time limit of 20.6618 seconds was reached
+bound built: 14,474 keys (13,489 expanded), 38 of 38 offers in the model, start value 0.19284801048 (27 s); STOPPED in the model phase: the time limit of 20.6618 seconds was reached
+model 1: 19 offers, 2,990 keys (281 expanded), 1,874 kernels, start value 1.0850870799633723 (model 2.7 s, solve 0.1 s); STOPPED: stopped after 3 of the 10.9043 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 2,990 keys (281 expanded), 19 of 41 offers in the model, start value 1.0850870799633723 (3 s); STOPPED in the model phase: stopped after 3 of the 10.9043 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+keys found 108,596 expanded 43 (now offer 3 of 35 of key 43) kernels 165,898 members 596
+=== T-R24
+start 13:02:16 load 16.49 head 2028e28b workers 4 LEAD=names:Shrieking Essence of Hatred|Shrieking Essence of Anger|Deafening Essence of Torment|Shrieking Essence of Wrath|Screaming Essence of Doubt|P
+TRACE LEAD names: first group 34 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Cannot roll Caster Modifiers',
+model 1: 35 offers, 98,821 keys (98,033 expanded), 202,010 kernels, start value 0.34630005186 (model 149.7 s, solve 0.6 s); STOPPED: stopped after 150 of the 598.721 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 98,821 keys (98,033 expanded), 35 of 35 offers in the model, start value 0.34630005186 (150 s); STOPPED in the model phase: stopped after 150 of the 598.721 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 57,937 keys (19,726 expanded), 21,857 kernels, start value 4.087999999995912 (model 100.4 s, solve 0.7 s); STOPPED: stopped after 100 of the 401.671 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 57,937 keys (19,726 expanded), 19 of 51 offers in the model, start value 4.087999999995912 (101 s); STOPPED in the model phase: stopped after 100 of the 401.671 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 45,681 keys (11,284 expanded), 17,697 kernels, start value 4.087999999995912 (model 65.6 s, solve 0.3 s); STOPPED: stopped after 66 of the 263.278 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 45,681 keys (11,284 expanded), 19 of 90 offers in the model, start value 4.087999999995912 (66 s); STOPPED in the model phase: stopped after 66 of the 263.278 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 79 offers, 28,833 keys (723 expanded), 15,673 kernels, start value 4.087999999995912 (model 43.7 s, solve 0.2 s); STOPPED: stopped after 44 of the 170.73 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 28,833 keys (723 expanded), 79 of 95 offers in the model, start value 4.087999999995912 (44 s); STOPPED in the model phase: stopped after 44 of the 170.73 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 25,685 keys (598 expanded), 5,100 kernels, start value 4.087999999995912 (model 26.1 s, solve 0.2 s); STOPPED: stopped after 27 of the 107.102 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 25,685 keys (598 expanded), 19 of 4,085 offers in the model, start value 4.087999999995912 (27 s); STOPPED in the model phase: stopped after 27 of the 107.102 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 19,712 keys (683 expanded), 4,508 kernels, start value 4.087999999995912 (model 16.9 s, solve 0.1 s); STOPPED: stopped after 17 of the 67.3669 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 19,712 keys (683 expanded), 19 of 41 offers in the model, start value 4.087999999995912 (17 s); STOPPED in the model phase: stopped after 17 of the 67.3669 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 2,645 keys (538 expanded), 7,866 kernels, start value 4.087999999995912 (model 11.1 s, solve 0.0 s); STOPPED: stopped after 11 of the 39.1978 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,645 keys (538 expanded), 19 of 41 offers in the model, start value 4.087999999995912 (11 s); STOPPED in the model phase: stopped after 11 of the 39.1978 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 36 offers, 3,563 keys (2,836 expanded), 7,555 kernels, start value 0.21333338519333334 (model 5.9 s, solve 0.0 s); STOPPED: stopped after 6 of the 20.5811 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 3,563 keys (2,836 expanded), 36 of 36 offers in the model, start value 0.21333338519333334 (6 s); STOPPED in the model phase: stopped after 6 of the 20.5811 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 36 offers, 2,348 keys (1,621 expanded), 4,191 kernels, start value 0.21333338519333334 (model 2.5 s, solve 0.0 s); STOPPED: stopped after 3 of the 9.44706 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 2,348 keys (1,621 expanded), 36 of 36 offers in the model, start value 0.21333338519333334 (3 s); STOPPED in the model phase: stopped after 3 of the 9.44706 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 19 offers, 1,148 keys (246 expanded), 644 kernels, start value 4.087999999995912 (model 0.8 s, solve 0.0 s); STOPPED: stopped after 1 of the 3.58085 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 1,148 keys (246 expanded), 19 of 43 offers in the model, start value 4.087999999995912 (1 s); STOPPED in the model phase: stopped after 1 of the 3.58085 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+model 1: 37 offers, 676 keys (405 expanded), 470 kernels, start value 5.186e-08 (model 0.7 s, solve 0.0 s); STOPPED: the time limit of 0.266612 seconds was reached
+bound built: 676 keys (405 expanded), 37 of 37 offers in the model, start value 5.186e-08 (1 s); STOPPED in the model phase: the time limit of 0.266612 seconds was reached
+exit 0 end 13:12:21 load 17.65
+keys found 28,257 expanded 720 (now offer 73 of 79 of key 720) kernels 15,126 members 25,837
+=== TS-R04
+start 13:04:18 load 10.88 head 2028e28b workers 4 SPB=0.33 LEAD=names:Wailing Essence of Suffering|Deafening Essence of Rage|Essence of Insanity|Bench craft +(29-35)% to Fire Resistance|Bench craft +(
+TRACE LEAD names: first group 33 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft (7-12)% increased Attack Speed', 'Bench craft +(29-35)% to Cold Resistance', 'Bench craft +(29-35)% to Fi
+model 1: 34 offers, 352,993 keys (351,155 expanded, 539 ruined keys held by one), 1,508,296 kernels, start value 0.01048001048 (model 451.5 s, solve 13.2 s); STOPPED: stopped after 451 of the 599.412 seconds of the time limit, to leave the rest for the search for the plan, which takes several times 
+bound built: 352,993 keys (351,155 expanded), 34 of 34 offers in the model, start value 0.01048001048 (465 s); STOPPED in the model phase: stopped after 451 of the 599.412 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE    -> plan 37784520555143.4531 lower 0.010479999999914514 states 246817 stopped its search made a plan, it had used its share of the time (43 seconds, the time left over the rounds left), and its last search round lowered its plan by no mor took 520.6 s
+model 1: 19 offers, 1,433 keys (328 expanded), 1,671 kernels, start value 0.7883799992747463 (model 4.5 s, solve 0.0 s); STOPPED: stopped after 5 of the 5.77576 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed that it
+bound built: 1,433 keys (328 expanded), 19 of 50 offers in the model, start value 0.7883799992747463 (5 s); STOPPED in the model phase: stopped after 5 of the 5.77576 seconds of the time limit, to leave the rest for the search for the plan: its model had not grown past its first, so nothing showed t
+keys found 328,130 expanded 53 (now offer 4 of 34 of key 53) kernels 1,407,663 members 3,942
+=== TS-R17
+start 13:05:10 load 9.72 head 2028e28b workers 4 SPB=0.33 LEAD=names:Wailing Essence of Greed|Shrieking Essence of Loathing|Orb of Alchemy|Orb of Transmutation|Orb of Augmentation|Chaos Orb|Harvest Re
+TRACE LEAD names: first group 32 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Fracture a Talisman Modifier', 'Beastcraft Fracture two Talisman Modifiers', 'Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Cannot roll Atta
+model 1: 33 offers, 71,517 keys (62,819 expanded), 218,808 kernels, start value 0.01048001048 (model 462.4 s, solve 0.9 s); STOPPED: stopped after 462 of the 598.183 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 71,517 keys (62,819 expanded), 33 of 33 offers in the model, start value 0.01048001048 (463 s); STOPPED in the model phase: stopped after 462 of the 598.183 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+keys found 62,543 expanded 1 (now offer 2 of 33 of key 1) kernels 197,144 members 144
+=== TL-R04
+start 13:18:46 load 10.93 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=names:Wailing Essence of Suffering|Deafening Essence o
+TRACE LEAD names: first group 33 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft (7-12)% increased Attack Speed', 'Bench craft +(29-35)% to Cold Resistance', 'Bench craft +(29-35)% to Fi
+keys found 2,610,869 expanded 234 (now offer 3 of 34 of key 234) kernels 9,775,487 members 18,975
+=== TL-R24
+start 13:19:40 load 12.42 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=names:Shrieking Essence of Hatred|Shrieking Essence of
+TRACE LEAD names: first group 34 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Cannot roll Caster Modifiers',
+keys found 4,045,628 expanded 1,171 (now offer 2 of 35 of key 1,171) kernels 5,698,090 members 39,274
+=== P0-R04
+start 13:14:19 load 15.41 head 2028e28b workers 4 LEAD=one ONLY=Wailing Essence of Suffering|Deafening Essence of Rage|Essence of Insanity|Bench craft +(29-35)% to Fire Resistance|Bench craft +(29-35)
+TRACE ONLY: 10 of 11193 offers kept; labels not found: []
+TRACE LEAD one: first group 10 offers of 6 groups, features ['junk', 'pool weights']; 0 groups after: []
+model 1: 11 offers, 885 keys (885 expanded), 625 kernels, start value inf (model 15.8 s, solve 0.0 s)
+bound built: 885 keys (885 expanded), 11 of 11 offers in the model, start value inf (16 s)
+  error: no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start)
+exit 0 end 13:14:40 load 14.81
+=== P0-R17
+start 13:15:32 load 10.48 head 2028e28b workers 4 LEAD=one ONLY=Wailing Essence of Greed|Shrieking Essence of Loathing|Orb of Alchemy|Orb of Transmutation|Orb of Augmentation
+TRACE ONLY: 5 of 11236 offers kept; labels not found: []
+TRACE LEAD one: first group 5 offers of 4 groups, features ['junk', 'pool weights']; 0 groups after: []
+model 1: 6 offers, 1,279 keys (1,279 expanded), 19 kernels, start value 1708178140913.8047 (model 6.6 s, solve 0.0 s)
+bound built: 1,279 keys (1,279 expanded), 6 of 6 offers in the model, start value 1708178140913.8047 (7 s)
+stop: the plan costs at most 1708178140913.8052, no plan costs less than 1708178139738.636: proved within 1.000%
+exit 0 end 13:17:18 load 12.97
+=== P0-R24
+start 13:17:50 load 11.69 head 2028e28b workers 4 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence of Anger|Deafening Essence of Torment|Shrieking Essence of Wrath|Screaming Essence of Doub
+TRACE ONLY: 8 of 10955 offers kept; labels not found: []
+TRACE LEAD one: first group 6 offers of 2 groups, features ['junk', 'pool weights']; 0 groups after: []
+model 1: 7 offers, 367 keys (367 expanded), 5 kernels, start value inf (model 0.5 s, solve 0.0 s)
+bound built: 367 keys (367 expanded), 7 of 7 offers in the model, start value inf (1 s)
+  error: no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start)
+exit 0 end 13:17:55 load 12.04
+=== P0-R13
+start 13:18:50 load 10.93 head 2028e28b workers 4 LEAD=one ONLY=Deafening Essence of Hatred|Deafening Essence of Anger|Deafening Essence of Wrath|Bench craft (24-32)% increased Elemental Damage with A
+TRACE ONLY: 8 of 11167 offers kept; labels not found: []
+model 1: 10 offers, 49 keys (49 expanded), 18 kernels, start value inf (model 0.1 s, solve 0.0 s)
+bound built: 49 keys (49 expanded), 10 of 10 offers in the model, start value inf (0 s)
+  error: no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start)
+exit 0 end 13:18:53 load 11.17
+=== P0-R20
+start 13:19:41 load 12.42 head 2028e28b workers 4 LEAD=one ONLY=Essence of Horror|Fossils Glyphic Fossil|Orb of Alchemy|Orb of Transmutation
+TRACE ONLY: 4 of 10978 offers kept; labels not found: []
+model 1: 6 offers, 17 keys (17 expanded), 3 kernels, start value 35058189.44673531 (model 8.4 s, solve 0.0 s)
+bound built: 17 keys (17 expanded), 6 of 6 offers in the model, start value 35058189.44673531 (8 s)
+TRACE PLAN made in 9.8 s: mean_remaining 35,058,189.4467
+TRACE STEP 3: Essence of Horror | uses 1,368,925.79 | 35,058,189.45 c | items 15 | rare
+TRACE STEP 2: The bought item's own mods | uses 1.00 | 0.00 c | items 1 | the bought rare item, its mods not drawn yet
+exit 0 end 13:19:54 load 12.96
+=== P0-R08
+start 13:20:43 load 15.05 head 2028e28b workers 4 LEAD=one ONLY=Orb of Alchemy|Orb of Transmutation
+TRACE ONLY: 2 of 13036 offers kept; labels not found: []
+model 1: 4 offers, 10 keys (10 expanded), 1 kernels, start value 34000.18981504212 (model 0.1 s, solve 0.0 s)
+bound built: 10 keys (10 expanded), 4 of 4 offers in the model, start value 34000.18981504212 (0 s)
+TRACE PLAN made in 2.0 s: mean_remaining 34,000.1898
+TRACE STEP 3: Restart: buy Sorcerer Boots, item level 86-100 again | uses 775.81 | 33,999.38 c | items 8 | rare
+TRACE STEP 2: The bought item's own mods | uses 776.81 | 0.81 c | items 1 | the bought rare item, its mods not drawn yet
+exit 0 end 13:20:48 load 15.52
+=== P1-R04
+start 13:14:56 load 13.18 head 2028e28b workers 4 LEAD=one ONLY=Wailing Essence of Suffering|Deafening Essence of Rage|Essence of Insanity|Bench craft +(29-35)% to Fire Resistance|Bench craft +(29-35)
+TRACE ONLY: 14 of 11193 offers kept; labels not found: []
+TRACE LEAD one: first group 14 offers of 9 groups, features ['fractures', 'junk', 'metamods', 'pool weights']; 0 groups after: []
+model 1: 13 offers, 3,662 keys (47 expanded, 11,238 ruined keys held by one), 139,724 kernels, start value 0.02096 (model 151.2 s, solve 0.0 s); STOPPED: stopped after 151 of the 599.485 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as th
+bound built: 3,662 keys (47 expanded), 13 of 13 offers in the model, start value 0.02096 (151 s); STOPPED in the model phase: stopped after 151 of the 599.485 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE PLAN made in 635.6 s: mean_remaining 7,447,169.5492
+TRACE STEP 6: Deafening Essence of Rage | uses 1,722,133.14 | 5,545,268.70 c | items 2805 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7
+TRACE STEP 5: Benchcraft: +(29-35)% to Fire Resistance | uses 574,665.74 | 1,723,997.23 c | items 356 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mo
+TRACE STEP 7: Benchcraft: +(29-35)% to Cold Resistance | uses 58,764.04 | 176,292.12 c | items 26 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; lacks family AdditionalArrows, mod AdditionalArrowQuiver1_; lacks 1 of: family FireResistance,
+TRACE STEP 3: Fracturing Orb | uses 4.00 | 1,284.00 c | items 538 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharM
+TRACE STEP 2: Essence of Insanity | uses 15.59 | 315.90 c | items 10002 | lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharMasterColdResist3__, family LightningResistance, mod Ein
+TRACE STEP 4: Restart: buy Penetrating Arrow Quiver (one of 2 bases of this name that play alike), normal, item level 81 again | uses 3.00 | 9.60 c | items 1574 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, m
+TRACE STEP 8: Benchcraft: (7-12)% increased Attack Speed | uses 1.00 | 2.00 c | items 1 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_; has family AdditionalArrows, mod AdditionalArrowQu
+exit 0 end 13:25:35 load 14.64
+keys found 3,366 expanded 1,524 kernels 138,987 members 330,923
+=== PL1-R04
+start 13:20:36 load 15.14 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Wailing Essence of Suffering|Deafening Essenc
+TRACE ONLY: 14 of 11193 offers kept; labels not found: []
+TRACE LEAD one: first group 14 offers of 9 groups, features ['fractures', 'junk', 'metamods', 'pool weights']; 0 groups after: []
+model 1: 13 offers, 3,662 keys (3,662 expanded, 11,238 ruined keys held by one), 139,724 kernels, start value 5546685.858019685 (model 244.2 s, solve 0.1 s)
+bound built: 3,662 keys (3,662 expanded), 13 of 13 offers in the model, start value 5546685.858019685 (244 s)
+stop: the plan costs at most 5546685.870911395, no plan costs less than 5546679.478583107: proved within 1.000%
+model 1: 15 offers, 11,816 keys (11,816 expanded, 29,250 ruined keys held by one), 120,384 kernels, start value 5546685.857869065 (model 209.5 s, solve 0.1 s)
+bound built: 11,816 keys (11,816 expanded), 15 of 15 offers in the model, start value 5546685.857869065 (210 s)
+stop: the plan costs at most 5546685.870911395, no plan costs less than 5546675.8277360285: proved within 1.000%
+TRACE PLAN made in 464.1 s: mean_remaining 5,546,685.8581
+TRACE STEP 5: Deafening Essence of Rage | uses 1,722,133.14 | 5,545,268.70 c | items 3430 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod Ei
+TRACE STEP 3: Fracturing Orb | uses 4.00 | 1,284.00 c | items 1163 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharM
+TRACE STEP 2: Essence of Insanity | uses 6.00 | 121.56 c | items 9377 | lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharMasterColdResist3__, family LightningResistance, mod Ein
+TRACE STEP 4: Restart: buy Penetrating Arrow Quiver (one of 2 bases of this name that play alike), normal, item level 81 again | uses 3.00 | 9.60 c | items 3418 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, m
+TRACE STEP 6: Benchcraft: (7-12)% increased Attack Speed | uses 1.00 | 2.00 c | items 1 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_; has family AdditionalArrows, mod AdditionalArrowQu
+exit 0 end 13:28:25 load 11.13
+keys found 11,816 expanded 4,287 kernels 120,384 members 716,235
+=== PL2-R04
+start 13:30:51 load 13.01 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Essence of Insanity|Fracturing Orb|Deafening 
+TRACE ONLY: 10 of 11193 offers kept; labels not found: []
+TRACE LEAD one: first group 10 offers of 8 groups, features ['fractures', 'junk', 'metamods', 'pool weights']; 0 groups after: []
+model 1: 9 offers, 3,442 keys (3,442 expanded, 7,510 ruined keys held by one), 46,451 kernels, start value 124390.81978333603 (model 27.0 s, solve 0.2 s)
+bound built: 3,442 keys (3,442 expanded), 9 of 9 offers in the model, start value 124390.81978333603 (27 s)
+stop: the plan costs at most 126035.49066592458, no plan costs less than 124795.61897117595: proved within 1.000%
+model 1: 11 offers, 10,243 keys (10,243 expanded, 21,920 ruined keys held by one), 84,838 kernels, start value 35619.29517576308 (model 44.7 s, solve 0.4 s)
+bound built: 10,243 keys (10,243 expanded), 11 of 11 offers in the model, start value 35619.29517576308 (45 s)
+stop: the plan costs at most 35664.995643469585, no plan costs less than 35619.914484397814: proved within 1.000%
+TRACE PLAN made in 302.6 s: mean_remaining 35,664.9950
+TRACE STEP 6: Deafening Essence of Rage | uses 8,423.71 | 27,124.35 c | items 2387 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod Ei
+TRACE STEP 8: Benchcraft: Cannot roll Attack Modifiers | uses 28.19 | 4,977.63 c | items 7 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_; has family AdditionalArrows, mod AdditionalArrowQu
+TRACE STEP 4: Orb of Annulment | uses 122.07 | 1,553.93 c | items 2817 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharMasterColdResist3__, family LightningResistance
+TRACE STEP 3: Fracturing Orb | uses 4.00 | 1,284.00 c | items 853 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharM
+TRACE STEP 7: Exalted Orb | uses 449.75 | 611.66 c | items 124 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_
+TRACE STEP 2: Essence of Insanity | uses 4.62 | 93.51 c | items 6281 | lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, mod EinharMasterFireResist3_, family ColdResistance, mod EinharMasterColdResist3__, family LightningResistance, mod Ein
+TRACE STEP 5: Restart: buy Penetrating Arrow Quiver (one of 2 bases of this name that play alike), normal, item level 81 again | uses 3.00 | 9.60 c | items 2477 | rare; has family Pierce, mod AdditionalPierceEssence7; lacks family Strength, mod StrengthEssence7_; lacks 1 of: family FireResistance, m
+TRACE STEP 10: Benchcraft: Remove Crafted Mods | uses 15.98 | 5.53 c | items 14 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7
+TRACE STEP 9: Benchcraft: (7-12)% increased Attack Speed | uses 2.39 | 4.79 c | items 2 | rare; fractured Projectiles Pierce 2 additional Targets; has family Pierce, mod AdditionalPierceEssence7; has family Strength, mod StrengthEssence7_; has family IncreasedLife (top tier, not crafted); 
+exit 0 end 13:37:28 load 10.44
+keys found 6,971 expanded 3,792 kernels 57,160 members 88,710
+=== P1-R13
+start 13:19:20 load 11.35 head 2028e28b workers 4 LEAD=one ONLY=Deafening Essence of Hatred|Deafening Essence of Anger|Deafening Essence of Wrath|Bench craft (24-32)% increased Elemental Damage with A
+TRACE ONLY: 18 of 11167 offers kept; labels not found: []
+TRACE LEAD one: first group 18 offers of 12 groups, features ['fractures', 'junk', 'metamods', 'pool weights']; 0 groups after: []
+model 1: 18 offers, 6,281 keys (6,281 expanded, 15,896 ruined keys held by one), 130,616 kernels, start value 1579.3903609713773 (model 108.4 s, solve 0.4 s)
+bound built: 6,281 keys (6,281 expanded), 18 of 18 offers in the model, start value 1579.3903609713773 (109 s)
+stop: the plan costs at most 1579.5059508502104, no plan costs less than 1579.4074271495824: proved within 1.000%
+model 1: 20 offers, 10,852 keys (5,861 expanded, 30,657 ruined keys held by one), 159,728 kernels, start value 355.4105731507368 (model 121.7 s, solve 0.2 s); STOPPED: stopped after 122 of the 486.64 seconds of the time limit, to leave the rest for the search for the plan, which takes several times 
+bound built: 10,852 keys (5,861 expanded), 20 of 20 offers in the model, start value 355.4105731507368 (122 s); STOPPED in the model phase: stopped after 122 of the 486.64 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE PLAN made in 626.6 s: mean_remaining 10,742.3924
+TRACE STEP 3: Orb of Alteration | uses 57,830.49 | 10,305.39 c | items 132 | magic; lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDamage2; lacks family ItemGenerationCanHaveMultipleCraftedMo
+TRACE STEP 7: Benchcraft: Can have up to 3 Crafted Modifiers | uses 1.00 | 353.20 c | items 3 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDam
+TRACE STEP 4: Orb of Augmentation | uses 976.48 | 50.64 c | items 4 | magic; lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDamage2; lacks family ItemGenerationCanHaveMultipleCraftedMo
+TRACE STEP 6: Orb of Scouring | uses 49.27 | 17.06 c | items 48 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDam
+TRACE STEP 5: Regal Orb | uses 50.27 | 9.64 c | items 3 | magic; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDa
+TRACE STEP 10: Benchcraft: (15-17)% increased Damage | uses 1.00 | 5.44 c | items 3 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; has family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDamag
+TRACE STEP 8: Orb of Transmutation | uses 49.27 | 0.52 c | items 1 | normal; lacks family IncreasedLife (tier 1 or better, not crafted); lacks 2 of: family FireResistance (tier 1 or better, not crafted), family ColdResistance (tier 1 or better, not crafted), family Lig
+TRACE STEP 9: Benchcraft: (24-32)% increased Elemental Damage with Attack Skills | uses 1.00 | 0.49 c | items 3 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeap
+TRACE STEP 2: The bought item's own mods | uses 1.00 | 0.00 c | items 1 | the bought magic item, its mods not drawn yet
+exit 0 end 13:30:02 load 12.31
+keys found 10,786 expanded 5,725 kernels 158,506 members 229,633
+=== P2-R13
+start 13:30:20 load 13.24 head 2028e28b workers 4 LEAD=one ONLY=Orb of Alteration|Orb of Augmentation|Orb of Scouring|Regal Orb|Orb of Transmutation|Bench craft Can have up to 3 Crafted Modifiers|Benc
+TRACE ONLY: 15 of 11167 offers kept; labels not found: []
+TRACE LEAD one: first group 15 offers of 10 groups, features ['draw tags', 'imprints', 'junk', 'pool weights']; 0 groups after: []
+model 1: 17 offers, 51,265 keys (28,193 expanded), 149,754 kernels, start value 66.26686273949714 (model 149.8 s, solve 1.1 s); STOPPED: stopped after 150 of the 598.929 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+bound built: 51,265 keys (28,193 expanded), 17 of 17 offers in the model, start value 66.26686273949714 (151 s); STOPPED in the model phase: stopped after 150 of the 598.929 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
+TRACE PLAN made in 617.4 s: mean_remaining 3,757.1730
+TRACE STEP 5: Imprint with the Craicic Croaker | uses 50.27 | 3,182.41 c | items 3 | magic; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDa
+TRACE STEP 8: Benchcraft: Can have up to 3 Crafted Modifiers | uses 1.00 | 353.20 c | items 6 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDam
+TRACE STEP 3: Orb of Alteration | uses 1,150.28 | 204.98 c | items 132 | magic; lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDamage2; lacks family ItemGenerationCanHaveMultipleCraftedMo
+TRACE STEP 6: Regal Orb | uses 50.27 | 9.64 c | items 3 | magic; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDa
+TRACE STEP 10: Benchcraft: (15-17)% increased Damage | uses 1.00 | 5.44 c | items 6 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; has family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDamag
+TRACE STEP 4: Orb of Augmentation | uses 19.42 | 1.01 c | items 4 | magic; lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDamage2; lacks family ItemGenerationCanHaveMultipleCraftedMo
+TRACE STEP 9: Benchcraft: (24-32)% increased Elemental Damage with Attack Skills | uses 1.00 | 0.49 c | items 6 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeap
+TRACE STEP 2: The bought item's own mods | uses 1.00 | 0.00 c | items 1 | the bought magic item, its mods not drawn yet
+TRACE STEP 7: Restore imprint 1 | uses 49.27 | 0.00 c | items 48 | rare; has family IncreasedLife (tier 1 or better, not crafted); lacks family AllDamage, mod JunMaster2AllDamage3; lacks family IncreasedWeaponElementalDamagePercent, mod EinharMasterWeaponElementalDam
+exit 0 end 13:40:51 load 6.77
+keys found 44,906 expanded 23,074 kernels 126,044 members 366,635
+=== PL1-R24
+start 13:19:00 load 11.25 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence
+TRACE ONLY: 14 of 10955 offers kept; labels not found: []
+TRACE LEAD one: first group 14 offers of 8 groups, features ['junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods']; 0 groups after: []
+model 1: 12 offers, 33,545 keys (33,545 expanded), 6,663 kernels, start value inf (model 76.4 s, solve 0.2 s)
+bound built: 33,545 keys (33,545 expanded), 12 of 12 offers in the model, start value inf (77 s)
+model 1: 15 offers, 60,536 keys (60,536 expanded), 16,610 kernels, start value inf (model 153.4 s, solve 0.4 s)
+bound built: 60,536 keys (60,536 expanded), 15 of 15 offers in the model, start value inf (154 s)
+  error: no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start)
+exit 0 end 13:22:56 load 16.71
+keys found 60,536 expanded 59,112 kernels 15,326 members 438,617
+=== PL2-R24
+start 13:30:44 load 12.83 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence
+TRACE ONLY: 20 of 10955 offers kept; labels not found: []
+TRACE LEAD one: first group 20 offers of 12 groups, features ['draw tags', 'junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods']; 0 groups after: []
+model 1: 18 offers, 36,211 keys (36,211 expanded), 54,490 kernels, start value inf (model 201.4 s, solve 0.3 s)
+bound built: 36,211 keys (36,211 expanded), 18 of 18 offers in the model, start value inf (202 s)
+model 1: 21 offers, 67,855 keys (67,855 expanded), 83,132 kernels, start value inf (model 312.7 s, solve 0.8 s)
+bound built: 67,855 keys (67,855 expanded), 21 of 21 offers in the model, start value inf (314 s)
+  error: no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start)
+exit 0 end 13:39:26 load 8.91
+keys found 67,695 expanded 63,088 kernels 74,357 members 2,605,309
