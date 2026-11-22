@@ -1152,14 +1152,16 @@ def plan_fallback(solution: Solution, offered: Sequence[PricedOffer]) -> tuple[P
 
 def rounds_apply(data: GameData, target: Target, priced: Sequence[PricedOffer], *, solve_it: bool, judged: bool, solver: str) -> bool:
     """Whether the offers may be searched in rounds (`_rounds`, #1069): a plan the envelope search solves, of one reading (no rule axis), with no
-    offer that searches a second item (an Awakener's Orb's donor, an offer that takes donors), and no route judged against it whose actions are
-    not known (`judged`: such a route, or an incumbent, is a fixed policy that may name any offer; a route whose actions are known leads the
-    first round instead, #1110)."""
+    offer that takes donors other than an Awakener's Orb, and no route judged against it whose actions are not known (`judged`: such a route,
+    or an incumbent, is a fixed policy that may name any offer; a route whose actions are known leads the first round instead, #1110). An
+    Awakener's Orb is searched in the rounds that hold it, its donor searched inside that round's share (`_make_plan`, #1101); refusing the
+    rounds for it made a target offered one a single search of every offer, which the growth never reached (#1426, R14)."""
     if not solve_it or judged or solver not in ("auto", "envelope"):
         return False
-    if interval_axes(data, priced) or awakener_offers(priced):
+    if interval_axes(data, priced):
         return False
-    return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem))
+    orbs = {id(p) for p in awakener_offers(priced)}
+    return not any(takes_inputs(p.offer.action) for p in priced if not isinstance(p.offer.action, BuyStartItem) and id(p) not in orbs)
 
 
 def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Offer], route: Sequence[str] = ()) -> tuple[_rounds.Group, ...]:
