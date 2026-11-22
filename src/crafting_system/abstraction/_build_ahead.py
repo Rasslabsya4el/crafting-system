@@ -106,6 +106,8 @@ class KeysAhead:
         self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
         self.renew = False  # the workers grew past their share of the room: the pool is closed once its windows are in (`_grown`)
         self.renewed = 0  # pools closed so (each forked again from this process)
+        self.early = 0  # pools of this pass grown past half the room before a window came back
+        self.pass_off = False  # no pool again in this pass (`_gather`)
         self.scale = 1.0  # the windows' share of their size by the pace (`_size`): halved each time workers grew past half the room within one
         self.gathered = 0
 
@@ -154,7 +156,7 @@ class KeysAhead:
 
     def _pays(self, i: int) -> bool:
         """Whether a pool forked now saves time, by this build's measures (the module's note); asked once a poll of work done here."""
-        if self.count < 2 or self.stopped is not None:
+        if self.count < 2 or self.stopped is not None or self.pass_off:
             return False
         if ALWAYS:
             return True
@@ -225,14 +227,17 @@ class KeysAhead:
             self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
             return
         except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): stopped as in `asked`
-            if str(reached) == GROWN and (self.gathered or self._size() > self.count * CHUNKS):
-                # the workers grew past half the room: let go now, with the window in flight (`_fill`); grown so before a window came back, the
-                # windows are halved (R17: six workers grew past half the room within one window, pool after pool), and the pool is cut only
-                # once a window is its least, a chunk of one key for each worker
-                if not self.gathered:
-                    self.scale /= 2
+            if str(reached) == GROWN:
+                # the workers grew past half the room: let go now, with the window in flight (`_fill`). Grown so before a window came back, the
+                # windows are halved; a second time in the pass, no pool forks again in it (R17: keys of 100,000 kernels each, whose workers grew
+                # past half the room within any window, pool after pool, and the pass ran slower than one process)
                 self.pool = None  # (the pool's workers were killed by the wait)
                 self.pending.clear()
+                if not self.gathered:
+                    self.scale /= 2
+                    self.early += 1
+                    if self.early >= 2:
+                        self.pass_off = True
                 self._renewed()
                 return
             self._cut(f"the build's net was reached with the workers alive: {reached}")
@@ -324,6 +329,11 @@ class KeysAhead:
             pool.close()
         self.pending.clear()
         self._account()
+
+    def end_pass(self) -> None:
+        """The pass is over: its pool is closed, and the next pass may fork one again."""
+        self.close()
+        self.early, self.pass_off = 0, False
 
     def _account(self) -> None:
         """Add what a closed pool lost to the measures (`_pays`)."""

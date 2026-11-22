@@ -2011,7 +2011,7 @@ class PatternBuilder:
                 # the pool of this pass, if one was forked, is closed: the next pass forks from this process, whose `computed` then holds every
                 # kernel key of the pass. A pool kept from pass to pass was slower than one process on R04's spread passes (85 s where one
                 # process took 58): each worker's `computed` lacked the kernel keys the others had made, and their kernels were made again (#1384)
-                self.ahead.close()
+                self.ahead.end_pass()
 
     def _pass_keys(self) -> str | None:
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
