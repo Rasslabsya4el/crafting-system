@@ -352,7 +352,7 @@ gives. `CLAUDE.md`, "Heavy runs", names this exception.
 
 **When it runs.** At each checkpoint of OR-46 (the dispatcher's report of the routes' state to the owner), one run, checked against the
 record; and before a PR lands that changes what the planner offers or how the one search finds and stops on a plan (the main chat decides
-and names the run in its PR; a PR that fails a route fixes it or files the issue). It takes 13 runners (one route each, so that a runner that dies hides no other route; R06 is not planned, #516) for 15 to 60 minutes. One run:
+and names the run in its PR; a PR that fails a route fixes it or files the issue). It takes 13 runners (one route each, so that a runner that dies hides no other route; R06 is planned since #1267, its start belt at a hand-set price) for 15 to 60 minutes. One run:
 
     D="python .github/scripts/heavy_dispatch.py run --no-wait --ref BRANCH"
     $D --runners 13 --timeout-minutes 60 --command 'case $RUNNER_INDEX in 1) R=R12;; 13) R=R06;; 2) R=R10;; 3) R=R11;; 4) R=R05;; 5) R=R13;; 6) R=R08;; 7) R=R09;; 8) R=R04;; 9) R=R14;; 10) R=R17;; 11) R=R20;; 12) R=R24;; esac; uv run --no-sync python -u .github/scripts/benchmark_routes.py $R $OUT_DIR/part --net'

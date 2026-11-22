@@ -102,5 +102,10 @@ start_item:
 # How the start item is had (OR-6): bought. The guide's step 1 reads "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt"
 # (docs/research/2026-10-30-5-reference-routes.md). Its buy spec, trade query and price key are computed from this file (base,
 # item level, influence), so nothing else describes it. It must have a price under that key, and the exact item has no listing (0 on
-# 2026-11-06, search #483: the start item is a Normal one that carries an influence, #515), so none is written.
+# 2026-11-06, search #483: the start item is a Normal one that carries an influence, #515; the rule of OR-43 for it is #1202).
 start: bought
+
+# The price file of this route (a path from this file's folder): the 3.29 week-one file (OR-44) plus the hand-set start items of the
+# reference routes, here the Hunter belt: 5 Chaos, marked as hand-set, since no file has a line for an influenced Heavy Belt (#1267). The
+# first Deafening Essence of Rage reforges the belt whatever it holds, and the plan and the guide's route pay the same start.
+price_file: ../../tests/fixtures/prices/references-allflame-2026-07-31.json

@@ -490,7 +490,7 @@ def make_plan(
                 data, mods_target(), prices, start_price=start_price, offers=offers,
                 aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
                 strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
-                incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
+                incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions, priced_as=target,
             )  # fmt: skip
             offered = [p.offer.action for p in plan.offers if not isinstance(p.offer.action, BuyStartItem)]
             quality_holds = not finished_last or _quality_finish.holds(data, offered)
@@ -505,6 +505,7 @@ def make_plan(
                     data, mods_target(), prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds,
                     rates=rates, strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver,
                     with_risk=with_risk, incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
+                    priced_as=target,
                 )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
             if clock is not None:
@@ -702,6 +703,7 @@ def _make_plan(
     foresee: bool = True,
     round_call: RoundCall | None = None,
     route_actions: tuple[str, ...] | None = None,
+    priced_as: Target | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -734,6 +736,10 @@ def _make_plan(
     plan does not consider strands, as before; with either on, `PlanError` says the planner cannot plan with them yet
     (tickets of batch B5). `price_source` is the profile setting (`ninja`, `trade`, `both`) that `planned_price` respects. `start_price_of` is the price of the start item as the caller worked it out, for a start option that is
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the price the target's computed key has in the file.
+    `priced_as` is the target whose start item is priced when the caller gives no price: the target as written, where `target` is it with its
+    finishes taken off (`make_plan`). The start item is the same item, but its key is computed from the target, and a catalyst quality narrows
+    the window of item levels the key names (R06: `item level 75` with its Intrinsic quality, `75-76` without, #1267), so the price is the
+    one of the item the target describes (OR-3).
 
     `solver` picks the exact solve (ticket #374, #377, #535, ADR-0063): "auto" (the default) is the envelope search wherever its bound can be
     built (`abstraction.pattern_refusal` says before any solve; none refuses it since #833: imprints are held by the key since #833, a roll
@@ -795,7 +801,8 @@ def _make_plan(
         raise PlanError(
             "the target asks for an enchantment, which the planner cannot plan yet"
         )
-    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, target, prices, start_price, price_source)
+    priced_start = target if priced_as is None else priced_as
+    price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, priced_start, prices, start_price, price_source)
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
     if target.quality is not None and lock_wanted(target.actions):  # the run names the Lock, and a burn keeps no quality yet (#159)

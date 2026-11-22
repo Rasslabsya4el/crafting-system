@@ -39,7 +39,7 @@ from crafting_system.planner._offers import Offer, PricedOffer
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_file import PriceEntry
 from crafting_system.prices.provenance import EXCHANGE, Provenance
-from crafting_system.targets import PlainQualityRequirement
+from crafting_system.targets import PlainQualityRequirement, start_price_key
 
 D = with_currency_names(DATA)
 K, A = 2.0, 0.5  # an Intrinsic Catalyst and an Orb of Alteration, in Chaos
@@ -351,3 +351,19 @@ def test_searched_with_the_mods_a_quality_target_whose_run_leaves_the_catalysts_
     plan = _plan(text, methods=("chaos-orb",), searched=True)
     assert "Catalysts" in {label for limit in plan.limits if limit.kind == "kinds-not-named" for label in limit.labels}
     assert "Quality currency" not in _named_left_out(plan)  # a belt takes none
+
+
+def test_a_bought_start_is_priced_under_the_key_of_the_target_as_written_not_of_the_mods_alone():
+    # #1267: the quality is a finish, so the mods are planned on the target without it; the start item is the same item, and its price is the
+    # one of the key the target computes. A catalyst quality narrows the window of item levels (the gain law reads the level): with it the key
+    # is `item level 84`, without it `84-100`. Only the first is priced here, at 3 Chaos: the plan buys at 3 and pays 13.35 catalysts at K.
+    target = parse(LIGHTNING_HELD, start="bought", methods=("catalyst",))
+    key, mods_key = "Paua Amulet, item level 84, +(42-45)% to Lightning Resistance", "Paua Amulet, item level 84-100, +(42-45)% to Lightning Resistance"
+    assert start_price_key(D, target) == key and start_price_key(D, dataclasses.replace(target, quality=None)) == mods_key
+    plan = plan_target(D, target, _prices(**{key: 3.0}), PlanSettings(recipe_starts=False, solver="envelope"))
+    assert plan.start_price.bought and plan.start_price.name == key and plan.start_price.chaos == 3.0
+    assert plan.mean_remaining == 0.0 and plan.quality_finish is not None
+    assert float(plan.quality_finish.uses) == pytest.approx(_mean(84), rel=1e-12)
+    # priced under the key of the mods alone, the item the target describes has no price: the run says so with the target's key
+    with pytest.raises(PlanError, match=r"no price for the start item 'Paua Amulet, item level 84, "):
+        plan_target(D, target, _prices(**{mods_key: 3.0}), PlanSettings(recipe_starts=False, solver="envelope"))
