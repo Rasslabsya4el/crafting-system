@@ -250,9 +250,10 @@ def test_the_planners_entry_plans_the_orb_through_the_one_search_at_the_exact_va
 
 def test_offered_beside_other_groups_the_orb_is_a_round_of_its_own_its_donor_searched_in_it_and_the_plan_is_the_exact_value(monkeypatch):
     """#1426: an Awakener's Orb among the offers no longer keeps the target out of the rounds (`rounds_apply`; R14 was one search of every
-    offer, and the growth never ran): through `make_plan`, the ring's offers in two groups (the plain orbs, then the orb), the rounds search the
-    plain orbs first, the orb's round searches its donor inside it, and the answer is the exact value of the target's graph with the orb at
-    its cost and the donor's exact mean, the one search's figure of the test above."""
+    offer, and the growth never ran): through `make_plan`, the ring's offers in two groups (the plain orbs, then the orb), the target is searched
+    in rounds (the growth's seed holds the run's named methods, the orb among them), each round that holds the orb searches its donor inside
+    it, and the answer is the exact value of the target's graph with the orb at its cost and the donor's exact mean, the one search's figure of
+    the test above."""
     import datetime
 
     from crafting_system.cli import make_plan
@@ -290,7 +291,7 @@ def test_offered_beside_other_groups_the_orb_is_a_round_of_its_own_its_donor_sea
     donor = _exact_donor(offers, PLANNER_PRICES)
     graph = [PatternOffer(label, action, cost + (donor if action is ORB else 0.0)) for label, (action, cost) in PLANNER_PRICES.items()]
     exact = exact_values(ab, ab.compress(START), [*graph, PatternOffer(RESTART, None, RESTART_PRICE)])[ab.compress(START)]
-    assert plan.search.widening and held  # searched in rounds, and a round that held the orb searched its donor
+    assert plan.search.widening and held and all(count == len(offers) for count in held)  # in rounds; each orb round searched its donor on its offers
     assert plan.mean_remaining == pytest.approx(exact, rel=TOLERANCE)
     assert any(action.label.startswith("Awakener's Orb with a shaper donor") for action in plan.solution.policy.values())
 
