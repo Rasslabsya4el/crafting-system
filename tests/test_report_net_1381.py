@@ -11,6 +11,7 @@ report meets it. Nothing here reads the clock.
 """
 
 import json
+import re
 
 import pytest
 from cli_support import R12, TODAY, price_file, read_json
@@ -105,13 +106,19 @@ def test_under_the_net_the_outputs_are_those_of_a_run_with_no_net(tmp_path, caps
         runs.append((capsys.readouterr().out.replace(str(tmp_path / folder), "DIR"), read_json(out), page))
     free, netted = runs
 
+    def timeless(text: str) -> str:  # the seconds a round took are the run's, not the plan's: 0 s in one run is 1 s in the next
+        return re.sub(r"actions offered, [\d,]+ s\)", "actions offered, N s)", text)
+
     def strip(text: str) -> list[str]:
-        return [line for line in text.splitlines() if not line.startswith("Run time: ")]
+        return [line for line in timeless(text).splitlines() if not line.startswith("Run time: ")]
+
+    def document(policy: dict) -> object:
+        return json.loads(timeless(json.dumps({k: v for k, v in policy.items() if k != "timings_seconds"})))
 
     assert strip(free[0]) == strip(netted[0])
-    assert {k: v for k, v in free[1].items() if k != "timings_seconds"} == {k: v for k, v in netted[1].items() if k != "timings_seconds"}
+    assert document(free[1]) == document(netted[1])
     assert RECORD not in netted[1]
-    assert free[2] == netted[2]  # the route page
+    assert timeless(free[2]) == timeless(netted[2])  # the route page
 
 
 def test_the_net_is_asked_only_inside_the_report_s_block(monkeypatch):
