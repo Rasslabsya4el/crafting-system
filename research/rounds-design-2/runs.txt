@@ -152,7 +152,7 @@ bound built: 8,620 keys (0 expanded), 21 of 21 offers in the model, start value 
 exit 0 end 12:55:18 load 19.55
 keys found 8,849 expanded 55 (now offer 1 of 19 of key 55) kernels 17,261 members 18,192
 === G2h-R17
-start 12:51:35 load 16.06 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-2h.toml LEAD=names:Bench craft Can have up to 3 Crafted Modifiers|Bench craf
+start 12:51:35 load 16.06 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-2h.toml LEAD=names:Bench craft Can have up to 3 Crafted Modifiers|Bench craf
 TRACE LEAD names: first group 14 offers, features ['draw tags', 'imprints', 'junk', 'metamods', 'pool weights'], 25 groups; labels ['Bench craft Can have up to 3 Crafted Modifiers', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Prefixes Cannot Be Changed', 'Exalted Orb', 'Harvest Add Remo
 model 1: 15 offers, 495,932 keys (62,934 expanded), 1,811,512 kernels, start value 13.110480010480002 (model 1800.0 s, solve 9.8 s); STOPPED: stopped after 1800 of the 7198.33 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
 bound built: 495,932 keys (62,934 expanded), 15 of 15 offers in the model, start value 13.110480010480002 (1811 s); STOPPED in the model phase: stopped after 1800 of the 7198.33 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
@@ -373,11 +373,11 @@ model 1: 33 offers, 71,517 keys (62,819 expanded), 218,808 kernels, start value 
 bound built: 71,517 keys (62,819 expanded), 33 of 33 offers in the model, start value 0.01048001048 (463 s); STOPPED in the model phase: stopped after 462 of the 598.183 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count
 keys found 62,543 expanded 1 (now offer 2 of 33 of key 1) kernels 197,144 members 144
 === TL-R04
-start 13:18:46 load 10.93 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=names:Wailing Essence of Suffering|Deafening Essence o
+start 13:18:46 load 10.93 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=names:Wailing Essence of Suffering|Deafening Essence o
 TRACE LEAD names: first group 33 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft (7-12)% increased Attack Speed', 'Bench craft +(29-35)% to Cold Resistance', 'Bench craft +(29-35)% to Fi
 keys found 2,610,869 expanded 234 (now offer 3 of 34 of key 234) kernels 9,775,487 members 18,975
 === TL-R24
-start 13:19:40 load 12.42 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=names:Shrieking Essence of Hatred|Shrieking Essence of
+start 13:19:40 load 12.42 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=names:Shrieking Essence of Hatred|Shrieking Essence of
 TRACE LEAD names: first group 34 offers, features ['fractures', 'imprints', 'junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods'], 14 groups; labels ['Beastcraft Wild Bristle Matron (add a metamod)', 'Bench craft Cannot roll Attack Modifiers', 'Bench craft Cannot roll Caster Modifiers',
 keys found 4,045,628 expanded 1,171 (now offer 2 of 35 of key 1,171) kernels 5,698,090 members 39,274
 === P0-R04
@@ -446,7 +446,7 @@ TRACE STEP 8: Benchcraft: (7-12)% increased Attack Speed | uses 1.00 | 2.00 c | 
 exit 0 end 13:25:35 load 14.64
 keys found 3,366 expanded 1,524 kernels 138,987 members 330,923
 === PL1-R04
-start 13:20:36 load 15.14 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Wailing Essence of Suffering|Deafening Essenc
+start 13:20:36 load 15.14 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Wailing Essence of Suffering|Deafening Essenc
 TRACE ONLY: 14 of 11193 offers kept; labels not found: []
 TRACE LEAD one: first group 14 offers of 9 groups, features ['fractures', 'junk', 'metamods', 'pool weights']; 0 groups after: []
 model 1: 13 offers, 3,662 keys (3,662 expanded, 11,238 ruined keys held by one), 139,724 kernels, start value 5546685.858019685 (model 244.2 s, solve 0.1 s)
@@ -464,7 +464,7 @@ TRACE STEP 6: Benchcraft: (7-12)% increased Attack Speed | uses 1.00 | 2.00 c | 
 exit 0 end 13:28:25 load 11.13
 keys found 11,816 expanded 4,287 kernels 120,384 members 716,235
 === PL2-R04
-start 13:30:51 load 13.01 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Essence of Insanity|Fracturing Orb|Deafening 
+start 13:30:51 load 13.01 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Essence of Insanity|Fracturing Orb|Deafening 
 TRACE ONLY: 10 of 11193 offers kept; labels not found: []
 TRACE LEAD one: first group 10 offers of 8 groups, features ['fractures', 'junk', 'metamods', 'pool weights']; 0 groups after: []
 model 1: 9 offers, 3,442 keys (3,442 expanded, 7,510 ruined keys held by one), 46,451 kernels, start value 124390.81978333603 (model 27.0 s, solve 0.2 s)
@@ -525,7 +525,7 @@ TRACE STEP 7: Restore imprint 1 | uses 49.27 | 0.00 c | items 48 | rare; has fam
 exit 0 end 13:40:51 load 6.77
 keys found 44,906 expanded 23,074 kernels 126,044 members 366,635
 === PL1-R24
-start 13:19:00 load 11.25 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence
+start 13:19:00 load 11.25 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence
 TRACE ONLY: 14 of 10955 offers kept; labels not found: []
 TRACE LEAD one: first group 14 offers of 8 groups, features ['junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods']; 0 groups after: []
 model 1: 12 offers, 33,545 keys (33,545 expanded), 6,663 kernels, start value inf (model 76.4 s, solve 0.2 s)
@@ -536,7 +536,7 @@ bound built: 60,536 keys (60,536 expanded), 15 of 15 offers in the model, start 
 exit 0 end 13:22:56 load 16.71
 keys found 60,536 expanded 59,112 kernels 15,326 members 438,617
 === PL2-R24
-start 13:30:44 load 12.83 head 2028e28b workers 4 CRAFTING_CONFIG=/root/projects/crafting system/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence
+start 13:30:44 load 12.83 head 2028e28b workers 4 CRAFTING_CONFIG=$REPO/.claude/scratch/t1276c/net-1h.toml SPB=0.33 LEAD=one ONLY=Shrieking Essence of Hatred|Shrieking Essence
 TRACE ONLY: 20 of 10955 offers kept; labels not found: []
 TRACE LEAD one: first group 20 offers of 12 groups, features ['draw tags', 'junk', 'metamods', 'pool weights', 'unveil offer', 'veiled mods']; 0 groups after: []
 model 1: 18 offers, 36,211 keys (36,211 expanded), 54,490 kernels, start value inf (model 201.4 s, solve 0.3 s)

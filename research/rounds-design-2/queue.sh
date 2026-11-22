@@ -1,6 +1,5 @@
-#!/bin/bash
 # queue.sh FILE MAX : each line of FILE is "TAG ROUTE PROCS ENV=VAL..." (one run1.sh call); at most MAX at once
-S="/root/projects/crafting system/.claude/scratch/t1276c"; F=$1; MAX=$2
+S="$REPO/.claude/scratch/t1276c"; F=$1; MAX=$2
 pids=()
 while IFS= read -r line; do
   [ -z "$line" ] && continue
