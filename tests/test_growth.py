@@ -246,7 +246,7 @@ def test_with_no_plan_in_hand_the_roles_are_read_at_the_start_and_the_support_is
     grower = Grower(table, ())
     grower.ran((0,), None, False)
     positions, why = grower.next()
-    assert _names(table, positions) == {"reroll A", "add A", "add B", "fracture"} and why.startswith("no plan in hand")
+    assert _names(table, positions) == {"reroll A", "add A", "add B", "fracture"} and why.startswith("no plan yet")
     grower.ran(positions, None, False)
     assert grower.next() is None  # the same reading names nothing new: the growth ends
     view = {_State("s", (Status.ABSENT, Status.ABSENT)): Action("add A", 2.0, (Outcome(_State("g", (Status.PASSING, Status.PASSING)), 1),))}

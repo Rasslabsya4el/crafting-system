@@ -180,7 +180,12 @@ def test_buying_again_gives_back_the_start_item_whatever_it_was():
 
 
 @pytest.mark.parametrize("label", ["Chaos Orb", "Harvest Reforge Lightning"])
-def test_r12_keeps_its_two_rerolls(label):
+def test_r12_keeps_its_two_rerolls(label, monkeypatch):
+    # what is offered is read off the plan's offers, those of the round that made it: so main's widening alone, whose last round holds every
+    # offer (the plan-led growth, #1414, holds the plan's support and the methods it names)
+    from crafting_system.planner import _growth
+
+    monkeypatch.setattr(_growth, "GROWS", False)
     plan = make_plan(DATA, load_target(R12, DATA), price_file())
 
     assert label in [priced.label for priced in plan.offers]

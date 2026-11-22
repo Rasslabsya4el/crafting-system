@@ -404,7 +404,7 @@ class Grower:
         chosen = self.table.closure(self.table.seed() | self.asked)
         if not chosen:
             return None
-        return tuple(sorted(chosen)), "the seed: the offers of least cost over chance on each wanted mod"
+        return tuple(sorted(chosen)), "the seed: the cheapest methods for each wanted mod, by cost over chance"
 
     def support(self, plan) -> frozenset[int]:
         if plan is None:
@@ -441,7 +441,7 @@ class Grower:
             named = table.roles(waits, risks, frozenset({table.start_rarity}), False, self.last, frozenset(base))
             chosen = table.closure(base | named | self.asked)
             if named and self._new(chosen):
-                return tuple(sorted(chosen)), f"no plan in hand: roles read at the start (waits for {self._names(waits)}; at risk {self._names(risks)})"
+                return tuple(sorted(chosen)), f"no plan yet, so methods named at the start item (it waits for {self._names(waits)}; at risk: {self._names(risks)})"
             return None
         support = self.support(plan)
         for label, share, acts in step_shares(plan):
@@ -454,7 +454,7 @@ class Grower:
             chosen = table.closure(set(current) | named)
             if named - current and self._new(chosen):
                 return tuple(sorted(chosen)), (
-                    f"the plan's dearest step not diagnosed yet, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}"
+                    f"the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}"
                 )
         return None
 
@@ -476,8 +476,13 @@ class Grower:
         """The wanted mods `leaves` by a mod each can be (the first of its accepted mods)."""
         if not leaves:
             return "no wanted mod"
-        goal = self.table.goal
-        return ", ".join(sorted(goal.leaves[leaf].tier_ok or goal.leaves[leaf].mod_ids)[0] for leaf in sorted(leaves))
+        goal, mods = self.table.goal, self.table.data.mods
+        names = []
+        for leaf in sorted(leaves):
+            mod_id = sorted(goal.leaves[leaf].tier_ok or goal.leaves[leaf].mod_ids)[0]
+            mod = mods.get(mod_id)
+            names.append(" ".join(str(getattr(mod, "text", "") or mod_id).split()))
+        return "; ".join(names)
 
 
 def growth_table(data: GameData, goal, target, priced: Sequence[PricedOffer], listing: Item | None, ask=None) -> OfferTable:

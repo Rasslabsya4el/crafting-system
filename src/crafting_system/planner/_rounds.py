@@ -747,7 +747,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     proved = "; ".join(closed) if closed else "no method"
     if any(record.growth is not None for record in records):  # the plan-led growth (#1414, the note's section 7): each round proves its own
         guarantee = (
-            "This plan is the cheapest only of the methods searched with it. Each round that finished proved that no plan made only of its own "
+            "This plan is proved only against the methods searched with it. Each round that finished proved that no plan made only of its own "
             "methods (listed with it) costs less than the figure stated for it"
             + (f", to within {within:.2%}" if within else "")
             + ": the rounds grown from the plan in hand held its methods and those its dearest steps named, not every method of the rounds "
