@@ -125,7 +125,7 @@ NOT_COVERED: dict[str, tuple[str, tuple[str, ...]]] = {
     "R07": ("r07-minion-wand", ("Veiled Chaos Orb", "Unveil", "lock a side", "Corroded Fossil", "no bench option")),  # #775
     "R20": ("r20-rf-helmet", ("Harvest Reforge Influence", "Wild Bristle Matron", "lock a side")),  # #775
 }
-# the routes whose target this player cannot read (an implicit or quality wish; the planner refuses them too, #516): R06 (#901), and R17
+# the routes whose target this player cannot read (an implicit or quality wish; the planner plans both as finishes since #159 and #1231): R06 (#901), and R17
 # since #1289: its target is the guide's finished Talisman, which has 20% quality, so the world is refused before its route is read. Until
 # then R17 stood in NOT_COVERED for the mechanics its route needs and this player lacks (the imprint, the restore, "lock a side", the
 # Harvest add and remove: #823, #775); they are still lacking, and R17 goes back there when the naive crafter reads quality.

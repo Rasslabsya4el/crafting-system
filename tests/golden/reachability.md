@@ -104,7 +104,7 @@ One row per kind of `actions.catalog`, in catalog order. *Offered by* lists the 
 | r03 | refused: no price for the start item 'Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage'. |  |  |  |  |  |  |
 | r04 | plans | 8 names | 63 | 0 | 0 | 7 | annulment-orb, bench-craft, corrupted-essence, essence, exalted-orb, fracturing-orb, remove-crafted-mods |
 | r05 | plans | no key | 9305 | 0 | 0 | 26 | alteration-orb, annulment-orb, augmentation-orb, beast-side-swap, bench-craft, chaos-orb, corrupted-essence, essence, exalted-orb, fossil-set, fracturing-orb, harvest-add-remove, harvest-damage-swap, harvest-reforge, harvest-reforge-likelihood, harvest-resistance-swap, imprint, pick, regal-orb, remove-crafted-mods, restore, scouring-orb, unveil, veiled-chaos-orb, veiled-exalted-orb, wild-bristle-matron |
-| r06 | refused: no price for the start item 'Heavy Belt, normal, item level 75-76, Hunter influence'. |  |  |  |  |  |  |
+| r06 | refused: the target asks for 20% Intrinsic quality, and no catalyst of that type is among the methods offered |  |  |  |  |  |  |
 | r07 | plans | 8 names | 11 | 0 | 0 | 7 | annulment-orb, bench-craft, fossil-set, pick, remove-crafted-mods, unveil, veiled-chaos-orb |
 | r08 | plans | 2 names | 12702 | 0 | 0 | 2 | bench-craft, fossil-set |
 | r09 | plans | 2 names | 12702 | 0 | 0 | 2 | bench-craft, fossil-set |
