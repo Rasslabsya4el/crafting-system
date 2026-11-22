@@ -773,10 +773,16 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
             "Not finished",
             f"these rounds did not finish before their share of {net}, ended at once but were not held by the rounds after them, or were not reached: {{names}}",
             "The plan shown is the best the finished rounds found; these methods may still give a cheaper one, at no less than the figure stated for each.",
-            labels=tuple(sorted({kind for _, record in open_rounds for kind in record.kinds})),
+            labels=tuple(sorted({kind for _, record in open_rounds for kind in record.kinds} - _held_by_finished_growth(records))),
             names=tuple(round_line(n, record) for n, record in open_rounds),
         ),
     )
+
+
+def _held_by_finished_growth(records: Sequence[RoundRecord]) -> frozenset[str]:
+    """The offers a growth round that finished held (a growth round is named by its offers' labels): they were searched, and a later growth
+    round that did not finish and held them again leaves them tried, not untried (#1414)."""
+    return frozenset(label for record in records if record.growth is not None and record.status in (CLOSED, WITHIN, BEATEN, NONE) for label in record.kinds)
 
 
 def no_plan_words(records: Sequence[RoundRecord]) -> str | None:

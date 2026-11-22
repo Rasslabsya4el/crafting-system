@@ -303,3 +303,14 @@ def test_no_plan_words_never_take_a_growth_round_with_no_plan_for_the_proof_over
     grown = _rounds.RoundRecord(("a",), 1, _rounds.NONE, "no plan", None, None, 1.0, growth="the seed")
     assert _rounds.no_plan_words((stopped, grown)) is not None  # a growth round held only its own offers: no proof that none reaches the goal
     assert not _rounds.all_closed((dataclasses.replace(grown, status=_rounds.CLOSED),))  # growth rounds alone prove nothing over every method
+
+
+def test_an_offer_a_finished_growth_round_held_is_not_listed_as_untried_when_a_later_round_held_it_again_and_stopped():
+    R = _rounds.RoundRecord
+    records = [
+        R(("base", "G"), 2, _rounds.CLOSED, "", 10.0, 10.0, 0.0, growth="the seed"),  # finished: base and G were searched
+        R(("G", "H", "base"), 3, _rounds.STOPPED, "its share ended", 1.0, None, 0.0, growth="the plan's dearest step"),  # H alone is new
+        R(("fossil-set",), 4, _rounds.UNTRIED, "the time was used up", None, None, 0.0),
+    ]
+    untried = _rounds.rounds_limits(records, True, None)[1]
+    assert untried.labels == ("H", "fossil-set")
