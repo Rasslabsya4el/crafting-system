@@ -110,7 +110,8 @@ def test_a_step_whose_build_does_not_complete_is_undone_named_and_tried_once_mor
 
     widened = _widen(groups, offers, run)
     assert seen == [("seed",), ("seed", "x"), ("seed", "y"), ("seed", "x", "y")]
-    assert calls == [(3, False), (2, True), (1, True), (1, True)]  # each step's share is the time left over the steps left, this one included
+    # each step's share is the time left over the steps left, this one included, and the retries the second pass owes so far
+    assert calls == [(3, False), (2, True), (2, True), (1, True)]
     assert [record.status for record in widened.records] == ["closed", "undone", "closed", "undone"]
     assert "30 of 100 cases worked out" in widened.records[1].reason and widened.records[1].lower == 4.0
     assert widened.plan.mean_remaining == 7.0 and not _rounds.all_closed(widened.records)
@@ -174,6 +175,28 @@ def test_an_awakener_s_orb_no_longer_keeps_a_target_out_of_the_steps(monkeypatch
     other = SimpleNamespace(offer=SimpleNamespace(action=SimpleNamespace()))
     assert not planner_plan.rounds_apply(None, target, (orb, other), solve_it=True, judged=False, solver="auto")  # a recombinator's donors still are not
     assert _rounds.rung(frozenset({_rounds.SECOND_ITEM})) == 1 + _rounds.rung(frozenset({"metamods"}))
+
+
+def test_a_family_of_several_kinds_not_finished_is_tried_one_kind_a_step_in_the_second_pass():
+    # the single orbs' family (two kinds) does not build in its step; the second pass tries each kind alone over the seed, and the first of them
+    # builds and makes a cheaper plan
+    offers = ("seed", "alt", "regal")
+    kinds = {"seed": "seed", "alt": "alteration-orb", "regal": "regal-orb"}
+    groups = (_rounds.Group((0,), ("seed",), frozenset({"junk"})), _rounds.Group((1, 2), ("alteration-orb", "regal-orb"), frozenset({"junk", "pool weights"})))
+    seen = []
+
+    def run(chosen, call):
+        labels = tuple(offer.label for offer in chosen)
+        seen.append(chosen)
+        if labels == offers:
+            raise Incomplete("the time limit of 9 seconds was reached", None)
+        return _plan(5.0 if "alt" in labels else 10.0)
+
+    named = tuple(SimpleNamespace(label=o, kind=kinds[o], blocks=None) for o in offers)
+    widened = _widen(groups, named, run)
+    assert [tuple(o.label for o in chosen) for chosen in seen] == [("seed",), ("seed", "alt", "regal"), ("seed", "alt"), ("seed", "alt", "regal")]
+    assert [record.status for record in widened.records] == ["closed", "undone", "closed", "undone"] and widened.plan.mean_remaining == 5.0
+    assert widened.records[1].reason.endswith("one kind a step (2 steps)")
 
 
 @pytest.mark.parametrize("bad", [ValueError("refused"), _rounds.Stopped("the time limit of 9 seconds was reached", 3.0)])

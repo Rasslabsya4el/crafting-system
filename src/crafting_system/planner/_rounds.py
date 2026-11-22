@@ -21,8 +21,8 @@ and e10: the same R04 methods give 32,192.94 c on 7 offers, 898,973,434,471 c on
   when its build completes, so a build cut at a quarter to leave room for a search is the build it would then undo. A step whose build
   completes searches and its family is **accepted**: it stays in every later step, whether its plan was cheaper or not. A step that began
   with a plan in hand and whose build did not complete is **undone** with no search (`_envelope.Incomplete`): the offers accepted before it
-  stand, and its family is named in the answer as not finished. A step with no plan in hand searches on the bound it has (the answer must
-  hold a plan, OR-33): a plan its search makes on a stopped bound is kept when it is the cheapest, said to be unproved, and the step is undone
+  stand, and its family is named in the answer as not finished. A step with no plan in hand searches on the bound it has, its first
+  plan's chain past its share if it must (the answer must hold a plan, OR-33): a plan its search makes on a stopped bound is kept when it is the cheapest, said to be unproved, and the step is undone
   all the same. The seed is the base of every later step whatever its end. A step stopped by its share, or refused, is undone too. Time a step
   does not use goes to the steps after it.
 * **A family that cannot beat the plan in hand is set aside** (#1080, #1091, #1097): a step that began with a plan in hand and ended beaten,
@@ -32,7 +32,9 @@ and e10: the same R04 methods give 32,192.94 c on 7 offers, 898,973,434,471 c on
   base costs 11 and H with the base costs 11, both beaten, while G and H together cost 2 (#1389). So:
 * **The second pass.** When the steps are done and time is left, the families set aside or undone are tried once more, in their order, each
   over the offers accepted by then; in this pass a step whose build completes joins whatever its end (nothing is set aside again), so G's step
-  holds the base and H's holds G too, and the plan of 2 is found. A refused family is tried there again (#1088). One pass, no loop.
+  holds the base and H's holds G too, and the plan of 2 is found. A refused family is tried there again (#1088). A family of several kinds
+  whose step was not finished is tried there one kind a step, smaller steps whose builds may complete. One pass, no loop. The retries owed
+  count among the steps left in the first pass, so its last step (the fossil sets) leaves the pass its shares.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The steps count their work in the states their searches knew, never in seconds (`StatesMeter`): a step searches with a states net of
   its share of the states left, and its build has the pieces of that whole share. Nothing here reads the clock, so the same target under the
@@ -106,7 +108,7 @@ class RoundCall:
     give_way: Callable[[object], str | None] | None = None  # asked after each round of the step's search (`StatesMeter` reads its states there)
     states: int | None = None  # the step's states net when the run counts in states (`StatesMeter`): it replaces the budget's whole figure
     held: bool = False
-    first_any: bool = False  # the first step with no plan in hand: its first plan's chain may run on a bound not built whole (OR-33)
+    first_any: bool = False  # no plan in hand: the step's first plan's chain may run on a bound not built whole (OR-33)
     first_states: int | None = None  # counted in states: the states the steps have left, what a step's first plan's chain may know (`Net.first_states`)
 
 
@@ -295,7 +297,9 @@ def widen(
     retry: dict[int, tuple[int, list[int], str]] = {}  # the place in the queue of a family tried again -> its first record's place, offers and end
     for k, group in _growing(queue):
         second = k >= first_pass
-        rest = len(queue) - k  # the steps of the queue from this one on: the share is the time left over them
+        # the steps of the queue from this one on, and in the first pass the retries the second pass owes so far: the share is the time left
+        # over them, so the last step of the first pass (the fossil sets) does not take what the second pass needs
+        rest = len(queue) - k + (0 if second else len(again))
         if (time_left := left()) is not None and time_left <= 0.0:
             used = "the run's time was used up" if meter is None else "the run's states net was used up"
             records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, f"{used} before this step", None, None, 0.0, features=tuple(sorted(g.features)), carried=False, states=None if meter is None else 0) for g in queue[k:])
@@ -316,7 +320,7 @@ def widen(
         asked = None if meter is None else _seen_by(meter)  # counted in states: every step's search reports the states it knows
         try:
             plan = run(chosen, RoundCall(
-                rest, best_upper, k == 0, asked, None if meter is None else meter.net(rest), held, first_any=k == 0 and not held,
+                rest, best_upper, k == 0, asked, None if meter is None else meter.net(rest), held, first_any=not held,
                 first_states=None if meter is None else max(int(meter.left()), 1),
             ))  # fmt: skip
         except Beaten as beaten:
@@ -382,9 +386,12 @@ def widen(
         if k == first_pass - 1 and again:
             # the first pass is done: the families set aside or undone are tried once more, in their order, over the offers accepted by then
             for place, family, searched, ended_as in again:
-                retry[len(queue)] = (place, searched, ended_as)
-                queue.append(family)
-                records[place] = replace(records[place], reason=records[place].reason + "; tried again in the second pass")
+                parts = [family] if ended_as in ENDED or len(family.kinds) < 2 else _by_kind(family, offers)
+                for part in parts:
+                    retry[len(queue)] = (place, searched if part is family else [], ended_as)
+                    queue.append(part)
+                said = "tried again in the second pass" + ("" if len(parts) == 1 else f", one kind a step ({len(parts)} steps)")
+                records[place] = replace(records[place], reason=records[place].reason + "; " + said)
         if k == len(queue) - 1 and status in ENDED and len(positions) == len(offers):
             # the last step held every offer and closed: its proof is the whole one, and covers every step before it (OR-38)
             records = [replace(record, covered=True) for record in records]
@@ -442,6 +449,15 @@ def _cheaper(mean: float, upper: float | None, best_mean: float, best_upper: flo
     if upper is None or best_upper is None:
         return mean < best_mean
     return upper < best_mean - max(best_upper - best_mean, 0.0)
+
+
+def _by_kind(family: Group, offers: Sequence) -> list[Group]:
+    """A family whose step was not finished, split into one group per kind for the second pass (#1276): a smaller step whose build may
+    complete where the whole family's did not (R09: the single orbs together, 15 offers, built 194,000 cases in their share and stopped)."""
+    kinds: dict[str, list[int]] = {}
+    for i in family.positions:
+        kinds.setdefault(kind_of(offers[i]), []).append(i)
+    return [Group(tuple(positions), (kind,), family.features) for kind, positions in sorted(kinds.items())]
 
 
 def _growing(queue: list[Group]):
