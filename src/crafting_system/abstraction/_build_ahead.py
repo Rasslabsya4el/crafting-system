@@ -14,9 +14,14 @@ each kernel the worker made (`_replay`) is looked up by its kernel key in this p
 and made here from the worker's outcomes only where this process has none (the outcomes noted in the universe and their keys numbered, as
 there). So the keys, their numbers, the kernels and their numbers, the rows and the values are those of one process, whatever the number of
 workers. The net is asked at each offer as one process asks it, and the pieces of work of a run counted in pieces (`Tally`) are added offer
-by offer, so a count stops where one process stops. What is left to this process: a key whose kernels found a slot the universe lacked (the
-universe then differs from this process's, and a pool forked before it is closed: the next one forks from the grown universe), a relaxed
-draw (its choice nodes are numbered in the order the build makes them), a key a worker failed at, and every key while no pool pays.
+by offer, so a count stops where one process stops. The figures of work that hang on a process's memos may differ (the members made and the
+kernels made, which a memo that let a list or a kernel go makes again, and the refusals shared): never a key, a row or a value. What is left
+to this process: a key whose kernels found a slot the universe lacked, or met an influence set whose family types were not numbered yet (the
+universe or the numbers that name slots then differ from this process's, `PatternBuilder.version`, and a pool forked before is closed: the
+next one forks from what this process has then), a relaxed draw (its choice nodes are numbered in the order the build makes them), a key a
+worker failed at, and every key while no pool pays. A key holding imprints is sent with the snapshots this process's members of it hold (the
+first met, `Pattern.held_of`), and an outcome holding imprints whose key is new comes back as its state, whose key this process reads itself,
+so the snapshots it meets first are the ones one process meets.
 
 A pool is forked once a pass has measured its keys: the work left (its keys still to expand times the seconds a key took, here or in a worker)
 times `1 - 1/workers` must save more than the fork costs (each worker's fork, as the last pool measured it, `FORK_PRIOR` before one) and what
@@ -41,6 +46,7 @@ from ._recent import FEWEST_KEPT, Recent
 
 CHUNKS = 4  # the chunks of a window per worker: a slow chunk holds one worker for a part of the window (speed only, never a result)
 WINDOW = 4  # the polls of work per worker a window holds (`POLL_SECONDS` of `_pattern`): the nets are asked between two windows too
+MOST_PER_CHUNK = 256  # the most keys a chunk holds: with keys of microseconds a window of polls would be 10^5 keys and their pickles (speed only)
 FORK_PRIOR = 0.015  # seconds the fork of one worker costs before this build measured one (`_ahead.FORK_PRIOR`, #1340); the first fork's measure replaces it
 ALWAYS = False  # a pool at every pass with keys to send, whatever the measures (the tests: they never read the clock)
 
@@ -89,7 +95,7 @@ class KeysAhead:
         self.next = 0  # the number of the first key not yet sent
         self.memo: dict[int, tuple] = {}  # key number -> (worker pid, the worker's row)
         self.tables: dict[int, dict[int, int]] = {}  # worker pid -> its kernel ids -> this process's, of the kernels taken from it (`_apply`)
-        self.fork_grew = 0  # the universe's growth count at the fork (`Pattern.grew`): a worker's rows hold while both are at it
+        self.fork_version: tuple = ()  # what the workers' members and states are made of, at the fork (`PatternBuilder.version`): a worker's rows hold while both are at it
         self.base = 0  # the kernels this process had at the fork: a worker's kernel ids below it are this process's
         self.keys_base = 0  # and the keys: a worker's key numbers below it are this process's
         self.waited = 0.0
@@ -113,7 +119,7 @@ class KeysAhead:
 
     def take(self, i: int) -> tuple | None:
         """The row of key number `i` made in a worker, `(worker pid, row)`, or None: this process expands the key itself."""
-        if self.pool is not None and self.builder.pattern.grew != self.fork_grew:  # this process's universe grew: the workers' members are stale
+        if self.pool is not None and self.builder.version() != self.fork_version:  # this process's universe grew, or it numbered a family type: the workers' members are stale
             self.close()
         if self.pool is None:
             if not self._pays(i):
@@ -151,7 +157,7 @@ class KeysAhead:
             return
         builder = self.builder
         self.pool = parallel.WorkerPool(_hold, (builder, self.workers), workers=self.workers)
-        self.fork_grew, self.base, self.keys_base = builder.pattern.grew, len(builder.kernels), len(builder.keys)
+        self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -161,7 +167,7 @@ class KeysAhead:
         per_key = self.spent / self.keys if self.keys else None
         if per_key is None or per_key <= 0.0:
             return least
-        return max(least, int(WINDOW * self.poll * self.workers / per_key))
+        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.workers / per_key)))
 
     def _send(self, i: int) -> bool:
         builder = self.builder
@@ -195,7 +201,11 @@ class KeysAhead:
             self.stopped = str(reached)
             self._drop()
             return
-        except (Exception, budget.BudgetExceeded):  # noqa: BLE001  (a worker failed, or a net was met while waiting: this process goes on alone and meets it itself)
+        except (parallel.Stopped, budget.BudgetExceeded):  # a net was met while waiting: this process goes on alone and meets it itself
+            self._drop()
+            return
+        except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
+            self.stopped = f"the pool of the keys failed: {failed!r}"
             self._drop()
             return
         self.waited += time.perf_counter() - mark

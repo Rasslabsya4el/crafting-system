@@ -139,3 +139,46 @@ def test_with_ruined_keys_a_model_built_with_workers_is_the_model_of_one_process
     assert one.model.ruined is not None and one.model.stats.ruined_keys > 20
     assert _model(other.model) == _model(one.model) and other.model.stats.ruined_keys == one.model.stats.ruined_keys
     assert np.array_equal(other.value, one.value)
+
+
+@pytest.mark.parametrize("cap", [1, 2])
+def test_with_imprints_a_model_built_with_workers_is_the_model_of_one_process(pooled, cap):
+    # A key holding imprints is made of the snapshots this process met first (`Pattern.held_of`): a key met first in a worker is sent with
+    # this process's snapshots, and an outcome holding imprints whose key is new comes back as its state (the checker of #1384 found the
+    # pooled build of this world raising a KeyError)
+    import test_pattern_imprint as imprint
+
+    models = []
+    for workers in (1, 3):
+        ab = imprint.abstraction(cap)
+        builder = PatternBuilder(ab, ab.compress(imprint.START), workers=workers)
+        models.append((builder.extend(imprint.pattern_offers(cap)), builder))
+    (one, _), (other, builder) = models
+    assert _model(other) == _model(one)
+    assert builder.ahead.taken > 0 and builder.ahead.left == 0
+
+
+def test_a_row_made_before_this_process_numbered_a_family_type_is_not_taken(world, pooled, monkeypatch):  # noqa: F811
+    # The family types are numbered as influence sets are met (`TypeNumbers`) and their numbers name slots: once this process numbered one
+    # since the fork, a worker's rows are left and the key is expanded here
+    data, ab, _ = world
+    alone, _ = _build(data, ab, 0, 1)
+    real = PatternBuilder._apply
+    refused = []
+
+    def apply(self, i, given, made, tick):
+        if i % 3 == 0:
+            numbers = self.ab._kinds._numbers._numbers
+            numbers[("test", i)] = len(numbers)
+            try:
+                taken = real(self, i, given, made, tick)
+            finally:
+                del numbers[("test", i)]
+            refused.append(taken)
+            return taken
+        return real(self, i, given, made, tick)
+
+    monkeypatch.setattr(PatternBuilder, "_apply", apply)
+    ahead, builder = _build(data, ab, 0, 3)
+    assert refused and not any(refused) and builder.ahead.taken > 0
+    assert _model(ahead) == _model(alone)

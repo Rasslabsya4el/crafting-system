@@ -1856,7 +1856,13 @@ class PatternBuilder:
         itself and whether it is a goal (the parent numbers it), and a ruined key by itself (the parent sends it to its ruined state)."""
         key = self.pattern.key(state)
         j = self._intern_key(key, state)
-        outs.append((j if j < self.ahead.keys_base and j != self.ruined else (key, j != self.ruined and self.goal[j]), chance))
+        if j < self.ahead.keys_base and j != self.ruined:
+            ref = j
+        elif state.imprints:  # the parent reads its key itself: the snapshots it meets first are those its members hold (`Pattern.held_of`)
+            ref = state
+        else:
+            ref = (key, j != self.ruined and self.goal[j])
+        outs.append((ref, chance))
         return j
 
     def _intern_key(self, key: "PatternKey", state: CompressedState | None = None, goal: bool | None = None) -> int:
@@ -2323,7 +2329,9 @@ class PatternBuilder:
         j = start
         while j < len(self.keys) and len(tasks) < size:
             if self._workable(j):
-                tasks.append((j, self.keys[j], tuple(self._given(j)), self.expanded[j]))
+                key = self.keys[j]
+                reps = tuple((found, self.pattern._snapshot_reps[found]) for found in key.held[IMPRINTS]) if key.held[IMPRINTS] else ()
+                tasks.append((j, key, tuple(self._given(j)), self.expanded[j], reps))
             j += 1
         return tasks, j
 
@@ -2332,10 +2340,12 @@ class PatternBuilder:
         parent expanded it before) as `_offers_of_key` makes it here, with what it made that the parent must make again (`_Recorder`), or None
         where the parent is to expand the key itself: this worker's universe grew (it is no longer the parent's), the key has no member, a relaxed
         draw, or any error (the parent meets it in its own order)."""
-        _, key, given, expanded = task
+        _, key, given, expanded, reps = task
         pattern = self.pattern
-        if pattern.grew != self.ahead.fork_grew:
+        if self.version() != self.ahead.fork_version:
             return None
+        for found, snapshot in reps:  # the snapshots the parent's members of this key hold (`Pattern.held_of`): the first it met, not this worker's
+            pattern._snapshot_reps[found] = snapshot
         j = self.index.get(key)
         if j is None:  # a key the parent found after the fork: its number here is this worker's own (its rows and kernels name keys by state)
             j = self.index[key] = len(self.keys)
@@ -2356,9 +2366,9 @@ class PatternBuilder:
         finally:
             self.recording = None
             self._release()
-        if pattern.grew != self.ahead.fork_grew:  # a slot this key's kernels found: the parent finds it and begins again from there
+        if self.version() != self.ahead.fork_version:  # a slot this key's kernels found, or a family type numbered: the parent meets it there
             return None
-        return rec.result()
+        return (given, *rec.result())
 
     def _apply(self, i: int, given: Sequence[int], made: tuple, tick) -> bool:
         """Add to key number `i` the row a worker made of it (`row_ahead`), doing here what the worker made that this process must make in
@@ -2367,9 +2377,9 @@ class PatternBuilder:
         The same as `_offers_of_key` here, by construction (the module of `_build_ahead` gives the argument): the net is asked at each offer as
         there (`tick`, a count where it stops one process), the pieces of work and the counts of each offer are added once its question is
         passed, and a kernel the worker made is made again here only where this process has none of its kernel key."""
-        pid, (added, events, steps, modes) = made
+        pid, (sent, added, events, steps, modes) = made
         ahead = self.ahead
-        if self.pattern.grew != ahead.fork_grew or len(steps) != len(given) + 1:  # this process's universe grew since the fork: the workers' members are not its own
+        if self.version() != ahead.fork_version or tuple(given) != sent:  # this process's universe grew since the fork, or a type was numbered: the workers' members are not its own
             return False
         table = ahead.tables.setdefault(pid, {})
         base = ahead.base
@@ -2442,8 +2452,14 @@ class PatternBuilder:
         same argument)."""
         pushed: dict[int, Fraction] = defaultdict(Fraction)
         for ref, chance in outs:
-            pushed[ref if isinstance(ref, int) else self._intern_key(ref[0], goal=ref[1])] += chance
+            pushed[ref if isinstance(ref, int) else self._intern_key(ref[0], goal=ref[1]) if isinstance(ref, tuple) else self._intern(ref)] += chance
         return pushed
+
+    def version(self) -> tuple:
+        """What a worker's members and states are made of besides the keys it is sent: the universe's growth (`Pattern.grew`) and the family types
+        numbered (`TypeNumbers`, shared with the twin; a type is numbered when the first item of an influence set is met, and its number names
+        slots in states and kernel keys)."""
+        return (self.pattern.grew, len(self.ab._kinds._numbers._numbers))
 
     def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
         """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does
