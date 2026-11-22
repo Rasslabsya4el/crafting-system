@@ -139,6 +139,12 @@ def held_mb(under: float | None = None, paced: bool = True) -> float | None:
     return _proportional_sum()
 
 
+def forget_reading() -> None:
+    """Drop the last proportional reading `held_mb` keeps for its paced questions: the next one reads anew (a caller that has just stopped
+    workers the reading held, #1384)."""
+    _dear[0], _dear[1] = -math.inf, None
+
+
 def _now() -> float:
     return time.perf_counter()
 

@@ -229,6 +229,7 @@ class KeysAhead:
         what it copied of this process's pages and what it made in its pass (R04, 12 GB net: six workers took about 1.2 GB each beside this
         process's 4.8 GB, #1384), so fewer of them fit where the net is near."""
         self.count = min(self.count, self.pool.workers if self.pool is not None else self.count) - 1
+        parallel.forget_reading()  # the next question reads the memory anew: the last full reading held the workers stopped here
         if self.count < 2:
             self._stop(reason)
             return
