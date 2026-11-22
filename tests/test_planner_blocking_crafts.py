@@ -270,7 +270,7 @@ def test_the_lock_is_a_round_of_its_own_that_ends_once_its_lower_figure_reaches_
     seed, lock, fills = _rounds_of(plan)
     assert seed.status == fills.status == "closed" and lock.reason.endswith("it joined the second pass with no new search (the same methods)")
     # it ended at once (beaten) when its lower figure reached the plan's certified upper figure, else by closing at the same cost: never below it
-    assert lock.status in ("beaten", "closed") and lock.lower >= seed.upper * (1 - 1e-6) and fills.offers == seed.offers + lock.offers - seed.offers + 3
+    assert lock.status in ("beaten", "closed") and lock.lower >= seed.upper * (1 - 1e-6) and fills.offers == lock.offers + 3
     assert LOCK in {entry.label for entry in plan.offers}  # the fillers' step held every offer, the lock among them; its plan does not take it
     assert plan.search.exact  # every round closed, the last with every method: the plan is the cheapest over them all (OR-13)
     assert any(limit.kind == "rounds" and limit.guarantee.startswith("The plan is the cheapest among every method offered") for limit in plan.limits)

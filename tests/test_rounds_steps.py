@@ -264,3 +264,16 @@ def test_the_families_before_the_kinds_of_many_offers_are_retried_before_those_k
     widened = _widen(groups, offers, run)
     assert seen == [("seed",), ("seed", "x"), ("seed", "x"), ("seed", "x", "bulk1"), ("seed", "x", "bulk2"), ("seed", "x", "bulk1", "bulk2")]
     assert widened.plan.mean_remaining == 6.0 and _rounds.all_closed(widened.records)
+
+
+@pytest.mark.parametrize("held, upper, stops", [(False, None, False), (False, 5.0, True), (True, None, True)])
+def test_a_step_with_no_plan_in_hand_keeps_its_states_allowance_until_its_search_holds_one(held, upper, stops):
+    # #1276, OR-33: a step of the widening (`Net.step`) whose search holds no plan and that began with none keeps `first_states` as its states
+    # limit in its search rounds; once its search holds a plan, or when the step began with a plan in hand, its own states net holds
+    from crafting_system.planner._envelope import Net, Search
+
+    search = Search.__new__(Search)
+    search.net = Net(states=3, step=True, held=held, first_states=10)
+    search.upper, search.states = upper, list(range(5))
+    said = search._net(0.0, memory=False)
+    assert (said is not None and "the limit is 3" in said) if stops else said is None
