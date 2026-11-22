@@ -1258,8 +1258,13 @@ class Search[S]:
         the time limit in place of the net's (`Net.first`, the first plan's chain), and `known` the states limit (`Net.first_states`)."""
         net = self.net
         limit = net.seconds if seconds is None else seconds
+        if net.step and self.upper is None:  # a step of the widening with no plan yet keeps its allowance until it holds one (OR-33, #1276)
+            if seconds is None and net.first is not None:
+                limit = net.first if limit is None else max(limit, net.first)
+            if known is None and net.first_states is not None:
+                known = net.first_states if net.states is None else max(net.states, net.first_states)
         if limit is not None and time.perf_counter() - began >= limit:
-            if seconds is None and net.first is not None and net.step:  # a step whose first plan's chain had what the run has left (#1276)
+            if seconds is None and net.first is not None and net.step:  # a step: its share, or with no plan yet what the run had left (#1276)
                 return f"the time limit of {limit:g} seconds was reached (the step's share, after its bound's build)"
             if seconds is None and net.first is not None:  # the search after a bound's build that went past the round's share (#1135)
                 return f"the time limit of {limit:g} seconds was reached: the bound's build, nearly done at the round's share, had gone on past it to finish"

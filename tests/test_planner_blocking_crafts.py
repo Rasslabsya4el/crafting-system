@@ -262,15 +262,16 @@ def _rounds_of(plan):
 
 @pytest.mark.parametrize("divine", [92.0, 91.0])
 def test_the_lock_is_a_round_of_its_own_that_ends_once_its_lower_figure_reaches_the_plan_in_hand(data, target, monkeypatch, divine):
-    # #1276: the steps are the seed (the Exalted Orb), the lock's metamod family, the fillers; the lock's step cannot beat the seed's plan and is
-    # set aside, the fillers' step makes the plan, and the second pass holds the lock again with every offer
+    # #1276: the steps are the seed (the Exalted Orb), the lock's metamod family, the fillers (a kind of many offers); the lock's step cannot beat
+    # the seed's plan and is set aside; the second pass, before the fillers, holds it again over the same offers, so it joins with no new
+    # search; the fillers' step then holds every offer and makes the plan
     plan = _plan_at(data, target, monkeypatch, divine=divine)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    seed, lock, fills, last = _rounds_of(plan)
-    assert [record.status for record in (seed, fills)] == ["closed", "closed"] and not lock.carried and last.offers == fills.offers + 1
-    # it ends at once (beaten) when its lower figure reaches the plan's certified upper figure, else by closing at the same cost: never below it
-    assert last.status in ("beaten", "closed") and last.lower >= fills.upper * (1 - 1e-6)
-    assert LOCK not in {entry.label for entry in plan.offers} and not plan.abstraction.models_metamods  # the plan is the fillers' step's
+    seed, lock, fills = _rounds_of(plan)
+    assert seed.status == fills.status == "closed" and lock.reason.endswith("it joined the second pass with no new search (the same methods)")
+    # it ended at once (beaten) when its lower figure reached the plan's certified upper figure, else by closing at the same cost: never below it
+    assert lock.status in ("beaten", "closed") and lock.lower >= seed.upper * (1 - 1e-6) and fills.offers == seed.offers + lock.offers - seed.offers + 3
+    assert LOCK in {entry.label for entry in plan.offers}  # the fillers' step held every offer, the lock among them; its plan does not take it
     assert plan.search.exact  # every round closed, the last with every method: the plan is the cheapest over them all (OR-13)
     assert any(limit.kind == "rounds" and limit.guarantee.startswith("The plan is the cheapest among every method offered") for limit in plan.limits)
 
@@ -340,7 +341,7 @@ def test_a_round_its_net_stops_leaves_the_plan_in_hand_and_says_what_it_did_not_
     monkeypatch.setattr(planner_plan, "_make_plan", later_stopped)
     plan = _plan_at(data, target, monkeypatch, divine=91.0)  # a lock at 182 would be kept: its step is stopped
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    assert [record.status for record in _rounds_of(plan)] == ["closed", "stopped", "closed", "stopped"]
+    assert [record.status for record in _rounds_of(plan)] == ["closed", "stopped", "stopped", "closed"]  # the lock's retry before the fillers
     assert not plan.search.exact and plan.search.stopped  # no text calls it the cheapest of every method
     assert not any("cheapest among every method" in limit.guarantee for limit in plan.limits)
     untried = next(limit for limit in plan.limits if limit.what == "Not finished")
@@ -378,7 +379,7 @@ def test_a_round_proved_within_the_gap_proves_the_plan_within_it_only_when_every
     assert first.status == "within" and first.within == 0.01
     record = _record(plan, plan.mean_remaining + S, S)
     if lock_stopped:
-        assert [record.status for record in _rounds_of(plan)] == ["within", "stopped", "within", "stopped"]
+        assert [record.status for record in _rounds_of(plan)] == ["within", "stopped", "stopped", "within"]
         assert plan.search.within is None and plan.search.stopped == "not every round of the methods finished" and not plan.search.exact
         assert record["stop"] == "stopped: not every round of the methods finished" and record["lower"] == S  # no plan proved within the gap of 0
         assert _search_document(plan)["within"] is None  # the site's JSON says no gap either
@@ -408,10 +409,13 @@ def test_a_round_whose_search_a_net_stops_before_any_plan_is_stopped_not_refused
     monkeypatch.setattr(planner_plan, "_make_plan", later_stopped)
     plan = _plan_at(data, target, monkeypatch, divine=91.0)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    first, lock, fills, last = _rounds_of(plan)
-    assert first.status == fills.status == "closed" and lock.status == last.status == "stopped"
+    first, lock, again, fills = _rounds_of(plan)
+    assert first.status == fills.status == "closed" and lock.status == again.status == "stopped"
     assert lock.reason.startswith("the time limit of 30 seconds was reached") and lock.lower == 120.0
     assert not plan.search.exact
+
+
+STOPPED_AT_10 = ["stopped", "stopped", "stopped", "not tried"]  # the seed, the lock, its retry before the fillers, and the fillers not reached
 
 
 @pytest.mark.parametrize("states", [10, 40])
@@ -441,7 +445,7 @@ def test_through_the_entry_a_run_counted_in_states_gives_the_same_plan_and_answe
     assert slow.risk is not None and slow.risk == fast.risk  # the cost figures too (their ladder has no time net in such a run)
     assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
     statuses = [record.status for record in slow.search.widening]
-    assert statuses == (["closed"] * 4 if states == 40 else ["stopped", "stopped", "stopped", "not tried", "not tried"])
+    assert statuses == (["closed"] * 3 if states == 40 else STOPPED_AT_10)
     assert all(record.states is not None for record in slow.search.widening)
     assert sum(record.states for record in slow.search.widening) <= states
 
@@ -481,12 +485,14 @@ def test_through_the_entry_the_plan_without_the_lock_is_made_first_counted_in_st
     assert [replace_seconds(record) for record in slow.search.widening] == [replace_seconds(record) for record in fast.search.widening]
     rounds = slow.search.widening
     assert slow.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)  # the filler, then exalt
-    assert LOCK not in {entry.label for entry in slow.offers} and not slow.abstraction.models_metamods
-    first, lock, fills, again = rounds
+    assert LOCK in {entry.label for entry in slow.offers}  # the fillers' step held every offer
+    first, lock, fills = rounds
     assert slow_calls[0] == (False, states // 3)  # the seed: a third of the account, three steps left
-    assert slow_calls[1] == (True, (states - first.states) // 2) and slow_calls[2][0] is False  # the lock's step, then the fillers' without it
-    assert slow_calls[3][0] is True and again.offers == fills.offers + 1  # the second pass: the lock with every offer
-    assert [record.status for record in rounds] == ["closed"] * 4 and not lock.carried and lock.covered and slow.search.exact
+    assert slow_calls[1] == (True, (states - first.states) // 2)  # the lock's step, which cannot beat the seed's plan and is set aside
+    # the second pass, before the fillers (a kind of many offers): the lock over the same offers joins with no new search; the fillers' step
+    # then holds every offer, the lock among them
+    assert len(slow_calls) == 3 and slow_calls[2][0] is True and fills.offers == lock.offers + 3
+    assert [record.status for record in rounds] == ["closed"] * 3 and not lock.carried and lock.covered and slow.search.exact
 
 
 @pytest.mark.parametrize("states, per_state", [(10, 0.2), (10, 1.5), (10, 100.0), (40, 100.0)])
@@ -549,7 +555,7 @@ def test_through_the_entry_the_bound_s_build_and_its_binding_count_their_work_an
     else:  # every build finishes; with 40 states every step closes on the cheapest plan
         assert all(build[2] == "complete" and build[3] is None for build in slow_builds) and "done" in slow_bindings
         if states == 40:
-            assert [record.status for record in slow.search.widening] == ["closed"] * 4
+            assert [record.status for record in slow.search.widening] == ["closed"] * 3
             assert slow.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     if stopped is not None:  # the answer names the build's count where round 1 stopped (OR-13)
         assert stopped.startswith(f"it had done {pieces:,} pieces of work, its allowance being {share:,} pieces of work, set from the run's states net")
@@ -831,7 +837,7 @@ def test_through_the_entry_a_family_whose_build_does_not_complete_is_undone_and_
     monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", stopped_for_the_lock)
     plan = _plan_at(data, target, monkeypatch, divine=91.0)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
-    assert [record.status for record in _rounds_of(plan)] == ["closed", "undone", "closed", "undone"] and searched.count(True) == 2
+    assert [record.status for record in _rounds_of(plan)] == ["closed", "undone", "undone", "closed"] and searched.count(True) == 2  # its retry comes before the fillers
     assert not plan.search.exact and LOCK not in {entry.label for entry in plan.offers}
     untried = next(limit for limit in plan.limits if limit.what == "Not finished")
     assert "not finished (its count of the cheapest possible cost did not finish in its share" in untried.names[0]

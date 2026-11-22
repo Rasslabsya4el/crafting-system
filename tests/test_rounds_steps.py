@@ -243,3 +243,24 @@ def test_a_step_s_error_kept_until_the_run_ends_does_not_keep_that_step_s_search
     assert str(widened.error) == "deep in the search"  # (a stop keeps its cause: what the caller raises, with its words)
     assert alive and all(ref() is None for ref in alive)
 
+
+
+def test_the_families_before_the_kinds_of_many_offers_are_retried_before_those_kinds_join():
+    # a family set aside before the kinds of many offers (`Group.bulk`) is tried again before them, over the small base; one set aside among
+    # those kinds is tried again after the last step
+    offers = ("seed", "x", "bulk1", "bulk2")
+    groups = (
+        _rounds.Group((0,), ("seed",), frozenset({"junk"})), _rounds.Group((1,), ("x",), frozenset({"junk", "x"})),
+        _rounds.Group((2,), ("bulk1",), frozenset(), bulk=True), _rounds.Group((3,), ("bulk2",), frozenset(), bulk=True),
+    )  # fmt: skip
+    seen = []
+
+    def run(chosen, call):
+        seen.append(chosen)
+        if chosen in (("seed", "x"), ("seed", "x", "bulk1")) and seen.count(chosen) == 1:  # each fails to build the first time only
+            raise Incomplete("the time limit of 9 seconds was reached", None)
+        return _plan(10.0 - len(chosen))
+
+    widened = _widen(groups, offers, run)
+    assert seen == [("seed",), ("seed", "x"), ("seed", "x"), ("seed", "x", "bulk1"), ("seed", "x", "bulk2"), ("seed", "x", "bulk1", "bulk2")]
+    assert widened.plan.mean_remaining == 6.0 and _rounds.all_closed(widened.records)

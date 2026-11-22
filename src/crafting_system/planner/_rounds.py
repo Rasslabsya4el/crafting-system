@@ -31,8 +31,9 @@ and e10: the same R04 methods give 32,192.94 c on 7 offers, 898,973,434,471 c on
   hand. Carrying it would grow every later step by it (R05's 1,192 fossil sets grew the solve after the net by 1 GB a minute, #1091). A plan in
   hand of 10 that adds mods A and B together; family G adds A for 1, family H adds B for 1, the base has no other way to either: G with the
   base costs 11 and H with the base costs 11, both beaten, while G and H together cost 2 (#1389). So:
-* **The second pass.** When the steps are done and time is left, the families set aside or undone are tried once more, in their order, each
-  over the offers accepted by then; in this pass a step whose build completes joins whatever its end (nothing is set aside again), so G's step
+* **The second pass.** When the families that refine the model are done, and again when every step is, the families set aside or undone
+  are tried once more, in their order, each over the offers accepted by then (so the retries of the small families come before the kinds of
+  many offers join, while their base is small: R09's single orbs were retried over 2,680 offers once the fossil sets had joined); in this pass a step whose build completes joins whatever its end (nothing is set aside again), so G's step
   holds the base and H's holds G too, and the plan of 2 is found. A refused family is tried there again (#1088). A family of several kinds
   whose step was not finished is tried there one kind a step, smaller steps whose builds may complete. One pass, no loop. The retries owed
   count among the steps left in the first pass, so its last step (the fossil sets) leaves the pass its shares.
@@ -93,6 +94,7 @@ class Group:
     positions: tuple[int, ...]
     kinds: tuple[str, ...]
     features: frozenset[str]
+    bulk: bool = False  # a kind of many offers that refines nothing (`round_groups`): the second pass of the families before it runs before it
 
 
 @dataclass(frozen=True)
@@ -194,7 +196,9 @@ def round_groups(
             key = (3 + len(LADDER), sizes[kind], kind)  # a kind of many offers that refines nothing: its own family, the fewest first
         families.setdefault(key, []).append(i)
     steps = [_group(offers, features, sorted(first))] if first else []
-    steps += [_group(offers, features, positions) for _key, positions in sorted(families.items(), key=lambda item: item[0])]
+    steps += [
+        replace(_group(offers, features, positions), bulk=key[0] == 3 + len(LADDER)) for key, positions in sorted(families.items(), key=lambda item: item[0])
+    ]
     return tuple(steps)
 
 
@@ -293,20 +297,19 @@ def widen(
     base: list[int] = []
     records: list[RoundRecord] = []
     queue = list(groups)
-    first_pass = len(queue)  # the steps of the first pass; those after it are the second pass (`again`)
-    again: list[tuple[int, Group, list[int], str]] = []  # the families set aside or undone in the first pass: their record's place, the family, the offers its step held, how it ended
-    retry: dict[int, tuple[int, list[int], str]] = {}  # the place in the queue of a family tried again -> its first record's place, offers and end
+    again: list[tuple[int, Group, list[int], str]] = []  # the families set aside or undone and not yet tried again: their record's place, the family, the offers its step held, how it ended
+    retry: dict[int, tuple[int, list[int], str]] = {}  # id of a step of the second pass -> its family's first record's place, offers and end
     for k, group in _growing(queue):
-        second = k >= first_pass
+        second = id(group) in retry
         # the steps of the queue from this one on, and in the first pass the retries the second pass owes so far: the share is the time left
         # over them, so the last step of the first pass (the fossil sets) does not take what the second pass needs
-        rest = len(queue) - k + (0 if second else len(again))
+        rest = len(queue) - k + len(again)
         if (time_left := left()) is not None and time_left <= 0.0:
             used = "the run's time was used up" if meter is None else "the run's states net was used up"
             records.extend(RoundRecord(g.kinds, len(g.positions), UNTRIED, f"{used} before this step", None, None, 0.0, features=tuple(sorted(g.features)), carried=False, states=None if meter is None else 0) for g in queue[k:])
             break
         positions = sorted({*base, *group.positions})
-        earlier = retry.get(k)
+        earlier = retry.get(id(group))
         if earlier is not None and earlier[1] == positions and earlier[2] in ENDED:
             # the second pass, over the very offers its first step held, which closed: it joins with no search (its proof is the same)
             records[earlier[0]] = replace(records[earlier[0]], reason=records[earlier[0]].reason + "; it joined the second pass with no new search (the same methods)")
@@ -384,15 +387,20 @@ def widen(
         ))  # fmt: skip
         if accepted:
             base = positions
-        if k == first_pass - 1 and again:
-            # the first pass is done: the families set aside or undone are tried once more, in their order, over the offers accepted by then
+        if again and (k + 1 == len(queue) or (queue[k + 1].bulk and not group.bulk)):
+            # the families before the kinds of many offers are done (or every family is): those set aside or undone are tried once more, in
+            # their order, over the offers accepted by then, before the kinds of many offers join (their base is then small), and these
+            # kinds' own after the last
+            parts_all: list[Group] = []
             for place, family, searched, ended_as in again:
-                parts = [family] if ended_as in ENDED or len(family.kinds) < 2 else _by_kind(family, offers)
+                parts = [replace(family)] if ended_as in ENDED or len(family.kinds) < 2 else _by_kind(family, offers)
                 for part in parts:
-                    retry[len(queue)] = (place, searched if part is family else [], ended_as)
-                    queue.append(part)
+                    retry[id(part)] = (place, searched if len(parts) == 1 else [], ended_as)
+                parts_all.extend(parts)
                 said = "tried again in the second pass" + ("" if len(parts) == 1 else f", one kind a step ({len(parts)} steps)")
                 records[place] = replace(records[place], reason=records[place].reason + "; " + said)
+            queue[k + 1 : k + 1] = parts_all
+            again = []
         if k == len(queue) - 1 and status in ENDED and len(positions) == len(offers):
             # the last step held every offer and closed: its proof is the whole one, and covers every step before it (OR-38)
             records = [replace(record, covered=True) for record in records]
