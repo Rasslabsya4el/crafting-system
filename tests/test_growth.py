@@ -225,7 +225,7 @@ def test_the_plan_in_hand_never_gets_dearer_and_a_round_whose_build_did_not_comp
     assert not _rounds.all_closed(widened.records[:2])  # growth rounds alone prove nothing over every method
 
 
-def test_through_the_entry_the_belt_grows_from_its_seed_to_the_hand_worked_plan_and_the_widening_closes_every_method(data, target, monkeypatch):  # noqa: F811
+def test_through_the_entry_the_belt_begins_with_its_seed_round_and_reaches_the_hand_worked_plan_and_the_widening_closes_every_method(data, target, monkeypatch):  # noqa: F811
     plan = _plan(data, target, monkeypatch, blocking=True)
     assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
     records = plan.search.widening
@@ -233,3 +233,28 @@ def test_through_the_entry_the_belt_grows_from_its_seed_to_the_hand_worked_plan_
     assert grown and grown[0].growth.startswith("the seed")
     assert any(record.growth is None for record in records) and plan.search.exact  # the widening's last round held every method and closed
     assert not math.isnan(plan.mean_remaining)
+
+
+def test_with_no_plan_in_hand_the_roles_are_read_at_the_start_and_the_support_is_what_the_plan_uses():
+    # the seed holds a reroll alone that gives A: A waits (its providers all reroll), and B, whose only provider there is that reroll, is at risk
+    table = _table(
+        _entry("reroll A", 1.0, kind="reroll", chance={A: Fraction(1, 2)}),
+        _entry("add A", 2.0, chance={A: 1}),
+        _entry("fracture", 4.0, kind="terminal", fractures=True, draws=False),
+        _entry("add B", 2.0, chance={B: 1}),
+    )
+    grower = Grower(table, ())
+    grower.ran((0,), None, False)
+    positions, why = grower.next()
+    assert _names(table, positions) == {"reroll A", "add A", "add B", "fracture"} and why.startswith("no plan in hand")
+    grower.ran(positions, None, False)
+    assert grower.next() is None  # the same reading names nothing new: the growth ends
+    view = {_State("s", (Status.ABSENT, Status.ABSENT)): Action("add A", 2.0, (Outcome(_State("g", (Status.PASSING, Status.PASSING)), 1),))}
+    assert _names(table, grower.support(SimpleNamespace(packed=SimpleNamespace(view=view), policy={}))) == {"add A"}
+
+
+def test_no_plan_words_never_take_a_growth_round_with_no_plan_for_the_proof_over_every_method():
+    stopped = _rounds.RoundRecord(("x",), 1, _rounds.STOPPED, "the time limit", None, None, 1.0)
+    grown = _rounds.RoundRecord(("a",), 1, _rounds.NONE, "no plan", None, None, 1.0, growth="the seed")
+    assert _rounds.no_plan_words((stopped, grown)) is not None  # a growth round held only its own offers: no proof that none reaches the goal
+    assert not _rounds.all_closed((dataclasses.replace(grown, status=_rounds.CLOSED),))  # growth rounds alone prove nothing over every method

@@ -433,6 +433,8 @@ def widen(
             base = sorted(grow.support(best) | grow.asked)
             queue = [Group(tuple(i for i in g.positions if i not in set(base)), g.kinds, g.features) for g in queue]
             queue = [g for g in queue if g.positions]
+            if not queue:  # the base holds every offer: one round of them all still closes the proof over every method (`all_closed`)
+                queue = [Group((), ("the plan's methods",), frozenset())]
             if floor is not None and len(queue) >= 2 and not ((still := left()) is not None and still <= 0.0):
                 order = FloorsPass(floor, len(queue), best_upper, left, clock_now, meter)
                 queue = by_floor(queue, lambda g: order.figure(tuple(offers[i] for i in sorted({*base, *g.positions}))))
@@ -732,7 +734,10 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
     if all_closed(records):
         among = "every method offered, searched in rounds"
         guarantee = (
-            _limits.claim(among, "Each round held the methods of the rounds before it, so the last one held every method.")
+            _limits.claim(among, (
+                "The rounds grown from the plan in hand each held that plan's methods and those its steps named; every round after them held "
+                "the methods of the rounds before it, so the last one held every method."
+            ) if any(record.growth is not None for record in records) else "Each round held the methods of the rounds before it, so the last one held every method.")
             if exact
             else {"guarantee": f"The plan is {WITHIN_GAP} among {among}, at most {within or 0.0:.2%} above it."}
         )

@@ -27,7 +27,7 @@ from crafting_system.abstraction import _pattern
 from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
-from crafting_system.actions import BLOCKING, Axis, OutOfScopeError, Reading, kinds, sharing, unopened_listing
+from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, sharing, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
@@ -1200,7 +1200,12 @@ def rounds_grower(
     if not _growth.GROWS:
         return None
     names = {*(target.actions or ()), *route}
-    table = _growth.growth_table(data, goal, target, priced, listing, ask=checkpoint)
+    try:
+        table = _growth.growth_table(data, goal, target, priced, listing, ask=checkpoint)
+    except (ValueError, OutOfScopeError, NotApplicableError, BudgetExceeded):
+        # the growth only orders what is searched first: a table it cannot read (a model refused, a net spent while reading it) leaves the
+        # rounds to main's widening, which says itself what the model makes of the offers, and what a spent net stopped (#1414)
+        return None
     if not table.open:
         return None
     asked = [i for i, p in enumerate(priced) if p.offer.label in names or (p.offer.kind in names and p.offer.blocks is None)]
