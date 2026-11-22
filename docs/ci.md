@@ -153,7 +153,7 @@ background command, whose exit is its notification, and writes the output under 
   path written into the agent's handoff file at once. An agent waits on a pid (`while kill -0 PID 2>/dev/null; do sleep 20; done`),
   never on `pgrep -f "<pattern>"`: the waiting shell's own command line holds the pattern, so the loop matches itself and never ends
   (an agent hung for hours on 2026-11-18).
-- **Helpers.** `finder`, `checker` and `crafter` start no heavy run, on the server or on GitHub; they run quick, targeted tests
+- **Helpers.** `finder`, `checker`, `crafter` and `auditor` start no heavy run, on the server or on GitHub; they run quick, targeted tests
   only (under a minute, one process).
 
 GitHub keeps what the server does not give: a PR's own CI, the integration run that lands a PR, a run that needs Windows, and the heavy
