@@ -87,6 +87,8 @@ class KeysAhead:
         self.lost = 0.0  # seconds the pools waited beyond the work of the keys taken spread over the workers
         self.lost_keys = 0
         self.spent = 0.0  # seconds of work of the keys expanded so far, here or in a worker
+        self.replay = 0.0  # seconds this process spent taking workers' rows (`applied`)
+        self.replayed = 0
         self.keys = 0  # those keys
         self.pool: parallel.WorkerPool | None = None
         self.pending: list[tuple[int, int, list[Future]]] = []  # (first key's number, the number after the last, futures of its chunks), oldest first
@@ -114,6 +116,12 @@ class KeysAhead:
     @property
     def open(self) -> bool:
         return self.pool is not None
+
+    def applied(self, seconds: float) -> None:
+        """A worker's row taken here (`PatternBuilder._apply`): its seconds, for the rule."""
+        self.replay += seconds
+        self.replayed += 1
+        self.since += seconds
 
     def alone(self, seconds: float) -> None:
         """A key expanded here: its seconds go to the pace of the keys."""
@@ -161,7 +169,10 @@ class KeysAhead:
         per_key = self.spent / self.keys
         fork = FORK_PRIOR if self.fork is None else self.fork
         lost = self.lost / self.lost_keys if self.lost_keys else 0.0
-        return per_key * left * (1.0 - 1.0 / self.count) > fork * self.count + lost * left
+        # what this process spends to take a worker's row (its kernels made again: on R17's keys of 100,000 kernels, about what one
+        # process spends to make the row, #1384)
+        replay = self.replay / self.replayed if self.replayed else 0.0
+        return (per_key * (1.0 - 1.0 / self.count) - replay) * left > fork * self.count + lost * left
 
     def _fork(self, i: int) -> None:
         net = parallel.active_memory_net()

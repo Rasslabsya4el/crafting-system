@@ -2066,7 +2066,11 @@ class PatternBuilder:
                 if given:
                     made = self.ahead.take(i)  # the key's row made ahead in a worker (`_build_ahead`), or None
                     try:
-                        if made is None or not self._apply(i, given, made, tick):
+                        if made is not None:
+                            mark = time.perf_counter()
+                            taken = self._apply(i, given, made, tick)
+                            self.ahead.applied(time.perf_counter() - mark)
+                        if made is None or not taken:
                             mark = time.perf_counter()
                             firsts = None
                             if not self.expanded[i]:  # a key expanded before had a member: the universe only grows
