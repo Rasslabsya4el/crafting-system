@@ -433,8 +433,8 @@ def widen(
             base = sorted(grow.support(best) | grow.asked)
             queue = [Group(tuple(i for i in g.positions if i not in set(base)), g.kinds, g.features) for g in queue]
             queue = [g for g in queue if g.positions]
-            if not queue:  # the base holds every offer: one round of them all still closes the proof over every method (`all_closed`)
-                queue = [Group((), ("the plan's methods",), frozenset())]
+            if not queue:  # the base holds every offer: one round of them all still closes the proof over every method (`all_closed`),
+                queue = [Group((), tuple(sorted({kind_of(offers[i]) for i in base})), frozenset())]  # named by the kinds the base holds
             if floor is not None and len(queue) >= 2 and not ((still := left()) is not None and still <= 0.0):
                 order = FloorsPass(floor, len(queue), best_upper, left, clock_now, meter)
                 queue = by_floor(queue, lambda g: order.figure(tuple(offers[i] for i in sorted({*base, *g.positions}))))

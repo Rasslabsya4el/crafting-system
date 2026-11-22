@@ -74,13 +74,38 @@ def test_the_protectors_of_a_mod_at_risk_keep_the_mods_they_are_given():
         _entry("reroll that fractures", 1.0, kind="reroll", fractures=True),  # it draws: it keeps nothing it was given
         _entry("lock prefixes", 6.0, kind="craft", locks=frozenset({Side.PREFIX})),
         _entry("lock suffixes", 6.0, kind="craft", locks=frozenset({Side.SUFFIX})),
-        _entry("imprint", 3.0, kind="terminal", makes_imprint=True, draws=False),
+        _entry("imprint", 3.0, kind="terminal", makes_imprint=True, draws=False, leads={MAGIC: frozenset({MAGIC})}),
     )
     # A (a prefix) is at risk while the step waits for B (a suffix): the prefix lock, never the suffix one, which would keep B from coming
     named = _names(table, table.roles({B}, {A}, frozenset({MAGIC}), False, frozenset(), frozenset()))
     assert {"fracture", "lock prefixes", "imprint"} <= named and not named & {"reroll that fractures", "lock suffixes"}
     # a state that holds a fractured mod already names no fracture
     assert "fracture" not in _names(table, table.roles({B}, {A}, frozenset({MAGIC}), True, frozenset(), frozenset()))
+
+
+def test_a_step_that_waits_on_both_sides_locks_each_side_and_one_that_waits_on_one_side_alone_never_locks_it():
+    # a reroll that waits for A (a prefix) and B (a suffix) and can lose both: under the prefix lock it still gains B, under the suffix lock A
+    table = _table(
+        _entry("lock prefixes", 6.0, kind="craft", locks=frozenset({Side.PREFIX})),
+        _entry("lock suffixes", 6.0, kind="craft", locks=frozenset({Side.SUFFIX})),
+    )
+    assert _names(table, table.roles({A, B}, {A, B}, frozenset({MAGIC}), True, frozenset(), frozenset())) == {"lock prefixes", "lock suffixes"}
+    # a step that waits for A alone gains nothing under the prefix lock: only B's side is locked
+    assert _names(table, table.roles({A}, {A, B}, frozenset({MAGIC}), True, frozenset(), frozenset())) == {"lock suffixes"}
+
+
+def test_a_wanted_mod_s_side_is_read_from_its_prefixes_and_suffixes_alone():
+    table = _table()
+    table.data.mods["A2"] = SimpleNamespace(generation_type="unique", implicit_tags=(), families=())  # a unique's mod that passes A too
+    table.goal.leaves[A].mod_ids = frozenset({"A1", "A2"})
+    assert table.side_of(A) == "prefix"
+
+
+def test_an_imprint_is_named_only_where_it_can_be_made():
+    # an imprint taken of magic items only (its outcomes read at the magic shape alone) protects nothing on a step that acts on a rare item
+    table = _table(_entry("imprint", 3.0, kind="terminal", makes_imprint=True, draws=False, leads={MAGIC: frozenset({MAGIC})}))
+    assert _names(table, table.roles({B}, {A}, frozenset({RARE}), True, frozenset(), frozenset())) == set()
+    assert _names(table, table.roles({B}, {A}, frozenset({MAGIC}), True, frozenset(), frozenset())) == {"imprint"}
 
 
 def test_the_cleaners_and_narrowers_of_the_adders():
@@ -198,6 +223,26 @@ def test_g_and_h_that_pay_only_together_are_named_in_one_round_by_the_step_that_
     # stops a round before it never reaches (#1389)
     main = _widen(groups, offers, run, None)
     assert main.plan.mean_remaining == 2.0 and len(main.records) == 4 and "the last round held them again" in main.records[1].reason
+
+
+def test_when_the_plan_s_support_holds_every_offer_one_widening_round_of_them_all_closes_the_proof_over_every_method():
+    # one offer, the base's tool: its plan costs 10 and uses it, so the support is every offer and no group is left to widen with
+    table, _offers, plan_of = _g_h_world()
+    table.entries = table.entries[:1]
+    offers = (SimpleNamespace(label="base", kind="reroll"),)
+    seen = []
+
+    def run(chosen, call):
+        seen.append(tuple(offer.label for offer in chosen))
+        return plan_of(chosen)
+
+    grower = Grower(table, ())
+    grower.seed = lambda: ((0,), "the seed")
+    widened = _widen((_rounds.Group((0,), ("reroll",), frozenset()),), offers, run, grower)
+    assert seen == [("base",), ("base",)] and widened.plan.mean_remaining == 10.0
+    closing = widened.records[-1]
+    assert closing.growth is None and closing.kinds == ("reroll",) and closing.closed  # named by the base's own kind, not an invented label
+    assert _rounds.all_closed(widened.records)
 
 
 def test_the_plan_in_hand_never_gets_dearer_and_a_round_whose_build_did_not_complete_ends_the_growth_and_says_so():

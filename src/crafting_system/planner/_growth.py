@@ -21,7 +21,8 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   - **moves**: for an adder whose best shape is not one `D` acts at, the cheapest offer of each step of the rarities between them;
   - **protectors** for each mod of `K`, among the offers that draw no mod (they keep the mods they are given; a reroll that also fractures
     keeps none of them): every one that fractures (when the states hold no fractured mod), the cheapest that adds the lock of the mod's side
-    (when no mod of `W` sits on that side), and the cheapest that makes an imprint at `D`'s shape;
+    (unless every mod of `W` sits on that side: a step that waits for a mod of the other side still gains it under the lock), and the
+    cheapest imprint that can be made at `D`'s shape (its outcomes are read there);
   - **cleaners and narrowers** for the adders: the cheapest craft that adds no mod and needs no crafted one (it removes a mod), the crafts that
     add no mod and need a crafted one when the round holds a crafted mod, and, among the offers that draw no mod, the cheapest that keeps each
     tag out of the draws that no wanted mod carries, and the cheapest of more crafted mods when the round holds two crafted mods.
@@ -61,6 +62,7 @@ PER_ROLE = 2  # the offers of least cost over chance a wanted mod brings for one
 KEEPS_MODS = (ADD, *FINISHING)  # the kinds that keep the mods they are given and add one: what an adder is (a reroll is not)
 _LOCKS = {metamod.value: side for metamod, side in LOCKED_SIDE.items()}
 _TAGS = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+_SIDES = frozenset({"prefix", "suffix"})  # the sides a rolled mod sits on (`Mod.generation_type`)
 
 
 @dataclass
@@ -218,8 +220,9 @@ class OfferTable:
         return [position for _ratio, position in ranked[:count]]
 
     def side_of(self, leaf: int) -> str | None:
-        """The side of the wanted mod `leaf` when every mod that can pass it is on one side, else None."""
-        sides = {self.data.mods[mod_id].generation_type for mod_id in self.goal.leaves[leaf].mod_ids if mod_id in self.data.mods}
+        """The side of the wanted mod `leaf` when every prefix or suffix that can pass it is on one side, else None (a unique's or another
+        source's mod that passes it too is never rolled on the item, so it names no side)."""
+        sides = {self.data.mods[mod_id].generation_type for mod_id in self.goal.leaves[leaf].mod_ids if mod_id in self.data.mods} & _SIDES
         return next(iter(sides)) if len(sides) == 1 else None
 
     def tags_of_wanted(self) -> frozenset[str]:
@@ -246,11 +249,11 @@ class OfferTable:
             if not fractured:
                 named.update(entry.position for entry in self.entries if entry.fractures and not entry.draws and entry.acts_at(shapes))
             side = self.side_of(leaf)
-            if side is not None and side not in wait_sides:
+            if side is not None and wait_sides != {side}:
                 lock = self.cheapest(lambda entry, side=side: not entry.draws and any(getattr(each, "value", each) == side for each in entry.locks))
                 if lock is not None:
                     named.add(lock)
-            imprint = self.cheapest(lambda entry: entry.makes_imprint and not entry.draws and entry.acts_at(shapes))
+            imprint = self.cheapest(lambda entry: entry.makes_imprint and not entry.draws and any(shape in entry.leads for shape in shapes))
             if imprint is not None:
                 named.add(imprint)
         if adders or any(self.entries[position].crafted for position in current):
