@@ -2067,9 +2067,17 @@ class PatternBuilder:
                     made = self.ahead.take(i)  # the key's row made ahead in a worker (`_build_ahead`), or None
                     try:
                         if made is not None:
-                            mark = time.perf_counter()
-                            taken = self._apply(i, given, made, tick)
-                            self.ahead.applied(time.perf_counter() - mark)
+                            mark, asking = time.perf_counter(), [0.0]
+
+                            def timed(oi: int, inner: bool = False) -> None:  # the net's questions are not the row's cost (`KeysAhead.applied`)
+                                began = time.perf_counter()
+                                try:
+                                    tick(oi, inner)
+                                finally:
+                                    asking[0] += time.perf_counter() - began
+
+                            taken = self._apply(i, given, made, timed)
+                            self.ahead.applied(time.perf_counter() - mark - asking[0])
                         if made is None or not taken:
                             mark = time.perf_counter()
                             firsts = None

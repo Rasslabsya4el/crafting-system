@@ -41,6 +41,7 @@ holds what it copied of this process's pages (a fork shares them until either si
 it made, so where the net is near fewer of them fit. Below two workers no pool forks again in this build.
 """
 
+import math
 import os
 import time
 from concurrent.futures import Future
@@ -90,6 +91,8 @@ class KeysAhead:
         self.replay = 0.0  # seconds this process spent taking workers' rows (`applied`)
         self.replayed = 0
         self.replayed_at_fork = self.keys_at_fork = 0
+        self.worker_keys = 0  # keys the workers made (`_gather`)
+        self.grown_asked = -math.inf  # when `asked` last read the workers' memory
         self.replay_at_fork = 0.0
         self.keys = 0  # those keys
         self.pool: parallel.WorkerPool | None = None
@@ -198,7 +201,7 @@ class KeysAhead:
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
         self.renew = False
         self.gathered = 0  # windows of this pool come back: a pool grown past half the room before one did is cut, not made afresh
-        self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork = self.replayed, self.replay, self.keys  # (`_idle`)
+        self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork = self.replayed, self.replay, self.worker_keys  # (`_idle`)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -266,6 +269,7 @@ class KeysAhead:
             self.useful += seconds
             self.spent += seconds
             self.keys += len(made)
+            self.worker_keys += len(made)
             for k, row in made:
                 if row is not None:
                     self.memo[k] = (pid, row)
@@ -279,7 +283,7 @@ class KeysAhead:
         taking a row (its kernels' outcomes numbered here) cost what making it did, and the keys after the pool made again here the label
         distributions the workers had made (#1384)."""
         taken = self.replayed - self.replayed_at_fork
-        made = self.keys - self.keys_at_fork
+        made = self.worker_keys - self.keys_at_fork  # the keys its workers made (the keys this process expanded meanwhile are not in `useful`)
         if taken < self.count * CHUNKS or made <= 0:
             return False
         replay = (self.replay - self.replay_at_fork) / taken
@@ -329,12 +333,16 @@ class KeysAhead:
             return False
         held, own = parallel.held_mb(), parallel.own_mb()
         return held is not None and own is not None and held - own >= (net - own) / 2
+
     def asked(self, stop) -> str | None:
         """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first (one
         worker fewer next time, `_cut`) and the net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the
         one process built whole was stopped at 12,543 MB with six workers beside it, #1384)."""
-        if self.pool is not None and self._grown():  # they grew past half the room while this process took their rows: let go now (`_gather`)
-            self._retire()
+        now = time.perf_counter()
+        if self.pool is not None and now - self.grown_asked >= self.poll:  # once a poll (a count asks at every offer): it reads `/proc`
+            self.grown_asked = now
+            if self._grown():  # they grew past half the room while this process took their rows: let go now (`_gather`)
+                self._retire()
         reason = stop()
         if reason is not None and self.pool is not None:
             self._cut(f"the build's net was reached with the workers alive: {reason}")
