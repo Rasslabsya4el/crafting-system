@@ -85,6 +85,7 @@ class Entry:
     locks: frozenset = frozenset()  # the sides whose lock it may add
     keeps_out: frozenset[str] = frozenset()  # the tags it may keep out of the draws
     more_crafted: bool = False  # it may add the metamod of more crafted mods
+    need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
 
     def acts_at(self, shapes) -> bool:
         """Whether it is read as acting at one of `shapes` (its kind there is not a refusal)."""
@@ -95,7 +96,7 @@ class Entry:
         best, at = math.inf, None
         for (shape, each), chance in self.chance.items():
             if each == leaf and chance > 0 and (shapes is None or shape in shapes):
-                ratio = float(Fraction(self.cost) / chance)
+                ratio = float(Fraction(self.cost + self.need) / chance) if math.isfinite(self.need) else math.inf
                 if ratio < best:
                     best, at = ratio, shape
         return best, at
@@ -117,6 +118,15 @@ class OfferTable:
             self._read_shape(abstraction, view, priced, ask)
         for entry, offer in zip(self.entries, priced):
             self._read_declarations(entry, offer, item)
+        self.priced_needs()
+
+    def priced_needs(self) -> None:
+        """Each offer's cost as the roles rank it: its price plus the cheapest offer of what it needs to act (`closure`): a veiled choice is
+        worth what a veiled placeholder costs to make, a restore what an imprint costs, so a free pick is not ranked as a free adder."""
+        veil = min((entry.cost for entry in self.entries if entry.veils), default=math.inf)
+        imprint = min((entry.cost for entry in self.entries if entry.makes_imprint), default=math.inf)
+        for entry in self.entries:
+            entry.need = (veil if entry.needs_veiled else 0.0) + (imprint if entry.restores else 0.0)
 
     def _read_shape(self, abstraction: Abstraction, view: Item, priced: Sequence[PricedOffer], ask) -> None:
         data, goal, rarity = self.data, self.goal, view.rarity

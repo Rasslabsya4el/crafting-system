@@ -113,6 +113,12 @@ def test_the_dependencies_a_pick_brings_the_unveil_the_veiled_sources_and_every_
     assert _names(table, table.closure({0})) == {"pick 1", "pick 2", "unveil", "veiled reroll", "veiled add"}
     assert _names(table, table.closure({5})) == {"restore", "imprint"}
     assert _names(table, table.closure({7})) == {"other"}  # an offer that needs nothing brings nothing
+    # a free pick is ranked with what its placeholder costs: the cheapest source (3), so an adder of 2 comes before it
+    table.entries[0].chance = {(MAGIC, A): Fraction(1)}
+    table.entries[7].chance = {(MAGIC, A): Fraction(1)}
+    table.entries[7].cost = 2.0
+    table.priced_needs()
+    assert table.entries[0].need == 3.0 and table._best(A, lambda entry: True, 1) == [7]
 
 
 @dataclasses.dataclass(frozen=True)
