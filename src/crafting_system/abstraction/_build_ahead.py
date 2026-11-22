@@ -135,12 +135,19 @@ class KeysAhead:
         return self.memo.pop(i, None)
 
     def _fill(self, i: int) -> None:
-        if self.pool is not None and self.renew:  # the workers grew past their half of the room: no new window, a fresh pool once these are in
-            if not self.pending:  # the rows already in stay, with the numbers of this pool (`base`, `tables`): no pool forks before they are taken
-                pool, self.pool = self.pool, None
+        if self.pool is not None and self.renew:  # the workers grew past their half of the room: closed now, a fresh pool forks from here
+            # the rows already in stay, with the numbers of this pool (`base`, `tables`): no pool forks before they are taken. A window still in
+            # flight is let go (R17: the workers grew by about 1 GB in 30 s, past the net before the window in flight came back)
+            pool, self.pool = self.pool, None
+            if self.pending:
+                pool.abandon()
+                self.pending.clear()
+            else:
                 pool.close()
-                self.renewed += 1
-                self._account()
+            self.renewed += 1
+            self._account()
+            if self.builder.progress is not None and self.renewed in (1, 10, 100, 1000):
+                self.builder.progress(f"keys' workers: made afresh {self.renewed:,} times so far (they held half the room the memory net leaves)")
             return
         while self.pool is not None and len(self.pending) < 2 and self._send(i):
             pass
