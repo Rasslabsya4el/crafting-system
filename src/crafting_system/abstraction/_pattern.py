@@ -1810,6 +1810,7 @@ class PatternBuilder:
         # none where there is no fork (OR-57)
         self.ahead = KeysAhead(self, (parallel.worker_count() if workers is None else workers) if parallel.can_inherit() else 1)
         self.recording: "_Recorder | None" = None  # in a worker of `_build_ahead`: what the key being expanded made, for the parent
+        self.grown_total = 0  # the universe's growths counted before `Pattern.grew` was last set back to 0 (`version`)
         self._reset()
 
     def _reset(self) -> None:
@@ -1900,6 +1901,8 @@ class PatternBuilder:
         at every other key (`_pattern_bound`). `spread`: offers already held at some keys (offer number -> keys) that are to be built at these too."""
         if self.dead:
             raise RuntimeError("the build was stopped; use the model of the round before")
+        if offers:  # the workers of a pool kept from the passes before do not hold these offers (`_build_ahead`)
+            self.ahead.close()
         first = len(self.offers)
         self.offers.extend(offers)
         if self.done == 0 and not any(self.expanded):
@@ -1909,6 +1912,7 @@ class PatternBuilder:
             self._place(first, at, spread)
         else:
             self._place(first, at, spread)
+            self.grown_total += self.pattern.grew
             self.pattern.grew = 0
             self.pattern.grown = []
             self.pattern.add_actions([offer.action for offer in offers if offer.action is not None])
@@ -1919,6 +1923,7 @@ class PatternBuilder:
             stopped = self._pass()
             if stopped is not None:
                 self.dead = True
+                self.ahead.close()
                 if self.pattern.grew:
                     self.expanded = [False] * len(self.keys)
                     self.rows = RowStore(len(self.keys))
@@ -1969,6 +1974,7 @@ class PatternBuilder:
         keys = {self.keys[i] for i in again}
         self.gaps = {found: value for found, value in self.gaps.items() if found[0] not in keys}
         self.stats.restarted_keys += len(again)
+        self.grown_total += pattern.grew
         pattern.grew = 0
         pattern.grown = []
 
@@ -2001,7 +2007,10 @@ class PatternBuilder:
                 self._release()
                 return reached.reason
             finally:
-                self.ahead.close()  # the pool of this pass, if one was forked: its workers hold this pass's universe
+                # the pool of this pass, if one was forked: a builder that grows keeps it for its next passes, where its workers' memos (the members
+                # kept, the kernel keys) serve the keys again as this process's memos served them alone (#1384: on R04, the offers built at more keys
+                # pass after pass made every key's members again in a fresh pool); it closes once offers join, the universe grows or the build ends
+                self.ahead.end_pass(keep=self.grow)
 
     def _pass_keys(self) -> str | None:
         pattern, offers, stats, progress = self.pattern, self.offers, self.stats, self.progress
@@ -2459,7 +2468,11 @@ class PatternBuilder:
         """What a worker's members and states are made of besides the keys it is sent: the universe's growth (`Pattern.grew`) and the family types
         numbered (`TypeNumbers`, shared with the twin; a type is numbered when the first item of an influence set is met, and its number names
         slots in states and kernel keys)."""
-        return (self.pattern.grew, self.ab.types_numbered())
+        return (self.grown_total + self.pattern.grew, self.ab.types_numbered())
+
+    def close(self) -> None:
+        """End the keys' pool kept from pass to pass (`_build_ahead`): the build is done with."""
+        self.ahead.close()
 
     def _relaxed_rows(self, key: PatternKey, oi: int, offer: PatternOffer, members, last: bool, tick) -> list[int] | None:
         """The kernel ids of the rows that enter the relaxed draws of `offer` at the `ONE` members of `key` (`_relaxed`), None where one does
