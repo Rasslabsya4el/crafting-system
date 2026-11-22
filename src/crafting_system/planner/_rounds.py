@@ -781,7 +781,9 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
 
 def _held_by_finished_growth(records: Sequence[RoundRecord]) -> frozenset[str]:
     """The offers a growth round that finished held (a growth round is named by its offers' labels): they were searched, and a later growth
-    round that did not finish and held them again leaves them tried, not untried (#1414)."""
+    round that did not finish and held them again leaves them tried, not untried (#1414). It is read offer by offer: two offers each held by
+    a finished round, but together only by one that stopped, both leave this list, and that round's own line (with every offer) still says
+    the pair was not ruled out."""
     return frozenset(label for record in records if record.growth is not None and record.status in (CLOSED, WITHIN, BEATEN, NONE) for label in record.kinds)
 
 
