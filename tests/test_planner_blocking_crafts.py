@@ -797,3 +797,41 @@ def _one_offer_per_model(monkeypatch):
 
     monkeypatch.setattr(_pattern_bound, "_binding", one_at_a_time)
     monkeypatch.setattr(_offer_floor.OfferFloors, "initial", lambda self: real_initial(self)[:1])
+
+
+def test_through_the_entry_the_seed_holds_the_offer_that_gives_the_wanted_mod_and_no_tool(data, target, monkeypatch):
+    # #1276: the belt's seed is read from the offers' chances on the wanted mods (`_offer_kinds.leaf_providers`): the Exalted Orb, which can add
+    # the wanted mod; the fillers and the lock pass no wanted mod alone (tools), so each is in a family of a later step
+    from crafting_system.planner import _rounds
+
+    seeds, real = [], _rounds.round_groups
+
+    def spied(offers, named, added, seed=()):
+        steps = real(offers, named, added, seed)
+        seeds.append([offers[i].label for i in steps[0].positions])
+        return steps
+
+    monkeypatch.setattr(_rounds, "round_groups", spied)
+    plan = _plan_at(data, target, monkeypatch, divine=92.0)
+    assert seeds == [["Exalted Orb"]] and plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+
+
+def test_through_the_entry_a_family_whose_build_does_not_complete_is_undone_and_the_plan_is_not_called_the_cheapest(data, target, monkeypatch):
+    # #1276: the lock's step has a plan in hand and its bound's build is stopped (planted): the step is undone with no search, in the first pass
+    # and in the second; the fillers' step still makes the plan of 133, and the answer proves it only over the steps that closed, naming the lock's
+    real = _envelope_plan.pattern_lower_bound
+    searched = []
+
+    def stopped_for_the_lock(abstraction, start, offers, **kwargs):
+        bound = real(abstraction, start, offers, **kwargs)
+        held = {priced.label for priced in offers}
+        searched.append(LOCK in held)
+        return dataclasses.replace(bound, stopped="planted: the time limit was reached", phase="model") if LOCK in held else bound
+
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", stopped_for_the_lock)
+    plan = _plan_at(data, target, monkeypatch, divine=91.0)
+    assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9)
+    assert [record.status for record in _rounds_of(plan)] == ["closed", "undone", "closed", "undone"] and searched.count(True) == 2
+    assert not plan.search.exact and LOCK not in {entry.label for entry in plan.offers}
+    untried = next(limit for limit in plan.limits if limit.what == "Not finished")
+    assert "not finished (its count of the cheapest possible cost did not finish in its share" in untried.names[0]

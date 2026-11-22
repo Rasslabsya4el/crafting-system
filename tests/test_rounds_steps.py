@@ -192,3 +192,31 @@ def test_a_refused_or_stopped_family_is_retried_once_in_the_second_pass(bad):
     widened = _widen(groups, offers, run)
     assert seen == [("seed",), ("seed", "x"), ("seed", "x")] and widened.plan.mean_remaining == 10.0
     assert [record.status for record in widened.records][1:] == ["refused", "refused"] if isinstance(bad, ValueError) else ["stopped", "stopped"]
+
+
+def test_a_step_s_error_kept_until_the_run_ends_does_not_keep_that_step_s_search_alive():
+    # #1325 (kept from the rounds): the first step's error is kept until the run ends; its traceback held the frames it was raised from, and
+    # with them the step's whole search (R11: 4,084 MB at the next round's start). Here the search of the only step raises from a frame that
+    # holds its store, with a cause raised one frame deeper: once `widen` returns, the error is still there and the store is freed.
+    import weakref
+
+    class Store:
+        pass
+
+    alive = []
+
+    def deeper(store):
+        raise RuntimeError("deep in the search")
+
+    def search(chosen, call):
+        store = Store()
+        alive.append(weakref.ref(store))
+        try:
+            deeper(store)
+        except RuntimeError as cause:
+            raise _rounds.Stopped("the time limit of 3 seconds was reached", None) from cause
+
+    widened = _widen((_rounds.Group((0,), ("a",), frozenset({"junk", "a"})),), ("a",), search)
+    assert str(widened.error) == "deep in the search"  # (a stop keeps its cause: what the caller raises, with its words)
+    assert alive and all(ref() is None for ref in alive)
+

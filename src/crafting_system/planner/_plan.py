@@ -50,7 +50,7 @@ from . import _limits
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
-from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
+from ._envelope import ACCEPT_BOUND, Incomplete, Net, NoPolicy, Standing
 from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, certified_upper, envelope_limits, envelope_result
 from ._packed import SOLVERS, PackedResult, packed_result
 from ._pattern_bound import MIN_OFFERS
@@ -697,6 +697,7 @@ def _make_plan(
     foresee: bool = True,
     round_call: RoundCall | None = None,
     route_actions: tuple[str, ...] | None = None,
+    orbs_left: list | None = None,
 ) -> Plan:
     """Solve the target and measure the risk of the policy.
 
@@ -924,6 +925,7 @@ def _make_plan(
         raise PlanError(f"an offered action takes donors, so the plan is made by the search that holds every item it reaches; `--solver {solver}` does not do that")
     donors: tuple[Donor, ...] = ()
     unfolded = priced
+    inexact = False  # a donor whose plan is not proved exact (`Donor.exact`)
     if awakened:  # each donor first, by the same search (#832): the orb is then an ordinary offer whatever solver takes the target
         # a donor stops as the target does (past the aim, at a proved gap) on its share of the net; its [lower, upper] goes into `whole_lower`
         # in a round of a run counted in states the donors share the round's own share of the states with its search (#1101)
@@ -936,9 +938,12 @@ def _make_plan(
         )  # fmt: skip
         if share is not None and clock is not None:
             round_call = replace(round_call, states=max(share - (clock.spent - spent_before), 1))  # the round's search has what its donors left
+        inexact = any(not donor.exact for donor in donors)
         kept_orbs = {d.action for d in donors}
         priced = fold(tuple(p for p in priced if p not in awakened or p.offer.action in kept_orbs), donors)
         limits += left_out + donor_limits(donors, donor_base_cost(unfolded))
+        if orbs_left is not None:  # a step's orbs left out: the steps' answer says so whichever step's plan wins (OR-13, #1276)
+            orbs_left.extend(left_out)
     refusal = pattern_refusal(abstraction) if not axes else "the plan reads a rule axis"  # searched per reading below (#589, #1111)
     # "auto" is the envelope search wherever its bound can be built (#535), a plan a given route is judged against included: the route is evaluated on
     # its own reach, as objects or packed (#829, #986). The number of offers decides nothing (#829): the fossil sets take the envelope search with or
@@ -1032,8 +1037,14 @@ def _make_plan(
                         abstraction, start, offered, prune_corrupting=PRUNE_CORRUPTING, incumbent=incumbent,
                         net=net, item=target.start_item if many else None, gap=gap,
                         gap_after=gap_after, watch=watch if round_call is None or round_call.watched else None,
-                        beaten_at=round_call.upper if round_call is not None else None,
+                        # an orb priced at its donor's upper mean (`_awakener.fold`) leaves the search's lower figure no lower bound of the
+                        # true cost unless every donor is exact: such a step is not ended as beaten on it (OR-13, the note's obligation 4)
+                        beaten_at=round_call.upper if round_call is not None and not inexact else None,
                     )  # fmt: skip
+            except Incomplete as stop:
+                if inexact:  # (as above: its figure is not a lower bound of the step's offers)
+                    raise Incomplete(stop.reason, None, stop.keys, stop.expanded) from None
+                raise
             except (OutOfScopeError, NoPolicy, BoundError, ConvergenceError) as error:
                 if round_call is None and clock is not None:  # a round's states are counted by the rounds (`_rounds.StatesMeter`)
                     clock.spend(getattr(error, "states", 0))
@@ -1241,7 +1252,8 @@ def widened_plan(
         try:
             return _make_plan(
                 data, target, prices, start_price=None, offers=chosen, solve_it=True, start_price_of=price_of_start, with_risk=False,
-                incumbent=None, clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, route_actions=route_actions, **kwargs,
+                incumbent=None, clock=clock, watch=watch, judges_route=False, foresee=False, round_call=call, route_actions=route_actions,
+                orbs_left=orbs_left, **kwargs,
             )  # fmt: skip
         except PlanError as error:  # the search's `NoPolicy`: a net stopped it before a plan closed (a stop), or no plan of the offers exists
             cause = error.__cause__
@@ -1256,6 +1268,7 @@ def widened_plan(
                 raise _rounds.NoPlan(str(error)) from error
             raise
 
+    orbs_left: list[Limit] = []  # the Awakener's Orbs a step left out, its donor not planned (`no_donor_limit`)
     meter = states_meter(clock)
     widened = _rounds.widen(
         groups, grouped, run, upper_of=known_upper, mean_of=lambda plan: float(plan.mean_remaining), ended=round_end,
@@ -1271,6 +1284,13 @@ def widened_plan(
             raise PlanError(f"stopped{spent}, {NO_PLAN}: {said}") from widened.error  # as `stopped_refusal` says a stop (OR-33's example)
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
     plan, records = widened.plan, widened.records
+    if orbs_left:
+        # a step left an orb out (its donor was not planned): no step held every offer, whatever the records say, and the answer names the orb
+        # whichever step's plan won (OR-13)
+        records = tuple(replace(record, covered=False) for record in records)
+        last = records[-1]
+        records = (*records[:-1], replace(last, carried=False, reason=(last.reason + "; " if last.reason else "") + "an Awakener's Orb was left out of it, its second item not planned"))
+        limits = (*limits, *(limit for n, limit in enumerate(orbs_left) if limit not in orbs_left[:n] and limit not in limits))
     closed = _rounds.all_closed(records)
     withins = [record.within for record in records if record.within is not None]
     within = max(withins) if withins else None  # a finished round proved within the gap: what the rounds prove is proved only to that gap
