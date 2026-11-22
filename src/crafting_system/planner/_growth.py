@@ -324,17 +324,20 @@ def step_shares(plan) -> list[tuple[str, float, list[tuple[CompressedState, obje
     rows, cols, chances, leave = [], [], [], np.ones(n)
     for i, state in enumerate(states):
         action = view[state]
-        total = float(sum(outcome.weight for outcome in action.outcomes))
-        self_weight = float(sum(outcome.weight for outcome in action.outcomes if outcome.state == state))
-        if total <= 0.0 or self_weight >= total:
+        # the weights may be exact integers past float's range (a kernel on one common denominator, #957)
+        total = sum(outcome.weight for outcome in action.outcomes)
+        self_weight = sum(outcome.weight for outcome in action.outcomes if outcome.state == state)
+        if total <= 0 or self_weight >= total:
             return []
-        leave[i] = (total - self_weight) / total
+        exact = isinstance(total, int) and total.bit_length() > 1000  # past float's range: ratios taken as fractions
+        part = (lambda a, b: float(Fraction(a, b))) if exact else (lambda a, b: float(a) / float(b))
+        leave[i] = part(total - self_weight, total)
         for outcome in action.outcomes:
             j = index.get(outcome.state)
             if j is not None and j != i:
                 rows.append(i)
                 cols.append(j)
-                chances.append(outcome.weight / (total - self_weight))
+                chances.append(part(outcome.weight, total - self_weight))
     row, col, chance = np.asarray(rows, dtype=np.int64), np.asarray(cols, dtype=np.int64), np.asarray(chances, dtype=float)
 
     class _Departures(linear_solve.Terms):

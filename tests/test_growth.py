@@ -314,3 +314,14 @@ def test_an_offer_a_finished_growth_round_held_is_not_listed_as_untried_when_a_l
     ]
     untried = _rounds.rounds_limits(records, True, None)[1]
     assert untried.labels == ("H", "fossil-set")
+
+
+def test_the_dearest_step_is_read_when_the_weights_are_integers_past_float_s_range():
+    # the chain of the test above with its weights on one common denominator of 2**1100 (a kernel held exactly, #957): the same shares
+    big = 2**1100
+    passing, empty, done = (Status.PASSING, Status.ABSENT), (Status.ABSENT, Status.ABSENT), (Status.PASSING, Status.PASSING)
+    start, half, goal = _State("start", empty), _State("half", passing), _State("goal", done)
+    view = {start: Action("craft A", 3.0, (Outcome(half, big),)), half: Action("reroll", 1.0, (Outcome(goal, big), Outcome(half, 8 * big), Outcome(start, big)))}
+    shares = step_shares(SimpleNamespace(start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None)))
+    assert [label for label, _share, _acts in shares] == ["reroll", "craft A"]
+    assert shares[0][1] == pytest.approx(10.0) and shares[1][1] == pytest.approx(6.0)
