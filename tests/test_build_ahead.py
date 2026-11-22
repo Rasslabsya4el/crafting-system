@@ -266,6 +266,8 @@ def test_a_pool_whose_rows_cost_here_what_a_worker_spends_is_idle(world):  # noq
     # `_idle` (R17's keys of 100,000 kernels, #1384): measured on the rows the workers made and the seconds taking them took here
     fresh = abstraction()
     ahead = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=4).ahead
+    ahead._size = lambda: 10  # windows of 10 keys: told over 40 rows, from the second window on
+    ahead.gathered = 2
     ahead.worker_keys, ahead.useful = 100, 1.0  # 10 ms a key in a worker
     ahead.replayed, ahead.replay = 50, 0.5  # 10 ms a row here: as slow as one process
     assert ahead._idle()
@@ -273,5 +275,5 @@ def test_a_pool_whose_rows_cost_here_what_a_worker_spends_is_idle(world):  # noq
     assert not ahead._idle()
     ahead.replay = 0.1  # 2 ms a row here
     assert not ahead._idle()
-    ahead.replayed, ahead.replay = 8, 0.5  # fewer rows than a window: not yet told
+    ahead.replayed, ahead.replay = 30, 0.5  # fewer rows than four windows: not yet told
     assert not ahead._idle()

@@ -51,6 +51,7 @@ from crafting_system import budget, parallel
 
 CHUNKS = 4  # the chunks of a window per worker: a slow chunk holds one worker for a part of the window (speed only, never a result)
 WINDOW = 4  # the polls of work per worker a window holds (`POLL_SECONDS` of `_pattern`): the nets are asked between two windows too
+IDLE_WINDOWS = 4  # the windows of rows a pool's cost here is measured on before it may be let go for the pass (`_idle`; speed only)
 MOST_PER_CHUNK = 256  # the most keys a chunk holds: with keys of microseconds a window of polls would be 10^5 keys and their pickles (speed only)
 FORK_PRIOR = 0.015  # seconds the fork of one worker costs before this build measured one (`_ahead.FORK_PRIOR`, #1340); the first fork's measure replaces it
 GROWN = "the keys' workers hold half the room the memory net leaves"  # what the wait on the workers says once they grew so (`_gather`)
@@ -93,7 +94,7 @@ class KeysAhead:
         self.replayed_at_fork = self.keys_at_fork = 0
         self.worker_keys = 0  # keys the workers made (`_gather`)
         self.grown_asked = -math.inf  # when `asked` last read the workers' memory
-        self.replay_at_fork = 0.0
+        self.replay_at_fork = self.useful_at_fork = 0.0
         self.keys = 0  # those keys
         self.pool: parallel.WorkerPool | None = None
         self.pending: list[tuple[int, int, list[Future]]] = []  # (first key's number, the number after the last, futures of its chunks), oldest first
@@ -200,7 +201,7 @@ class KeysAhead:
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
         self.renew = False
         self.gathered = 0  # windows of this pool come back: a pool grown past half the room before one did is cut, not made afresh
-        self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork = self.replayed, self.replay, self.worker_keys  # (`_idle`)
+        self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork, self.useful_at_fork = self.replayed, self.replay, self.worker_keys, 0.0  # (`_idle`)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -264,6 +265,10 @@ class KeysAhead:
             return
         self.waited += time.perf_counter() - mark
         self.gathered += 1
+        if self.gathered == 2:  # `_idle` is told from the second window on: the first's rows are taken by now (R04: its first window after the key
+            # of 1,245 offers held its 22 other keys given them, whose rows cost this process more than the new keys after them)
+            self.replayed_at_fork, self.replay_at_fork = self.replayed, self.replay
+            self.keys_at_fork, self.useful_at_fork = self.worker_keys, self.useful
         for pid, made, seconds in results:
             self.useful += seconds
             self.spent += seconds
@@ -277,17 +282,17 @@ class KeysAhead:
         self.renew = self._grown()
 
     def _idle(self) -> bool:
-        """Whether this pool's rows cost this process what they save: once a window's worth of its rows were taken, the seconds taking a row
+        """Whether this pool's rows cost this process what they save: once `IDLE_WINDOWS` windows of its rows were taken, the seconds taking a row
         took here are at least the seconds a worker took to make one (the workers make rows while this process takes them, so a pool goes at
         the pace of the slower: R04's new keys, about 3 ms a row here against 7 ms a key in a worker, went 3.5 times one process's pace). On R17's keys of 100,000 kernels,
         taking a row (its kernels' outcomes numbered here) cost what making it did, and the keys after the pool made again here the label
         distributions the workers had made (#1384)."""
         taken = self.replayed - self.replayed_at_fork
         made = self.worker_keys - self.keys_at_fork  # the keys its workers made (the keys this process expanded meanwhile are not in `useful`)
-        if taken < self.count * CHUNKS or made <= 0:
+        if self.gathered < 2 or taken < IDLE_WINDOWS * self._size() or made <= 0:
             return False
         replay = (self.replay - self.replay_at_fork) / taken
-        worker = self.useful / made
+        worker = (self.useful - self.useful_at_fork) / made
         return replay >= worker  # the workers make rows while this process takes them: a pool's pace is the slower of the two
 
     def _retire(self) -> None:
