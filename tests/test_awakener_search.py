@@ -248,6 +248,54 @@ def test_the_planners_entry_plans_the_orb_through_the_one_search_at_the_exact_va
     assert {"A second item's base is a stand-in price", "How each second item is made is not shown"} <= said
 
 
+def test_offered_beside_other_groups_the_orb_is_a_round_of_its_own_its_donor_searched_in_it_and_the_plan_is_the_exact_value(monkeypatch):
+    """#1426: an Awakener's Orb among the offers no longer keeps the target out of the rounds (`rounds_apply`; R14 was one search of every
+    offer, and the growth never ran): through `make_plan`, the ring's offers in two groups (the plain orbs, then the orb), the target is searched
+    in rounds (the growth's seed holds the run's named methods, the orb among them), each round that holds the orb searches its donor inside
+    it, and the answer is the exact value of the target's graph with the orb at its cost and the donor's exact mean, the one search's figure of
+    the test above."""
+    import datetime
+
+    from crafting_system.cli import make_plan
+    from crafting_system.planner import _plan, _rounds
+    from crafting_system.prices.price_file import PriceEntry, PriceFile, Provenance
+    from crafting_system.targets import parse_target
+
+    from influence_support import INFLUENCE_DATA
+
+    data = dataclasses.replace(DATA, mods={**DATA.mods, **{k: m for k, m in INFLUENCE_DATA.mods.items() if m.domain == "crafted"}})
+    target = dataclasses.replace(parse_target(_ring_target(data), data, source="<ring>"), actions=RING_METHODS)
+    entries = {
+        name: PriceEntry(cost, "poe.ninja", None, None, Provenance("ninja-exchange", "Test", "2026-11-16", 1.0)) for name, (_, cost) in PLANNER_PRICES.items()
+    }
+    prices = PriceFile("Test", datetime.datetime(2026, 11, 16, tzinfo=datetime.UTC), 300.0, entries)
+    kinds = [dataclasses.replace(p, offer=dataclasses.replace(p.offer, kind=AWAKENER_KIND)) if p.offer.action is ORB else p for p in priced(PLANNER_PRICES)]
+    assert _plan.rounds_apply(data, target, kinds, solve_it=True, judged=False, solver="auto")  # the orb takes a second item: no refusal for it
+
+    def two_groups(data_, goal, target_, offers, route=()):  # the ring's named methods are one group; split as a target of every method is
+        orb = tuple(i for i, offer in enumerate(offers) if offer.kind == AWAKENER_KIND)
+        plain = tuple(i for i in range(len(offers)) if i not in orb)
+        return (_rounds.Group(plain, ("plain",), frozenset({"junk"})), _rounds.Group(orb, (AWAKENER_KIND,), frozenset({"junk", "influence mods"})))
+
+    monkeypatch.setattr(_plan, "offer_groups", two_groups)
+    held = []
+    real_donors = _plan.solve_donors
+
+    def solve_donors(abstraction_, awakened, offers, **kwargs):
+        held.append(len(offers))
+        return real_donors(abstraction_, awakened, offers, **kwargs)
+
+    monkeypatch.setattr(_plan, "solve_donors", solve_donors)
+    plan = make_plan(data, target, prices, start_price=RESTART_PRICE, with_risk=False)
+    ab, offers = abstraction(PLANNER_PRICES), priced(PLANNER_PRICES)
+    donor = _exact_donor(offers, PLANNER_PRICES)
+    graph = [PatternOffer(label, action, cost + (donor if action is ORB else 0.0)) for label, (action, cost) in PLANNER_PRICES.items()]
+    exact = exact_values(ab, ab.compress(START), [*graph, PatternOffer(RESTART, None, RESTART_PRICE)])[ab.compress(START)]
+    assert plan.search.widening and held and all(count == len(offers) for count in held)  # in rounds; each orb round searched its donor on its offers
+    assert plan.mean_remaining == pytest.approx(exact, rel=TOLERANCE)
+    assert any(action.label.startswith("Awakener's Orb with a shaper donor") for action in plan.solution.policy.values())
+
+
 def test_an_orb_whose_donor_cannot_be_read_is_kept_and_its_search_leaves_it_out_and_says_why():
     """`donor_wants`' clause (`test_cli_model_gaps.CLAUSES`): an orb whose donor mod is no influence mod of its influence names no donor; the
     offers keep it, and its donor's search leaves it out with the limit that says why (OR-13), never an error of the whole plan."""
