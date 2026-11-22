@@ -1,0 +1,189 @@
+"""#1384: the keys of a bound's build expanded ahead in forked workers, where the twin makes the erasing kernels (#1146) and where the
+kernels find slots the universe lacked (#1086): the model of one process, bit for bit, and the plan through the planner's entry.
+
+A kernel the twin made in a worker is made again here from its outcomes, unnoted, as `_offers_of_key` makes it; a key whose kernels grew a
+worker's universe is left to this process, which grows its own there, and the pool forked before it is closed."""
+
+from collections import Counter
+
+import numpy as np
+import pytest
+from test_abstraction_pattern import BOW, STARTS, build, world  # noqa: F401 (world: the fixture)
+from test_cli_envelope_plan import coarse  # noqa: F401 (the fixture: the coarse world, a Chaos Orb and bench crafts)
+from test_pattern_lumped import broad_offers
+from coarse_support import DATA as COARSE
+
+from crafting_system import parallel
+from crafting_system.abstraction import _build_ahead, _pattern
+from crafting_system.abstraction._pattern import PatternBuilder
+from crafting_system.budget import Budget
+from crafting_system.planner import PlanSettings, plan_target
+from crafting_system.planner._pattern_bound import pack_pattern_model
+from crafting_system.solver import solve_packed
+
+pytestmark = pytest.mark.skipif(not parallel.can_inherit(), reason="no fork here: the build runs in one process (OR-57)")
+
+
+def _model(model) -> tuple:
+    rows = [list(model.actions[k]) for k in range(len(model.keys))]
+    return (model.keys, model.goal, rows, model.kernels, model.index, model.expanded, model.stopped, model.ruined, model.stats.universe_growth)
+
+
+@pytest.fixture
+def pooled(monkeypatch):
+    monkeypatch.setattr(_build_ahead, "ALWAYS", True)
+    assert _pattern.LUMP_ERASING
+
+
+def _build(data, ab, start, workers: int, grow: bool = False):
+    builder = PatternBuilder(ab, ab.compress(build(data, BOW, STARTS[start])), tags=True, workers=workers, grow=grow)
+    return builder.extend(broad_offers()), builder
+
+
+@pytest.mark.parametrize("start", [0, 4], ids=["plain", "lock"])
+def test_with_the_twin_a_model_built_with_workers_is_the_model_of_one_process(world, pooled, start, monkeypatch):  # noqa: F811
+    data, ab, _ = world
+    lumped = []
+    real = _pattern.PatternBuilder._replay
+
+    def replay(self, event):
+        if event[1] == _pattern.MADE and event[5]:
+            lumped.append(1)
+        return real(self, event)
+
+    monkeypatch.setattr(_pattern.PatternBuilder, "_replay", replay)
+    alone, _ = _build(data, ab, start, 1)
+    ahead, builder = _build(data, ab, start, 3)
+    assert _model(ahead) == _model(alone)
+    assert builder.ahead.taken > 0
+    assert lumped, "no kernel of the twin came from a worker"
+    offers = broad_offers()
+    assert np.array_equal(solve_packed(pack_pattern_model(ahead, offers)).value, solve_packed(pack_pattern_model(alone, offers)).value)
+
+
+@pytest.mark.parametrize("grow", [False, True], ids=["pool-a-pass", "pool-kept"])
+def test_a_universe_that_grows_inside_a_pass_leaves_the_key_here_and_the_model_is_the_model_of_one_process(world, pooled, monkeypatch, grow):  # noqa: F811
+    # Every slot a kernel produces counts as growth the first time a process meets it: a worker that meets one leaves the key, this process
+    # grows its universe there, the pool goes, and the pass begins again with a pool forked from the grown universe
+    data, ab, _ = world
+    real = _pattern._Universe.note
+    met: Counter = Counter()
+
+    def note(self, slot):
+        grew = real(self, slot)
+        met[slot] += 1
+        return grew or met[slot] == 1
+
+    monkeypatch.setattr(_pattern._Universe, "note", note)
+    # a pool forked past the first keys, after the growth of the pass: the pass ends, the keys the slot may be in are made again
+    # (`_begin_again`), and a pool kept for the next pass would hold their old members (the checker of #1384)
+    monkeypatch.setattr(_build_ahead.KeysAhead, "_pays", lambda self, i: self.workers > 1 and i >= 30)
+    alone, one = _build(data, ab, 0, 1, grow)
+    met.clear()
+    ahead, builder = _build(data, ab, 0, 3, grow)
+    builder.close()
+    assert alone.stats.universe_growth > 0
+    assert _model(ahead) == _model(alone)
+    assert builder.ahead.taken > 0 and (grow or builder.ahead.pools > 1)  # a pool a pass: closed by the growth, and forked again
+
+
+def test_through_the_planners_entry_counted_in_states_with_the_twin_the_plan_with_workers_is_the_plan_of_one_process(coarse, pooled, monkeypatch):  # noqa: F811
+    target, prices, _ = coarse
+    taken = []
+    real = PatternBuilder._apply
+    monkeypatch.setattr(PatternBuilder, "_apply", lambda self, *args: (taken.append(1), real(self, *args))[1])
+    plans = []
+    for workers in ("1", "3"):
+        monkeypatch.setenv(parallel.WORKERS_ENV, workers)
+        plans.append(plan_target(COARSE, target, prices, PlanSettings(recipe_starts=False, start_price=5.0, solver="envelope", budget=Budget.in_states(10**5))))
+    one, other = plans
+    assert other.mean_remaining == one.mean_remaining
+    assert other.solution.values == one.solution.values and other.solution.policy == one.solution.policy
+    assert other.packed.info["envelope"].lower == one.packed.info["envelope"].lower
+    assert taken  # rows came from the workers
+
+
+def test_the_twins_distributions_are_primed_in_a_pool_and_the_model_is_the_same(world, monkeypatch):  # noqa: F811
+    # The kernels the twin makes (an erasing draw, #1146) had no pool: R04's 1,245 fossil sets joining at one key were six minutes of the twin's
+    # walks in one process. They are primed in the twin now, which changes nothing but where they are made (`_prime`, #250)
+    from crafting_system.abstraction import _prime
+
+    data, ab, _ = world
+    alone, _ = _build(data, ab, 0, 1)
+    primed = []
+    real = _prime.prime
+
+    def counting(abstraction, requests, **kwargs):
+        made = real(abstraction, requests, **kwargs)
+        primed.append((abstraction is not ab, made))
+        return made
+
+    monkeypatch.setattr(_prime, "prime", counting)
+    monkeypatch.setattr(_prime, "WORTH", 0)
+    monkeypatch.setattr(_pattern, "PRIME_FROM", 2)
+    monkeypatch.setenv(parallel.WORKERS_ENV, "3")
+    ahead, _ = _build(data, ab, 0, 1)
+    assert _model(ahead) == _model(alone)
+    assert any(twin and made for twin, made in primed), "no distribution of the twin was primed"
+
+
+def test_with_ruined_keys_a_model_built_with_workers_is_the_model_of_one_process(pooled, monkeypatch):
+    # A ruined key met in a worker is sent to this process as the key itself (`_intern_out`): here it is sent to the one ruined state, and the
+    # index holds it, as one process holds it (#1367)
+    from test_pattern_ruined import bound
+
+    # the pool forked at key 20, once the ruined state was met (24 ruined keys of 224 then): the ruined keys met after are sent by their keys
+    monkeypatch.setattr(_build_ahead.KeysAhead, "_pays", lambda self, i: self.workers > 1 and i >= 20)
+    models = []
+    for workers in (1, 3):
+        real = PatternBuilder.__init__
+        monkeypatch.setattr(PatternBuilder, "__init__", lambda self, *a, **k: real(self, *a, **{**k, "workers": workers}))
+        models.append(bound(True)[0])
+        monkeypatch.setattr(PatternBuilder, "__init__", real)
+    one, other = models
+    assert one.model.ruined is not None and one.model.stats.ruined_keys > 20
+    assert _model(other.model) == _model(one.model) and other.model.stats.ruined_keys == one.model.stats.ruined_keys
+    assert np.array_equal(other.value, one.value)
+
+
+@pytest.mark.parametrize("cap", [1, 2])
+def test_with_imprints_a_model_built_with_workers_is_the_model_of_one_process(pooled, cap):
+    # A key holding imprints is made of the snapshots this process met first (`Pattern.held_of`): a key met first in a worker is sent with
+    # this process's snapshots, and an outcome holding imprints whose key is new comes back as its state (the checker of #1384 found the
+    # pooled build of this world raising a KeyError)
+    import test_pattern_imprint as imprint
+
+    models = []
+    for workers in (1, 3):
+        ab = imprint.abstraction(cap)
+        builder = PatternBuilder(ab, ab.compress(imprint.START), workers=workers)
+        models.append((builder.extend(imprint.pattern_offers(cap)), builder))
+    (one, _), (other, builder) = models
+    assert _model(other) == _model(one)
+    assert builder.ahead.taken > 0 and builder.ahead.left == 0
+
+
+def test_a_row_made_before_this_process_numbered_a_family_type_is_not_taken(world, pooled, monkeypatch):  # noqa: F811
+    # The family types are numbered as influence sets are met (`TypeNumbers`) and their numbers name slots: once this process numbered one
+    # since the fork, a worker's rows are left and the key is expanded here
+    data, ab, _ = world
+    alone, _ = _build(data, ab, 0, 1)
+    real = PatternBuilder._apply
+    refused = []
+
+    def apply(self, i, given, made, tick):
+        if i % 3 == 0:
+            numbers = self.ab._kinds._numbers._numbers
+            numbers[("test", i)] = len(numbers)
+            try:
+                taken = real(self, i, given, made, tick)
+            finally:
+                del numbers[("test", i)]
+            refused.append(taken)
+            return taken
+        return real(self, i, given, made, tick)
+
+    monkeypatch.setattr(PatternBuilder, "_apply", apply)
+    ahead, builder = _build(data, ab, 0, 3)
+    assert refused and not any(refused) and builder.ahead.taken > 0
+    assert _model(ahead) == _model(alone)

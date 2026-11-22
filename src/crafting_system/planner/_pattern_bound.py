@@ -235,79 +235,88 @@ def pattern_lower_bound(
     holders = Held()  # an offer held at some keys only: its position in `priced` -> the numbers of those keys
     first = len(order)  # the offers of the first model: what growth adds is the rest (`Growth.start`)
     rounds = 0
-    while True:
-        rounds += 1
-        mark = time.perf_counter()
-        model = builder.extend([all_offers[p] for p in adding], at, spread)
-        built = time.perf_counter()
-        phases["model"] += built - mark
-        if model.stopped is not None and kept is not None:  # the round that was growing the model did not end: the round before stands
-            reason = model.stopped
-            say(f"model {rounds}: stopped while {len(adding):,} offers were joining ({reason}); the model of round {rounds - 1} stands")
-            model, value, error, order, narrow = kept
-            return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
-        if kept is not None and (reason := _no_room_to_solve(model)) is not None:  # the solve cannot be interrupted: its memory is asked before it
-            say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
-            model, value, error, order, narrow = kept
-            return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
-        inside = set(order)
-        outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
-        floor = _floor_of(floors, outside, priced, holders) if floors is not None else _tip_floor(priced)
-        graph = pack_pattern_model(model, [all_offers[p] for p in order], floor)
-        if kept is not None and stop is not None and (reason := stop()) is not None:  # the solve cannot be interrupted: the net is asked before it
-            say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
-            model, value, error, order, narrow = kept
-            return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
-        say(f"model {rounds}: solving the count on {len(model.keys):,} keys and {graph.num_kernels:,} kernels")
-        try:
-            solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
-        except ConvergenceError:
-            if refuse_above == math.inf:
-                raise  # nothing looser to ask for
-            # A model of very many steps (divine-roll-limits/large, #830: 2,917 keys whose certified error is 0.577 of the value): the bound is the
-            # value lowered by whatever error the solver does certify (`PatternBound.lower`, 0 when it certifies none), a weaker bound and still a
-            # lower one. Refusing it refused the whole target, where OR-33 wants a plan with its gap; the search's own figures then say how far it is.
-            solved = solve_packed(graph, progress=None, refuse_above=math.inf)
-        solved_at = time.perf_counter()
-        phases["solve"] += solved_at - built
-        n = len(model.keys)
-        value = np.asarray(solved.value[: n + 1])  # the keys, and the sink last (a goal: 0)
-        say(
-            f"model {rounds}: {len(order):,} offers, {n:,} keys ({sum(model.expanded):,} expanded"
-            + (f", {model.stats.ruined_keys:,} ruined keys held by one" if model.stats.ruined_keys else "")
-            + f"), {model.stats.kernels:,} kernels, start value "
-            f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
-        )
-        if model.stopped is not None or floors is None or not (outside or holders):  # every offer built at every key: nothing can join
-            phase = "floors" if floors_stopped else "model" if model.stopped else "complete"
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, phase, tally, watched, holders.copy())
-        try:
-            needs, limits = _binding(graph, solved, model, floors, outside, holders, say)
-        except FloorsStopped as reached:  # the model of this round is solved and stands; only the offers that would join are not known
-            say(f"model {rounds}: the net was reached while the offers outside the model were examined ({reached.reason}); the model of this round stands")
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth", tally, watched, holders.copy())
-        if not needs:
-            return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched, holders.copy())
-        more = [p for p in needs if p not in inside]
-        slot = {p: j for j, p in enumerate(order)}
-        spread = {slot[p]: keys for p, keys in needs.items() if p in inside}
-        at = [needs[p] for p in more]
-        kept = (model, value, float(solved.error_bound), list(order), holders.copy())
-        for p, keys in needs.items():
-            holders.add(p, keys)
-        built = sum(len(keys) for keys in needs.values())
-        names = ", ".join(f"{priced[p].label} (cost {priced[p].cost:.3g})" for p in more[:2]) + (", ..." if len(more) > 2 else "")
-        named = ((OUTSIDE, "outside E"), (INSIDE, "inside E"), (OTHER, "other shape"), (UNOPENED, "unopened"), *((k, f"shape {shape_of(k)}") for k in floors.classes[len(CLASSES):]))
-        said = ", ".join(f"{name} {limits[k]:.4g}" for k, name in named if limits.get(k) is not None)
-        say(
-            f"model {rounds}: the floor action is the cheapest at some key (largest model value there: {said}); {len(more):,} offers more join the model"
-            + (f" and {len(spread):,} of its offers are built at more keys" if spread else "")
-            + f", at {len(np.unique(np.concatenate(list(needs.values())))):,} keys that need them ({built:,} offers at a key): {names}"
-        )
-        adding = more
-        order = [*order, *more]
-        for net in watched:  # the next model holds these offers: how far the build is, for a net that lets a nearly done build finish
-            net.grown(Growth(len(order), len(priced), first, len(kept[3])), net.used())
+    try:
+        while True:
+            rounds += 1
+            mark = time.perf_counter()
+            model = builder.extend([all_offers[p] for p in adding], at, spread)
+            built = time.perf_counter()
+            phases["model"] += built - mark
+            if model.stopped is not None and kept is not None:  # the round that was growing the model did not end: the round before stands
+                reason = model.stopped
+                say(f"model {rounds}: stopped while {len(adding):,} offers were joining ({reason}); the model of round {rounds - 1} stands")
+                model, value, error, order, narrow = kept
+                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+            if kept is not None and (reason := _no_room_to_solve(model)) is not None and builder.ahead.open:  # the keys' workers go before the solve (#1384)
+                builder.close()
+                reason = _no_room_to_solve(model)
+            if kept is not None and reason is not None:  # the solve cannot be interrupted: its memory is asked before it
+                say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
+                model, value, error, order, narrow = kept
+                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+            inside = set(order)
+            outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
+            floor = _floor_of(floors, outside, priced, holders) if floors is not None else _tip_floor(priced)
+            graph = pack_pattern_model(model, [all_offers[p] for p in order], floor)
+            if kept is not None and stop is not None and (reason := stop()) is not None and builder.ahead.open:  # the idle keys' workers go first (#1384)
+                builder.close()
+                reason = stop()
+            if kept is not None and stop is not None and reason is not None:  # the solve cannot be interrupted: the net is asked before it
+                say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
+                model, value, error, order, narrow = kept
+                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+            say(f"model {rounds}: solving the count on {len(model.keys):,} keys and {graph.num_kernels:,} kernels")
+            try:
+                solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
+            except ConvergenceError:
+                if refuse_above == math.inf:
+                    raise  # nothing looser to ask for
+                # A model of very many steps (divine-roll-limits/large, #830: 2,917 keys whose certified error is 0.577 of the value): the bound is the
+                # value lowered by whatever error the solver does certify (`PatternBound.lower`, 0 when it certifies none), a weaker bound and still a
+                # lower one. Refusing it refused the whole target, where OR-33 wants a plan with its gap; the search's own figures then say how far it is.
+                solved = solve_packed(graph, progress=None, refuse_above=math.inf)
+            solved_at = time.perf_counter()
+            phases["solve"] += solved_at - built
+            n = len(model.keys)
+            value = np.asarray(solved.value[: n + 1])  # the keys, and the sink last (a goal: 0)
+            say(
+                f"model {rounds}: {len(order):,} offers, {n:,} keys ({sum(model.expanded):,} expanded"
+                + (f", {model.stats.ruined_keys:,} ruined keys held by one" if model.stats.ruined_keys else "")
+                + f"), {model.stats.kernels:,} kernels, start value "
+                f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
+            )
+            if model.stopped is not None or floors is None or not (outside or holders):  # every offer built at every key: nothing can join
+                phase = "floors" if floors_stopped else "model" if model.stopped else "complete"
+                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, phase, tally, watched, holders.copy())
+            try:
+                needs, limits = _binding(graph, solved, model, floors, outside, holders, say)
+            except FloorsStopped as reached:  # the model of this round is solved and stands; only the offers that would join are not known
+                say(f"model {rounds}: the net was reached while the offers outside the model were examined ({reached.reason}); the model of this round stands")
+                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth", tally, watched, holders.copy())
+            if not needs:
+                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched, holders.copy())
+            more = [p for p in needs if p not in inside]
+            slot = {p: j for j, p in enumerate(order)}
+            spread = {slot[p]: keys for p, keys in needs.items() if p in inside}
+            at = [needs[p] for p in more]
+            kept = (model, value, float(solved.error_bound), list(order), holders.copy())
+            for p, keys in needs.items():
+                holders.add(p, keys)
+            built = sum(len(keys) for keys in needs.values())
+            names = ", ".join(f"{priced[p].label} (cost {priced[p].cost:.3g})" for p in more[:2]) + (", ..." if len(more) > 2 else "")
+            named = ((OUTSIDE, "outside E"), (INSIDE, "inside E"), (OTHER, "other shape"), (UNOPENED, "unopened"), *((k, f"shape {shape_of(k)}") for k in floors.classes[len(CLASSES):]))
+            said = ", ".join(f"{name} {limits[k]:.4g}" for k, name in named if limits.get(k) is not None)
+            say(
+                f"model {rounds}: the floor action is the cheapest at some key (largest model value there: {said}); {len(more):,} offers more join the model"
+                + (f" and {len(spread):,} of its offers are built at more keys" if spread else "")
+                + f", at {len(np.unique(np.concatenate(list(needs.values())))):,} keys that need them ({built:,} offers at a key): {names}"
+            )
+            adding = more
+            order = [*order, *more]
+            for net in watched:  # the next model holds these offers: how far the build is, for a net that lets a nearly done build finish
+                net.grown(Growth(len(order), len(priced), first, len(kept[3])), net.used())
+    finally:
+        builder.close()  # the keys' pool kept from pass to pass (`abstraction._build_ahead`, #1384)
 
 
 def _bound(model, value, error, phases, began, order, floors, rounds, stopped, phase, tally: Tally | None = None, watched=(), narrow=None) -> PatternBound:

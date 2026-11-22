@@ -554,6 +554,11 @@ class Abstraction:
         twin.share_items, twin.project, twin.share_refusals = self.share_items, self.project, self.share_refusals
         return twin
 
+    def types_numbered(self) -> int:
+        """How many family types ("~n") this abstraction and its twin have numbered (`TypeNumbers`, shared): numbers only grow, so two equal
+        counts are one numbering (`_pattern.PatternBuilder.version`, #1384)."""
+        return len(self._kinds._numbers._numbers)
+
     def lumps(self, state: CompressedState, action: Action) -> bool:
         """Whether the bound's build may take the kernel of `action` at `state` from the alike twin (#1146, ADR-0065): the action erases the
         ordinary slots (`_erases`) and fractures no mod it draws (a Fractured Fossil: the fractured mod is in the key, and the twin's labels lump
