@@ -38,10 +38,16 @@ each memo cut to `1/workers` of its size, the reads of a pass pushed the inherit
 six workers where one process took 123 s, its kernels made again.) The wait on the workers reads this process's and their memory against the run's
 net (`parallel.WorkerPool.gather`); once it is reached the workers are stopped, and the next pool forks one worker fewer (`_cut`): a worker
 holds what it copied of this process's pages (a fork shares them until either side writes, and reading an object writes its count) and what
-it made, so where the net is near fewer of them fit. Below two workers no pool forks again in this build.
+it made, so where the net is near fewer of them fit. Below two workers no pool forks again in this build. The build's own net, asked between
+two offers or keys, reads the workers too: reached with a pool open, the pool is cut and the net asked again (`asked`), so the workers never
+stop a build one process would have built whole (R17).
+
+A pool whose rows cost this process what they save (`_idle`: taking a row, its kernels' outcomes numbered here, takes as long as a worker took
+to make it) is let go for the rest of the pass (R17: keys of 100,000 kernels each). Tried and dropped: a pool kept from pass to pass (its
+workers lacked each other's kernel keys: R04's spread passes ran slower than one process), and a pool made afresh once its workers held half
+the room the net leaves (on R04 it threw away windows ten times a round and gave back the gain).
 """
 
-import math
 import os
 import time
 from concurrent.futures import Future
@@ -54,7 +60,6 @@ WINDOW = 4  # the polls of work per worker a window holds (`POLL_SECONDS` of `_p
 IDLE_WINDOWS = 4  # the windows of rows a pool's cost here is measured on before it may be let go for the pass (`_idle`; speed only)
 MOST_PER_CHUNK = 256  # the most keys a chunk holds: with keys of microseconds a window of polls would be 10^5 keys and their pickles (speed only)
 FORK_PRIOR = 0.015  # seconds the fork of one worker costs before this build measured one (`_ahead.FORK_PRIOR`, #1340); the first fork's measure replaces it
-GROWN = "the keys' workers hold half the room the memory net leaves"  # what the wait on the workers says once they grew so (`_gather`)
 ALWAYS = False  # a pool at every pass with keys to send, whatever the measures (the tests: they never read the clock)
 
 
@@ -93,7 +98,6 @@ class KeysAhead:
         self.replayed = 0
         self.replayed_at_fork = self.keys_at_fork = 0
         self.worker_keys = 0  # keys the workers made (`_gather`)
-        self.grown_asked = -math.inf  # when `asked` last read the workers' memory
         self.replay_at_fork = self.useful_at_fork = 0.0
         self.keys = 0  # those keys
         self.pool: parallel.WorkerPool | None = None
@@ -112,11 +116,7 @@ class KeysAhead:
         self.taken = 0  # rows taken from the workers (`PatternBuilder._apply`)
         self.sent = 0  # keys sent to them
         self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
-        self.renew = False  # the workers grew past their share of the room: the pool is closed once its windows are in (`_grown`)
-        self.renewed = 0  # pools closed so (each forked again from this process)
-        self.early = 0  # pools of this pass grown past half the room before a window came back
         self.pass_off = False  # no pool again in this pass (`_gather`)
-        self.scale = 1.0  # the windows' share of their size by the pace (`_size`): halved each time workers grew past half the room within one
         self.gathered = 0
 
     @property
@@ -154,11 +154,6 @@ class KeysAhead:
         return self.memo.pop(i, None)
 
     def _fill(self, i: int) -> None:
-        if self.pool is not None and self.renew:  # the workers grew past their half of the room: closed now, a fresh pool forks from here
-            # the rows already in stay, with the numbers of this pool (`base`, `tables`): no pool forks before they are taken. A window still in
-            # flight is let go (R17: the workers grew by about 1 GB in 30 s, past the net before the window in flight came back)
-            self._retire()
-            return
         if self.pool is not None and self._idle():
             pool, self.pool = self.pool, None  # (the rows already in stay, as above)
             if self.pending:
@@ -199,7 +194,6 @@ class KeysAhead:
         builder = self.builder
         self.pool = parallel.WorkerPool(_hold, (builder, self.count), workers=self.count)
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
-        self.renew = False
         self.gathered = 0  # windows of this pool come back: a pool grown past half the room before one did is cut, not made afresh
         self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork, self.useful_at_fork = self.replayed, self.replay, self.worker_keys, 0.0  # (`_idle`)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
@@ -211,7 +205,7 @@ class KeysAhead:
         per_key = self.spent / self.keys if self.keys else None
         if per_key is None or per_key <= 0.0:
             return least
-        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.count / per_key * self.scale)))
+        return min(least * MOST_PER_CHUNK, max(least, int(WINDOW * self.poll * self.count / per_key)))
 
     def _send(self, i: int) -> bool:
         builder = self.builder
@@ -240,24 +234,11 @@ class KeysAhead:
         mark = time.perf_counter()
         try:
             tally = self.builder.tally  # the net on the clock, asked while this process waits as it is asked between two offers (a count is not)
-            net = self.builder.stop if tally is None else tally.then
-
-            def asked() -> str | None:  # and whether the workers grew past half the room (`_grown`), every `WATCH_SECONDS` of the wait
-                return (net() if net is not None else None) or (GROWN if self._grown() else None)
-
-            results = self.pool.gather(futures, stop=asked)
+            results = self.pool.gather(futures, stop=self.builder.stop if tally is None else tally.then)
         except (parallel.MemoryNetReached, budget.BudgetExceeded) as reached:  # the workers' memory passed the net (or the run's net was met):
             self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
             return
         except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): stopped as in `asked`
-            if str(reached) == GROWN:
-                # the workers grew past half the room: let go now, with the window in flight (`_fill`). Grown so before a window came back, the
-                # windows are halved; a second time in the pass, no pool forks again in it (R17: keys of 100,000 kernels each, whose workers grew
-                # past half the room within any window, pool after pool, and the pass ran slower than one process)
-                self.pool = None  # (the pool's workers were killed by the wait)
-                self.pending.clear()
-                self._grew()
-                return
             self._cut(f"the build's net was reached with the workers alive: {reached}")
             return
         except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
@@ -279,7 +260,6 @@ class KeysAhead:
                     self.memo[k] = (pid, row)
                 else:
                     self.left += 1
-        self.renew = self._grown()
 
     def _idle(self) -> bool:
         """Whether this pool's rows cost this process what they save: once `IDLE_WINDOWS` windows of its rows were taken, the seconds taking a row
@@ -295,59 +275,10 @@ class KeysAhead:
         worker = (self.useful - self.useful_at_fork) / made
         return replay >= worker  # the workers make rows while this process takes them: a pool's pace is the slower of the two
 
-    def _retire(self) -> None:
-        """Let the workers go now, with the windows in flight; the rows already in stay (`_fill`)."""
-        pool, self.pool = self.pool, None
-        if self.pending:
-            pool.abandon()
-            self.pending.clear()
-        else:
-            pool.close()
-        self._grew()
-
-    def _grew(self) -> None:
-        """A pool let go because its workers grew past half the room: grown so before a window came back, the windows are halved, and a second
-        time in the pass no pool forks again in it (R17: keys of 100,000 kernels each, whose workers grew past half the room within any window,
-        pool after pool, and the pass ran slower than one process)."""
-        if not self.gathered:
-            self.scale /= 2
-            self.early += 1
-            if self.early >= 2:
-                self.pass_off = True
-        self._renewed()
-
-    def _renewed(self) -> None:
-        self.renewed += 1
-        self._account()
-        if self.builder.progress is not None and self.renewed in (1, 10, 100, 1000):
-            self.builder.progress(f"keys' workers: made afresh {self.renewed:,} times so far (they held half the room the memory net leaves)")
-
-    def _grown(self) -> bool:
-        """Whether the workers hold half the room this process leaves under the run's memory net or more: a worker keeps every kernel and key it
-        made in its pass, and a fresh pool, forked from this process, which holds them all once, holds none of its own (R17: a bound of 773,092
-        kernels whose one process held 3.4 GB took six workers past the 12 GB net within minutes, again and again, #1384). Read cheaply: the
-        upper figure first (`parallel.held_mb` under the net: the run's group, or the resident sizes, which count the pages a fork shares once for
-        each worker), and where it says so the proportional sizes, which count a shared page once (where no group can be read, the resident
-        sum of six workers is past half the room at once)."""
-        net = parallel.active_memory_net()
-        if net is None:
-            return False
-        own = budget.process_mb()
-        held = parallel.held_mb(under=net)
-        if held is None or own is None or held - own < (net - own) / 2:
-            return False
-        held, own = parallel.held_mb(), parallel.own_mb()
-        return held is not None and own is not None and held - own >= (net - own) / 2
-
     def asked(self, stop) -> str | None:
         """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first (one
         worker fewer next time, `_cut`) and the net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the
         one process built whole was stopped at 12,543 MB with six workers beside it, #1384)."""
-        now = time.perf_counter()
-        if self.pool is not None and now - self.grown_asked >= self.poll:  # once a poll (a count asks at every offer): it reads `/proc`
-            self.grown_asked = now
-            if self._grown():  # they grew past half the room while this process took their rows: let go now (`_gather`)
-                self._retire()
         reason = stop()
         if reason is not None and self.pool is not None:
             self._cut(f"the build's net was reached with the workers alive: {reason}")
@@ -397,7 +328,7 @@ class KeysAhead:
     def end_pass(self) -> None:
         """The pass is over: its pool is closed, and the next pass may fork one again."""
         self.close()
-        self.early, self.pass_off = 0, False
+        self.pass_off = False
 
     def _account(self) -> None:
         """Add what a closed pool lost to the measures (`_pays`)."""

@@ -235,33 +235,6 @@ def test_a_net_reached_only_with_the_workers_alive_stops_the_workers_and_not_the
     assert builder.ahead.pools >= 1 and builder.ahead.count < 3
 
 
-def test_workers_grown_past_half_the_room_are_made_afresh_and_the_model_is_the_model_of_one_process(world, floors_on, pooled, monkeypatch):  # noqa: F811
-    # A worker keeps what it made in its pass: once the workers hold half the room the net leaves, the pool takes the windows in flight and
-    # closes, and the next forks from this process (R17, #1384). Here every gather finds them grown.
-    from crafting_system.abstraction import _build_ahead as ahead_module
-
-    monkeypatch.setattr(ahead_module.KeysAhead, "_grown", lambda self: True)
-    offers = world[2]
-    alone, _ = _grown(1, offers=offers)
-    ahead, builder = _grown(3, offers=offers)
-    _same_bound(alone, ahead)
-    assert builder.ahead.renewed > 0 and builder.ahead.taken > 0
-
-
-def test_workers_are_not_made_afresh_where_only_the_resident_sizes_say_they_grew(world, monkeypatch):  # noqa: F811
-    # The resident sizes count the pages a fork shares once for each worker: where they alone say the workers hold half the room, the
-    # proportional sizes are read, and they decide (round 5 of #1384's checker: on a machine with no group to read, every pool renewed)
-    fresh = abstraction()
-    builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=4)
-    monkeypatch.setattr(parallel, "active_memory_net", lambda: 1000.0)
-    monkeypatch.setattr(budget, "process_mb", lambda pid=None: 100.0)
-    monkeypatch.setattr(parallel, "own_mb", lambda under=None: 100.0)
-    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 900.0 if under is not None else 300.0)
-    assert not builder.ahead._grown()  # resident 800 MB beside 100, proportional 200: under half the 900 MB of room
-    monkeypatch.setattr(parallel, "held_mb", lambda under=None, paced=True: 900.0 if under is not None else 700.0)
-    assert builder.ahead._grown()
-
-
 def test_a_pool_whose_rows_cost_here_what_a_worker_spends_is_idle(world):  # noqa: F811
     # `_idle` (R17's keys of 100,000 kernels, #1384): measured on the rows the workers made and the seconds taking them took here
     fresh = abstraction()
