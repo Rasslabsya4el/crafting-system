@@ -117,7 +117,8 @@ class KeysAhead:
         self.sent = 0  # keys sent to them
         self.left = 0  # keys a worker left to this process (`PatternBuilder.row_ahead` gave None)
         self.pass_off = False  # no pool again in this pass (`_gather`)
-        self.gathered = 0
+        self.gathered = 0  # windows of this pass that came back (`_idle`)
+        self.worked = 0.0  # the workers' seconds of this pass
 
     @property
     def open(self) -> bool:
@@ -194,8 +195,6 @@ class KeysAhead:
         builder = self.builder
         self.pool = parallel.WorkerPool(_hold, (builder, self.count), workers=self.count)
         self.fork_version, self.base, self.keys_base = builder.version(), len(builder.kernels), len(builder.keys)
-        self.gathered = 0  # windows of this pool come back: a pool grown past half the room before one did is cut, not made afresh
-        self.replayed_at_fork, self.replay_at_fork, self.keys_at_fork, self.useful_at_fork = self.replayed, self.replay, self.worker_keys, 0.0  # (`_idle`)
         self.next, self.forked, self.waited, self.useful = i, False, 0.0, 0.0
         self.tables = {}
         self.pools += 1
@@ -246,12 +245,13 @@ class KeysAhead:
             return
         self.waited += time.perf_counter() - mark
         self.gathered += 1
-        if self.gathered == 2:  # `_idle` is told from the second window on: the first's rows are taken by now (R04: its first window after the key
+        if self.gathered == 2:  # `_idle` is told from the pass's second window on: the first's rows are taken by now (R04: its first window after the key
             # of 1,245 offers held its 22 other keys given them, whose rows cost this process more than the new keys after them)
             self.replayed_at_fork, self.replay_at_fork = self.replayed, self.replay
-            self.keys_at_fork, self.useful_at_fork = self.worker_keys, self.useful
+            self.keys_at_fork, self.useful_at_fork = self.worker_keys, self.worked
         for pid, made, seconds in results:
             self.useful += seconds
+            self.worked += seconds  # (over the pass: `_idle` is told over the pools of a pass, a pool cut by the memory net included)
             self.spent += seconds
             self.keys += len(made)
             self.worker_keys += len(made)
@@ -272,7 +272,7 @@ class KeysAhead:
         if self.gathered < 2 or taken < IDLE_WINDOWS * self._size() or made <= 0:
             return False
         replay = (self.replay - self.replay_at_fork) / taken
-        worker = (self.useful - self.useful_at_fork) / made
+        worker = (self.worked - self.useful_at_fork) / made
         return replay >= worker  # the workers make rows while this process takes them: a pool's pace is the slower of the two
 
     def asked(self, stop) -> str | None:
@@ -328,7 +328,9 @@ class KeysAhead:
     def end_pass(self) -> None:
         """The pass is over: its pool is closed, and the next pass may fork one again."""
         self.close()
-        self.pass_off = False
+        self.pass_off, self.gathered, self.worked, self.worker_keys = False, 0, 0.0, 0
+        self.replayed = self.replayed_at_fork = self.keys_at_fork = 0
+        self.replay = self.replay_at_fork = self.useful_at_fork = 0.0
 
     def _account(self) -> None:
         """Add what a closed pool lost to the measures (`_pays`)."""
