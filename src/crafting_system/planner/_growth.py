@@ -32,8 +32,10 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     removes no mod the item holds). A narrower is a crafted mod held: it counts towards the crafted mods of the two rules after it.
   - **the narrowers of each state** (`Grower.state_narrowers`): at every state where a drawing addition of the plan in hand acts (an
     Exalted Orb and the like), the narrowers of the wanted mods it waits for at that state, by the rule above, with the crafted roles they
-    bring. A step read whole waits for the union of its states' mods: R04's Exalted Orb waits for the extra Arrow (tagged `attack`) at the
-    states that lack it and for Life and Bow Damage alone at the others, where the guide keeps the attack tag out (#1423).
+    bring. Unlike the step's own reading, which keeps the tags of every wanted mod not passing at some state where it acts, a state keeps
+    only the tags of what it waits for there (less what a finishing offer of the round gives). A step read whole waits for the union of its
+    states' mods: R04's Exalted Orb waits for the extra Arrow (tagged `attack`) at the states that lack it and for Life and Bow Damage alone
+    at the others, where the guide keeps the attack tag out (#1423). A drawing reroll is not read so (only additions are).
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
@@ -486,6 +488,7 @@ class Grower:
             return None
         support = self.support(plan)
         shares = step_shares(plan)
+        at_states = self.waits_at_states(shares)  # read once per plan: it does not depend on the step diagnosed
         for label, share, acts in shares:
             if label in self.diagnosed or label not in self.by_label:
                 continue
@@ -493,20 +496,28 @@ class Grower:
             waits, risks, shapes, fractured = read_step(acts, len(table.goal.leaves))
             current = frozenset(support | self.asked)
             named = table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending_at(acts, len(table.goal.leaves)))
-            narrowers = self.state_narrowers(shares, current | named)
-            if narrowers - named:
-                named |= narrowers | table.crafted_roles(current | named | narrowers)
+            narrowers = self.state_narrowers(shares, current | named, at_states) - current - named
+            named |= narrowers | (table.crafted_roles(current | named | narrowers) if narrowers else set())
             chosen = table.closure(set(current) | named)
             if named - current and self._new(chosen):
+                also = f"; and, at the states where the plan's drawing additions act, {self._labels(narrowers)}" if narrowers else ""
                 return tuple(sorted(chosen)), (
-                    f"the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}"
+                    f"the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}{also}"
                 )
         return None
 
-    def state_narrowers(self, shares, holding) -> set[int]:
+    def state_narrowers(self, shares, holding, at_states: set[frozenset[int]] | None = None) -> set[int]:
         """The narrowers of each state where a drawing adder of the plan in hand acts (module text, #1423): from the wanted mods it waits for
         at that state, not at the step's other states (R04's Exalted Orb waits for the Arrow at some states, for Life and Bow Damage alone at
-        others: there the attack tag may be kept out)."""
+        others: there the attack tag may be kept out). `at_states` is `waits_at_states(shares)` when the caller has read it."""
+        table = self.table
+        named: set[int] = set()
+        for waits in self.waits_at_states(shares) if at_states is None else at_states:
+            named |= table.narrowers(set(waits), holding)
+        return named
+
+    def waits_at_states(self, shares) -> set[frozenset[int]]:
+        """The sets of wanted mods a drawing addition of the plan waits for, one per state where it acts (`read_step` at that state)."""
         table, leaves = self.table, len(self.table.goal.leaves)
         drawn: set[frozenset[int]] = set()
         for label, _share, acts in shares:
@@ -520,10 +531,10 @@ class Grower:
                 waits = read_step([act], leaves)[0]
                 if waits:
                     drawn.add(frozenset(waits))
-        named: set[int] = set()
-        for waits in drawn:
-            named |= table.narrowers(set(waits), holding)
-        return named
+        return drawn
+
+    def _labels(self, positions) -> str:
+        return ", ".join(sorted(self.table.entries[position].label for position in positions))
 
     def _start_reading(self, held: set[int]) -> tuple[set[int], set[int]]:
         """`W` and `K` with no plan in hand (module text): the wanted mods whose providers among `held` all reroll, and, when one mod's only
