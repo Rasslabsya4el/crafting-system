@@ -490,11 +490,13 @@ class _View:
         before_crafted = set().union(*(self._crafted(state) for state in step.states))
         new_fractured = sorted(set.intersection(*(self._fractured(state) for state in edge.states)) - before_fractured, key=lambda entry: (entry.mod_id, entry.contribution))
         new_crafted = sorted(set.intersection(*(self._crafted(state) for state in edge.states)) - before_crafted)
+        each = [self._fractured(state) - before_fractured for state in edge.states]  # what each item had fractured by this use
+        mixed = not new_fractured and bool(edge.states) and all(each)  # every item had a mod fractured, not the same one (R13 step 10, #1442)
         explained = {
             i
-            for state in edge.states
+            for state, new in zip(edge.states, each)
             for contribution in (
-                *(entry.contribution for entry in state.fractured if entry in new_fractured),
+                *(entry.contribution for entry in new if mixed or entry in new_fractured),  # a fractured mod named below, alone or in a list
                 *(slot.contribution for slot in state.slots if slot.crafted and slot.kind in new_crafted),
             )
             for i, status in enumerate(contribution)
@@ -506,8 +508,7 @@ class _View:
             if i not in before and i not in explained and all(state.status[i] is Status.PASSING for state in edge.states)
         ]
         found += [self._fractured_text(entry) for entry in new_fractured]
-        each = [self._fractured(state) - before_fractured for state in edge.states]
-        if not new_fractured and edge.states and all(each):  # every item had a mod fractured, not the same one: say which they may be (R13 step 10, #1442)
+        if mixed:  # say which they may be
             texts = sorted({self._fractured_text(entry).removesuffix(" · fractured") for new in each for entry in new})
             found.append(f"{texts[0]} · fractured" if len(texts) == 1 else f"one of these fractured: {'; '.join(texts)}")
         found += [f"{self._mod(mod_id)} · crafted" for mod_id in new_crafted]

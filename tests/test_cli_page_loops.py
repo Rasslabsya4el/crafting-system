@@ -129,3 +129,58 @@ def test_a_branch_whose_items_had_different_mods_fractured_names_the_ones_they_m
 
     (words,) = view.appeared(chaos, dataclasses.replace(edge, states=states))
     assert words.startswith("one of these fractured: ") and words.count(";") == 1
+
+
+def _fractured_branch(*hits):
+    """The Chaos Orb row of a belt and its forward edge, its items made one per `hits` entry: each with that mod fractured (None: none)."""
+    import dataclasses
+
+    from crafting_system.abstraction import FracturedMod
+    from crafting_system.cli._route_view import _View
+
+    view = _View(hand_input(belt(FRACTURED_COLD), (COLD_REQ, LIFE), chaos_then_bench_back), DATA, None, "", True)
+    chaos = next(step for step in view.flow.steps if step.action is not None and step.action.label == "Chaos Orb")
+    edge = next(edge for edge in chaos.edges if edge.kind == "forward")
+    life = view.plan.leaf_labels.index(next(label for label in view.plan.leaf_labels if "Life" in label))
+
+    def mod(mod_id: str, wanted: bool) -> FracturedMod:
+        contribution = tuple(Status.PASSING if wanted and i == life else Status.ABSENT for i in range(len(view.plan.leaf_labels)))
+        return FracturedMod(mod_id, contribution)
+
+    def hit_on(state, mod_id: str, wanted: bool):
+        status = tuple(Status.PASSING if wanted and i == life else s for i, s in enumerate(state.status))  # a wanted mod meets its leaf
+        return dataclasses.replace(state, fractured=(*state.fractured, mod(mod_id, wanted)), status=status)
+
+    state = edge.states[0]
+    states = tuple(state if hit is None else hit_on(state, *hit) for hit in hits)
+    return view, chaos, dataclasses.replace(edge, states=states)
+
+
+def test_a_branch_whose_items_had_different_wanted_mods_fractured_reads_one_of_these():
+    view, chaos, edge = _fractured_branch(("IncreasedLife1", True), ("IncreasedLife2", True))
+
+    words, names_row = view.edge_phrase(chaos, edge)
+    first, second = sorted(view._fractured_text(entry).removesuffix(" · fractured") for state in edge.states for entry in state.fractured[-1:])
+    assert view.appeared(chaos, edge) == [f"one of these fractured: {first}; {second}"]  # the Life leaf they meet is named as the mods, once
+    assert words.startswith(f"one of these fractured: {first}; {second}") and not names_row
+
+
+def test_a_branch_of_a_wanted_mod_and_a_junk_mod_fractured_names_both():
+    view, chaos, edge = _fractured_branch(("IncreasedLife1", True), ("LifeRegeneration1", False))
+
+    words, _ = view.edge_phrase(chaos, edge)
+    assert words.startswith("one of these fractured: ") and words.split(", ")[0].count(";") == 1
+
+
+def test_a_branch_whose_items_hold_one_mod_fractured_two_ways_names_it_once():
+    view, chaos, edge = _fractured_branch(("IncreasedLife1", True), ("IncreasedLife1", False))  # one mod, read for the goal two ways
+
+    (words,) = view.appeared(chaos, edge)
+    assert words == f"{view._fractured_text(edge.states[0].fractured[-1])}"
+
+
+def test_a_branch_where_one_item_had_no_new_mod_fractured_says_nothing_of_a_fracture():
+    view, chaos, edge = _fractured_branch(("IncreasedLife1", True), None)
+
+    assert view.appeared(chaos, edge) == []
+    assert "fractured" not in view.edge_phrase(chaos, edge)[0]
