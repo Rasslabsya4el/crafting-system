@@ -18,6 +18,7 @@ from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import ApplyEssence, BenchCraft, ChaosOrb, RemoveCraftedMods
 from crafting_system.cli._route_card import (
     _leaf_slot,
+    _tiers_joined,
     Group,
     ItemCard,
     ANY_OR_EMPTY,
@@ -329,9 +330,9 @@ def stub_reader(*mods) -> _StateReader:
         for mod_id, text, _, essence in mods
     }  # fmt: skip
     reader = object.__new__(_StateReader)
-    reader.data = SimpleNamespace(mods=made)
+    reader.data = SimpleNamespace(mods=made, base_items={"Base": SimpleNamespace(domain="item")})
     reader.tiers = {mod_id: tier for mod_id, _, tier, _ in mods if tier is not None}
-    reader.ab = SimpleNamespace(_drawn_contribution=lambda other: ())
+    reader.ab = SimpleNamespace(_drawn_contribution=lambda other: (), base_id="Base")
     reader._fractured, reader._families = {}, {}
     reader._held = ()  # no start item: a fractured entry is drawn as the tiers it stands for
     reader._forced = {}  # no essence of a route
@@ -750,3 +751,16 @@ def test_the_real_r12_states_are_the_start_and_the_goal_and_neither_shows_markup
     for card in cards:
         assert card.suffixes[0].marks == ("fractured",) and card.suffixes[0].text.endswith("to Lightning Resistance")
         assert not any("[" in slot.text or "|" in slot.text for slot in (*card.prefixes, *card.suffixes))
+
+
+def test_a_fixed_lowest_tier_beside_ranged_tiers_reads_as_their_one_text_and_only_mods_a_slot_can_hold_are_named():
+    """#1442 (R05 cards): "Adds # to # Physical Damage to Attacks or Adds 1 to 2 Physical Damage to Attacks" is one mod to a player, and an
+    unveiled Jun mod or a crafted mod of the family is no mod an ordinary slot of that family holds."""
+    assert _tiers_joined(["Adds # to # Physical Damage to Attacks", "Adds 1 to 2 Physical Damage to Attacks"]) == "Adds # to # Physical Damage to Attacks"
+    assert _tiers_joined(["Adds # to # Lightning Damage", "Adds 1 to # Lightning Damage", "Adds 1 to 5 Lightning Damage"]) == "Adds # to # Lightning Damage"
+    assert _tiers_joined(["35% increased Speed", "30% increased Speed"]) == "35% increased Speed or 30% increased Speed"
+    reader = stub_reader(*FAST)
+    reader.data.mods["FastJun"] = SimpleNamespace(**{**vars(reader.data.mods["Fast1"]), "id": "FastJun", "text": "40% increased Speed / 5% more Fun", "domain": "unveiled"})
+    reader.data.mods["FastBench"] = SimpleNamespace(**{**vars(reader.data.mods["Fast1"]), "id": "FastBench", "text": "20% increased Speed / crafted", "domain": "crafted"})
+    reader.tiers.update(FastJun=1, FastBench=1)
+    assert reader.family(SimpleNamespace(side=Side.PREFIX, kind="Speed")) == Slot("35% increased Speed or 30% increased Speed", "mod", (), "any tier")

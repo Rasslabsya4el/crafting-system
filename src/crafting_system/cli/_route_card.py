@@ -161,14 +161,18 @@ _FIGURE = re.compile(rf"(?<![\w.]){_NUMBER}(?![\w.])")
 
 
 def _tiers_joined(texts: Iterable[str]) -> str:
-    """The texts of the tiers of one line (ranges already `#`) joined by ` or `, a tier that only differs by its numbers said once (#1442).
+    """The texts of the tiers of one line (ranges already `#`) joined by ` or `, a fixed tier beside the ranged ones of its text said once (#1442).
 
     The lowest tier of a ladder often rolls no range ("Adds 1 to 2 Physical Damage to Attacks" beside "Adds # to # Physical Damage to
-    Attacks"): such texts are one mod to a player, so a group of texts that are the same with every figure as `#` is written that way."""
+    Attacks"): to a player that is one mod, so a group of texts that are the same with every figure as `#`, one of them written with `#`
+    already, is written that way. Tiers that are all fixed values keep them ("35% increased Speed or 30% increased Speed"): there the
+    figures are what tells the tiers apart."""
     groups: dict[str, list[str]] = {}
     for text in dict.fromkeys(texts):
         groups.setdefault(_FIGURE.sub("#", text), []).append(text)
-    return " or ".join(key if len(members) > 1 else members[0] for key, members in groups.items())
+    return " or ".join(
+        key if len(members) > 1 and any("#" in member for member in members) else " or ".join(members) for key, members in groups.items()
+    )
 
 
 def _factor(text_low: float, text_high: float, stat_low: int, stat_high: int) -> float | None:
