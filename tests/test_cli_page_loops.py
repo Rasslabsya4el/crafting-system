@@ -5,6 +5,8 @@ one outcome goes back to an earlier step, a step with one forward branch that is
 step nor what the restart costs. Small hand-made policies on a belt, drawn through the page's entry (`build_section`).
 """
 
+import re
+
 from items_support import DATA
 from route_view_support import COLD_REQ, DAMAGE, FRACTURED_COLD, HYSTERIA_REQ, LIFE, belt, hand_input
 
@@ -108,6 +110,8 @@ def test_a_branch_whose_items_hold_different_counts_of_open_slots_is_told_by_the
     assert len(mine.states) >= 2
     counts = {state: (1 + k % 2, 1) for k, state in enumerate(mine.states)} | {state: (0, 1 + k % 2) for k, state in enumerate(other.states)}
     view._free_slots = counts.get  # the counts of open slots, made to differ inside a branch
+    seen = view._traits
+    view._traits = lambda state: {key: value for key, value in seen(state).items() if key[0] != "junk"}  # the mods the target does not need part nothing here
 
     words = view.item_words(bench, mine, [other])
     assert words == "with at least 1 open prefix"
@@ -183,4 +187,5 @@ def test_a_branch_where_one_item_had_no_new_mod_fractured_says_nothing_of_a_frac
     view, chaos, edge = _fractured_branch(("IncreasedLife1", True), None)
 
     assert view.appeared(chaos, edge) == []
-    assert "fractured" not in view.edge_phrase(chaos, edge)[0]
+    words = view.edge_phrase(chaos, edge)[0]  # it may say what the item has not fractured ("without ... fractured"), never that one was
+    assert "one of these fractured" not in words and not re.search(r"(^|, )with [^,]*fractured", words)
