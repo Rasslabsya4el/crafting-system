@@ -1,0 +1,46 @@
+[
+ {
+  "id": "r06-side-swap",
+  "route": "R06",
+  "note": "#1433: the Beastcraft side swaps on R06's Hunter Heavy Belt (item level 75) with 2 prefixes (Life below its tier, Armour) and 2 suffixes (the essence Strength, Cold Resistance). The Lynx adds a suffix drawn from the pool at the beast level (83, not the item's 75) by weight, among them (10-12)% increased Attributes (PercentageAllAttributesInfluence2), and removes one prefix uniformly; the Wolf the other way round. Our outcomes are pool draws, one per removed mod (#1433).",
+  "base": "Metadata/Items/Belts/Belt4",
+  "item_level": 75,
+  "rarity": "rare",
+  "influences": [
+   "hunter"
+  ],
+  "mods": [
+   "IncreasedLife4",
+   "IncreasedPhysicalDamageReductionRating3",
+   "StrengthEssence7_",
+   "ColdResist4"
+  ],
+  "actions": [
+   "Beastcraft Add Suffix Remove Prefix",
+   "Beastcraft Add Prefix Remove Suffix"
+  ],
+  "repeats": 4000
+ },
+ {
+  "id": "r06-side-swap-ilvl83",
+  "route": "R06",
+  "note": "#1433: the same belt at item level 83, the beast level: Craft of Exile's emulator draws a side swap's added mod at the item level (poec_simRollAffix has no beast level), so only here can the two pools be compared whole.",
+  "base": "Metadata/Items/Belts/Belt4",
+  "item_level": 83,
+  "rarity": "rare",
+  "influences": [
+   "hunter"
+  ],
+  "mods": [
+   "IncreasedLife4",
+   "IncreasedPhysicalDamageReductionRating3",
+   "StrengthEssence7_",
+   "ColdResist4"
+  ],
+  "actions": [
+   "Beastcraft Add Suffix Remove Prefix",
+   "Beastcraft Add Prefix Remove Suffix"
+  ],
+  "repeats": 4000
+ }
+]
