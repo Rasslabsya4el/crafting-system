@@ -248,6 +248,7 @@ class KeysAhead:
         except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): told apart as in `asked`
             workers = self.pool.workers
             self._drop(keep=True)
+            parallel.forget_reading()  # the question below reads the memory anew, without the workers stopped here (as in `asked`)
             again = self.builder.stop() if self.builder.stop is not None else reached
             self._cut(f"the build's net was reached with the workers alive: {reached}", memory=again is None, workers=workers)
             return

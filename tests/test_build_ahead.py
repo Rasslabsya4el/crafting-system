@@ -147,6 +147,43 @@ def test_the_rows_sent_back_before_the_memory_net_are_taken_and_no_pool_forks_ag
     assert not ahead.memo
 
 
+def test_a_wait_stopped_by_the_builds_net_tells_the_workers_memory_from_its_time(world, pooled, monkeypatch):  # noqa: F811
+    # `gather`'s own question (`Stopped`): asked again once the pool is gone, a net no more reached was the workers' memory (no pool again in
+    # this build); a net reached still was its time (one worker fewer next, and the build stops where one process stops)
+    offers = pattern_offers(world[2])
+    fresh = abstraction()
+    alone = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=1).extend(offers)
+    forgot = []
+    monkeypatch.setattr(parallel, "forget_reading", lambda: forgot.append(1))
+    for reached_after, count in ((None, 1), ("the time limit of 1 seconds was reached", 2)):
+        def gather(self, futures, stop=None):
+            self.abandon()
+            raise parallel.Stopped("the process held 13,000 MB, the limit is 12,288 MB")
+
+        monkeypatch.setattr(parallel.WorkerPool, "gather", gather)
+        built = []
+
+        asked = []
+
+        def stop(reached_after=reached_after):
+            if built and built[0].ahead.pools:
+                asked.append(len(forgot))
+                return reached_after
+            return None
+
+        fresh = abstraction()
+        builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=3, stop=stop)
+        built.append(builder)
+        forgot.clear()
+        model = builder.extend(offers)
+        assert builder.ahead.pools == 1 and builder.ahead.count == count
+        assert asked and asked[0] >= 1  # the memory was read anew before the net was asked again
+        if reached_after is None:
+            assert builder.ahead.stopped is not None and model.stopped is None and _model(model) == _model(alone)
+        else:
+            assert builder.ahead.stopped is None and model.stopped is not None
+
+
 def test_a_row_made_on_a_universe_that_grew_since_the_fork_is_not_taken(world, pooled, monkeypatch):  # noqa: F811
     # A worker's members are those of the universe at the fork: once this process's universe grew, its rows are left and the key is expanded here
     ab, start, offers = world[:3]
