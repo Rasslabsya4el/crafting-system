@@ -339,3 +339,112 @@ def test_a_free_action_into_the_goal_is_certified_though_its_margin_and_error_ar
     certificate = certify(graph, np.array([3.0, 0.0, 0.0]), np.ones(3, dtype=bool), wanted=0.0)
 
     assert certificate.bound < 1e-14 and certificate.own_bound == math.inf  # the rounding of state 0's sum; its own cost 0 at state 1 says nothing
+
+
+# --- a run of free steps carried at the floor cost: no bound until the window meets the paid step (#1448) --------------------------------------
+#
+# The planner's bound carries a step of a relaxed draw (a choice node) at `FLOOR_COST`, 1e-200, not 0 (`_pattern_bound`). Its margin in a window
+# that has not met the paid step is of that size, so the rounding of a sum gives no bound while every state still has a margin (`stuck == 0`):
+# windows 2 and 4 alike gave "no bound" on R12's likelihood reforge, and the doubling stopped there as at a free cycle, though window 8 certifies
+# 5.1e-13. The doubling now stops on "no bound" only where states have no margin at all and no fewer than before.
+
+FLOOR = 1e-200  # `_pattern_bound.FLOOR_COST`
+
+
+def floor_chain(run: int):
+    """`run` steps at `FLOOR` one after another, then the paid loop of FREE (pay 1, end with chance 1/1024, else stay), then the goal; and its
+    values (1024 at every state but the goal: the floor costs vanish in the sum)."""
+    states = [(False, [(FLOOR, [(i + 1, 1)])]) for i in range(run)] + [(False, [(1.0, [(run + 1, 1), (run, 1023)])]), (True, [])]
+    return build(*states), np.array([1024.0] * (run + 1) + [0.0])
+
+
+def chain_margins(run: int, window: int) -> list[Fraction]:
+    """gamma = T h - h at each state of `floor_chain(run)` by hand, h = (w / L) (C_1 + ... + C_L) with C_1 = the cost of the one action and
+    C_(j+1) = c + P C_j (one action a state, so the cheapest j-step cost is the cost of the only j steps)."""
+    floor, stay = Fraction(FLOOR), Fraction(1023, 1024)
+    cost = [floor] * run + [Fraction(1)]
+
+    def step(c: list[Fraction]) -> list[Fraction]:
+        return [cost[i] + c[i + 1] for i in range(run)] + [1 + stay * c[run]]
+
+    c, total = list(cost), list(cost)
+    for _ in range(window - 1):
+        c = step(c)
+        total = [t + x for t, x in zip(total, c)]
+    h = [Fraction(AHEAD_WEIGHT) / window * t for t in total]
+    return [cost[i] + h[i + 1] - h[i] for i in range(run)] + [1 + stay * h[run] - h[run]]
+
+
+@pytest.fixture
+def no_rational_solve(monkeypatch):
+    """The exact solve in rational numbers (#1380) takes a quotient of at most `EXACT_CLASSES` classes, and these graphs are that small; the planner's
+    bounds where the doubling stopped (R12: 823 keys, R11: 98,408) are not. Off, the solve stands or falls by its float64 certificate alone."""
+    from crafting_system.solver import _packed_exact
+
+    monkeypatch.setattr(_packed_exact, "EXACT_CLASSES", 0)
+
+
+def test_a_run_of_six_floor_cost_steps_before_a_paid_step_is_certified_at_the_window_of_eight(no_rational_solve):
+    # From state 0 the paid step is 6 steps on: a window of L sees it once L + 1 > 6, so windows 2 and 4 give state 0 a margin of about FLOOR
+    # (no bound: its rounding is 1e187 times that), and 8 the paid steps' (w / 8) (C_9 - FLOOR). The bound is then max delta / gamma, the
+    # paid state's rounding (3 terms) over its margin setting it.
+    run = 6
+    graph, value = floor_chain(run)
+    for window in (2, 4):
+        assert float(chain_margins(run, window)[0]) < 1e-199  # no paid step in the window: the floor cost alone
+    gamma = chain_margins(run, 8)
+    assert all(float(g) > 0.1 for g in gamma)  # every state now sees a paid step
+    delta = [allowance(2, 1024.0)] * run + [allowance(3, 1024.0)]
+    t = max(d / float(g) for d, g in zip(delta, gamma))
+    certificate = certify(graph, value, np.ones(run + 2, dtype=bool))
+
+    assert certificate.own_bound == math.inf  # against each state's own cost (FLOOR): no bound
+    assert certificate.window == 8  # not refused at 4 as a free cycle
+    assert certificate.bound == pytest.approx(t, rel=1e-6) and certificate.bound < 1e-11
+    solved = solve_packed(graph)  # the solver's own entry: accepted on its float64 certificate (before #1448 a ConvergenceError, bound inf)
+    assert solved.value.tolist() == value.tolist() and solved.error_bound == certificate.bound
+
+
+def test_the_doubling_goes_on_through_no_bound_while_every_state_has_a_margin():
+    # `widen` alone, with the measures R12's likelihood bound gave: windows 2 and 4 no bound with no state stuck, window 8 certified
+    from crafting_system.solver._certify import widen
+
+    found = {2: (1e-187, math.inf, 0), 4: (1e-187, math.inf, 0), 8: (1.0 - 5e-13, 1.0 + 5e-13, 0), 16: (1.0 - 4e-13, 1.0 + 4e-13, 0)}
+    tried = []
+    best = widen(lambda w: tried.append(w) or w, lambda w: (*found[w], w), (0.0, math.inf, None, 0), 1e-6, 64)
+    assert tried == [2, 4, 8] and best == (1.0 - 5e-13, 1.0 + 5e-13, 8, 8)  # stops at the first window within the bound wanted
+
+
+def test_the_doubling_still_stops_where_states_without_a_margin_do_not_fall():
+    # a free cycle: the same states have no margin at windows 2 and 4, so no window helps; and a count that rises stops it as well
+    from crafting_system.solver._certify import widen
+
+    for counts in ((3, 3), (1, 2)):
+        tried = []
+        stuck = dict(zip((2, 4, 8), (*counts, 0)))
+        best = widen(lambda w: tried.append(w) or w, lambda w: (0.0, math.inf, stuck[w], w), (0.0, math.inf, None, 0), 1e-6, 64)
+        assert tried == [2, 4] and best == (0.0, math.inf, None, 0)
+    tried = []
+    stuck = {2: 3, 4: 1}
+    widen(lambda w: tried.append(w) or w, lambda w: (0.0, math.inf, stuck.get(w, 0), w), (0.0, math.inf, None, 0), 1e-6, 64)
+    assert tried == [2, 4, 8, 16, 32, 64]  # fewer states stuck, then none and still no bound: it goes on to the rail, the first window of at least 64
+
+
+def test_values_of_zero_on_a_floor_cost_cycle_are_still_not_certified_and_the_doubling_ends_at_the_rail(monkeypatch):
+    # a ring of 80 states sending each other on at FLOOR, the last one able to pay 5 to finish; values 0 (the improper fixed point of the ring).
+    # Every state has a margin of about FLOOR, so the doubling runs to the rail (AHEAD_LIMIT = 64 steps), and no window gives an upper side:
+    # e = TV - V is the floor cost itself, never under a margin of the same size
+    from crafting_system.solver import _packed_solve as ps
+
+    ring = 80
+    states = [(False, [(FLOOR, [((i + 1) % ring, 1)])]) for i in range(ring - 1)] + [(False, [(FLOOR, [(0, 1)]), (5.0, [(ring, 1)])]), (True, [])]
+    graph = build(*states)
+    sweeps = []
+    real = ps.kernel_sums
+    monkeypatch.setattr(ps, "kernel_sums", lambda g, f: sweeps.append(1) or real(g, f))
+    certificate = certify(graph, np.zeros(ring + 1), np.ones(ring + 1, dtype=bool), wanted=0.0)
+
+    assert certificate.upper == math.inf and certificate.bound == math.inf
+    # each of the two measures (`certify`'s second has every sum rounded once, #867): the Bellman sum, the steps of the windows up to 64 and
+    # their six margins, at most; the rail is what bounds the cost of a window that never meets a paid step
+    assert len(sweeps) <= 2 * (1 + (ps.AHEAD_LIMIT - 1) + 6)

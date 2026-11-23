@@ -117,13 +117,13 @@ def _plan(target, seen: list, data=TOY):
 # ---- the hand-worked numbers ------------------------------------------------------------------------------------
 
 
-def _draw(held: frozenset, more: bool, families=SIX) -> dict[frozenset, Fraction]:
-    """The chance of each set of four families a reforge of an item holding `held` leaves, by the draw orders written out: each draw takes a
+def _draw(held: frozenset, more: bool, families=SIX, count: int = 4) -> dict[frozenset, Fraction]:
+    """The chance of each set of `count` families a reforge of an item holding `held` leaves, by the draw orders written out: each draw takes a
     family not drawn yet with a chance proportional to its weight, among the families of a side that still has room."""
     factor = Fraction(10) if more else Fraction(1, 10)
     weight = {family: factor if family in held else Fraction(1) for family in families}
     found: dict[frozenset, Fraction] = {}
-    for order in itertools.permutations(families, 4):
+    for order in itertools.permutations(families, count):
         chance = Fraction(1)
         for step, family in enumerate(order):
             drawn = order[:step]
@@ -212,3 +212,31 @@ def test_the_floor_of_the_reforge_is_its_price_terminal():
     for more in (True, False):
         action = HarvestReforgeLikelihood(more)
         assert _kind_of(TOY, start, PricedOffer(Offer(action.label(), action, {}), C, ()))[0] == TERMINAL
+
+
+def test_a_six_mod_reforge_bound_is_certified_not_lowered_to_zero(tmp_path, monkeypatch):
+    # #1448. Seven families; the start holds six of them, all but Mana Leech, which is the goal. A reforge of a six-mod item draws six: three
+    # prefixes of three and three suffixes of four, so it leaves out exactly one suffix; Less Likely weighs the five held families other than
+    # the prefixes 1/10 and Mana Leech 1, and every miss gives the start again: V = c / (1 - q), q the chance Mana Leech is the one left out.
+    # The bound walks a draw of six as six choice nodes at `FLOOR_COST` before the next paid reforge, so its certificate needs the window 8.
+    # Before #1448 the doubling stopped at 4 as at a free cycle, the bound certified nothing and was lowered to 0 at every key: the search began
+    # at a lower figure of 0 (R12's likelihood group, 823 keys, the same way). The exact solve in rational numbers (#1380) would rescue a bound
+    # this small, not R12's; it is turned off so the bound stands on its float64 certificate as a large one does.
+    from crafting_system.planner import _envelope_plan
+    from crafting_system.solver import _packed_exact
+
+    monkeypatch.setattr(_packed_exact, "EXACT_CLASSES", 0)
+    held = (GEM, DAMAGE_1, LIFE_1, RESIST_1, COLD_RESIST, FIRE_RESIST)
+    q = sum(p for six, p in _draw(frozenset(held), more=False, families=SEVEN, count=6).items() if MANA_1 not in six)
+    assert q == sum(p for six, p in _draw(frozenset(held), more=False, families=SEVEN, count=6).items() if six == frozenset(held))
+    expected = C / (1 - float(q))
+    bounds = []
+    real = _envelope_plan.pattern_lower_bound
+    monkeypatch.setattr(_envelope_plan, "pattern_lower_bound", lambda *a, **k: bounds.append(real(*a, **k)) or bounds[-1])
+    seen: list = []
+    plan = _plan(_target(tmp_path, (MANA_1,), held, TOY7), seen, TOY7)
+
+    assert plan.mean_remaining == pytest.approx(expected, rel=1e-9)
+    assert bounds and all(bound.error_bound < 1e-6 for bound in bounds)  # certified (before: inf)
+    assert seen[0].lower >= C * (1 - 1e-9)  # the search starts at the bound: at least one reforge's price (before: 0)
+    assert seen[-1].lower == pytest.approx(expected, rel=1e-9)  # proved

@@ -127,16 +127,21 @@ def widen[H, M](
     rounding, with `stuck` the number of states without a margin. The cost ahead is measured only while the bound is above `wanted`, so a plan
     that certifies on its own costs keeps its numbers to the bit. The window doubles while the doubling does not make the bound clearly worse: a
     run of free steps with epsilon costs gives the same margin to every window until the window reaches the paid step after it, and then a far
-    larger one. The last window tried is the first at least `longest` (a window as long as the states are many cannot meet a paid step it has
-    not met)."""
+    larger one. A window with no bound ends the doubling only when some states have no margin in it (`stuck`) and no fewer than in the window
+    before: a free cycle, where the cheapest costs ahead stay 0 at its states whatever the window. With every state given a margin but no bound
+    (`stuck == 0`: free steps carried at `FLOOR_COST`, 1e-200, a margin of that size until the window meets the paid step) the doubling goes on,
+    since the next window may meet the paid step (#1448: the relaxed draws of R12's likelihood reforge, no bound at windows 2 and 4, 5.1e-13 at 8).
+    The last window tried is the first at least `longest` (a window as long as the states are many cannot meet a paid step it has not met).
+    Every window's bound is a bound (the module docstring: any `h >= 0` that is 0 outside the states measured), so where the doubling stops
+    decides only how tight the bound given is, never whether it holds."""
     window, last, last_stuck = AHEAD_FIRST, INF, 0
     while not max(1.0 - best[0], best[1] - 1.0) <= wanted and window // 2 < longest:
         lower, upper, stuck, gamma = measure(ahead(window))
         if lower > best[0] or upper < best[1]:
             best = (max(lower, best[0]), min(upper, best[1]), gamma, window)
         now = max(1.0 - lower, upper - 1.0)
-        if window > AHEAD_FIRST and not (now <= 2.0 * last if math.isfinite(now) else stuck < last_stuck):
-            break  # worse than twice the last window's bound, or no bound and no fewer states without a margin (a free cycle: no window helps)
+        if window > AHEAD_FIRST and not (now <= 2.0 * last if math.isfinite(now) else stuck == 0 or stuck < last_stuck):
+            break  # worse than twice the last window's bound, or no bound with states left without a margin and no fewer of them (a free cycle: no window helps)
         last, last_stuck = now, stuck
         window *= 2
     return best
