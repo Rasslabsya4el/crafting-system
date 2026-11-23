@@ -506,6 +506,10 @@ class _View:
             if i not in before and i not in explained and all(state.status[i] is Status.PASSING for state in edge.states)
         ]
         found += [self._fractured_text(entry) for entry in new_fractured]
+        each = [self._fractured(state) - before_fractured for state in edge.states]
+        if not new_fractured and edge.states and all(each):  # every item had a mod fractured, not the same one: say which they may be (R13 step 10, #1442)
+            texts = sorted({self._fractured_text(entry).removesuffix(" · fractured") for new in each for entry in new})
+            found.append(f"{texts[0]} · fractured" if len(texts) == 1 else f"one of these fractured: {'; '.join(texts)}")
         found += [f"{self._mod(mod_id)} · crafted" for mod_id in new_crafted]
         return list(dict.fromkeys(found))
 
@@ -536,7 +540,8 @@ class _View:
         elif appeared := self.appeared(step, edge):
             # what the use gave, and, when another branch of the step got the same (a sure craft's every branch), what tells this one apart
             alike = [other for other in step.edges if other is not edge and other.kind == "forward" and self.appeared(step, other) == appeared]
-            tell = self.item_words(step, edge, alike) if alike else ""
+            mixed = any(text.startswith("one of these fractured") for text in appeared)  # the items differ in what the use gave: say what parts them too
+            tell = self.item_words(step, edge, alike) if alike else self.item_words(step, edge) if mixed else ""
             return " and ".join(appeared) + (f", {tell}" if tell else ""), False
         if words := self.item_words(step, edge):
             return words, False

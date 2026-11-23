@@ -111,3 +111,21 @@ def test_a_branch_whose_items_hold_different_counts_of_open_slots_is_told_by_the
 
     words = view.item_words(bench, mine, [other])
     assert words == "with at least 1 open prefix"
+
+
+def test_a_branch_whose_items_had_different_mods_fractured_names_the_ones_they_may_be():
+    """R13 step 10: every item of a branch had a mod fractured, not the same one; the line says which they may be, not nothing (#1442)."""
+    import dataclasses
+
+    from crafting_system.abstraction import FracturedMod
+    from crafting_system.cli._route_view import _View
+
+    view = _View(hand_input(belt(FRACTURED_COLD), (COLD_REQ, LIFE), chaos_then_bench_back), DATA, None, "", True)
+    chaos = next(step for step in view.flow.steps if step.action is not None and step.action.label == "Chaos Orb")
+    edge = next(edge for edge in chaos.edges if edge.kind == "forward")
+    hit = [FracturedMod(mod_id, (Status.ABSENT,) * len(view.plan.leaf_labels)) for mod_id in ("IncreasedLife1", "LifeRegeneration1")]
+    state = edge.states[0]
+    states = tuple(dataclasses.replace(state, fractured=(*state.fractured, mod)) for mod in hit)  # two items, each with another mod fractured
+
+    (words,) = view.appeared(chaos, dataclasses.replace(edge, states=states))
+    assert words.startswith("one of these fractured: ") and words.count(";") == 1
