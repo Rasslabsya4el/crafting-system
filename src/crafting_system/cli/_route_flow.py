@@ -85,6 +85,7 @@ from crafting_system.solver import _packed_linear
 from crafting_system.solver._packed_chain import ChainSolver, CyclesTooTangled, inverse_diagonal
 from crafting_system.solver._packed_linear import DENSE_LIMIT, Terms, backward_error, forward_estimate, gth_inverse
 from crafting_system.solver._packed_lump import lump_states
+from crafting_system.solver._packed_solve import SHARE_MIN
 from crafting_system.planner import STEPS, Limit, claim
 
 from ._reach import policy_states
@@ -1236,8 +1237,9 @@ class _KernelRows:
 
 
 def _kernel_rows(chain: Chain, finishing: np.ndarray) -> _KernelRows:
-    """The rows of the states that can finish, read from the kernels of `chain` a block at a time: a kernel is copied for a state only when no other
-    state that can finish takes it, else it is one shared row (`_KernelRows`). The memory is the kernels', never the states times their outcomes:
+    """The rows of the states that can finish, read from the kernels of `chain` a block at a time: a kernel of at least `SHARE_MIN` edges that two or
+    more states that can finish take is one shared row (`_KernelRows`), and every other kernel is copied for its states (fewer than `SHARE_MIN` edges each,
+    or one state). The memory is the kernels', never the states times their outcomes:
     R06's plan of 2026-11-23 had one reroll of 64,969 outcomes taken by 66,907 states, 4.3 billion edges once copied per state (`Chain._rows`), and
     the kernel killed the benchmark at 16 GB while its visit chances were built (#1478)."""
     ask(fresh=True)  # the report's memory net, read now: the start of a build (#1381)
@@ -1250,7 +1252,7 @@ def _kernel_rows(chain: Chain, finishing: np.ndarray) -> _KernelRows:
     count = len(table.k_ptr) - 1
     takers = np.bincount(kernel, minlength=count)
     group = np.full(count, -1, dtype=np.int64)
-    pooled_kernels = np.flatnonzero(takers > 1)
+    pooled_kernels = np.flatnonzero((takers > 1) & (table.kernel_sizes() >= SHARE_MIN))  # as the policy's own solve shares a kernel (`_packed_solve.policy_solver`)
     group[pooled_kernels] = np.arange(len(pooled_kernels))
     shared_of = group[kernel]
     leave, leak = np.zeros(nt), np.zeros(nt)
@@ -1262,13 +1264,16 @@ def _kernel_rows(chain: Chain, finishing: np.ndarray) -> _KernelRows:
         return inside
 
     shared = []
+    pooled = np.flatnonzero(shared_of >= 0)
+    by_group = pooled[np.argsort(shared_of[pooled], kind="stable")]
+    bounds = np.searchsorted(shared_of[by_group], np.arange(len(pooled_kernels) + 1))
     for g, k in enumerate(pooled_kernels.tolist()):
         ask()  # the report's memory net, between two rows (#1381)
         lo, hi = int(table.k_ptr[k]), int(table.k_ptr[k + 1])
         d, p = table.k_succ[lo:hi].astype(np.int64), table.k_prob[lo:hi]
         inside = inside_of(d)
         shared.append((position[d[inside]], p[inside], float(p[~inside].sum())))
-        who = np.flatnonzero(shared_of == g)
+        who = by_group[bounds[g] : bounds[g + 1]]
         leak[who] = shared[-1][2]
         # the chance to leave a taker is the row without its own entry: the sums before and after that entry, both of positive terms (no `1 - p`)
         order = np.argsort(d, kind="stable")
