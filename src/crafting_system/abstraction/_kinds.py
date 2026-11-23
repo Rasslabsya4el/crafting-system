@@ -354,13 +354,15 @@ class Kinds:
             if place is None and all(self.is_influenced(mod) for mod in mods) and (mod := self._named_only(key, side, tags, taken)) is not None:
                 return mod  # the pool holds only influence mods of this family on this side: the slot is a mod an action names (below)
         if place is None:
-            # No family of the type has an ordinary mod of the pool on this side with room. `of` gives a mod that only an action puts on the
-            # item by name (an essence's) the type of its family, also where the family has its weight on the other side, or in influence mods
-            # alone: holding it takes that weight out of the pool. A slot of such a mod stands for it, found in the data as the mod of a
-            # family the pool does not list is (#1290: the Essence of Horror's suffix on a Shaper and Elder helmet is of the family of the
-            # influences' "supported by" mods; the state an essence gave was no item, and the bound's build met a key with no member).
+            # No family of the type has an ordinary mod of the pool on this side with room and the kind's tags. `of` gives a mod that only an
+            # action puts on the item by name (an essence's) the type of its family wherever the pool lists the family: on this side in mods
+            # that carry other protected tags (#1453: the Screaming Essence of Woe's spell damage on R14's Hunter bow, tagged `caster`, is of
+            # the family of the Hunter's untagged Chaos Damage over Time prefixes), on the other side, or in influence mods alone. Holding it
+            # takes that weight out of the pool. A slot of such a mod stands for it, found in the data as the mod of a family the pool does not
+            # list is (#1290: the Essence of Horror's suffix on a Shaper and Elder helmet is of the family of the influences' "supported by"
+            # mods). Without it the state an essence gave was no item, and the bound's build met a key with no member.
             other = Side.SUFFIX if side is Side.PREFIX else Side.PREFIX
-            for key, _ in self._members_of(other, base):
+            for key, _ in (*self._members_of(side, base), *self._members_of(other, base)):
                 if key not in taken and (family is None or key == family) and (mod := self._named_only(key, side, tags, taken)) is not None:
                     return mod
         raise ValueError(f"the state has more {side.value} slots of an ordinary family of that type than the pool has families")
