@@ -365,6 +365,8 @@ def inverse_diagonal(
     start_row: np.ndarray | None = None,
     progress: Callable[[str], None] | None = None,
     leak: np.ndarray | None = None,
+    shared_of: np.ndarray | None = None,
+    shared: Sequence[tuple[np.ndarray, np.ndarray, float]] = (),
 ) -> tuple[np.ndarray, float]:
     """`(diagonal of N = (I - Q)^-1, deviation)` for the chain `Q` (CSR, self-loops included), exact up to the rounding of the dense inverses.
 
@@ -383,6 +385,12 @@ def inverse_diagonal(
     measured), the same pieces give that row too, and `deviation` is the largest relative difference between the two over the states whose
     diagonal the cut changes (0 when no row is given): a wrong dense inverse, block or identity shows there, not only in a diagonal nobody has
     another figure for.
+
+    A row that many states share can be given once, as `ChainSolver` takes it (#1478): `shared_of[s]` names the row `shared[g] = (columns, entries,
+    leak)` of a state whose own row is empty here, self-loop included in the row. Such a row is never copied per state: it is cut and put back by
+    the Woodbury step whatever the size of its component, and the states whose diagonal it changes are found on the graph with one node for the
+    row (a state that takes it leads to that node, the node to the row's columns), whose components are those of the chain. A policy whose one
+    reroll of 64,969 outcomes is taken by 66,907 states (R06's plan) costs the row once, not 4.3 billion edges.
     """
     limit = INVERT_LIMIT if invert_limit is None else invert_limit
     say = progress or (lambda _text: None)
@@ -391,21 +399,56 @@ def inverse_diagonal(
     off = row != col
     p_ptr = np.concatenate(([0], np.cumsum(np.bincount(row[off], minlength=n))))
     p_col, p_weight = col[off], weight[off] / leave[row[off]]
-    label, count = components(n, p_ptr, p_col)
+    pooled = np.zeros(n, dtype=bool) if shared_of is None else shared_of >= 0
+    if pooled.any():
+        label, count, hubbed = _components_with_shared(n, p_ptr, p_col, shared_of, shared)
+    else:
+        label, count = components(n, p_ptr, p_col)
+        hubbed = np.zeros(count, dtype=bool)
     sizes = np.bincount(label, minlength=count)
     big = sizes[label] > limit
     say(f"cycles: {n:,} states, {count:,} components, the biggest {int(sizes.max()) if count else 0:,} ({time.perf_counter() - began:.1f} s)")
-    scale = 1.0 / leave
+    with np.errstate(divide="ignore"):
+        scale = 1.0 / leave
     if leak is None:
         leak = np.maximum(0.0, 1.0 - np.bincount(row, weights=weight, minlength=n))
-    if not big.any():
+    if not big.any() and not pooled.any():
         base = Triangular(n, p_ptr, p_col, p_weight, label, count, leak * scale)
         say(f"cycles: every component inverted whole ({time.perf_counter() - began:.1f} s)")
         found = base.solve_transposed(_unit(n, start)) * scale if start_row is not None else None
         return base.diagonal() * scale, _deviation(found, start_row, np.arange(n))
-    cut = _cut_rows(n, ptr, col, weight, p_ptr, p_col, big, limit)
-    say(f"cycles: {int(cut.sum()):,} rows cut from {int(big.sum()):,} states in components above {limit:,} ({time.perf_counter() - began:.1f} s)")
-    return _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak)
+    cut = _cut_rows(n, ptr, col, weight, p_ptr, p_col, big, limit, pooled)
+    wanted = big | hubbed[label]  # the states whose diagonal a row put back changes: in a big component, or in a cycle through a shared row
+    say(f"cycles: {int(cut.sum()):,} rows cut from {int(wanted.sum()):,} states in components above {limit:,} or through a shared row ({time.perf_counter() - began:.1f} s)")
+    return _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, wanted, start, start_row, say, leak, shared_of, shared)
+
+
+def _components_with_shared(n: int, p_ptr: np.ndarray, p_col: np.ndarray, shared_of: np.ndarray, shared) -> tuple[np.ndarray, int, np.ndarray]:
+    """`(label, count, hubbed)`: the components of the chain whose shared rows are given once, found on the graph with one node `n + g` for the row
+    `shared[g]` (a state that takes it leads to it, it leads to the row's columns), numbered over the states only; `hubbed[c]` says that a shared row's
+    node is in the component `c`, that is a cycle runs through the row. The components of the states are those of the chain with every row copied."""
+    groups = len(shared)
+    pooled = np.flatnonzero(shared_of >= 0)
+    own = np.diff(p_ptr)
+    extra = np.zeros(n, dtype=np.int64)
+    extra[pooled] = 1
+    hub_sizes = np.array([len(cols) for cols, _, _ in shared], dtype=np.int64)
+    ptr = np.concatenate(([0], np.cumsum(np.concatenate((own + extra, hub_sizes)))))
+    col = np.empty(int(ptr[-1]), dtype=np.int64)
+    at = ptr[:n]
+    where = np.repeat(at, own) + (np.arange(len(p_col)) - np.repeat(p_ptr[:-1], own))
+    col[where] = p_col
+    col[at[pooled] + own[pooled]] = n + shared_of[pooled]
+    for g, (cols, _, _) in enumerate(shared):
+        col[ptr[n + g] : ptr[n + g + 1]] = cols
+    label, _ = components(n + groups, ptr, col)
+    numbers, label = np.unique(label, return_inverse=True)  # renumbered over the components that hold a state or a row; sink-first order kept
+    count = len(numbers)
+    hubbed = np.zeros(count, dtype=bool)
+    hubbed[label[n:]] = True
+    hubbed &= np.bincount(label, minlength=count) > 1  # a row's node alone is in no cycle
+    state_label = label[:n]
+    return state_label, count, hubbed
 
 
 def _unit(n: int, at: int) -> np.ndarray:
@@ -440,10 +483,11 @@ def _without_rows(ptr: np.ndarray, col: np.ndarray, weight: np.ndarray, cut: np.
     return np.concatenate(([0], np.cumsum(np.where(cut, 0, sizes)))), col[keep], weight[keep]
 
 
-def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int) -> np.ndarray:
-    """A boolean mask of states of the big components whose rows are cut so that no component of the rest has more than `limit` states."""
-    cut = np.zeros(n, dtype=bool)
-    for members in _row_groups(ptr, col, weight, np.flatnonzero(big)):
+def _cut_rows(n, ptr, col, weight, p_ptr, p_col, big: np.ndarray, limit: int, pooled: np.ndarray | None = None) -> np.ndarray:
+    """A boolean mask of states of the big components whose rows are cut so that no component of the rest has more than `limit` states; the
+    states that take a shared row (`pooled`) are cut whatever their component."""
+    cut = np.zeros(n, dtype=bool) if pooled is None else pooled.copy()
+    for members in _row_groups(ptr, col, weight, np.flatnonzero(big & ~cut)):
         if len(members) > 1:
             cut[members] = True
     return _cut_until_small(n, p_ptr, p_col, cut, limit)
@@ -506,7 +550,7 @@ def _correction(base: Triangular, r: np.ndarray, groups, rows, leaks: np.ndarray
     return m, y_w, z_w, y_start
 
 
-def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak) -> tuple[np.ndarray, float]:
+def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, start, start_row, say, leak, shared_of=None, shared=()) -> tuple[np.ndarray, float]:
     """`(diagonal, deviation)` of N = (I - Q)^-1 by cutting the rows `cut` of Q out and putting them back (module text).
 
     With A = I - Q_B, where Q_B is Q with the rows `cut` emptied, A^-1 = (I - P_B)^-1 diag(r) with r = 1/leave on the rows kept and 1 on the rows cut
@@ -522,10 +566,25 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
     base = Triangular(n, new_ptr, new_col, new_weight, label, count, np.where(cut, 1.0, leak * scale))
     r = np.where(cut, 1.0, scale)  # the rows of A: each divided by leave, a cut row not at all
     diagonal = base.diagonal() * r  # A^-1[s, s]
-    groups = _row_groups(ptr, col, weight, np.flatnonzero(cut))
+    groups: list = []
+    rows: list = []
+    leaks: list = []
+    pooled = np.zeros(n, dtype=bool) if shared_of is None else shared_of >= 0
+    if pooled.any():  # the shared rows first, each once (as `ChainSolver`)
+        members = np.flatnonzero(pooled)
+        by_group = members[np.argsort(shared_of[members], kind="stable")]
+        bounds = np.searchsorted(shared_of[by_group], np.arange(len(shared) + 1))
+        for g, (cols, vals, gone) in enumerate(shared):
+            if bounds[g + 1] > bounds[g]:
+                groups.append(by_group[bounds[g] : bounds[g + 1]])
+                rows.append((cols, vals))
+                leaks.append(float(gone))
+    for g in _row_groups(ptr, col, weight, np.flatnonzero(cut & ~pooled)):
+        groups.append(g)
+        rows.append((col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]))  # the rows of K, self-loops included
+        leaks.append(float(leak[g[0]]))
     q = len(groups)
     say(f"cycles: the chain without the cut rows has {count:,} components, the biggest {int(sizes.max()):,}; {q:,} distinct rows are cut")
-    rows = [(col[ptr[g[0]] : ptr[g[0] + 1]], weight[ptr[g[0]] : ptr[g[0] + 1]]) for g in groups]  # the rows of K, self-loops included
     wanted = np.flatnonzero(big)
     # everything that is held at once: A^-1 U and K A^-1 on the wanted states, K A^-1 U and its inverse, the blocks of a solve (the right-hand
     # side, its scaled copy, the answer, the answer's copy and the gathers: six), and a chunk of the sum below
@@ -535,8 +594,7 @@ def _woodbury(n, ptr, col, weight, p_ptr, p_col, p_weight, scale, cut, big, star
             f"putting back {q:,} distinct cut rows for {len(wanted):,} states needs {cells:,} cells, past the {WOODBURY_CELLS:,} the memory of a run allows",
             q, cells, WOODBURY_CELLS,
         )
-    leaks = np.array([leak[g[0]] for g in groups])
-    m, y_w, z_w, y_start = _correction(base, r, groups, rows, leaks, n, wanted, start, say)
+    m, y_w, z_w, y_start = _correction(base, r, groups, rows, np.array(leaks), n, wanted, start, say)
     middle = np.linalg.inv(m)
     chunk = max(1, BLOCK_CELLS // max(1, q))  # the sum over a and b of y[w, a] middle[a, b] z[b, w], some states at a time: its first product is a chunk x q block
     for lo in range(0, len(wanted), chunk):

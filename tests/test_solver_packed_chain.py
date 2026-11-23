@@ -338,3 +338,23 @@ def test_a_shared_row_that_does_not_fit_the_memory_of_a_run_is_refused_by_the_co
 def test_a_chain_solver_of_one_state():
     one = pc.ChainSolver(1, np.zeros(2, dtype=np.int64), np.zeros(0, dtype=np.int64), np.zeros(0), np.ones(1), np.ones(1))
     assert one.solve(np.array([3.0])).tolist() == [3.0]
+
+
+@pytest.mark.parametrize("limit", [1000, 3])
+@pytest.mark.parametrize("seed", range(6))
+def test_the_diagonal_with_the_rows_that_states_share_given_once_is_the_dense_diagonal(seed, limit):
+    """#1478: a row many states take is given once (`shared_of`, `shared`), as `ChainSolver` takes it, never copied per state; the diagonal is the
+    dense one whatever the size of the components, and the row of the start from the same pieces agrees with the dense row."""
+    rng = np.random.default_rng(1478 + seed)
+    n = int(rng.integers(30, 80))
+    dense, ptr, col, weight = random_chain(rng, n, shared=2, shared_users=10, density=2, loops=True)
+    n, s_ptr, s_col, s_weight, leave, leak, shared_of, shared = chain_solver_inputs(dense, ptr, col, weight, pool=True)
+    exact = inverse_of(dense)
+
+    got, deviation = pc.inverse_diagonal(
+        n, s_ptr, s_col, s_weight, leave, invert_limit=limit, start=0, start_row=exact[0], leak=leak, shared_of=shared_of, shared=shared
+    )
+
+    assert got == pytest.approx(np.diag(exact), rel=1e-9)
+    assert deviation < 1e-9
+    assert len(s_col) < len(col)  # the shared rows were not handed in per state
