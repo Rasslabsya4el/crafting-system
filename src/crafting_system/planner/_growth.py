@@ -47,8 +47,8 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   the other half. Read earlier, before a step's usual roles or right after they were beaten, a lock group took the time a usual round
   needed: on R13 at 600 s 4,346.05 c against main's 2,066.12 c, its Orb of Annulment round two rounds later. On R14 the earlier order
   gave 3,429.31 c at 600 s, a lock group on the Augmentation step that named the Orb of Alteration; here that step's usual roles come
-  first and improve the plan (5,897.11 c), after which no step that can lose nothing waits on both sides, so R14 stays at main's
-  5,725.49 c. A step that can lose a mod has its protectors in its usual roles, so it has no lock group. Its round holds the offers the
+  first (5,897.11 c, then 5,725.49 c in the next round), and no step of those plans that can lose nothing waits on both sides, so no
+  lock group is named and R14 stays at main's 5,725.49 c. A step that can lose a mod has its protectors in its usual roles, so it has no lock group. Its round holds the offers the
   next round holds already, the cheapest cleaner, and the lock role (`OfferTable.lock_roles`), alone:
   - for each side, every offer that may add its lock and keeps the mods it is given (`lockers`: no reroll at any shape): the bench lock, and
     what puts it back once a reroll of the other side has taken it off with that side (a beast that draws a metamod keeps the mods);
