@@ -60,7 +60,7 @@ def test_past_the_resident_sum_the_proportional_sum_decides_and_stops_the_net(mo
 
 def test_the_proportional_sum_is_read_at_most_once_per_its_share_of_the_time(monkeypatch):
     """A question every 0.25 s (the making's gate) on a process whose proportional sum takes 0.1 s to read: on the code before #1252 the reads
-    took 0.1 of every 0.35 s; now they take at most 1 / READ_SHARE of the time, and the answer between two reads is the last reading."""
+    took 0.1 of every 0.35 s; now they take at most 1 / READ_SHARE of the time, and the answer between two reads is the last reading (no group's figure here: #1411)."""
     memory = Readings(monkeypatch, resident=40_000.0, proportional=9_000.0, cost=0.1)
     answers = []
     for _ in range(2_000):
@@ -82,17 +82,17 @@ def test_a_paced_question_keeps_the_stop_of_the_last_reading(monkeypatch):
     assert parallel.held_mb(under=12_000.0) == 1.0 and memory.dear == 2
 
 
-def test_a_kept_reading_under_the_net_grows_with_the_upper_figure_and_stops_within_one_question(monkeypatch):
+def test_a_kept_reading_under_the_net_grows_with_the_groups_figure_and_stops_within_one_question(monkeypatch):
     """#1411: past the upper figure the proportional sum read 100 MB under the net, and that reading was the answer for the whole pace
     (`READ_SHARE` times its 2.4 s near 12 GB with four workers, ~48 s) while the workers grew by ~50 MB/s: R14 passed its 12,288 MB net by
-    2.4 GB in the bound's build. Between two readings the answer is now the kept reading plus what the upper figure has grown since it was
+    2.4 GB in the bound's build. Between two readings the answer is now the kept reading plus what the group's figure has grown since it was
     read: once the memory passes the net, the next question (0.5 s later) says so, with no new reading."""
-    memory = Readings(monkeypatch, resident=12_100.0, proportional=11_900.0, cost=2.4)
-    assert parallel.held_mb(under=12_000.0) == 11_900.0 and memory.dear == 1  # the file pages: the upper figure is past, the memory is not
+    memory = Readings(monkeypatch, resident=40_000.0, proportional=11_900.0, cost=2.4, group=12_100.0)  # forked workers: resident far above
+    assert parallel.held_mb(under=12_000.0) == 11_900.0 and memory.dear == 1  # the file pages: the group's figure is past, the memory is not
     answers = []
-    for _ in range(8):  # 50 MB/s in the workers, a question every 0.5 s: both sums grow by 25 MB a question
+    for _ in range(8):  # 50 MB/s in the workers, a question every 0.5 s: the group's anon and the proportional sum grow by 25 MB a question
         memory.now += 0.5
-        memory.resident += 25.0
+        memory.group += 25.0
         memory.proportional += 25.0
         answers.append(parallel.held_mb(under=12_000.0))
     assert memory.dear == 1  # all within the pace: no new reading
@@ -100,19 +100,30 @@ def test_a_kept_reading_under_the_net_grows_with_the_upper_figure_and_stops_with
     assert answers[3] >= 12_000.0  # the question at which the memory reaches the net is past it: the stop comes then, not ~48 s later
 
 
-def test_a_kept_reading_never_answers_below_itself_when_the_upper_figure_falls_but_stays_past_the_net(monkeypatch):
-    memory = Readings(monkeypatch, resident=40_000.0, proportional=11_000.0, cost=1.0)
+def test_a_group_figure_that_cannot_be_read_now_leaves_the_kept_reading_and_never_adds_the_resident_sum(monkeypatch):
+    """A worker that has just ended makes the group's figure unreadable for a question; the upper figure then falls back on the resident sum,
+    which counts the forked pages once per process. Its rise over the group's figure is no growth of the memory: the kept reading answers."""
+    memory = Readings(monkeypatch, resident=30_000.0, proportional=11_900.0, cost=1.0, group=12_100.0)
+    assert parallel.held_mb(under=12_000.0) == 11_900.0
+    memory.group, memory.now = None, 0.5
+    assert parallel.held_mb(under=12_000.0) == 11_900.0 and memory.dear == 1  # not 11,900 + 17,900: no false stop
+    memory.group, memory.now = 12_150.0, 1.0
+    assert parallel.held_mb(under=12_000.0) == 11_950.0  # readable again: the growth since the reading counts
+
+
+def test_a_kept_reading_never_answers_below_itself_when_the_groups_figure_falls_but_stays_past_the_net(monkeypatch):
+    memory = Readings(monkeypatch, resident=40_000.0, proportional=11_000.0, cost=1.0, group=13_000.0)
     assert parallel.held_mb(under=12_000.0) == 11_000.0
-    memory.resident, memory.now = 30_000.0, 0.5  # a worker freed pages: still past the limit, the kept reading answers
+    memory.group, memory.now = 12_500.0, 0.5  # a worker freed pages: still past the limit, the kept reading answers
     assert parallel.held_mb(under=12_000.0) == 11_000.0 and memory.dear == 1
 
 
-def test_forgetting_the_reading_drops_its_upper_figure_too(monkeypatch):
-    memory = Readings(monkeypatch, resident=12_100.0, proportional=11_900.0, cost=1.0)
+def test_forgetting_the_reading_drops_its_groups_figure_too(monkeypatch):
+    memory = Readings(monkeypatch, resident=40_000.0, proportional=11_900.0, cost=1.0, group=12_100.0)
     assert parallel.held_mb(under=12_000.0) == 11_900.0
     parallel.forget_reading()
     assert parallel._dear == [float("-inf"), None, None]
-    memory.resident, memory.proportional, memory.now = 12_500.0, 11_950.0, 0.5
+    memory.group, memory.proportional, memory.now = 12_500.0, 11_950.0, 0.5
     assert parallel.held_mb(under=12_000.0) == 11_950.0 and memory.dear == 2  # read anew, not the old reading plus 400 MB
 
 

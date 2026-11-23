@@ -53,7 +53,7 @@ READ_SHARE = 20.0  # a net's question reads the proportional sizes at most once 
 
 _memory_net: float | None = None  # the limit in MB of the run's memory net (`memory_net`), None when no net is set
 _frozen: list = [0, False]  # how many forked pools of this process hold its objects frozen now, and whether they thaw them when the last closes
-_dear: list = [-math.inf, None, None]  # when a net's question may next read the proportional sizes, the last reading, and the upper figure read with it (`held_mb`)
+_dear: list = [-math.inf, None, None]  # when a net's question may next read the proportional sizes, the last reading, and the group's figure read with it (`held_mb`)
 
 
 class MemoryNetReached(Exception):
@@ -120,10 +120,13 @@ def held_mb(under: float | None = None, paced: bool = True) -> float | None:
     first, and while it is under `under` it is the answer: the proportional sum is under the limit too, and the net is not reached. Only once it
     reaches the limit is the proportional sum read. With `paced` that reading is made at most once per `READ_SHARE` times what the last one
     took, so the questions of a net take at most about 1/`READ_SHARE` of the time at any size. In between, the answer is the last reading plus
-    what the upper figure has grown since it was read with it (never less than the last reading): the memory grows by no more than its upper
-    figure does (a new or copied page is counted once in the group's `anon` and in full in a resident size), so a reading that said "under" stops
-    the net at the first question after the memory has passed it, not up to `READ_SHARE` readings later (#1411: the bare reading, ~48 s stale
-    near 12 GB with four workers growing ~50 MB/s, let R14's bound build pass a 12,288 MB net by 2.4 GB). Without `paced` it is read at each
+    what the group's figure (`_group_sum`) has grown since it was read with it, never less than the last reading (#1411: the bare reading, up to
+    ~48 s stale near 12 GB with four workers growing ~50 MB/s, let R14's bound build pass a 12,288 MB net by 2.4 GB). The proportional sum grows
+    by no more than that figure does, but for the file pages' gap (tens of MB): a new or copied anonymous page is counted once in the group's
+    `anon`. So a reading that said "under" stops the net at the first question after the memory has passed it. The resident sum is no such
+    measure of growth (a copy-on-write copy leaves it as it was: each process already counted the shared page), so where the group's figure
+    cannot be read, at the reading or now (no own control group; a worker that has just ended), the last reading is the answer as before, and
+    the stop can come up to `READ_SHARE` readings late; on Windows and macOS no workers share pages that way. Without `paced` it is read at each
     question past the upper figure, never late: the wait on the workers asks so (#1258: paced there, four workers passed a 12,000 MB net by up
     to 3 GB). Without `under` the proportional sum is read every time: a figure that is said, and the room check before the arrays grow (#839).
     """
@@ -134,12 +137,13 @@ def held_mb(under: float | None = None, paced: bool = True) -> float | None:
         if not paced:
             return _proportional_sum()
         now = _now()
+        group = _group_sum()
         if now < _dear[0] and _dear[1] is not None:
-            if cheap is None or _dear[2] is None or _dear[1] is None:
+            if group is None or _dear[2] is None:
                 return _dear[1]
-            return _dear[1] + max(cheap - _dear[2], 0.0)
+            return _dear[1] + max(group - _dear[2], 0.0)
         held = _proportional_sum()
-        _dear[0], _dear[1], _dear[2] = now + READ_SHARE * max(_now() - now, 0.0), held, cheap
+        _dear[0], _dear[1], _dear[2] = now + READ_SHARE * max(_now() - now, 0.0), held, group
         return held
     return _proportional_sum()
 
