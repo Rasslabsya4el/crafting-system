@@ -130,13 +130,28 @@ def test_a_plan_is_drawn_again_after_the_page_code_changed(planned, tmp_path: Pa
     assert _page(load_plan(path, DATA).plan) == _page(plan)
 
 
-def test_a_plan_file_of_the_first_format_is_refused_in_words(tmp_path: Path):
-    import pickle
+def test_a_plan_file_of_the_first_format_is_refused_in_words(planned, tmp_path: Path):
+    from crafting_system.cli import _plan_file
 
+    plan, target = planned
     path = tmp_path / "old.plan"
-    path.write_bytes(pickle.dumps(("0.0-test, 107 mods, 18 bases", None, None, "")))  # the first format: the data's identity, then the plan
+    with path.open("wb") as file:  # the first format: one pickle of the data's identity, then the plan
+        _plan_file._Writer(file, DATA).dump((_plan_file._identity(DATA), plan, target, "two.yaml"))
 
     with pytest.raises(PlanFileError, match="older version of --save-plan"):
+        load_plan(path, DATA)
+
+
+def test_a_header_that_names_modules_of_no_planner_is_refused_without_looking_them_up(tmp_path: Path, monkeypatch):
+    import pickle
+
+    from crafting_system.cli import _plan_file
+
+    path = tmp_path / "odd.plan"
+    path.write_bytes(pickle.dumps((_plan_file.MAGIC, _plan_file._python(), _plan_file._identity(DATA), {"evil.mod": "x"})))
+    monkeypatch.setattr(_plan_file, "_source_hash", lambda module: pytest.fail(f"looked up {module}"))
+
+    with pytest.raises(PlanFileError, match="modules of no planner"):
         load_plan(path, DATA)
 
 

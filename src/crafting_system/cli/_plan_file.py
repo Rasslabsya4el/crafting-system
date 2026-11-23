@@ -55,6 +55,12 @@ def _python() -> tuple:
     return (sys.implementation.name, *sys.version_info[:3])
 
 
+def _python_words(python) -> str:
+    """A Python of `_python` in words, as "cpython 3.14.10"."""
+    name, *version = python
+    return f"{name} {'.'.join(map(str, version))}"
+
+
 def _source_hash(module: str) -> str | None:
     """A hash of a module's source file (its line endings made alike), or None when the module is gone."""
     spec = importlib.util.find_spec(module)
@@ -154,13 +160,15 @@ def load_plan(path: Path, data: GameData) -> SavedPlan:
     with path.open("rb") as file:
         try:
             header = _HeaderReader(file).load()
-        except Exception as error:  # truncated, or not a plan file of this format: whatever the unpickler raises
-            raise PlanFileError(f"{path} is not a plan this code can read ({error!r})") from error
-        if not (isinstance(header, tuple) and len(header) == 4 and header[0] == MAGIC):
+        except Exception as error:  # truncated, of the first format (no header), or of a newer pickle: whatever the unpickler raises
+            raise PlanFileError(f"{path} is not a plan this code can read: an older version of --save-plan or a damaged file, plan again ({error!r})") from error
+        if not (isinstance(header, tuple) and len(header) == 4 and header[0] == MAGIC and isinstance(header[3], dict)):
             raise PlanFileError(f"{path} was saved by an older version of --save-plan: plan again")
         _, python, identity, stamp = header
         if python != _python():
-            raise PlanFileError(f"{path} was saved by another Python ({'.'.join(map(str, python))}) than this one ({'.'.join(map(str, _python()))}): plan again")
+            raise PlanFileError(f"{path} was saved by another Python ({_python_words(python)}) than this one ({_python_words(_python())}): plan again")
+        if not all(isinstance(module, str) and module.startswith(PACKAGE + ".") for module in stamp):  # never look up a name read from a file outside it
+            raise PlanFileError(f"{path} is not a plan this code can read: its code stamp names modules of no planner")
         if identity != _identity(data):
             raise PlanFileError(f"{path} was planned on other game data ({identity}) than this one ({_identity(data)})")
         if changed := [module for module, digest in _code_stamp(stamp).items() if digest != stamp[module]]:
