@@ -111,8 +111,11 @@ class Coe:
     def _keys(self, crafted: bool, side: str, level, ranges, groups, text: str) -> tuple:
         """The keys a mod is matched by, strictest first: (level, values, group), (values, group) for a crafted
         mod's bench level, and (level, group, stat text) for values in other units (life regeneration per minute)."""
-        spans, groups = self._spans(ranges), tuple(sorted(groups))
-        return ((crafted, side, int(level), spans, groups), (crafted, side, spans, groups), (crafted, side, int(level), groups, text))
+        # the stats in sorted order: the two sides list a support mod's stats in opposite orders (#1457: Level 20 Trap And Mine Damage)
+        spans, groups = tuple(sorted(self._spans(ranges))), tuple(sorted(groups))
+        # last, (level, group) alone: a display stat one side has and the other not (an aura's "increased Elemental Damage taken", #1457)
+        return ((crafted, side, int(level), spans, groups), (crafted, side, spans, groups), (crafted, side, int(level), groups, text),
+                (crafted, side, int(level), groups))
 
     def _our_keys(self, mod) -> tuple:
         return self._keys(mod.domain == "crafted", mod.generation_type, mod.required_level,
@@ -122,11 +125,11 @@ class Coe:
         modifier = self.modifiers[aid]
         tier = self.d["tiers"][aid][coe_base][index]
         return self._keys(modifier["id_mgroup"] == "11", modifier["affix"], tier["ilvl"], json.loads(tier["nvalues"]),
-                          json.loads(modifier["modgroups"]), modifier["name_modifier"])
+                          json.loads(modifier["modgroups"]), coe_text(modifier))
 
     def _coe_index(self, coe_base: str) -> list[dict]:
         if coe_base not in self._coe_indexes:
-            index = [{}, {}, {}]
+            index = [{}, {}, {}, {}]
             for aid in map(str, self.d["basemods"].get(coe_base, [])):
                 if aid not in self.modifiers or self.modifiers[aid]["affix"] not in ("prefix", "suffix"):
                     continue
@@ -138,7 +141,7 @@ class Coe:
 
     def _our_index(self) -> list[dict]:
         if self._ours is None:
-            self._ours = [{}, {}, {}]
+            self._ours = [{}, {}, {}, {}]
             for mod in self.data.mods.values():
                 if mod.generation_type in ("prefix", "suffix"):
                     for level, key in enumerate(self._our_keys(mod)):
@@ -153,7 +156,7 @@ class Coe:
             if among is not None and len(hits) > 1:
                 hits = [hit for hit in hits if hit[0] in among] or hits
             if len(hits) > 1:
-                hits = [hit for hit in hits if self.modifiers[hit[0]]["name_modifier"] == mod_text(mod)] or hits
+                hits = [hit for hit in hits if coe_text(self.modifiers[hit[0]]) == mod_text(mod)] or hits
             if len(hits) > 1:
                 hits = [hit for hit in hits if self.modifiers[hit[0]]["id_mgroup"] == "1"] or hits  # not an essence's twin
             if len(hits) == 1:
@@ -166,7 +169,7 @@ class Coe:
         """Our mod id of a CoE result mod (preferring `pool`, the ids our item can roll); 'coe:aid:tindex' when none fits."""
         if entry["tindex"] == "e" or entry["aid"] in ("-1", "0"):
             return f"coe:{entry['aid']}:{entry['tindex']}"
-        name = self.modifiers[entry["aid"]]["name_modifier"]
+        name = coe_text(self.modifiers[entry["aid"]])
         for index, key in zip(self._our_index(), self._coe_keys(coe_base, entry["aid"], int(entry["tindex"]))):
             hits = index.get(key, [])
             if pool is not None and len(hits) > 1:
@@ -238,7 +241,12 @@ class Coe:
 def mod_text(mod) -> str:
     """Our mod's text as Craft of Exile names a modifier: every number and range a #, lines joined by ", "."""
     text = re.sub(r"\(-?\d+(\.\d+)?--?\d+(\.\d+)?\)|-?\d+(\.\d+)?", "#", mod.text or "")
-    return ", ".join(line.strip() for line in text.splitlines())
+    return ", ".join(sorted(line.strip() for line in text.splitlines()))  # sorted: the two sides order a support mod's lines differently (#1457)
+
+
+def coe_text(modifier: dict) -> str:
+    """A Craft of Exile modifier's name in the form of `mod_text`: its lines sorted."""
+    return ", ".join(sorted(part.strip() for part in modifier["name_modifier"].split(", ")))
 
 
 def build_item(data, spec: dict) -> Item:
