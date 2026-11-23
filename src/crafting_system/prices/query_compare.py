@@ -135,7 +135,22 @@ def wider_words(phrase: str | None) -> str | None:
     return phrase[start + 1 : end] if 0 <= start < end else phrase
 
 
-_CATEGORY_WORDS = {"armour.chest": "body armour"}
+_CATEGORY_WORDS = {
+    "armour.chest": "body armour",
+    "weapon.basedagger": "dagger",
+    "weapon.runedagger": "rune dagger",
+    "weapon.oneaxe": "one hand axe",
+    "weapon.basemace": "one hand mace",
+    "weapon.onesword": "one hand sword",
+    "weapon.onemelee": "one-handed melee weapon",
+    "weapon.basestaff": "staff",
+    "weapon.twoaxe": "two hand axe",
+    "weapon.twomace": "two hand mace",
+    "weapon.twosword": "two hand sword",
+    "jewel.base": "jewel",
+    "jewel.abyss": "abyss jewel",
+    "jewel.cluster": "cluster jewel",
+}
 
 
 def category_words(category: str) -> str:

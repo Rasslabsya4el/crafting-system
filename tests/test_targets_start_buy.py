@@ -1,7 +1,7 @@
 """The bought start item is described once: the buy spec, the trade query and the price key are computed from the target (#474, OR-3).
 
 The data is the small fixture export (`items_support.DATA`): a Paua Amulet pool whose Lightning Resistance tiers need item levels 1, 13,
-25, 37, 49, 60, 72 and 84, plus hand-made bases added below (a twin of the amulet, a Battle Royale copy, a base with no trade category).
+25, 37, 49, 60, 72 and 84, plus hand-made bases added below (a twin of the amulet, a Battle Royale copy, bases of a class with no trade category).
 The real benchmark targets, with the stored price entries, are in `test_start_buy_real.py`.
 """
 
@@ -66,27 +66,28 @@ def test_the_trade_category_comes_from_the_item_class_of_the_base(base, requirem
     assert found.base_type == name
 
 
-def test_a_base_class_with_no_trade_category_is_refused_by_name():
-    target = target_at(80, "start: bought\nrequirements:\n  - family: IncreasedAttackSpeed\n", base="Rusted Sword")
+def test_a_base_class_with_no_trade_category_is_refused_with_its_reason():
+    data = with_bases(**{"Metadata/Items/Test/Rod": {"name": "Test Rod", "item_class": "FishingRod"}})
+    target = target_at(80, "start: bought\nrequirements:\n  - family: IncreasedLife\n", base="Test Rod", data=data)
 
-    with pytest.raises(StartBuyError, match="One Hand Sword"):
-        buy_spec_of(DATA, target)
+    with pytest.raises(StartBuyError, match="'FishingRod'.*Craft of Exile has no trade link"):
+        buy_spec_of(data, target)
 
 
-def test_the_category_map_has_the_eleven_classes_of_the_benchmark_routes():
-    assert set(TRADE_CATEGORY.values()) == {
-        "accessory.amulet",
-        "accessory.ring",
-        "accessory.belt",
-        "armour.boots",
-        "armour.gloves",
-        "armour.helmet",
-        "armour.chest",
-        "armour.shield",
-        "armour.quiver",
-        "weapon.bow",
-        "weapon.wand",  # R07 (ticket #146)
-    }
+def test_a_class_the_table_has_never_heard_of_is_refused_by_name():
+    data = with_bases(**{"Metadata/Items/Test/Thing": {"name": "Test Thing", "item_class": "Thing"}})
+    target = target_at(80, "start: bought\nrequirements:\n  - family: IncreasedLife\n", base="Test Thing", data=data)
+
+    with pytest.raises(StartBuyError, match="'Thing'.*add it to TRADE_CATEGORY"):
+        buy_spec_of(data, target)
+
+
+def test_the_weapon_classes_the_reference_crafts_lack_have_their_category():
+    # Craft of Exile's own trade link (#1491); the walk over every class of the game data is `test_item_class_tables.py`
+    assert TRADE_CATEGORY["Sceptre"] == "weapon.sceptre"
+    assert TRADE_CATEGORY["Claw"] == "weapon.claw"
+    assert TRADE_CATEGORY["Thrusting One Hand Sword"] == "weapon.onemelee"
+    assert TRADE_CATEGORY["Staff"] == "weapon.basestaff"
 
 
 # -- the item level window --------------------------------------------------------------------------------------
