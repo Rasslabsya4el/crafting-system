@@ -33,13 +33,15 @@ from crafting_system.actions import AlterationOrb, AnnulmentOrb, ChaosOrb, Exalt
 from crafting_system.actions.beast_mods import BeastSideSwap
 from crafting_system.actions.bench import BenchCraft, RemoveCraftedMods
 from crafting_system.actions.harvest_likelihood import HarvestReforgeLikelihood
+from crafting_system.actions.magic import AugmentationOrb, RegalOrb, TransmutationOrb
+from crafting_system.actions.scour import ScouringOrb
 from crafting_system.actions.veiled import VeiledExaltedOrb
 from crafting_system.cli import Offer
 from crafting_system.items import Item, Rarity, Side
 from crafting_system.planner import _missing_mods
 from crafting_system.planner._envelope import Beaten
 from crafting_system.planner._envelope_plan import envelope_result
-from crafting_system.planner._missing_mods import missing_mods_table
+from crafting_system.planner._missing_mods import missing_mods_table, refused_by_shape
 from crafting_system.planner._offer_floor import OfferFloors
 from crafting_system.planner._offers import RESTART, BuyStartItem, PricedOffer
 from crafting_system.planner import _pattern_bound
@@ -196,6 +198,8 @@ TOY_ACTIONS = {
     "chaos": (ChaosOrb(), 1.0), "exalt": (ExaltedOrb(), 1.5), "annul": (AnnulmentOrb(), 2.0), "craft": (BenchCraft(CRAFTED_DAMAGE), 0.7),
     "no attacks": (BenchCraft(NO_ATTACKS), 0.4), "remove crafted": (RemoveCraftedMods(), 0.3), "swap": (BeastSideSwap(Side.SUFFIX), 0.9),
     "veil": (VeiledExaltedOrb(), 3.0), "likelihood": (HarvestReforgeLikelihood(more=True), 2.5),
+    "scour": (ScouringOrb(), 0.1), "transmute": (TransmutationOrb(), 0.1), "augment": (AugmentationOrb(), 0.1), "regal": (RegalOrb(), 0.2),
+    "cheap swap": (BeastSideSwap(Side.SUFFIX), 0.05),
 }  # fmt: skip
 TOY_LEAVES = {
     "cold or fire": Wanted(frozenset({COLD_RESIST, FIRE_RESIST})), "lightning": Wanted(frozenset({RESIST_3})),
@@ -296,3 +300,38 @@ def test_the_table_stops_at_its_own_share_of_the_time():
     ab, first, offers = no_imprints()
     table = missing_mods_table(OfferFloors(ab, first, offers, imprinted.START), seconds=0.0)
     assert table.off is not None and "share" in table.off
+
+
+SHAPES = (("chaos", "exalt", "cheap swap", "scour", "transmute", "augment", "regal"), ("cold or fire", "lightning"))
+
+
+def test_an_offer_refused_by_its_shape_leaves_the_table_and_the_table_stays_under_the_exact_cost():
+    """Three shapes (the rare start, the Normal item the Scouring Orb leaves, the Magic one of the Transmutation): the side swap, a rare-only
+    craft, is refused by the rarity at the two others and leaves their min (#1496: on R10 the Eldritch Exalted Orb held the Magic shape at its
+    price). Without the law the table is the Scouring Orb and the swap, 0.1 + 0.05; with it the table is under the exact cost at every state
+    and near the start's (0.98 of 1.33)."""
+    ab, first, offers, patterns, start = toy(*SHAPES)
+    floors = OfferFloors(ab, first, offers, start)
+    assert [view.item.rarity for view in floors.views] == [Rarity.RARE, Rarity.NORMAL, Rarity.MAGIC]
+    build = _missing_mods._Build(floors, None)
+    build.prepare()
+    swap = TOY_ACTIONS["cheap swap"][1]
+    assert [s for s, cost in build.cuts if cost == swap] == [] and build.by_shape > 0
+    assert any(d["cost"] == swap and d["s"] == 0 for d in build.draws)  # the rare shape keeps the swap's law
+    table = missing_mods_table(floors)
+    exact = exact_values(ab, first, patterns)
+    assert {state.flags.rarity for state in exact} == {Rarity.RARE, Rarity.MAGIC, Rarity.NORMAL}
+    assert table.off is None
+    assert all(table.lower(state) <= value * (1 + TOLERANCE) for state, value in exact.items())
+    assert table.start > 0.9 > TOY_ACTIONS["scour"][1] + swap
+    assert table.start <= exact[first]
+
+
+def test_a_refusal_that_reads_a_mod_is_not_read_as_the_shapes():
+    """The side swap at the rare bare item is refused for want of a suffix to remove: a read of the mods, which a state of the shape may hold, so
+    the probe does not call it refused by the shape; at the Magic and Normal items the rarity alone refuses it, and the Exalted Orb as well."""
+    swap, exalt = TOY_ACTIONS["cheap swap"][0], TOY_ACTIONS["exalt"][0]
+    rare, magic, normal = (Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=rarity) for rarity in (Rarity.RARE, Rarity.MAGIC, Rarity.NORMAL))
+    assert not refused_by_shape(TOY, rare, swap) and not refused_by_shape(TOY, rare, exalt)
+    assert refused_by_shape(TOY, magic, swap) and refused_by_shape(TOY, normal, swap) and refused_by_shape(TOY, normal, exalt)
+    assert not refused_by_shape(TOY, normal, TOY_ACTIONS["transmute"][0]) and not refused_by_shape(TOY, magic, TOY_ACTIONS["augment"][0])

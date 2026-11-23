@@ -87,6 +87,16 @@ THE LAWS (one row per kind of offer; `_Build`)
   of its shape, and P(leaf l PASSING after) <= u_l = `likelihood_bound` (#1471 part 1 per leaf; checker of 2026-11-23: sound as used on R10,
   hardened here by counting up to m(S, T) families per drawn mod, `Holdable.most`): level 1 of the erasing rerolls, L = G(empty) - min(chain,
   Moebius).
+* **Refused by its shape**: an offer whose `outcomes` raise NotApplicableError at the shape's bare item while reading none of the item's
+  fields that differ between the in-model states of the shape (`refused_by_shape`: the mods, implicits, quality, veiled offer, enchantment and
+  sockets are handed in as poisons that raise `_Read` at any read) has read only what every in-model state of the shape shares: the base and
+  the item level (the craft's, held by no state), the rarity, corruption, influences and the unopened flag (the shape's `Flags`), no imprint
+  and no Memory Strand (phi is OFF on either). The game's answer is a function of those alone, so it refuses the offer at every in-model state
+  of the shape: the offer is not available there and puts no term in the min of T (the floors' premise (1), as for a REFUSED entry; the
+  imprint law of H25 is the same argument). A refusal that reads a mod (a side swap with no mod to remove, an Exalted Orb on a full side, the
+  dominance of an Eldritch implicit) proves nothing for the states that hold others: the offer keeps its law or its CUT. So on R10 the
+  Eldritch Exalted Orb (3.31 c) and the Beastcraft side swaps (5 c) leave the Magic shape the Orb of Scouring leads to (#1496: they held the
+  787-offer round's table at 0.3463 + 3.31 = 3.6563 c).
 * **Every other offer** (Fracturing Orb, an imprint, corruptions, the Eldritch Chaos Orb and Annulment, value rerolls, any other TERMINAL, a
   reroll that fractures or keeps crafted mods): a CUT, L = 0 (h >= 0). So the table can never exceed the price of the cheapest offer it holds
   no law for (its ceiling: 41.82 c on R10, the Eldritch Chaos Orb; comment 7106498087 on #1434).
@@ -100,6 +110,7 @@ no junk keeps only the fractured mods and a locked side's), that a bench craft f
 only a lock craft makes a lock and only an imprint an imprint, and that no offer adds Memory Strands.
 """
 
+import copy
 import heapq
 import itertools
 import math
@@ -134,6 +145,58 @@ ASK_STATES = 256  # the net is asked once every this many states of a pass of T
 TABLE_SHARE = 0.5  # the table's own time share: this part of the round's seconds (`_pattern_bound`, OR-40); the build's net stands above it
 CONVERGED = 1e-10  # relative change of the start's value under which the iteration ends
 P_, S_ = Side.PREFIX, Side.SUFFIX
+
+
+class _Read(BaseException):
+    """A field of the probe item that differs between the states of a shape was read (`refused_by_shape`); a BaseException, so that no
+    `except Exception` of an action turns the read into a refusal."""
+
+
+def _poisoned(*_args, **_kwargs):
+    raise _Read
+
+
+class _PoisonTuple(tuple):
+    """A tuple field of the probe item: any read of it raises `_Read`."""
+
+    __iter__ = __len__ = __getitem__ = __contains__ = __bool__ = __hash__ = __eq__ = __ne__ = __add__ = __radd__ = __reversed__ = _poisoned
+    __lt__ = __le__ = __gt__ = __ge__ = __mul__ = __rmul__ = count = index = __reduce__ = __reduce_ex__ = __repr__ = _poisoned
+
+
+class _PoisonValue:
+    """An optional field of the probe item (a quality, an enchantment, sockets): any read of it raises `_Read`."""
+
+    __getattr__ = __bool__ = __hash__ = __eq__ = __ne__ = __iter__ = __len__ = __lt__ = __le__ = __gt__ = __ge__ = _poisoned
+    __getitem__ = __contains__ = __str__ = __repr__ = __int__ = __index__ = __reduce__ = __reduce_ex__ = _poisoned
+
+
+VARYING = ("mods", "implicits", "quality", "veil_offer", "enchantment", "sockets")  # the item's fields two in-model states of a shape may differ in
+
+
+def refused_by_shape(data, item, action) -> bool:
+    """Whether `action` is refused at every in-model state of the shape of `item` (THE LAWS, "Refused by its shape"): its `outcomes` raise
+    NotApplicableError at the shape's bare item (no imprint, no Memory Strand) with every field of `VARYING` poisoned, in two probes: the
+    optional fields as poisons and as the bare item's own values (so a test `is None` read by identity, which no poison sees, gives the
+    refusal both ways or the probe fails). False on any read of a poisoned field, on any other error, and when the outcomes are given."""
+    bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured), imprints=(), memory_strands=0)
+    for optional in (True, False):
+        probe = copy.copy(bare)
+        for name in VARYING:
+            value = getattr(bare, name)
+            if isinstance(value, tuple):
+                object.__setattr__(probe, name, _PoisonTuple(value))
+            elif optional or value is not None:
+                object.__setattr__(probe, name, _PoisonValue())
+        try:
+            action.outcomes(data, probe)
+        except NotApplicableError:
+            continue
+        except _Read:
+            return False
+        except Exception:  # noqa: BLE001  (any other answer proves nothing)
+            return False
+        return False
+    return True
 
 
 class _Off(Exception):
@@ -249,7 +312,7 @@ def missing_mods_table(
     start = build.H(*build.xstart)
     said(
         f"missing mods' table: h(start) {start!r} at {build.xstart}, {len(build.states):,} states, {build.iterations} iterations, "
-        f"{build.raised:,} rerolls raised, checked at a shrink of {shrink:g} ({seconds:.1f} s)"
+        f"{build.raised:,} rerolls raised, {build.by_shape:,} offers refused by their shape, checked at a shrink of {shrink:g} ({seconds:.1f} s)"
     )
     return MissingModsTable(None, start, seconds, len(build.states), reader)
 
@@ -415,6 +478,7 @@ class _Build:
         data = self.data
         self.erasing, self.draws, self.crafts, self.cuts, self.bounded = [], [], [], [], []
         self.restart = None
+        self.by_shape = 0
         for s, entries in enumerate(self.floors.shape_entries):
             view = self.views[s]
             for entry in entries:
@@ -423,6 +487,9 @@ class _Build:
                 cost = float(entry.cost)
                 if entry.kind == kinds.REFUSED:
                     continue  # refused at every state of the shape (the floors' premise (1); a restore with no imprint)
+                if entry.kind != kinds.RESTART_KIND and refused_by_shape(data, view.item, action):
+                    self.by_shape += 1
+                    continue  # refused at every in-model state of the shape (THE LAWS, "Refused by its shape")
                 if entry.kind == kinds.RESTART_KIND:
                     if isinstance(action, BuyStartItem):
                         self.restart = cost if self.restart is None else min(self.restart, cost)
