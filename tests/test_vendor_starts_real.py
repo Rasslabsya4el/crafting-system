@@ -102,12 +102,12 @@ def test_r09_asks_the_top_movement_speed_which_the_recipe_cannot_reach_and_says_
 
 def test_r10_asks_the_30_percent_boots_so_the_recipe_start_is_an_option_priced_by_its_goods(data):
     target = load_target(TARGETS / "r10-fractured-boots.yaml", data)  # exactly MovementVelocity5, with three other mods
-    prices = price_lines(**{"Sorcerer_Boots_(ilvl_84)": 3.0, "Quicksilver_Flask": 1.5, "Orb_of_Augmentation": 0.25})
+    prices = price_lines(**{"Sorcerer_Boots_(ilvl_85)": 3.0, "Quicksilver_Flask": 1.5, "Orb_of_Augmentation": 0.25})
 
     (candidate,) = listing(data, target, prices).candidates
 
     assert candidate.key == "vendor:boots_movement_speed:5"
-    assert candidate.item.rarity is Rarity.MAGIC and candidate.item.item_level == 84
+    assert candidate.item.rarity is Rarity.MAGIC and candidate.item.item_level == 85  # the target plans 85 (#1472)
     assert candidate.item.mods == (ExplicitMod("MovementVelocity5", (30,)),)  # the tier the target file writes for it by hand
     assert candidate.price == pytest.approx(3.0 + 5 * 1.5 + 5 * 0.25)
 
@@ -119,7 +119,7 @@ def test_a_recipe_start_without_prices_is_refused_not_guessed(data):
 
     assert found.candidates == ()
     (refusal,) = found.refused
-    assert refusal.reason == NO_PRICE and "Quicksilver Flask" in refusal.detail and "Sorcerer Boots (ilvl 84)" in refusal.detail
+    assert refusal.reason == NO_PRICE and "Quicksilver Flask" in refusal.detail and "Sorcerer Boots (ilvl 85)" in refusal.detail
 
 
 def test_r12_lists_the_chaos_resistance_recipe_as_asked_for_nothing(data):

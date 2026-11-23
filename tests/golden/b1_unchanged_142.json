@@ -10,7 +10,7 @@
  },
  "r10-fractured-boots": {
   "kernels": 79,
-  "kernels_sha": "f2a512ec74c9718d4cad768666cbf284e0700a1b5baa07a6cc6ebc23be22a565",
+  "kernels_sha": "25e807a2e7dacf463dd794dc803050e05d77304713f55e6cb8f18943c37ea3f6",
   "limits": 3,
   "limits_sha": "447a34c88e2fcb021d29c262596b5fa5911c414d4f11afd73a30e6cdc939f62f",
   "offers": 79,
@@ -19,7 +19,7 @@
  },
  "r10-fractured-boots-70-life": {
   "kernels": 40,
-  "kernels_sha": "356000a0fa23366510e2f7199e52bf5f203db61e85078556c795388ee59611ae",
+  "kernels_sha": "826f3c7e2fa44d403069a1d1253ba73dbcff4f5c9b8d149fbc1328b9234047ff",
   "limits": 3,
   "limits_sha": "b81a83d32f97cdeb0581eb9c5a6945b629dd55fc94c85ecaafc9ba38634f5b87",
   "offers": 80,
@@ -28,7 +28,7 @@
  },
  "r11-reservation-helmet": {
   "kernels": 42,
-  "kernels_sha": "0e66011bc0761c12f9e4f4d7df7e2e51c76ae92365fbef1d3a1bbf94b3358ac4",
+  "kernels_sha": "9f0beb6b8b265c9117bd2e023b98dc8dd9688f5e016b8238c174ab0377bd635c",
   "limits": 3,
   "limits_sha": "49d90213014bbac2c49f8a4f10c73c6926300a0c3b301a1dc2d874f89781457b",
   "offers": 84,

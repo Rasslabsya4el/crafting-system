@@ -11,7 +11,15 @@
 # A full base id such as Metadata/Items/Amulets/Amulet1 works too.
 base: Paua Amulet
 
-# The item level of the amulet, a whole number from 1 to 100.
+# The item level of the amulet, a whole number from 1 to 100. The guide gives none; 84 is one of the levels a player buys the start
+# at for its price, kept as the file's own pick (#1472, checked against the market). The start is priced by the search for any amulet base with a fractured Lightning
+# Resistance, item level 75 or more (909 listings on 2026-11-01, 902 on 2026-11-10), and its cheapest ten of 2026-11-01
+# (tests/fixtures/trade/recorded/start_items/fetch_r12.json) all cost 1 Chaos at item levels 78, 78, 79, 81, 83, 83, 83, 83,
+# 84 and 85: no level holds the market (83 is the most common, four of ten), so a player who pays 1 Chaos picks the level, and 84 is
+# among them (a Lapis Amulet of 84 at 1 Chaos). Item level 85 would add three mods to the pool (AllResistances6, AllAttributes9_, IncreasedMana13), none of them a
+# Lightning mod, so they only thin the chance of the +1 Lightning gems; a player does not pick the larger pool at the same price.
+# A level below 84 is also on sale at 1 Chaos and has a smaller pool; planning from each level a player may buy and keeping the
+# cheapest is #354 and #359 (the owner's decision on #495).
 item_level: 84
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).

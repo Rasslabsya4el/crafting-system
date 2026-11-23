@@ -201,6 +201,18 @@ def test_a_hand_set_price_of_the_tests_is_marked_and_one_set_from_a_wider_search
     assert derive("hand-set", None, "Allflame", "2026-07-31").kind == HAND_SET
 
 
+def test_a_hand_set_price_of_the_item_the_plan_buys_says_it_was_set_from_a_wider_search_and_names_no_exact_listings():
+    """#1472: R10's boots are planned at item level 85, where a player buys them; the number is set by hand from the reading of the
+    search for 84 or more, whose cheapest listings were most likely of 85 (OR-44). The price is of the item planned, so no "wider item" mark."""
+    planned = Provenance(HAND_SET, "Allflame", "2026-11-10", 5.0, "units", 5, for_item="item level 84 or more, whose cheapest listings were most likely of item level 85")
+    marks = price_marks(entry(17.0, planned, "hand-set"), FILE, uses=1.0)
+
+    assert codes(marks) == [HAND_SET_MARK]
+    assert marks[0].reason == "a price set by hand from the listings of a wider search, item level 84 or more, whose cheapest listings were most likely of item level 85; no search of this item alone was read"
+    plain = price_marks(entry(5.0, Provenance(HAND_SET, "Allflame", "2026-07-31"), "hand-set"), FILE, uses=1e9)
+    assert [mark.reason for mark in plain] == ["a price set by hand"]  # no search named: the words claim none
+
+
 def test_a_hand_price_and_a_default_are_not_approximate_inputs():
     assert price_marks(entry(provenance=Provenance(OVERRIDE, "Allflame", "2026-11-07")), FILE, uses=1e9) == ()
     assert price_marks(PriceEntry(0.0001, "default"), FILE, uses=1e9) == ()
