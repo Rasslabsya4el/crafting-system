@@ -322,8 +322,8 @@ class OfferTable:
         return [position for _ratio, position in ranked[:count]]
 
     def item_mod_ids(self) -> frozenset[str]:
-        """The mods this item can hold (#1502): its own pool on both sides at each shape the offers reach (`pool_ids`), the mods those
-        items hold, and the mods an offer names (`named_ids`: a craft's, an essence's, a veiled choice's). Empty for a table read with no
+        """The mods this item can hold (#1502): its own pool on both sides at the item of each rarity the offers reach (`views`, `pool_ids`), the mods
+        those items hold, and the mods an offer names (`named_ids`: a craft's, an essence's, a veiled choice's). Empty for a table read with no
         item. Read once."""
         if self._item_ids is None:
             found = set(self.named_ids)

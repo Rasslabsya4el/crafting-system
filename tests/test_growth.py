@@ -150,6 +150,8 @@ def test_a_crafted_only_requirement_has_the_side_of_the_mod_an_offer_names_and_a
     assert _sides_world(pool=("A1",), held=("BC",)).side_of(B) == "suffix"
     # no mod of this item passes B at all: every prefix and suffix that passes it is read, as before
     assert _sides_world(pool=("A1",)).side_of(B) is None
+    # a mod the offers name on the other side that does not pass B leaves A's one side as it was
+    assert _sides_world(pool=("A1", "B1"), named=("P9",)).side_of(A) == "prefix"
 
 
 def test_an_imprint_is_named_only_where_it_can_be_made():
