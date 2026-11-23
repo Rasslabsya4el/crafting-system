@@ -692,8 +692,9 @@ class _View:
             return "the target", False
         if edge.kind == "failure" and step.action is not None and step.action.label == RESTART:
             return f"the start item {'made again at the vendor' if self.first is not None else 'bought again'}", False
-        if edge.kind == "again":  # the item a use leaves in the step, told from those it sends on (R14 step 9's Exalted Orb)
-            tell = self.item_words(step, edge)
+        if edge.kind == "again":  # the item a use leaves in the step, told from those it sends on to another step (R14 step 9's Exalted Orb)
+            onward = any(other.kind != "goal" and other.to != edge.to for other in step.edges)  # beside the target alone, "not yet" says it
+            tell = self.item_words(step, edge) if onward else ""
             return (f"{tell}, {AGAIN}" if tell else AGAIN), False
         if edge.kind == "failure" and (lost := self.lost(edge, removed=step.action is not None and self.sure(step.action))):
             tell = self.item_words(step, edge, given=tuple(("without", self.leaf_text(i)) for i in edge.lost))
