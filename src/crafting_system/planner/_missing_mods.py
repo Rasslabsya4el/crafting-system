@@ -123,10 +123,7 @@ from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, Status, declared_bounds, keeps_shape, reach_bound
 from crafting_system.abstraction._bound import Holdable, _blocked_sets, _guard, _may_pass, _scenario_chance, _Side, holdable
-from crafting_system.actions import NotApplicableError, OutOfScopeError, allowed_by_tags, unveil_pool_mods
-from crafting_system.actions.beast_mods import BeastSideSwap
-from crafting_system.actions.harvest_likelihood import HarvestReforgeLikelihood
-from crafting_system.actions.pool import build_pool
+from crafting_system.actions import Action, NotApplicableError, OutOfScopeError, allowed_by_tags, build_pool, unveil_pool_mods
 from crafting_system.items.model import Metamod, Rarity, Side, capacity
 from crafting_system.items.quality import MAX_PLAIN_QUALITY, MAX_QUALITY, CatalystType, PlainQuality, Quality
 from crafting_system.items.sockets import SocketColour, Sockets
@@ -142,7 +139,6 @@ KMAX = 3  # the crafted mods an item can hold (with the multimod)
 MAX_OPEN = 6  # the most open leaves the table is built for: 2^|U'| sets per room
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
 TAG_METAMODS = frozenset({Metamod.NO_ATTACK_MODS.value, Metamod.NO_CASTER_MODS.value})  # an Annulment does not remove the mods they protect
-SWAPS = {"HarvestResistanceSwap": "resist", "HarvestDamageSwap": "damage"}  # one mod's element changes, the count kept (see THE LAWS)
 SHRINK = (1e-9, 1e-6)  # h is scaled down by 1 - this before the check (the float sums of T carry rounding); the second when the first fails
 ITERATIONS = 3000  # the iteration's cap (R10 needed 653); the check decides either way: a stopped iteration is a weaker table, never an unsound one
 ASK_STATES = 256  # the net is asked once every this many states of a pass of T
@@ -356,7 +352,7 @@ def missing_mods_table(
     except budget.NetReached as reached:
         return off(f"the net was reached: {reached.reason}")
     except Exception as error:  # noqa: BLE001  (a fault in the table turns it off; the round goes on with its floors)
-        return off(f"{type(error).__name__}: {error}")
+        return off(repr(error))
     seconds = time.perf_counter() - began
     reader = _Reader(
         floors.ab, build.known, tuple((leaf, build.bit[leaf]) for leaf in build.U), build.full, tuple(build.side_free), build.lockmods, build.h,
@@ -370,7 +366,7 @@ def missing_mods_table(
     return MissingModsTable(None, start, seconds, len(build.states), reader)
 
 
-def likelihood_bound(ab: Abstraction, action: HarvestReforgeLikelihood, item, leaves, held: Mapping[Side, Holdable]) -> dict[int, Fraction]:
+def likelihood_bound(ab: Abstraction, action: Action, item, leaves, held: Mapping[Side, Holdable]) -> dict[int, Fraction]:
     """u_l >= P(leaf l PASSING after one use of the likelihood reforge `action`) at every item of the shape of `item` (#1471 part 1, the
     lemma's P1, per leaf; checker of 2026-11-23 on th21c: SOUND as used on R10, with the hardening below).
 
@@ -536,7 +532,6 @@ class _Build:
             view = self.views[s]
             for entry in entries:
                 action = entry.priced.offer.action
-                name = type(action).__name__
                 cost = float(entry.cost)
                 if entry.kind == kinds.REFUSED:
                     continue  # refused at every state of the shape (the floors' premise (1); a restore with no imprint)
@@ -549,7 +544,7 @@ class _Build:
                     else:
                         self.cuts.append((s, cost))
                     continue
-                if name in SWAPS and not self._swap_hits(SWAPS[name]):
+                if (word := action.swapped_stat()) is not None and not self._swap_hits(word):
                     continue  # no constraint (THE LAWS)
                 if entry.kind in (kinds.REROLL, kinds.MOVE):
                     adds = action.adds(data, view.item)
@@ -563,7 +558,7 @@ class _Build:
                     self.crafts.append(dict(e=entry, s=s, cost=cost))
                 elif entry.kind == kinds.IMPLICIT:
                     continue  # no constraint
-                elif entry.kind == kinds.TERMINAL and isinstance(action, HarvestReforgeLikelihood):
+                elif entry.kind == kinds.TERMINAL and action.held_weight_factor() is not None:
                     self._likelihood(entry, s, cost)
                 else:
                     self.cuts.append((s, cost))
@@ -628,7 +623,6 @@ class _Build:
             for leaf in self.U:
                 if kinds.finishes(goal.leaves[leaf], named, bool(adds.crafted)):
                     gain |= self.bit[leaf]
-            name = type(action).__name__
             if entry.kind == kinds.VEILED:
                 if not gain:
                     continue  # no constraint
@@ -638,9 +632,9 @@ class _Build:
                     self.cuts.append((s, d["cost"]))
                     continue
                 d.update(kind="craft", gain=gain, crafted=bool(adds.crafted))
-            elif name == "RemoveCraftedMods":
+            elif action.removal() == "crafted":
                 d.update(kind="remove-crafted", gain=0)
-            elif name == "AnnulmentOrb":
+            elif action.removal() == "one":
                 d.update(kind="annul", gain=0)
             else:
                 d.update(kind="removes", gain=0)
@@ -730,7 +724,7 @@ class _Build:
                     self.cuts.append((s, d["cost"]))
                     continue
                 pool, free, tag, influences = declared.pool, dict(self.side_free[s]), declared.tag, view.item.influences
-                single = not getattr(declared, "together", False)
+                single = not declared.together
             else:
                 parts = ab._prepared(view.bare, action).outcomes.components
                 if len(parts) != 1:
@@ -743,8 +737,8 @@ class _Build:
             except OutOfScopeError:
                 self.cuts.append((s, d["cost"]))
                 continue
-            if isinstance(action, BeastSideSwap):
-                law = ("swap", action.add_side, action.remove_side)
+            if declared is not None and declared.removes is not None:
+                law = ("swap", next(side for side in (P_, S_) if side is not declared.removes), declared.removes)
             elif action.reads(data).variants or declared is not None:
                 law = "add"
             else:

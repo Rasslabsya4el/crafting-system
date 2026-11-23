@@ -237,7 +237,7 @@ class BeastSideSwap(Action):
         if partners(whole):
             return None  # a family on both sides (a jewel): a family held on the other side leaves the draw too, which the bound does not range over
         pool = tuple(family for family in whole if family.side is self.add_side)
-        return AddedDraw(pool, {self.add_side: bare.free_slots(data, self.add_side), self.remove_side: 0})
+        return AddedDraw(pool, {self.add_side: bare.free_slots(data, self.add_side), self.remove_side: 0}, removes=self.remove_side)
 
     def outcomes(self, data: GameData, item: Item) -> Mixture:
         """The outcomes of the recipe on `item`: one pool draw for each mod the removal may take, each with chance 1/n.

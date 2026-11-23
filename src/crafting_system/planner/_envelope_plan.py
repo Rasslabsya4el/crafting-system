@@ -88,7 +88,7 @@ class CraftingProblem:
         model = bound.model
         self.index = model.index
         self.floors = bound.floors
-        table = getattr(bound, "table", None)  # the missing mods' table (`_missing_mods`, #1496): read per state, only for the very offers it was built from
+        table = bound.table  # the missing mods' table (`_missing_mods`, #1496): read per state, only for the very offers it was built from
         self.table = table if table is not None and table.off is None and table.serves(self.offers) else None
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
         self.holds = bound.holds  # an offer of the model held at some keys only has no abstract action at the others (#1325)
