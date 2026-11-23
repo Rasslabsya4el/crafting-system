@@ -56,8 +56,10 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   that adds an influence's mod, the side swaps' draw at the beast's level). The roles are read as before with these offers held out (the
   next cheapest takes their place), and what they would have named of them is kept. When nothing new is named without them, or a round
   does not finish within its share, one later group runs with a plan in hand: the plan's support, the named offers and the methods of the
-  class the roles named, its words naming them (the page shows them). After it nothing is held back. Nothing is dropped (OR-12, OR-13): that
-  group still runs, and every offer keeps its group in the widening rounds after the growth.
+  class the roles named, its words naming them (the page shows them). After it nothing is held back; with no plan in hand when nothing new is
+  named, they are held back no longer and the start is read again with them (no plan was proved without them). Nothing is dropped (OR-12,
+  OR-13): the members the roles named run in that group, and every offer keeps its group in the widening rounds after the growth. A member
+  another offer needs (`closure`: a veiled placeholder, the imprint chain) comes in with it, as a dependency is never held back.
 
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
@@ -570,6 +572,9 @@ class Grower:
         found = self._next()
         if found is not None or self.later_done:
             return found
+        if self.plan is None:  # no round proved a plan without them: they are held back no longer, and the start is read again with them
+            self.later_done, self.table.held_back = True, frozenset()
+            return self._next()
         return self.later() or self._next()
 
     def _next(self) -> tuple[tuple[int, ...], str] | None:

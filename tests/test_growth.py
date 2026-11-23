@@ -511,3 +511,13 @@ def test_the_later_group_still_runs_when_a_round_without_it_did_not_finish_withi
     assert "the growth of the methods ended here" in widened.records[1].reason and widened.records[2].growth.startswith("the later group")
     assert widened.plan.mean_remaining == 3.0
     assert all(record.growth is None for record in widened.records[3:])  # then the widening, not more growth
+
+
+def test_with_no_plan_proved_without_them_the_methods_that_fan_out_are_held_back_no_longer():
+    # A's only provider fans out (a pool of its own): the start reading holds it back, names nothing new, and then names it
+    table = _table(_entry("G", 1.0, chance={B: 1}), _entry("F", 1.0, chance={A: 1}, fans=_growth.OWN_POOL))
+    grower = Grower(table, ())
+    assert grower.seed()[0] == (0,)  # the seed holds G alone: F is held back
+    grower.ran((0,), None, False)  # no plan
+    step = grower.next()
+    assert step is not None and 1 in step[0] and table.held_back == frozenset()
