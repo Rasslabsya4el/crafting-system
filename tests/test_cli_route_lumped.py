@@ -486,3 +486,38 @@ def test_a_mod_only_the_steps_own_last_roll_gave_is_a_miss_and_one_the_item_came
     # without the share every use that drops the mark is a loss: M's misses too (the page before #889)
     old = {(edge.kind, edge.lost): edge.chance for edge in flow_of(chain, loss=held).steps[step.number - 1].edges}
     assert old == pytest.approx({("goal", ()): 1 / 3, ("again", ()): 2 / 3 - 2 / 9, ("failure", ("x",)): 2 / 9})
+
+
+def test_the_page_reader_counts_a_reroll_s_own_roll_as_a_miss_but_never_what_a_removal_takes():
+    """#889 and its review: the page's loss reader (`_route_view.LOST_LEAVES`) on item states. A reroll "a" gives the mod and takes it back:
+    a miss on its own rolls, a loss on the item that came with it (1/9 per use, as above). A removal "x" never gives the mod: T comes holding
+    it, "x" takes a junk mod (T2, still holding it) or the mod (L); "x" again on T2 takes it too, so both of its losses count, 1/2 per use of x
+    (v_T = 1, v_T2 = 1/2: x is used 3/2 times and loses the mod with mass 1/2 + 1/4)."""
+    from typing import NamedTuple
+
+    from crafting_system.abstraction import Status
+    from crafting_system.cli._route_view import LOST_LEAVES
+
+    class Item(NamedTuple):
+        name: str
+        status: tuple
+
+    held, bare = (Status.PASSING,), (Status.ABSENT,)
+    goal = Item(GOAL, held)
+    t, s, mm, r = Item("T", held), Item("S", bare), Item("M", held), Item("R", bare)
+    reroll = (Outcome(mm, 1), Outcome(s, 1), Outcome(goal, 1))
+    policy = {r: Action("r", 1.0, (Outcome(t, 1),)), t: Action("a", 1.0, reroll), s: Action("a", 1.0, reroll), mm: Action("a", 1.0, reroll)}
+    chain = _route_flow.chain_of_policy(r, policy, lambda state: state.name == GOAL)
+    (step,) = [step for step in flow_of(chain, loss=LOST_LEAVES).steps if step.action is not None and step.action.label == "a"]
+    assert {(edge.kind, bool(edge.lost)): edge.chance for edge in step.edges} == pytest.approx({("goal", False): 1 / 3, ("again", False): 2 / 3 - 1 / 9, ("failure", True): 1 / 9})
+
+    t2, gone = Item("T2", held), Item("L", bare)
+    policy = {
+        r: Action("r", 1.0, (Outcome(t, 1),)),
+        t: Action("x", 1.0, (Outcome(t2, 1), Outcome(gone, 1))),
+        t2: Action("x", 1.0, (Outcome(goal, 1), Outcome(gone, 1))),
+        gone: Action("b", 1.0, (Outcome(goal, 1),)),
+    }
+    chain = _route_flow.chain_of_policy(r, policy, lambda state: state.name == GOAL)
+    (step,) = [step for step in flow_of(chain, loss=LOST_LEAVES).steps if step.action is not None and step.action.label == "x"]
+    assert {(edge.kind, bool(edge.lost)): edge.chance for edge in step.edges} == pytest.approx({("goal", False): 1 / 6, ("again", False): 1 / 3, ("failure", True): 1 / 2})

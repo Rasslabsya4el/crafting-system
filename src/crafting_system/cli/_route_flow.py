@@ -246,13 +246,16 @@ class LossReader:
 
     `lost(chain, src, dst)` gives `(items, matrix)`: for the edges `src[e] -> dst[e]` (states, or `m + j` for goal `j`) which of `items` they
     lose. `share(chain)` gives per state the share of its visits on which that loss counts (the rest of the uses of a losing edge lose
-    nothing and are grouped with those that do not lose); None counts every visit. `classes(chain)` gives a number per state such that what an edge loses depends on its source only through that number (the wanted
+    nothing and are grouped with those that do not lose); None counts every visit. `own(chain, src, dst)` says per edge whether every mod it
+    loses is one the step's own uses can give; the share applies only to those edges (an Annulment never gives a mod, so what it takes the
+    item held before the step, whatever use of the step made the item's state). `classes(chain)` gives a number per state such that what an edge loses depends on its source only through that number (the wanted
     mods it holds); the edges are then read once per (kernel, step, class) with one state standing for the class. None: every state its own class.
     """
 
     lost: Callable[[Chain, np.ndarray, np.ndarray], tuple[Sequence, np.ndarray]]
     classes: Callable[[Chain], np.ndarray] | None = None
     share: Callable[[Chain], np.ndarray] | None = None  # per state, the share of its visits on which what a use loses counts as lost (`arrived`); None: all of them
+    own: Callable[[Chain, np.ndarray, np.ndarray], np.ndarray] | None = None  # per edge, whether all it loses is what its step's own uses can give: only then does `share` apply
 
 
 def empty_kernels() -> Kernels:
@@ -404,6 +407,8 @@ def flow_of[S: Hashable](
         items, lost_matrix = ((), np.zeros((len(dst), 0), dtype=bool)) if reader is None else reader.lost(chain, src, dst)
         lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
         lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
+        if reader is not None and reader.own is not None:  # a mod the step can never give (an Annulment's) was on the item before any use of it
+            counted = np.where(np.asarray(reader.own(chain, src, dst), dtype=bool), counted, whole)
         # a losing edge is two parts: its uses on which the loss counts (`counted`), and the rest, which lose nothing (#889); a part of no mass is none
         first = ~lost_edge | (counted > 0.0) | (whole <= 0.0)  # an edge of no mass at all (a state that cannot finish) stays as it was
         rest = lost_edge & (whole > counted)

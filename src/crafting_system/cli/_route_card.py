@@ -705,7 +705,7 @@ def _rank(row: Slot) -> int:
     return {"wanted": 1, "crafted": 3}.get(row.tone, 2)
 
 
-VARIES = "on some of these items only, in the slots marked any:"  # the heading of the rows only some states of a card hold (#889)
+VARIES = "only on some of these items, each in a slot marked any:"  # the heading of the rows only some states of a card hold (#889)
 
 
 def _shared_rows(per_state: list[list[Slot]]) -> tuple[list[Slot], list[list[Slot]]]:

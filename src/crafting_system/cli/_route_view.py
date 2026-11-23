@@ -62,6 +62,7 @@ from pathlib import Path
 import numpy as np
 
 from crafting_system.actions import DRAW_LABEL
+from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
@@ -80,6 +81,7 @@ from ._report_net import ask
 from ._route import RESTART, Route, RouteResult
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
 from ._route_chain import chain_of_packed_policy
+from ._route_flow import _blocks as _route_flow_blocks
 from ._route_flow import Chain, Edge, Flow, LossReader, Step, arrived, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
 from ._route_tiers import TierLine, tier_lines
@@ -295,7 +297,54 @@ def _leaves_met(chain: Chain) -> np.ndarray:
     return np.unique(met, axis=0, return_inverse=True)[1].reshape(-1)
 
 
-LOST_LEAVES = LossReader(_lost_leaves, _leaves_met, arrived)
+def _met(chain: Chain) -> np.ndarray:
+    """The leaves of the target each state and each goal of `chain` meets (rows: states, then goals), kept on the chain."""
+    cached = chain.__dict__.get("_met")
+    if cached is None:
+        width = len(chain.states[0].status)
+        status = np.array([state.status for state in (*chain.states, *chain.goals)], dtype=np.int8).reshape(chain.m + len(chain.goals), width)
+        cached = status == int(Status.PASSING)
+        object.__setattr__(chain, "_met", cached)
+    return cached
+
+
+def _given(chain: Chain) -> np.ndarray:
+    """Per key of `chain` (a step), the leaves a use of that step can make met on an item that stays in the step: what its own rolls give.
+
+    Read once per (kernel, step, leaves met) triple, kept on the chain. An Annulment or a removal gives none; an essence, a Chaos Orb, a fossil
+    give the leaves of the mods they can roll.
+    """
+    cached = chain.__dict__.get("_given")
+    if cached is None:
+        met = _met(chain)
+        m = chain.m
+        cached = np.zeros((len(chain.keys), met.shape[1]), dtype=bool)
+        acting = np.flatnonzero(chain.kernel >= 0)
+        if acting.size:
+            classes = _leaves_met(chain)
+            _, first = np.unique(np.stack([chain.kernel[acting], chain.key[acting], classes[acting]], axis=1), axis=0, return_index=True)
+            reps = acting[first]
+            table = chain.kernels
+            sizes = table.kernel_sizes()[chain.kernel[reps]]
+            for a, b in _route_flow_blocks(np.concatenate(([0], np.cumsum(sizes)))):
+                ask()  # the report's memory net (#1381)
+                src = np.repeat(reps[a:b], sizes[a:b])
+                dst = table.k_succ[expand_ranges(table.k_ptr[chain.kernel[reps[a:b]]], sizes[a:b])].astype(np.int64)
+                stays = (dst < m) & (chain.key[np.minimum(dst, m - 1)] == chain.key[src])
+                gained = ~met[src] & met[dst] & stays[:, None]
+                np.logical_or.at(cached, chain.key[src], gained)
+        object.__setattr__(chain, "_given", cached)
+    return cached
+
+
+def _own_losses(chain: Chain, src: np.ndarray, dst: np.ndarray) -> np.ndarray:
+    """Per edge `src -> dst`: whether every leaf it loses is one its step's own uses can give (`_given`), so that it may be the step's own roll (#889)."""
+    met = _met(chain)
+    lost = met[src] & ~met[dst]
+    return ~(lost & ~_given(chain)[chain.key[src]]).any(axis=1)
+
+
+LOST_LEAVES = LossReader(_lost_leaves, _leaves_met, arrived, _own_losses)
 
 
 def steps_of_chain(chain: Chain) -> Flow:
