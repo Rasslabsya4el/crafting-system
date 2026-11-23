@@ -619,42 +619,59 @@ def test_a_reroll_s_figure_under_the_lock_is_read_at_the_item_holding_the_side_s
     assert table.under_lock("suffix", RARE, A, frozenset({B})) is ranked  # read once
 
 
-def test_the_lock_group_comes_before_the_step_s_usual_roles_and_the_step_is_read_again_after_it():
-    table = _lock_world()
+def _lock_grower(table, under_suffix_only=False):
+    """A grower on `_lock_world` with "add A" (an adder of A) and a plan whose one step, the spam, waits for A and B and can lose nothing."""
     table.entries.append(dataclasses.replace(_entry("add A", 5.0, at=RARE, chance={A: Fraction(1, 10)}), position=len(table.entries)))
-    table.under = {key: [(50.0, 5)] for key in (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))}
+    keys = (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))
+    table.under = {key: ([(50.0, 5)] if key[0] == "suffix" or not under_suffix_only else []) for key in keys}
     start, goal = _State("start", (Status.ABSENT, Status.ABSENT), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
     view = {start: Action("spam", 25.0, (Outcome(goal, 1), Outcome(start, 999)))}  # the spam waits for A and B at once and can lose nothing
     plan = _Plan(mean_remaining=25000.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
     grower = Grower(table, ())
     grower.ran((0,), plan, True)
-    positions, why = grower.next()
-    assert _names(table, positions) == {"spam", "lock suffixes", "lock prefixes", "beast lock", "chaos", "annul"}
-    assert why.startswith("the lock group of the plan's dearest step not yet read, spam")
+    return grower, plan
+
+
+def test_the_step_s_usual_roles_come_first_and_its_lock_group_right_after_their_round_is_beaten():
+    table = _lock_world()
+    grower, plan = _lock_grower(table)
+    positions, why = grower.next()  # the usual roles first: the adder of A comes in, no lock role
+    assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam") and not grower.lock_round
+    assert not _names(table, positions) & {"lock suffixes", "lock prefixes", "beast lock", "chaos"}
     grower.ran(positions, plan, False)  # beaten: the plan in hand stays
-    positions, why = grower.next()  # the same step, read again by its usual roles: the adder of A comes in, no lock group again
-    assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam")
+    positions, why = grower.next()  # the step's lock group, owed, comes next
+    assert _names(table, positions) == {"spam", "lock suffixes", "lock prefixes", "beast lock", "chaos", "annul"}
+    assert why.startswith("the lock group of the plan's dearest step not yet read, spam") and grower.lock_round
+    grower.ran(positions, plan, False)
+    assert grower.next() is None  # one lock group per step in the run, and its usual roles were read
+
+
+def test_a_round_of_usual_roles_that_improves_the_plan_owes_no_lock_group_the_step_is_read_again_usual_roles_first():
+    table = _lock_world()
+    grower, plan = _lock_grower(table)
+    positions, _why = grower.next()
+    grower.ran(positions, plan, True)  # the usual round made the plan in hand: the step is read again under it
+    assert grower.owed is None
+    positions, why = grower.next()  # its usual roles name nothing new now (that set was tried), so its lock group comes
+    assert why.startswith("the lock group of the plan's dearest step not yet read, spam") and grower.lock_round
 
 
 def test_a_lock_group_that_does_not_finish_in_its_share_ends_nothing_and_a_side_with_no_reroll_under_its_lock_names_no_lock():
     table = _lock_world()
-    table.entries.append(dataclasses.replace(_entry("add A", 5.0, at=RARE, chance={A: Fraction(1, 10)}), position=len(table.entries)))
-    keys = (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))
-    table.under = {key: ([(50.0, 5)] if key[0] == "suffix" else []) for key in keys}
+    grower, plan = _lock_grower(table, under_suffix_only=True)
     # no reroll is ranked under the prefix lock: the prefix lock is not named; the beast puts the suffix lock back, so it stays
     assert _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset())) == {"lock suffixes", "beast lock", "chaos"}
-    start, goal = _State("start", (Status.ABSENT, Status.ABSENT), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
-    view = {start: Action("spam", 25.0, (Outcome(goal, 1), Outcome(start, 999)))}
-    plan = _Plan(mean_remaining=25000.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
-    grower = Grower(table, ())
-    grower.ran((0,), plan, True)
+    positions, why = grower.next()
+    assert why.startswith("the plan's dearest step not yet read, spam")
+    grower.ran(positions, plan, False)
     positions, why = grower.next()
     assert why.startswith("the lock group") and grower.lock_round
     grower.ran(positions, plan, False)
-    positions, why = grower.stop()  # its build stopped at its share: the step's usual roles come next, and the growth goes on
-    assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam") and not grower.ended
-    grower.ran(positions, plan, False)
-    assert grower.stop() is None and grower.ended  # a usual round that stops ends the growth, as before
+    assert grower.stop() is None and not grower.ended  # its build stopped: the growth reads on (here no step names more)
+    grower2, plan2 = _lock_grower(_lock_world())
+    positions, _why = grower2.next()
+    grower2.ran(positions, plan2, False)
+    assert grower2.stop() is None and grower2.ended  # a usual round that stops ends the growth, as before, owed lock group or not
 
 
 def test_a_step_that_can_lose_a_mod_has_no_lock_group_its_usual_roles_name_its_protectors():
