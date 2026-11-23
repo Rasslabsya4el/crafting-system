@@ -896,7 +896,7 @@ def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
 def unmodelled_labels(data: GameData, start_item: Item, labels: Iterable[str]) -> tuple[str, ...]:
     """The labels of `labels` that no planner action of the catalog bears on the start item or on an empty item of its base at any rarity
     (`_probe_items`), sorted: the actions the model does not hold for this item, such as a deferred method (OR-37) or a misspelt label.
-    Hinekora's Lock is no such label: the plan offers it as a Peek (`_foresight`)."""
+    The kind name of Hinekora's Lock is left out: the plan offers it as a Peek (`_foresight`), not as an action of the catalog."""
     asked = {label for label in labels if label != LOCK_KIND}
     if not asked:
         return ()

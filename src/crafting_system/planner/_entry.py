@@ -91,8 +91,11 @@ def guide_plan(data: GameData, target: Target, prices: PriceFile, labels: tuple[
     quality and the implicit stay in the model, since a guide may name the catalyst or the orb that sets them. A catalyst quality or a base
     implicit that NO action of the route changes is left out of the model instead, as the planner's own plan leaves it to a finish after
     the mods (`_quality_finish`, `_implicit_finish`): the route could never reach it, and the plan's cost it is compared with holds the mods
-    alone. Raises `NotModelled` naming each label no action of the catalog bears on this item, and `PlanError` as `make_plan` does (a label
+    alone; a finish the route keeps in its model is in its cost, and the caller compares it with the plan's mods and that finish
+    (`Plan.quality_finish_value`, `Plan.implicit_finish_value`). Raises `NotModelled` naming each label no action of the catalog bears on this item, and `PlanError` as `make_plan` does (a label
     the catalog bears but the item never takes, no price for the start item)."""
+    if not labels:
+        raise PlanError("the guide's route names no action (only `restart`, or a file that cannot be read): there is nothing to price")
     missing = unmodelled_labels(data, target.start_item, labels)
     if missing:
         raise NotModelled(missing)
@@ -104,9 +107,14 @@ def guide_plan(data: GameData, target: Target, prices: PriceFile, labels: tuple[
         )  # fmt: skip
 
     plan = made(target)
-    named = [priced.offer.action.adds(data) for priced in plan.offers if priced.label in labels]
-    quality_left = _quality_finish.applies(target) and not any(adds.quality for adds in named)
-    implicit_left = _implicit_finish.applies(data, target) and not any(adds.implicits or adds.corrupts for adds in named)
+    named = [priced.offer.action for priced in plan.offers if priced.label in labels]
+    # an action that sets, changes or reads the quality (or the implicits), or corrupts the item, keeps it in the model, as `holds` keeps it for the planner
+    quality_left = _quality_finish.applies(target) and not any(
+        (adds := action.adds(data)).quality or adds.only_quality or adds.corrupts or action.reads(data).quality for action in named
+    )
+    implicit_left = _implicit_finish.applies(data, target) and not any(
+        (adds := action.adds(data)).implicits or adds.corrupts or action.reads(data).implicits for action in named
+    )
     if not (quality_left or implicit_left):
         return plan
     # the start item is the one the target describes, priced as it (OR-3): its key is computed from the whole target (`make_plan`'s `priced_as`)

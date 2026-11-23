@@ -479,6 +479,7 @@ def run_route(
         "timings_seconds": None,
         "record": None,
         "guide_not_evaluable": None,
+        "solver_compared": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
     loaded: PriceFile | None = None
@@ -532,7 +533,7 @@ def run_route(
             if bench.route is not None:
                 judged_on = plan if not site else _guide_plan_of(entry, bench, plan, data, target, loaded, root)
                 if judged_on is not None:
-                    _judge_guide(entry, timings, bench, judged_on, data, root, config, site)
+                    _judge_guide(entry, timings, bench, judged_on, data, root, config, site, _kept_finishes(plan, judged_on))
     except _Skipped:
         pass
     except BudgetExceeded as stop:  # the memory net, met after the plan: the record is kept and the stop is said (#1381)
@@ -561,9 +562,22 @@ def _guide_plan_of(entry: dict, bench: BenchmarkRoute, plan: Plan, data: GameDat
         return None
 
 
-def _judge_guide(entry: dict, timings: dict, bench: BenchmarkRoute, plan: Plan, data: GameData, root: Path, config: Config, site: bool) -> None:
+def _kept_finishes(plan: Plan, judged_on: Plan) -> float:
+    """What the site `plan` leaves to a finish after its mods (its `solver` mean holds the mods alone) and the guide's own plan `judged_on`
+    keeps in its model, since the guide names the catalyst or the orb (`guide_plan`): the guide's cost holds it, so the plan is compared
+    with its mods and that finish (#1442). 0 when the guide is read on the plan itself."""
+    if judged_on is plan:
+        return 0.0
+    quality = plan.quality_finish_value if judged_on.target.quality is not None else 0.0
+    implicit = plan.implicit_finish_value if judged_on.target.implicits else 0.0
+    return quality + implicit
+
+
+def _judge_guide(
+    entry: dict, timings: dict, bench: BenchmarkRoute, plan: Plan, data: GameData, root: Path, config: Config, site: bool, finishes: float = 0.0
+) -> None:
     """The guide's route, and its completed one, evaluated on `plan` into `entry` (`_given_route`): the site plan's or the guide's own
-    (`_guide_plan_of`). Of a site plan a route that cannot be read is said in `entry["guide_not_evaluable"]`, since the plan itself stands
+    (`_guide_plan_of`). The solver's side of the comparison is its mean plus `finishes` (`_kept_finishes`), said in `solver_compared`. Of a site plan a route that cannot be read is said in `entry["guide_not_evaluable"]`, since the plan itself stands
     (#1442); without the net it is the entry's error, as before."""
     try:
         route = load_route(root / bench.route, plan, data)
@@ -574,20 +588,22 @@ def _judge_guide(entry: dict, timings: dict, bench: BenchmarkRoute, plan: Plan, 
         entry["guide_not_evaluable"] = f"guide not evaluable: {_without_root(str(refused), root)}"
         return
     own = plan.start_price.chaos  # the guide's route starts from the target's own item, the start of `plan`
+    solver = entry["solver"]["mean"]
+    if finishes and solver is not None:
+        solver = solver + finishes
+        entry["solver_compared"] = {"mean": solver, "finishes": finishes}  # the plan's mods and the finish the guide's cost holds
     result = evaluate_route(plan, route, data)
     ask(fresh=True)
-    entry["given_route"] = _given_route(
-        plan, result, data, own, entry["solver"]["mean"], config.benchmark_review_ratio, _reviewing(bench, bench.route, GUIDE, root, config)
-    )
+    entry["given_route"] = _given_route(plan, result, data, own, solver, config.benchmark_review_ratio, _reviewing(bench, bench.route, GUIDE, root, config))
     timings["route_evaluate"] = result.seconds
-    entry["solver_not_dearer"] = _not_dearer(entry["solver"]["mean"], entry["given_route"]["mean"])
+    entry["solver_not_dearer"] = _not_dearer(solver, entry["given_route"]["mean"])
     if completed is not None:
         again = evaluate_route(plan, completed, data)
         entry["completed_route"] = _given_route(
-            plan, again, data, own, entry["solver"]["mean"], config.benchmark_review_ratio, _reviewing(bench, bench.completed, COMPLETED, root, config),
+            plan, again, data, own, solver, config.benchmark_review_ratio, _reviewing(bench, bench.completed, COMPLETED, root, config),
         )
         timings["completed_route_evaluate"] = again.seconds
-        entry["solver_not_dearer_than_completed"] = _not_dearer(entry["solver"]["mean"], entry["completed_route"]["mean"])
+        entry["solver_not_dearer_than_completed"] = _not_dearer(solver, entry["completed_route"]["mean"])
 
 
 def _record(plan: Plan, mean: float | None, shift: float) -> dict:
@@ -838,6 +854,9 @@ def render_summary(document: dict) -> str:
             lines.append("  solver not dearer than the guide: " + ("yes" if entry["solver_not_dearer"] else "NO"))
         if entry["solver_not_dearer_than_completed"] is not None:
             lines.append("  solver not dearer than the completed route: " + ("yes" if entry["solver_not_dearer_than_completed"] else "NO"))
+        if entry.get("solver_compared") is not None:
+            compared = entry["solver_compared"]
+            lines.append(f"  solver compared with the guide at {money(compared['mean'])} Chaos: its mods and the {money(compared['finishes'])} Chaos of the finish the guide's route holds")
         if entry.get("guide_not_evaluable") is not None:
             lines.append(f"  {entry['guide_not_evaluable']}")
         if entry["error"] is not None:

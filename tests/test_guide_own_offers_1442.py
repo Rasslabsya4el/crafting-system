@@ -89,3 +89,33 @@ def test_the_guide_costs_the_same_on_its_own_offers_as_on_a_plan_that_offers_eve
     on_own = evaluate_route(own, load_route(GUIDE, own, DATA), DATA).risk
     on_wide = evaluate_route(wide, load_route(GUIDE, wide, DATA), DATA).risk
     assert on_own.mean.value == pytest.approx(on_wide.mean.value, rel=1e-12) and own.start_price.chaos == wide.start_price.chaos
+
+
+def test_a_finish_the_guide_s_route_sets_stays_in_its_model_and_one_it_never_touches_is_left_to_the_finish():
+    """R05's guide names the Intrinsic Catalyst, so its plan keeps the quality and its cost holds the catalysts; R06's names neither the
+    catalyst nor the Blessed Orb, so both are left out, as the site plan leaves them to its finishes (real data; skips without it)."""
+    from abstraction_support import real_game_data
+
+    from crafting_system.cli._route import route_actions
+    from crafting_system.prices import load_price_file
+
+    data = real_game_data()
+    root = Path(__file__).resolve().parents[1]
+    kept = {}
+    for name in ("r05-strength-ring", "r06-strength-heavy-belt"):
+        target = load_target(root / "examples" / "targets" / f"{name}.yaml", data)
+        prices = load_price_file(target.price_file or root / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json")
+        plan = guide_plan(data, target, prices, route_actions(root / "examples" / "routes" / f"{name}.yaml"))
+        kept[name] = (plan.target.quality is not None, bool(plan.target.implicits))
+    assert kept == {"r05-strength-ring": (True, False), "r06-strength-heavy-belt": (False, False)}
+
+
+def test_the_plan_is_compared_with_its_mods_and_the_finish_the_guide_s_cost_holds():
+    from types import SimpleNamespace
+
+    site = SimpleNamespace(quality_finish_value=16.5, implicit_finish_value=4.0)
+    keeps_quality = SimpleNamespace(target=SimpleNamespace(quality=object(), implicits=()))
+    keeps_none = SimpleNamespace(target=SimpleNamespace(quality=None, implicits=()))
+    assert benchmark_module._kept_finishes(site, keeps_quality) == 16.5
+    assert benchmark_module._kept_finishes(site, keeps_none) == 0.0
+    assert benchmark_module._kept_finishes(site, site) == 0.0  # read on the site plan itself: one model, nothing added
