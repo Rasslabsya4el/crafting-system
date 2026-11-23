@@ -215,7 +215,7 @@ class BeastSideSwap(Action):
         types of the state carry the weight of each mod at the beast level too (`draw_levels`, #149): two families alike at
         the item's level but not at the beast's are never one type. The removal is uniform, so only counts matter.
         """
-        return Reads(junk=True, families=frozenset(), pool_weight=True, draw_levels=frozenset({self.beast_level}))
+        return Reads(junk=True, families=frozenset(), pool_weight=True, draw_levels=frozenset({self.beast_level}), carried=frozenset({self.remove_side}))
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         # `keeps_crafted` stays True: a crafted mod is one of the mods the removal may take, but it is not erased

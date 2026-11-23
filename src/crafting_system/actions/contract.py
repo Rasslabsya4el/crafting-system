@@ -258,6 +258,13 @@ class Reads:
       white) on a fixture item that holds sockets. The default is False; `Action.reads` (an action that declares nothing) says True for
       all three. Like the enchantment they are **not** part of `item_state`: the sockets are a finish step (ADR-0045) and stay out of the
       compressed state of the mods.
+    * `carried`: with `junk`, sides whose ordinary mods (not fractured, not crafted, not veiled) the action reads only by their count: on an
+      item whose pool holds no family on both sides (`pool.partners`), one such mod swapped for another ordinary mod of its side gives the
+      outcomes of the item before with that mod swapped in each result that keeps it, at the same chances, and the same refusal. A Beastcraft
+      side swap carries the side it removes from: it removes one of its mods uniformly and draws on the other side, which a family of the
+      removed side does not touch. The bound's build then asks the action once for each multiset of what the key reads of those slots
+      (`Pattern.carried_view`, #1192). The default is empty; the contract suite swaps such a mod on the fixture items
+      (`tests/test_reads_carried.py`).
     """
 
     junk: bool = True
@@ -286,6 +293,7 @@ class Reads:
     draw_tags: frozenset[str] = frozenset()
     draw_levels: frozenset[int] = frozenset()
     refusal_by_families: bool = False
+    carried: frozenset = frozenset()
 
     @property
     def item_state(self) -> bool:
