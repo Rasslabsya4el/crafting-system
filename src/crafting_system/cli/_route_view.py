@@ -67,6 +67,7 @@ import numpy as np
 from crafting_system.actions import DRAW_LABEL
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
+from crafting_system.abstraction._kinds import kind_tags
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
 from crafting_system.prices.query_compare import searched_spec
@@ -113,6 +114,7 @@ AGAIN = "not yet, this step again"  # an outcome that leaves the item in the sam
 NEXT = "Next step"  # the field of a restart, in place of "On failure": buying the item again is the step, not a failure of it (#892)
 FREE = "free"  # the cost of a use that consumes nothing (an unveil, a pick): the planner's epsilon is no price a player pays (#1442)
 NEVER = "never finishes"
+REACHED_FROM = "Reached from"  # the rows that lead to a row the row above does not lead to (#1442)
 
 # --- the model of the page -------------------------------------------------------------------------------
 
@@ -375,6 +377,150 @@ def _require_limits(plan: Plan) -> None:
         )
 
 
+# --- telling the branches of a step apart by the item (#1442) ---------------------------------------------------
+
+# the order of the conditions on an item: wanted mods first, a wanted family at too low a tier last
+_ORDER = {"leaf": 0, "crafted": 1, "fractured": 1, "rarity": 2, "junk": 3, "tag": 3, "open": 4, "below": 5}
+_BINARY = ("leaf", "below", "fractured", "crafted", "rarity")
+KINDS = 4  # the most kinds of item one line names, and the most conditions that name one: past them a line no longer reads as a condition
+KIND_WORDS = 4
+
+
+@dataclass(frozen=True)
+class _Column:
+    """A condition a player checks on an item: "with" or "without" `noun`, or `noun` alone ("a magic item"); `order` ranks the words."""
+
+    sign: str
+    noun: str
+    order: tuple[int, int]
+
+
+@dataclass(frozen=True)
+class _Table:
+    """The conditions on the items one step's uses leave: `tests[c, i]` whether condition `c` holds on item `i`."""
+
+    index: dict
+    columns: tuple[_Column, ...]
+    tests: np.ndarray
+
+    def rows(self, states) -> np.ndarray:
+        return np.unique(np.fromiter((self.index[state] for state in states), dtype=np.int64))
+
+    @staticmethod
+    def of(states: list, traits: list[dict[tuple, int]], noun) -> "_Table":
+        keys = list(dict.fromkeys(key for each in traits for key in each))
+        columns: list[_Column] = []
+        tests: list[np.ndarray] = []
+        seen: set[tuple[str, str]] = set()
+        for key in sorted(keys, key=lambda key: _ORDER[key[0]]):
+            if key[0] == "open" and any(key not in each for each in traits):  # an item whose open slots are not known
+                continue
+            values = np.fromiter((each.get(key, 0) for each in traits), dtype=np.int64, count=len(traits))
+            for sign, words, test in _conditions(key, values, noun):
+                if (sign, words) in seen or test.all() or not test.any():  # a crafted mod the target wants is its leaf too: one condition
+                    continue
+                seen.add((sign, words))
+                columns.append(_Column(sign, words, (_ORDER[key[0]], len(columns))))
+                tests.append(test)
+        matrix = np.array(tests, dtype=bool).reshape(len(tests), len(states))
+        return _Table({state: i for i, state in enumerate(states)}, tuple(columns), matrix)
+
+
+def _conditions(key: tuple, values: np.ndarray, noun):
+    """The conditions of one trait of the items (`_View._traits`), in words, each with where it holds."""
+    kind = key[0]
+    if kind in _BINARY:
+        if kind == "rarity":
+            yield "", f"a {key[1]} item", values == 1
+            return
+        words = noun(key)
+        yield "with", words, values == 1
+        yield "without", words, values == 0
+        return
+    side = key[1]
+    what = f"open {side}" if kind == "open" else f"unwanted {side}" if kind == "junk" else f"unwanted {side} mod"
+
+    def counted(count_: int) -> str:
+        return f"{count_} {what}" if count_ == 1 else f"{count_} {what}{'es' if what.endswith('fix') else 's'}"
+
+    found = sorted(set(values.tolist()))
+    for count_ in found:  # a count first, then the ranges
+        if kind == "open":
+            yield "with", _open(count_, side), values == count_
+        elif count_ == 0:
+            yield "without", f"an {what}", values == 0
+        else:
+            yield "with", f"an {what}" if count_ == 1 else counted(count_), values == count_
+    for count_ in found[1:]:
+        yield "with", f"at least {counted(count_)}", values >= count_
+    for count_ in found[:-1]:
+        if count_:
+            yield "with", f"at most {counted(count_)}", values <= count_
+
+
+def _parted(on_others: np.ndarray, rest: np.ndarray, columns) -> int:
+    """How many of the other items left (`rest`) the conditions `columns` together rule out."""
+    held = rest.copy()
+    for c in columns:
+        held &= on_others[c]
+    return int(rest.sum() - held.sum())
+
+
+def _fewest(whole: list[int], on_others: np.ndarray, rest: np.ndarray) -> list[int] | None:
+    """The fewest of the conditions `whole` (each holds on every item of the branch) that rule out every other item: one, else two, the
+    earliest words first; None when two do not."""
+    need = int(rest.sum())
+    for c in whole:  # in the order of their words
+        if _parted(on_others, rest, [c]) == need:
+            return [c]
+    best = sorted(whole, key=lambda c: -_parted(on_others, rest, [c]))[:24]
+    pairs = [(a + b, a, [a, b]) for k, a in enumerate(best) for b in best[k + 1 :] if _parted(on_others, rest, [a, b]) == need]
+    return min(pairs)[2] if pairs else None
+
+
+def _kinds(table: _Table, on_mine: np.ndarray, on_others: np.ndarray, rest: np.ndarray) -> list[list[int]] | None:
+    """The items of a branch as at most `KINDS` kinds, each told by at most `KIND_WORDS` conditions that hold on all its items and on no
+    other item: a kind is grown one condition at a time, each the one that rules out the most other items for the items it keeps (the
+    information gain of rule learning, FOIL), and the next kind is grown on the items no kind names yet. None when they do not cover them all."""
+    left = np.ones(on_mine.shape[1], dtype=bool)
+    kinds: list[list[int]] = []
+    for _ in range(KINDS):
+        kind: list[int] = []
+        mine, theirs = left.copy(), rest.copy()
+        while theirs.any() and len(kind) < KIND_WORDS:
+            p, n = int(mine.sum()), int(theirs.sum())
+            best, score = None, -math.inf
+            for c in range(len(on_mine)):
+                p1, n1 = int((mine & on_mine[c]).sum()), int((theirs & on_others[c]).sum())
+                if p1 == 0 or n1 == n:
+                    continue
+                gain = p1 * (math.log(p1 / (p1 + n1)) - math.log(p / (p + n)))
+                if gain > score + 1e-12:
+                    best, score = c, gain
+            if best is None:  # no condition rules out one more other item
+                break
+            kind.append(best)
+            mine &= on_mine[best]
+            theirs &= on_others[best]
+        if theirs.any() or not kind:
+            return None
+        kinds.append(kind)
+        left &= ~mine
+        if not left.any():
+            return kinds
+    return None
+
+
+def _words(columns: list[_Column]) -> str:
+    """Conditions in words: those alone first, then "with ...", then "without ..." ("a rare item, with Life T1, without an unwanted prefix")."""
+    ordered = sorted(columns, key=lambda column: column.order)
+    parts = [column.noun for column in ordered if column.sign == ""]
+    for sign in ("with", "without"):
+        if nouns := [column.noun for column in ordered if column.sign == sign]:
+            parts.append(f"{sign} {'; '.join(nouns)}")
+    return ", ".join(parts)
+
+
 class _View:
     """What the rows of one section share: the plan, the data, the flow and the anchors."""
 
@@ -476,9 +622,12 @@ class _View:
             found.append("a rare item")
         return list(dict.fromkeys(found))
 
-    def lost(self, edge: Edge) -> list[str]:
-        """What a failure edge costs the item, in words: the wanted mod its uses lose, or the list of those they may lose."""
+    def lost(self, edge: Edge, removed: bool = False) -> list[str]:
+        """What a failure edge costs the item, in words: the wanted mod its uses lose, or the list of those they may lose. A sure use
+        (`removed`: Remove Crafted Mods, a Scouring) does not miss: it removes them, which is what it is used for (R13 step 13, #1442)."""
         texts = list(dict.fromkeys(self.leaf_text(i) for i in edge.lost))  # two leaves that read alike are one mod to a player (#984)
+        if removed:
+            return [f"{texts[0]} removed" if len(texts) == 1 else f"removed: {'; '.join(texts)}"] if texts else []
         if len(texts) <= 1:
             return [f"{text} lost" for text in texts]
         return [f"one of these lost: {'; '.join(texts)}"]
@@ -528,25 +677,27 @@ class _View:
         """
         if edge.kind == "goal" or edge.to is None:
             return "the target", False
-        if edge.kind == "again":
-            return AGAIN, False
+        if edge.kind == "failure" and step.action is not None and step.action.label == RESTART:
+            return f"the start item {'made again at the vendor' if self.first is not None else 'bought again'}", False
+        if edge.kind == "again":  # the item a use leaves in the step, told from those it sends on to another step (R14 step 9's Exalted Orb)
+            onward = any(other.kind != "goal" and other.to != edge.to for other in step.edges)  # beside the target alone, "not yet" says it
+            tell = self.item_words(step, edge) if onward else ""
+            return (f"{tell}, {AGAIN}" if tell else AGAIN), False
+        if edge.kind == "failure" and (lost := self.lost(edge, removed=step.action is not None and self.sure(step.action))):
+            tell = self.item_words(step, edge, given=tuple(("without", self.leaf_text(i)) for i in edge.lost))
+            return " and ".join(lost) + (f", {tell}" if tell else ""), False
+        # what the use gave, and what parts the item from those of the step's other branches (the use may give the same on several)
+        appeared = self.appeared(step, edge) if edge.states else []
+        said = tuple(("with", text) for text in appeared)
+        words = ", ".join(part for part in (" and ".join(appeared), self.item_words(step, edge, given=said)) if part)
         if edge.kind == "failure":
-            if step.action is not None and step.action.label == RESTART:
-                return f"the start item {'made again at the vendor' if self.first is not None else 'bought again'}", False
-            if lost := self.lost(edge):
-                return " and ".join(lost), False
             there = self.flow.steps[edge.to - 1].action  # `edge.to` is a step number (from 1)
+            lead = f"{words}, " if words else ""
             if there is None:
-                return "the route has no step for this item", True
-            if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442)
-                return f"the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
-        elif appeared := self.appeared(step, edge):
-            # what the use gave, and, when another branch of the step got the same (a sure craft's every branch), what tells this one apart
-            alike = [other for other in step.edges if other is not edge and other.kind == "forward" and self.appeared(step, other) == appeared]
-            mixed = any(text.startswith("one of these fractured") for text in appeared)  # the items differ in what the use gave: say what parts them too
-            tell = self.item_words(step, edge, alike) if alike else self.item_words(step, edge) if mixed else ""
-            return " and ".join(appeared) + (f", {tell}" if tell else ""), False
-        if words := self.item_words(step, edge):
+                return f"{lead}the route has no step for this item", True
+            if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442), and the item that sends there
+                return f"{lead}the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
+        if words:
             return words, False
         return f"the item of step {edge.to + 1}", True
 
@@ -563,45 +714,100 @@ class _View:
         sides = (Side.PREFIX, Side.SUFFIX)
         return tuple(max(0, _capacity(self.data, self.ab.base_id, side, rarity) - held[side]) for side in sides)  # type: ignore[return-value]
 
-    def item_words(self, step: Step, edge: Edge, among: list[Edge] | None = None) -> str:
-        """The item of a branch, by what a player sees on it that the items of the step's other branches (or of `among`) do not all share (#1442).
+    def item_words(self, step: Step, edge: Edge, among: list[Edge] | None = None, given: tuple[tuple[str, str], ...] = ()) -> str:
+        """The item of a branch, by what a player checks on it that tells it from every item of the step's other branches (or of `among`)
+        (#1442): a wanted mod held or not, a crafted or a fractured mod, the rarity, the mods the target does not need on each side (and
+        those of them with an attack or caster tag, which a metamod reads), the open prefixes and suffixes, a wanted family at too low a tier.
 
-        The wanted mods every item of the branch holds and some item of another branch lacks ("with ..."), those none of them holds and
-        some item of another branch does ("without ..."); when no wanted mod tells them apart, the open prefixes and suffixes every item of the
-        branch has and some other has not. "" when nothing does (the branches differ only in what the page cannot name).
+        The plan picks the next action by the item a use leaves, so the items of two branches are never the same: a few of these conditions
+        that hold on every item of the branch and on none of the others' are what a player reads off his item ("with an unwanted attack mod,
+        then Orb of Annulment"). The fewest that do, wanted mods first; when the branch holds items of several kinds, one set per kind joined
+        by "or" (at most `KINDS`). `given` are the conditions the line says already, as ("with" or "without", words): what the use gave or
+        lost, which part it from some others already.
+        "" when nothing parts every item within those bounds (words that hold on some other branch's items too would send a player
+        wrong), or when `given` says enough.
         """
-        mine = edge.states
-        others = [state for other in (step.edges if among is None else among) if other is not edge for state in other.states]
-        if not mine or not others:
-            return ""
-        width = len(self.plan.leaf_labels)
+        key = (step.number, id(edge), None if among is None else tuple(id(other) for other in among), given)
+        cache = self.__dict__.setdefault("_words", {})
+        if key not in cache or cache[key][0] is not edge:  # the edge kept with its words: its id is not taken by another while it lives
+            cache[key] = (edge, among, self._item_words(step, edge, among, given))
+        return cache[key][2]
 
-        def met(state, i: int) -> bool:
-            return state.status[i] is Status.PASSING
-
-        held = [i for i in range(width) if all(met(state, i) for state in mine) and not all(met(state, i) for state in others)]
-        lacked = [i for i in range(width) if not any(met(state, i) for state in mine) and any(met(state, i) for state in others)]
-        parts = []
-        if held:
-            parts.append("with " + "; ".join(dict.fromkeys(self.leaf_text(i) for i in held)))
-        if lacked:
-            parts.append("without " + "; ".join(dict.fromkeys(self.leaf_text(i) for i in lacked)))
-        if parts:
-            return ", ".join(parts)
-        free = {self._free_slots(state) for state in mine}
-        if len(free) == 1 and (shared := next(iter(free))) is not None and any(self._free_slots(state) != shared for state in others):
-            return "with " + " and ".join(_open(count_, side) for count_, side in zip(shared, ("prefix", "suffix")))
-        theirs = [self._free_slots(state) for state in others]
-        if None in free or None in theirs:
+    def _item_words(self, step: Step, edge: Edge, among: list[Edge] | None, given: tuple[tuple[str, str], ...]) -> str:
+        if not edge.states:
             return ""
-        words = []  # the items of a branch hold different counts, but a side's count still parts them from the others' (R14 step 5, #1442)
-        for k, side in enumerate(("prefix", "suffix")):
-            low, high = min(f[k] for f in free), max(f[k] for f in free)
-            if low > max(f[k] for f in theirs):
-                words.append(f"at least {_open(low, side)}" if low < high else _open(low, side))
-            elif high < min(f[k] for f in theirs):
-                words.append(_open(0, side) if high == 0 else f"at most {_open(high, side)}" if low < high else _open(high, side))
-        return "with " + " and ".join(words) if words else ""
+        pool = [other for other in (step.edges if among is None else among) if other is not edge and other.to != edge.to]
+        # the items of the branches that go on with another action (the target's too): a lost-and-back branch to the same step reads apart already
+        table = self._table(step)
+        if any(state not in table.index for each in (edge, *pool) for state in each.states):  # items the step's own branches do not hold
+            states = list(dict.fromkeys(state for each in (edge, *pool) for state in each.states))
+            table = _Table.of(states, [self._traits(state) for state in states], self._noun)
+        mine = table.rows(edge.states)
+        theirs = [table.rows(other.states) for other in pool]
+        others = np.setdiff1d(np.concatenate(theirs) if theirs else np.zeros(0, dtype=np.int64), mine)
+        if not others.size:
+            return ""
+        on_mine, on_others = table.tests[:, mine], table.tests[:, others]
+        rest = np.ones(others.size, dtype=bool)
+        for c, column in enumerate(table.columns):  # what the line says already
+            if (column.sign, column.noun) in given and on_mine[c].all():
+                rest &= on_others[c]
+        if not rest.any():
+            return ""
+        whole = [c for c in range(len(table.columns)) if on_mine[c].all() and not on_others[c][rest].all()]
+        chosen = _fewest(whole, on_others, rest)
+        if chosen is not None:
+            return _words([table.columns[c] for c in chosen])
+        kinds = _kinds(table, on_mine, on_others, rest)  # several kinds of item, each told apart by its own conditions
+        if kinds is not None:
+            return ", or ".join(_words([table.columns[c] for c in kind]) for kind in kinds)
+        return ""  # no words that hold on this branch's items alone: a condition some other branch's items share would send a player wrong
+
+    def _table(self, step: Step) -> "_Table":
+        """The conditions of `_traits` on every item a use of `step` leaves, kept per step."""
+        tables = self.__dict__.setdefault("_tables", {})
+        if step.number not in tables:
+            states = list(dict.fromkeys(state for edge in step.edges for state in edge.states))
+            tables[step.number] = _Table.of(states, [self._traits(state) for state in states], self._noun)
+        return tables[step.number]
+
+    def _noun(self, key: tuple) -> str:
+        kind = key[0]
+        if kind == "leaf":
+            return self.leaf_text(key[1])
+        if kind == "below":
+            below = self.reader.wanted([key[1]], Status.BELOW)
+            return f"{below.text} · {below.note}"  # "tier too low", or "below roll 12" for a leaf that asks a roll (#1433)
+        if kind == "crafted":
+            return f"{self._mod(key[1])} · crafted"
+        return key[1]  # a fractured mod's words, a rarity
+
+    def _traits(self, state: CompressedState) -> dict[tuple, int]:
+        """What a player sees on an item, as numbers: the wanted mods it holds, at the tier or too low, its crafted and fractured mods, its
+        rarity, the mods the target does not need on each side (with the attack or caster tag a metamod reads), its open prefixes and suffixes."""
+        traits: dict[tuple, int] = {}
+        for i, status in enumerate(state.status):
+            traits[("leaf", i)] = int(status is Status.PASSING)
+            traits[("below", i)] = int(status is Status.BELOW)
+        for entry in state.fractured:
+            traits[("fractured", self._fractured_text(entry))] = 1
+        traits[("rarity", state.flags.rarity.value)] = 1
+        junk = {Side.PREFIX: 0, Side.SUFFIX: 0}
+        tags: Counter = Counter()
+        for slot in state.slots:
+            if slot.crafted:
+                traits[("crafted", slot.kind)] = 1
+            elif not any(status is not Status.ABSENT for status in slot.contribution):
+                junk[slot.side] += 1
+                tags.update(kind_tags(slot.kind))
+        if self.reader.tracked:  # else the state keeps no mod the target does not need
+            traits[("junk", "prefix")], traits[("junk", "suffix")] = junk[Side.PREFIX], junk[Side.SUFFIX]
+            for tag in ("attack", "caster"):
+                traits[("tag", tag)] = tags[tag]
+            free = self._free_slots(state)
+            if free is not None:
+                traits[("open", "prefix")], traits[("open", "suffix")] = free
+        return traits
 
     @staticmethod
     def sure(action: Action) -> bool:
@@ -900,16 +1106,17 @@ class _View:
         if action is None:
             fields = _fields(_plain("Why", step.reason or "no action is available here"))
             return StepRow(number, "No action", fields, card_of_states(self.ab, step.states, self.reader), self.anchor(number))
-        moving = [edge for edge in step.edges if edge.kind in ("forward", "goal")]
-        shown = [edge for edge in step.edges if edge.kind != "failure"]
-        failing = [edge for edge in step.edges if edge.kind == "failure"]
         restart = action.label == RESTART
+        sure = self.sure(action) and not restart
+        removing = [edge for edge in step.edges if sure and self.removes(edge)]  # a sure use's removal is no failure: it is what it is used for
+        moving = [edge for edge in step.edges if edge.kind in ("forward", "goal") or edge in removing]
+        shown = [edge for edge in step.edges if edge.kind != "failure" or edge in removing]
+        failing = [edge for edge in step.edges if edge.kind == "failure" and edge not in removing]
         goal = self.gains(step, moving)
         if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
         never = step.never_finishes
         step_cost = step.step_cost
-        sure = self.sure(action) and not restart
         leave = math.fsum(edge.chance for edge in step.edges if edge.to != step.number)  # the chance a use takes the item out of the step
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [self.uses_text(step.uses, step.reached, sure or restart, leave)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
@@ -921,6 +1128,7 @@ class _View:
             landing = [state for edge in (moving or step.edges) for state in edge.states]
             after = card_of_states(self.ab, list(dict.fromkeys(landing)), self.reader)
         fields = _fields(
+            self.reached_from(number),
             _plain("Goal", *goal),
             _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
@@ -935,6 +1143,34 @@ class _View:
         )
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after))
+
+    def removes(self, edge: Edge) -> bool:
+        """Whether a failure edge is a use that took wanted mods off the item and goes on to a step that acts (not a restart, not a dead end)."""
+        if edge.kind != "failure" or not edge.lost or edge.to is None:
+            return False
+        there = self.flow.steps[edge.to - 1].action
+        return there is not None and there.label != RESTART
+
+    def reached_from(self, number: int) -> Field | None:
+        """The rows that lead to row `number`, when the row above it is not one of them: a row reached only from a loop or a jump is printed
+        between the rows of the straight path, and a player reading down would take it next (R14: steps 11, 12, 13, #1442). Row 2 always
+        follows the start of row 1."""
+        into = self.__dict__.get("_into")
+        if into is None:
+            into = {}
+            for step in self.flow.steps:
+                for edge in step.edges:
+                    if edge.to is not None and edge.to != step.number:
+                        into.setdefault(edge.to + 1, set()).add(step.number + 1)
+            self._into = into
+        rows = sorted(into.get(number, ()))
+        if number <= 2 or not rows or number - 1 in rows:
+            return None
+        return Field(REACHED_FROM, tuple(Line(f"step {row}: {self.title_of(row)}", f"#{self.anchor(row)}") for row in rows))
+
+    def title_of(self, row: int) -> str:
+        there = self.flow.steps[row - 2].action
+        return "no action" if there is None else self.title(there)
 
     def free(self, action: Action) -> bool:
         """Whether a use of the action consumes nothing a player pays for: the draw of a bought listing, an unveil, a pick (#1442)."""
