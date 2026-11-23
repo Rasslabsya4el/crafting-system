@@ -27,7 +27,7 @@
 #     it asked tier 1 of both. The Evasion leaf is the percentage prefix "#% increased Evasion Rating", (68-79)% or more; the
 #     1900 is a total on the helmet (its base, quality, flat and percentage mods), not a roll of one mod, so it is not
 #     written. The flat "+# to Evasion Rating" prefix and the hybrids (evasion with life, evasion with stun recovery) are not
-#     counted. Life tier 1 on a helmet of item level 84 is +(130-144). Both are rolled, not from the bench.
+#     counted. Life tier 1 on a helmet of item level 85 is +(130-144). Both are rolled, not from the bench.
 #   * "Mana Reservation Efficiency from Loathing, at least Shrieking": the guide leaves the essence's tier to the crafter, so
 #     the planner chooses between the Shrieking and the Deafening essence (see the entry below), and the route page shows the
 #     one it chose in its steps, its prices and its finished item (#895).
@@ -47,9 +47,14 @@
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Lion Pelt
 
-# The item level of the helmet, a whole number from 1 to 100. The guide gives none; 84 lets every
-# tier of every mod appear, as in the R12 example.
-item_level: 84
+# The item level of the helmet, a whole number from 1 to 100. The guide gives none, so the file takes the level a player buys the
+# start at (#1472): the market of fractured Chaos Resistance Lion Pelts sits at item level 85 or more. The search of 2026-11-01
+# ("item level 84 or more", tests/fixtures/trade/recorded/start_items/fetch_r11.json) lists one helmet of item level 84 at
+# 10 Chaos, then nine of item level 85 at 15 to 100 Chaos; on 2026-11-10 the helmets of item level 84 exactly had 3 listings at
+# 3,617 Chaos, against 20 Chaos for the search of 84 or more. Item level 85 adds three suffixes to the pool (the tier-1 Spell
+# Suppression ChanceToSuppressSpells5__, Intelligence10, the tier-1 Accuracy IncreasedAccuracyNew6), and no mod needs a higher
+# level, so a helmet of 85 to 100 is one plan. Until #1472 the file planned item level 84, its own pick (as the R12 example).
+item_level: 85
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # [] means none.

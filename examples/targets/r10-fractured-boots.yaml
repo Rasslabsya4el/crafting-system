@@ -20,7 +20,7 @@
 #   * "30%+ increased Movement Speed (fractured)": the fractured mod is the bought one, the 30%
 #     tier (mod MovementVelocity5, tier 2); the buy spec prices a fractured Movement Speed of 30 or
 #     more, and 30 is the cheapest of those. The guide accepts more than one bought mod here ("30%+");
-#     at item level 84 the only one above 30 would need item level 86, so the file reads it as the 30%
+#     at item level 85 the only one above 30 would need item level 86, so the file reads it as the 30%
 #     one and makes up no other start. (Item level: the guide gives none.)
 #   * "48 Intelligence from Shrieking Essence of Spite": exactly what that essence adds,
 #     "+(43-50) to Intelligence" (mod Intelligence8, tier 2 on boots). The guide's priority list says
@@ -28,7 +28,7 @@
 #     int and life, with an open suffix, you're done"; every roll of the essence (43 to 50) is above
 #     the 40, and the 48 is read as the essence's usual roll, not as a minimum (the guide also says
 #     "Whatever additional stats you get is pure bonus"), so no `min_roll` is written for it.
-#   * "Life": tier 1 or tier 2, +(115-129) or +(100-114) on boots of item level 84. This is the owner's reading of 2026-11-13
+#   * "Life": tier 1 or tier 2, +(115-129) or +(100-114) on boots of item level 85. This is the owner's reading of 2026-11-13
 #     (ticket #895, OR-45): he read the page as a player and fixed the target, because nobody crafts or buys boots with a low Life
 #     tier. The guide says "We want at least 70, but more is always better"; before #895 the file read that as a roll of 70 or
 #     more at any tier (tiers 1 to 4). `r10-fractured-boots-70-life.yaml` keeps that reading of the guide's number.
@@ -46,10 +46,14 @@
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Sorcerer Boots
 
-# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 is this file's choice (the level of the
-# R12 example). It does not let every tier appear: the 35% Movement Speed, tier 1, needs item level 86, so at 84 the 30% tier
-# is the highest the pool holds.
-item_level: 84
+# The item level of the boots, a whole number from 1 to 100. The guide gives none, so the file takes the level a player buys the
+# start at (#1472): the market of fractured 30% Movement Speed Sorcerer Boots sits at item level 85. The search of 2026-11-01
+# ("item level 84 or more", tests/fixtures/trade/recorded/start_items/fetch_r10.json) lists its cheapest ten all at item level 85,
+# 15 to 25 Chaos, and on 2026-11-10 the boots of item level 84 exactly had 9 listings at 249 Chaos (the cheapest five of them),
+# against 17 Chaos for the search of 84 or more. Item level 85 adds one mod to the pool, the Energy Shield Recharge suffix
+# EnergyShieldRechargeRate5______; until #1472 the file planned item level 84, its own pick (the level of the R12 example).
+# The 35% Movement Speed, tier 1, needs item level 86, so at 85 the 30% tier is still the highest the pool holds.
+item_level: 85
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # [] means none.
@@ -62,7 +66,7 @@ requirements:
   # (OR-4), which would be `min_roll: 30` on the Movement Speed family, but the loader refuses that: the family also holds two-stat
   # hybrids, and one `min_roll` list cannot fit mods with different numbers of stats; a `stat:` text selects the fixed 30% mod
   # only, so it cannot say "30 or more" either (issue #534). So the leaf names the one mod that is 30 or more
-  # at item level 84 (the 35% tier needs 86), which is also the mod the buy spec prices. The fractured mod of the start item
+  # at item level 85 (the 35% tier needs 86), which is also the mod the buy spec prices. The fractured mod of the start item
   # counts, and no other mod of this family can be added next to it.
   - family: MovementVelocity
     mod: MovementVelocity5

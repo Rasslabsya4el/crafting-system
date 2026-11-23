@@ -32,9 +32,10 @@
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Sorcerer Boots
 
-# The item level of the boots, a whole number from 1 to 100. The guide gives none; 84 is this file's choice. It does not let
-# every tier appear: the 35% Movement Speed, tier 1, needs item level 86.
-item_level: 84
+# The item level of the boots, a whole number from 1 to 100. The guide gives none; 85 is where a player buys the start, as in
+# r10-fractured-boots.yaml (#1472; 84 until then). It does not let every tier appear: the 35% Movement Speed, tier 1, needs
+# item level 86.
+item_level: 85
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # [] means none.

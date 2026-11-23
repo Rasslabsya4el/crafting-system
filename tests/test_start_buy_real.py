@@ -45,9 +45,9 @@ WINDOWS = {  # (item level, highest item level with the same pool)
     "r05-strength-ring": (75, 75),
     "r08-energy-shield-boots": (86, 100),
     "r09-life-boots": (86, 100),
-    "r10-fractured-boots": (84, 84),
-    "r10-fractured-boots-70-life": (84, 84),
-    "r11-reservation-helmet": (84, 84),
+    "r10-fractured-boots": (85, 85),  # #1472: planned at 85, where a player buys it; 86 adds the 35% Movement Speed
+    "r10-fractured-boots-70-life": (85, 85),
+    "r11-reservation-helmet": (85, 100),  # #1472: planned at 85, where a player buys it; no helmet mod needs more
     "r12-lightning-amulet": (84, 84),
     "r13-life-resist-belt": (86, 100),
     "r14-hunter-bow": (78, 79),

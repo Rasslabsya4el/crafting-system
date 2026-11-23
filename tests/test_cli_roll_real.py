@@ -13,6 +13,7 @@ Every test here plans with the CLASSIC offers (`cli_support.CLASSIC_KINDS`, `CLA
 with every method on, a real route gives no plan within CI's time and memory, and the heavy benchmark records those plans.
 """
 
+import dataclasses
 from pathlib import Path
 
 import pytest
@@ -20,7 +21,8 @@ from abstraction_support import real_game_data
 
 from crafting_system.cli import make_plan, verify
 from crafting_system.prices import load_price_file
-from crafting_system.targets import load_target
+from crafting_system.targets import load_target, start_price_key
+from trade_support import key_in_older_file
 
 CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
 
@@ -38,7 +40,13 @@ def data():
 
 
 def plan_of(data, path: Path):
-    return make_plan(data, load_target(path, data), load_price_file(PRICES))
+    """The plan at the 2026-10-31 prices; the start item is priced by that file's reading of the search for item level 84 or more,
+    kept there under the key of 84 (the target plans 85 since #1472, where that search's cheapest listings were)."""
+    target = load_target(path, data)
+    prices = load_price_file(PRICES)
+    key = start_price_key(data, target)
+    prices = dataclasses.replace(prices, prices={**prices.prices, key: prices.prices[key_in_older_file(key)]})
+    return make_plan(data, target, prices)
 
 
 @pytest.fixture(scope="module")

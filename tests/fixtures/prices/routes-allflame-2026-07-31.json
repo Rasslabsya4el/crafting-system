@@ -1817,13 +1817,13 @@
       },
       "source": "poe.ninja-history"
     },
-    "Lion Pelt, item level 84, fractured +#% to Chaos Resistance (any tier)": {
+    "Lion Pelt, item level 85-100, fractured +#% to Chaos Resistance (any tier)": {
       "chaos": 20.0,
       "detail": {
         "date": "2026-11-10",
         "k": 5,
         "league": "Allflame",
-        "listings": 43,
+        "listings": 40,
         "query": {
           "query": {
             "filters": {
@@ -1836,7 +1836,7 @@
                     "option": "true"
                   },
                   "ilvl": {
-                    "min": 84
+                    "min": 85
                   },
                   "mirrored": {
                     "option": "false"
@@ -1874,19 +1874,16 @@
             "price": "asc"
           }
         },
-        "query_hash": "f0b800e732e0e1bae980f36470e6f53df42b35d876c66689afd9b7b17f8bd266",
+        "query_hash": "6e0f49eeb6033d238f2ae7750b1e2f08ea4657c9262298f37a43d965518b02d1",
         "usable": 10,
         "used": 5
       },
-      "note": "hand-set start price (OR-44, #483): the exact item has 3 listings at 3,617 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (item level 84 or more): the mean of the 5 cheapest instant-buyout listings of 43 on the site; the stored query is that search with its fractured Chaos Resistance minimum of 31 (tier 1) taken off by hand (#522: the start is bought at any tier); the 20 Chaos is the reading of the search with the minimum, kept. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
+      "note": "hand-set start price (OR-44, #1472): the target plans the start at item level 85 or more, where a player buys it, and no search of that item alone was read, so the number is the trade reading of 2026-11-10 of the search for item level 84 or more: 20 Chaos, the mean of its 5 cheapest instant-buyout listings of 43 on the site. Its item-level-84 part was read the same day as an item of its own (3 listings at 3,617 Chaos, the mean of the cheapest of them), so its 5 cheapest were most likely of item level 85 or more, and 40 listings were left; the search of 2026-11-01 (tests/fixtures/trade/recorded/start_items/fetch_r11.json) lists one helmet of item level 84 at 10 Chaos, then nine of item level 85 at 15 to 100 Chaos (the mean of the cheapest five of 85 is 25 Chaos); the reading kept is the later one. That search asked a fractured Chaos Resistance of 31 or more (tier 1); the stored query asks none (#522: the start is bought at any tier), so the price of any tier may be lower. The stored query is the search of the item planned (the page's trade link); until #1472 the start was planned at item level 84 and priced the same, marked as a wider item's price (#483)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
         "depth_unit": "units",
-        "exact_listings": 3,
-        "exact_price": 3616.7333333333336,
-        "for_item": "item level 84 or more",
-        "item": "wider",
+        "item": "exact",
         "kind": "hand-set",
         "league": "Allflame",
         "listings": 5
@@ -3764,13 +3761,13 @@
       },
       "source": "poe.ninja-previous-league"
     },
-    "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed": {
+    "Sorcerer Boots, item level 85, fractured 30% increased Movement Speed": {
       "chaos": 17.0,
       "detail": {
         "date": "2026-11-10",
         "k": 5,
         "league": "Allflame",
-        "listings": 155,
+        "listings": 146,
         "query": {
           "query": {
             "filters": {
@@ -3783,7 +3780,8 @@
                     "option": "true"
                   },
                   "ilvl": {
-                    "min": 84
+                    "max": 85,
+                    "min": 85
                   },
                   "mirrored": {
                     "option": "false"
@@ -3824,19 +3822,16 @@
             "price": "asc"
           }
         },
-        "query_hash": "87d77da5263e8e3d965f3a7024311a646d396b09779a66684bc0cc05b29afb1d",
+        "query_hash": "267bae8ed83b2e19763bad9fd38d669c6ea6f9677d47ecfbcdd9b5c999c74383",
         "usable": 10,
         "used": 5
       },
-      "note": "hand-set start price (OR-44, #483): the exact item has 9 listings at 249 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (item level 84 or more): the mean of the 5 cheapest instant-buyout listings of 155 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
+      "note": "hand-set start price (OR-44, #1472): the target plans the start at item level 85, where a player buys it, and no search of that item alone was read, so the number is the trade reading of 2026-11-10 of the search for item level 84 or more: 17 Chaos, the mean of its 5 cheapest instant-buyout listings of 155 on the site. Its item-level-84 part was read the same day as an item of its own (9 listings at 249 Chaos, the mean of the cheapest of them), so its 5 cheapest were most likely of item level 85 or more, and 146 listings were left; the search of 2026-11-01 (tests/fixtures/trade/recorded/start_items/fetch_r10.json) lists its cheapest ten all at item level 85 exactly, 15 to 25 Chaos (the mean of its cheapest five is 17 Chaos too), and none of 86 or more. The stored query is the search of the item planned (the page's trade link); until #1472 the start was planned at item level 84 and priced the same, marked as a wider item's price (#483)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
         "depth_unit": "units",
-        "exact_listings": 9,
-        "exact_price": 249.48000000000002,
-        "for_item": "item level 84 or more",
-        "item": "wider",
+        "item": "exact",
         "kind": "hand-set",
         "league": "Allflame",
         "listings": 5

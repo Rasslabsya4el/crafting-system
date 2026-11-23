@@ -278,7 +278,7 @@ def unmet_families(target, real, *mods):
 def test_the_r10_target_asks_for_the_fractured_speed_the_essence_intelligence_life_of_tier_1_or_2_and_the_top_craft(real):
     target = load_target(EXAMPLES / "r10-fractured-boots.yaml", real)
 
-    assert target.base_id == "Metadata/Items/Armours/Boots/BootsInt9" and target.item_level == 84
+    assert target.base_id == "Metadata/Items/Armours/Boots/BootsInt9" and target.item_level == 85  # where a player buys the start (#1472)
     assert target.start_item.mods == (ExplicitMod("MovementVelocity5", (30,), fractured=True),)
     speed, intelligence, life, ailments = target.requirements
     assert (speed.family, speed.mod_ids, speed.min_tier) == ("MovementVelocity", {"MovementVelocity5"}, None)
@@ -358,7 +358,7 @@ def test_the_r10_boots_are_not_met_by_another_tier_of_intelligence_life_below_ti
 def test_the_r11_target_asks_for_any_chaos_resistance_a_shrieking_or_deafening_reservation_evasion_of_tier_1_to_3_tier_1_life_and_a_crafted_suffix(real):
     target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
 
-    assert target.base_id == "Metadata/Items/Armours/Helmets/HelmetDex10" and target.item_level == 84
+    assert target.base_id == "Metadata/Items/Armours/Helmets/HelmetDex10" and target.item_level == 85  # where a player buys the start (#1472)
     assert target.start_item.mods == (ExplicitMod("ChaosResist6", (33,), fractured=True),)
     chaos, reservation, evasion, life, finish = target.requirements
     # the guide: "Buy a Fractured Chaos Resistance Base" (no tier), "Essences of Loathing (at least Shrieking)" (OR-4, #404);
@@ -390,7 +390,7 @@ def test_the_r11_and_r12_start_resistances_are_bought_at_any_tier_as_the_leaf_ta
     """#522 (OR-3, OR-4): the guides name no tier of the fractured resistance and the leaf takes any tier, so the buy spec asks no
     minimum and the key says "(any tier)"; the mod written on the start item is the one the plan holds, and it meets the leaf."""
     for name, written, text in (
-        ("r11-reservation-helmet.yaml", "ChaosResist6", "Lion Pelt, item level 84, fractured +#% to Chaos Resistance (any tier)"),
+        ("r11-reservation-helmet.yaml", "ChaosResist6", "Lion Pelt, item level 85-100, fractured +#% to Chaos Resistance (any tier)"),
         ("r12-lightning-amulet.yaml", "LightningResist2", "Paua Amulet, item level 84, fractured +#% to Lightning Resistance (any tier)"),
     ):
         target = load_target(EXAMPLES / name, real)

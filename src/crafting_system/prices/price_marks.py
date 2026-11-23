@@ -17,6 +17,8 @@ its depth in units is at least the units the plan expects to use. Every other pr
   compared with the plan's uses divided by that;
 * "a price set by hand: ..." (OR-44) (a number the tests' price file sets by hand where the market is plainly not what a player pays,
   #483); one set from a wider item's search says so with the stand-in's words, and its reading day is not judged against the file's;
+  one set for the item the plan buys from the listings of a wider search says "a price set by hand from the listings of a wider
+  search: ..." (#1472: R10's and R11's starts, planned at item level 85, priced from the search for 84 or more);
 * "an estimate: no market lists this item" (a number set by hand where neither poe.ninja nor the trade history has the item, #885;
   unlike a hand override it is not the user's own number, so it is never a plain fact);
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
@@ -72,6 +74,8 @@ OLD_THIN = "old-price"
 FROM_RECIPE = "upgrade-recipe"
 ESTIMATED = "estimate"
 HAND_SET_MARK = "hand-set"
+# OR-44, #1472: a number set by hand for the item the plan buys, from listings a search of a wider item read (no search of the item alone)
+HAND_SET_EXACT_WORDS = "a price set by hand from the listings of a wider search: no search of this item alone was read"
 
 
 @dataclass(frozen=True)
@@ -118,8 +122,10 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
     if p.kind == ESTIMATE:
         return (PriceMark(ESTIMATED, "an estimate: no market lists this item"),)
     if p.kind == HAND_SET:  # OR-44: set by hand and marked; a number set from a wider item's search names that item and the exact one's listings
-        hand = PriceMark(HAND_SET_MARK, "a price set by hand: the exact item's own listings (few or none) are not what a player pays")
-        return (hand, PriceMark(STAND_IN, _stand_in_words(p))) if p.item == WIDER else (hand,)
+        if p.item == WIDER:
+            hand = PriceMark(HAND_SET_MARK, "a price set by hand: the exact item's own listings (few or none) are not what a player pays")
+            return (hand, PriceMark(STAND_IN, _stand_in_words(p)))
+        return (PriceMark(HAND_SET_MARK, HAND_SET_EXACT_WORDS),)
     if p.kind == PREVIOUS_LEAGUE:
         found.append(PriceMark(EARLIER, f"previous league's price ({p.league}, {p.date})"))
     elif p.kind == STANDARD:
