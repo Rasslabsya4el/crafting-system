@@ -859,7 +859,18 @@ def test_the_bound_whose_build_begins_again_is_the_model_of_every_offer_and_a_lo
     ab, _, offers, _, exact, whole = world
     new_names_gain(monkeypatch)
     fresh = abstraction()
-    made = count_kernels_made(monkeypatch, fresh)
+    building = []  # the model builder's passes: the missing mods' table (#1496) makes kernels of its own, of the bare item, which are not counted
+    real_pass = PatternBuilder._pass
+
+    def passing(self):
+        building.append(self)
+        try:
+            return real_pass(self)
+        finally:
+            building.pop()
+
+    monkeypatch.setattr(PatternBuilder, "_pass", passing)
+    made = count_kernels_made(monkeypatch, fresh, when=lambda: bool(building))
     bound = pattern_lower_bound(fresh, fresh.compress(START_ITEM), offers, item=START_ITEM)
     assert bound.complete and bound.rounds > 1 and bound.model.stats.universe_growth > 0
     assert len(made) == bound.model.stats.kernels <= whole.model.stats.kernels

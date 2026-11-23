@@ -43,6 +43,9 @@ class AnnulmentOrb(Action):
     def label(self, data: GameData | None = None) -> str:
         return "Orb of Annulment"
 
+    def removal(self) -> str:
+        return "one"
+
     def previewable(self, data: GameData | None = None) -> Previewable:
         return Previewable.NAMED  # ADR-0055: wiki or owner names the preview
 

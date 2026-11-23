@@ -87,7 +87,7 @@ from functools import cache
 from typing import TYPE_CHECKING, ClassVar, Protocol, runtime_checkable
 
 from crafting_system.data import GameData, Mod
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Item, Rarity, Side
 from crafting_system.rules import Rule
 
 from .cut import Cut
@@ -749,6 +749,7 @@ class AddedDraw:
     free: Mapping  # Side -> the free slots of that side at the bare item
     tag: str | None = None
     together: bool = False  # the draw is over every open side at once, not on one of them
+    removes: "Side | None" = None  # a mod of this side, not fractured, is removed uniformly with the add (a Beastcraft side swap; #1496), unless the side is locked
 
 
 @dataclass(frozen=True)
@@ -904,6 +905,17 @@ class Action(ABC):
         """The factor a reroll multiplies the weight of every mod of a family the item holds by before it draws (the likelihood Harvest
         reforges, #975); None, the default, for an action whose pool does not read which families the item holds. The bound's build gives
         such an action the relaxed draw (`abstraction/_relaxed.py`) in place of every member of a key."""
+        return None
+
+    def swapped_stat(self) -> str | None:
+        """The word of the stat ids whose mods one use changes into others of the same count and side, nothing else changed (a Harvest
+        resistance swap: "resist", a damage swap: "damage"; the missing mods' table, #1496); None, the default, for any other action."""
+        return None
+
+    def removal(self) -> str | None:
+        """How a use that adds no mod removes mods, for the missing mods' table (#1496): "crafted" (every crafted mod, Remove Crafted Mods),
+        "one" (one removable mod, uniformly: an Orb of Annulment); None, the default, for an action that declares neither (read as "removes any
+        number")."""
         return None
 
     def imprint_move(self) -> ImprintMove | None:
