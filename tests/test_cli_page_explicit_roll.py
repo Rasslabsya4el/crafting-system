@@ -33,3 +33,13 @@ def test_a_line_naming_the_mod_says_its_roll_and_an_item_under_it_reads_below_th
     assert note.endswith(f"roll {TOP} or more")
     below = reader.wanted([0], Status.BELOW)
     assert below.note == f"below roll {TOP}"  # one mod: only its roll can be short
+
+
+def test_a_mod_asked_at_two_rolls_says_both_and_a_leaf_that_judges_a_tier_says_either():
+    from crafting_system.cli._route_card import below_note, roll_note
+
+    assert roll_note((None, 12)) == "roll 12 or more"
+    assert roll_note((10, 12)) == "rolls 10 and 12 or more"
+    assert roll_note(None) == ""
+    assert below_note(False, (12,)) == "below roll 12" and below_note(True, (12,)) == "tier too low or below roll 12"
+    assert below_note(True, None) == "tier too low"

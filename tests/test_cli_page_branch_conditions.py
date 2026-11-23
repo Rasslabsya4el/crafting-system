@@ -81,8 +81,7 @@ def test_a_sure_craft_that_removes_wanted_crafted_mods_reads_as_its_next_step_no
     (edge,) = step.edges
     assert edge.kind == "failure" and edge.lost  # the flow still counts the loss: the page says it as the craft's purpose
     words, _ = view.edge_phrase(step, edge)
-    assert words.startswith("+(") or words.startswith("(") or "removed" in words
-    assert "removed" in words and "lost" not in words
+    assert words.endswith("· crafted removed") and "lost" not in words  # the one crafted mod it took off
     assert all("lost" not in text for text in lines(remove, NEXT) + lines(remove, SURE_NEXT))
 
 

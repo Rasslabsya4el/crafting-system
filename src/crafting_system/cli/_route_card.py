@@ -95,7 +95,7 @@ from crafting_system.targets import ImplicitRequirement, KOfN, Target
 Tone = Literal["wanted", "mod", "crafted", "any", "empty", "implicit"]
 
 SIDES = (Side.PREFIX, Side.SUFFIX)
-FAMILY_TYPE_TEXT = "a mod of a family no requirement cares about"  # a fractured mod the state holds as its family type ("~n"), not as a mod (ticket #70)
+FAMILY_TYPE_TEXT = "an unwanted mod"  # a player's words (#1442; the page says "unwanted" of every mod the target does not need); a fractured mod the state holds as its family type ("~n"), not as a mod (ticket #70)
 CRAFTED_DOMAIN = "crafted"
 VEILED_DOMAIN = "veiled"
 GRADE_NAMES = {1: "Lesser", 2: "Greater", 3: "Grand", 4: "Exceptional", 5: "Exquisite", 6: "Perfect"}
@@ -538,16 +538,20 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
 def roll_note(min_roll) -> str:
     """The rolls a requirement asks of its mod, one per limited stat ("roll 12 or more"); "" for none. An explicit mod says it on the target
     card and wherever a line names it, as an implicit does: the plan re-rolls until it is reached (#1433, R06's Attributes at 12)."""
-    return _note(*(f"roll {roll} or more" for roll in min_roll or () if roll is not None))
+    rolls = [str(roll) for roll in min_roll or () if roll is not None]
+    if not rolls:
+        return ""
+    return f"roll {rolls[0]} or more" if len(rolls) == 1 else f"rolls {' and '.join(rolls)} or more"
 
 
-def below_note(min_tier_of_leaf: bool, min_roll) -> str:
-    """Why a mod of a wanted family does not meet its leaf: its tier, or its roll under the one asked ("below roll 12")."""
+def below_note(asks_tier: bool, min_roll) -> str:
+    """Why a mod of a wanted family does not meet its leaf: its tier, or its roll under the one asked ("below roll 12"); `asks_tier` when
+    the leaf judges a tier too."""
     rolls = [roll for roll in min_roll or () if roll is not None]
     if not rolls:
         return "tier too low"
     below = "below roll " + " / ".join(map(str, rolls))
-    return below if not min_tier_of_leaf else f"tier too low or {below}"
+    return below if not asks_tier else f"tier too low or {below}"
 
 
 def _wanted_implicit(data: GameData, wish: ImplicitRequirement) -> Slot:
@@ -613,7 +617,7 @@ class _StateReader:
             _, text, tier_note = self.leaf(index)
             texts.append(text if status is Status.PASSING else _hashes(text))
             leaf = self.ab.goal.leaves[index]
-            notes.append(tier_note if status is Status.PASSING else below_note(len(leaf.mod_ids) > 1, leaf.min_roll))
+            notes.append(tier_note if status is Status.PASSING else below_note(leaf.tier_ok is not None, leaf.min_roll))
         return Slot(" / ".join(dict.fromkeys(texts)), "wanted", (), _note(*dict.fromkeys(notes)))
 
     def fractured(self, mod_id: str, contribution: tuple[Status, ...]) -> tuple[Side, Slot]:

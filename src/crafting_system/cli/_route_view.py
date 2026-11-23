@@ -478,19 +478,6 @@ def _fewest(whole: list[int], on_others: np.ndarray, rest: np.ndarray) -> list[i
     return min(pairs)[2] if pairs else None
 
 
-def _most(whole: list[int], on_others: np.ndarray, rest: np.ndarray) -> list[int]:
-    """Up to three of the conditions `whole`, each chosen for the other items it rules out beyond those before it."""
-    chosen: list[int] = []
-    for _ in range(3):
-        gain = {c: _parted(on_others, rest, [*chosen, c]) - _parted(on_others, rest, chosen) for c in whole if c not in chosen}
-        if not gain or max(gain.values()) == 0:
-            break
-        chosen.append(min(gain, key=lambda c: (-gain[c], c)))
-        if _parted(on_others, rest, chosen) == int(rest.sum()):
-            break
-    return chosen
-
-
 def _kinds(table: _Table, on_mine: np.ndarray, on_others: np.ndarray, rest: np.ndarray) -> list[list[int]] | None:
     """The items of a branch as at most `KINDS` kinds, each told by at most `KIND_WORDS` conditions that hold on all its items and on no
     other item: a kind is grown one condition at a time, each the one that rules out the most other items for the items it keeps (the
@@ -737,7 +724,8 @@ class _View:
         then Orb of Annulment"). The fewest that do, wanted mods first; when the branch holds items of several kinds, one set per kind joined
         by "or" (at most `KINDS`). `given` are the conditions the line says already, as ("with" or "without", words): what the use gave or
         lost, which part it from some others already.
-        When nothing parts every item, the conditions that part the most; "" when none does, or when `given` says enough.
+        "" when nothing parts every item within those bounds (words that hold on some other branch's items too would send a player
+        wrong), or when `given` says enough.
         """
         key = (step.number, id(edge), None if among is None else tuple(id(other) for other in among), given)
         cache = self.__dict__.setdefault("_words", {})
@@ -773,7 +761,7 @@ class _View:
         kinds = _kinds(table, on_mine, on_others, rest)  # several kinds of item, each told apart by its own conditions
         if kinds is not None:
             return ", or ".join(_words([table.columns[c] for c in kind]) for kind in kinds)
-        return _words([table.columns[c] for c in _most(whole, on_others, rest)])
+        return ""  # no words that hold on this branch's items alone: a condition some other branch's items share would send a player wrong
 
     def _table(self, step: Step) -> "_Table":
         """The conditions of `_traits` on every item a use of `step` leaves, kept per step."""
