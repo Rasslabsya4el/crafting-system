@@ -58,7 +58,7 @@ mods of the start, lands in E with chance at most pbar(x):
     chance depends on the families the item holds, so it cannot be read at one state: pbar is the largest chance,
     over every state of the start's shape at which a leaf of U is not PASSING, that the one added mod passes that
     leaf (`add_bound`: the most favourable weight share of the free families, every set of families held and
-    every room left; the argument is in `abstraction/_bound.py`, "One added mod"). From a state outside E, E is
+    every room left, a held mod of several families taking them all out, #1489; the argument is in `abstraction/_bound.py`, "One added mod"). From a state outside E, E is
     entered only if a leaf of U that is not PASSING becomes PASSING, which only the added mod can do (a mod the
     action removes passes no leaf), so the chance is at most pbar. Level 0 is pbar = 1, level 1 that bound. It is
     raised only where the bare item of the shape takes it, keeps the shape, and gives one draw; anywhere else

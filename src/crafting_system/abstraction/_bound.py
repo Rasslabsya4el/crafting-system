@@ -13,7 +13,9 @@ is in X; a leaf a kept mod makes PASSING costs nothing (bound 1). The process (`
 total T is drawn from `totals`; with a tag one guaranteed draw comes first, from the tagged mods of the
 sides with room; then `max(0, T - kept - guaranteed)` ordinary draws, each picking one mod of an
 undrawn family on a side with room in proportion to weight, the whole family leaving the pool and its
-side losing a slot.
+side losing a slot. A drawn mod has one family: a mod of several is never a candidate of the pool (`actions/pool.py` keeps it apart and
+refuses the draw while nothing on the item blocks it), so one draw takes one family out. The mods the state already holds, hybrids
+included, are read exactly: the pool of `state` is the pool less every family they hold.
 
 One draw. Let c_j be a number such that, for every history of the draws before draw j in which no drawn
 mod is in X, the chance that draw j picks a mod of X is at most c_j. By the chain rule
@@ -55,10 +57,14 @@ its chance, from ANY state of one shape (the flags and the fractured mods of the
 on the item a mod of X (the mods that pass L at some roll). At such a state `s`, the mod is drawn from the mods of the pool of `s0` (less
 the mods of the tags an Attack or Caster metamod of `s` keeps out, and only those of the tag the action names, `Adds.tag`) whose family `s`
 does not hold, on the sides where `s` has room, in proportion to weight; so its chance of X is `(X weight left) / (weight left)` over the open
-sides. `s` holds on each side at most its free slots of `s0`, and at most that many families of the pool; a side is open when what it holds is
-below its room. So that chance is at most the largest, over the numbers `a` and `b` of families taken out of each side (below the room of an
-open side) and over which families they are, of that ratio: Dinkelbach's iteration (`_scenario_chance`) finds it exactly over every set of
-families of each count, the families of X included. The pool of `s0`, its free slots and the draw's tag are read from the action's own result
+sides. `s` holds on each side at most its free slots of `s0` in mods; a side is open when what it holds is below its room. A held mod takes
+EVERY one of its families out of the pool (`Item.blocks`), and a mod can have several: a crafted Strength and Dexterity suffix takes two, a
+crafted local weapon suffix three (#1489; before, one family per slot was counted, and a toy pool of four suffixes with that hybrid held had
+the chance 1/2 above the bound 1/3). So the families taken out of side T are at most `m(P, T) a + m(S, T) b` (`a`, `b` the mods held on each
+side, `m(S, T)` the most families of side T of this draw that one mod the item model admits on side S of the base holds: `holdable`, read
+from the data), and at most all of them. So that chance is at most the largest, over the numbers of families taken out of each open side
+(within those caps) and over which families they are, of that ratio: Dinkelbach's iteration (`_scenario_chance`) finds it exactly over every
+set of families of each count, the families of X included. The pool of `s0`, its free slots and the draw's tag are read from the action's own result
 at `s0` (one part, one draw); the blocked tags are every set the two metamods make when the abstraction models them. Nothing here tracks
 which families a state holds: it is the most favourable weight share of the free families, the same at every state of the shape. What is
 taken on the contract of `Reads.pool_weight` and not checked: that the action draws the same way at every state of the shape (from the pool
@@ -74,6 +80,7 @@ nothing. None of it is below the exact value; the tests compare it with the brut
 exact engine on random pools.
 """
 
+import itertools
 from collections.abc import Hashable, Mapping, Sequence
 from fractions import Fraction
 
@@ -81,6 +88,7 @@ from crafting_system.actions import BLOCKED_TAG, Action, Fixed, OutOfScopeError,
 from crafting_system.budget import checkpoint
 from crafting_system.data import Mod
 from crafting_system.items import ItemError, Side
+from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS
 
 from ._goal import Status
 from ._kernel import Abstraction
@@ -455,6 +463,7 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
         return None
     components = outcomes.components
     tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
+    held = holdable(abstraction.data, abstraction.base_id)
     memo: dict = {}
     best = ZERO
     for _share, part in components:
@@ -466,7 +475,7 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
         for leaf in leaves:
             passing = _may_pass(abstraction, part.pool, leaf, part.retained.influences, memo)
             for blocked in tag_sets:
-                best = max(best, _added_chance(part.pool, part.free, part.tag, blocked, passing))
+                best = max(best, _added_chance(part.pool, part.free, part.tag, blocked, passing, held))
     return min(ONE, best)
 
 
@@ -490,12 +499,13 @@ def declared_add_bound(abstraction: Abstraction, action: Action, item, leaves: S
         return None
     _guard(draw.pool)
     tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
+    held = holdable(data, item.base_id)
     memo: dict = {}
     best = ZERO
     for leaf in leaves:
         passing = _may_pass(abstraction, draw.pool, leaf, item.influences, memo)
         for blocked in tag_sets:
-            best = max(best, _added_chance(draw.pool, draw.free, draw.tag, blocked, passing))
+            best = max(best, _added_chance(draw.pool, draw.free, draw.tag, blocked, passing, held))
     return min(ONE, best)
 
 
@@ -505,33 +515,104 @@ def _blocked_sets() -> tuple[frozenset[str], ...]:
     return tuple(frozenset(tag for bit, tag in enumerate(tags) if mask >> bit & 1) for mask in range(1 << len(tags)))
 
 
-def _added_chance(pool: Sequence[PoolFamily], free: Mapping[Side, int], tag: str | None, blocked: frozenset[str], passing: Mapping[str, bool]) -> Fraction:
+class Holdable:
+    """The families the mods a side of an item can hold take out of the pool: what `_added_chance` needs of the held mods (#1489).
+
+    `singles` are the families of the one-family mods, `several` the family sets of the mods of more than one (a crafted Strength and Dexterity
+    suffix, an unveiled hybrid: `Item.blocks` blocks every family of a held mod).
+    """
+
+    __slots__ = ("several", "singles")
+
+    def __init__(self, singles: frozenset[str], several: tuple[frozenset[str], ...]):
+        self.singles = singles
+        self.several = several
+
+    def most(self, families: frozenset[str]) -> int:
+        """The most families of `families` that one held mod takes out of the pool."""
+        found = 1 if not self.singles.isdisjoint(families) else 0
+        for group in self.several:
+            found = max(found, len(group & families))
+        return found
+
+
+_HOLDABLE: dict[tuple[int, str], tuple[object, dict[Side, Holdable]]] = {}
+
+
+def holdable(data, base_id: str) -> dict[Side, Holdable]:
+    """The `Holdable` of each side of an item of `base_id`: every mod the item model admits on that side of that base (`Item._check_slot`: its
+    generation type, and its domain the base's or crafted, delve, veiled or unveiled), whatever puts it there: the pool, the bench, an essence, an
+    unveil, the start item. Read from the data, so the largest count is what the data holds (3 for a crafted local weapon suffix), not a constant.
+    """
+    domain = data.base_items[base_id].domain
+    key = (id(data), domain)
+    cached = _HOLDABLE.get(key)
+    if cached is not None and cached[0] is data:
+        return cached[1]
+    domains = {domain} | EXPLICIT_EXTRA_DOMAINS
+    singles: dict[Side, set[str]] = {side: set() for side in Side}
+    several: dict[Side, set[frozenset[str]]] = {side: set() for side in Side}
+    for mod in data.mods.values():
+        if mod.domain not in domains or mod.generation_type not in {side.value for side in Side}:
+            continue
+        side = Side(mod.generation_type)
+        if len(mod.families) == 1:
+            singles[side].add(mod.families[0])
+        elif mod.families:
+            several[side].add(frozenset(mod.families))
+    found = {side: Holdable(frozenset(singles[side]), tuple(sorted(several[side], key=sorted))) for side in Side}
+    if len(_HOLDABLE) >= 32:
+        _HOLDABLE.pop(next(iter(_HOLDABLE)))
+    _HOLDABLE[key] = (data, found)
+    return found
+
+
+def _added_chance(
+    pool: Sequence[PoolFamily],
+    free: Mapping[Side, int],
+    tag: str | None,
+    blocked: frozenset[str],
+    passing: Mapping[str, bool],
+    held: Mapping[Side, Holdable],
+) -> Fraction:
     """The largest chance that the one added mod is in X, over every set of families held besides the bare item's and every room left.
 
     The draw picks from the mods of `pool` that carry `tag` (all when None) and none of `blocked`, on the sides with room. A state holds `a` more
-    mods on the prefix side and `b` on the suffix side (`0 <= a <= free prefix`, and the same for `b`), whose families (at most `a` and `b` of them:
-    a crafted mod of no family takes a slot and no weight) left the pool. A side is open when its `a` is below its free slots. For each `(a, b)` and
-    each number `k` of families taken out of an open side (`k <= a`), the largest ratio over which families is `_scenario_chance`'s, which ranges
-    over every set of `k` families, X families included. A closed side takes nothing out of the draw, and every way a side closes is a `k` of the
-    loop: `k` at its room (whatever filled the slots: families, a crafted mod of none) or at its number of families (nothing left to draw there).
+    mods on the prefix side and `b` on the suffix side (`0 <= a <= free prefix`, and the same for `b`); a side is open when its count is below its
+    free slots. A held mod takes every one of its families out of the pool (`Item.blocks`), and a mod may have several (a crafted Strength and
+    Dexterity suffix takes two out, #1489): with `m(S, T)` the most families of side T of this draw that one mod the item model admits on side S
+    holds (`held`, `Holdable.most`; 0, 1 or more, and a family of the other side counted too), the held mods take at most
+    `k_T <= m(P, T) a + m(S, T) b` families out of side T, and at most all of them. A crafted mod of no family takes a slot and no weight. For
+    each such `(a, b)` and each `k` of an open side, the largest ratio over which families is `_scenario_chance`'s, which ranges over every set
+    of `k` families of the side, X families included: larger than the chance at any state, whose held families are one such set. The caps grow
+    with `a` and `b`, so an open side is taken at `a` = its room less one and a closed one at its room. A closed side takes nothing out of the
+    draw, and a side whose every family is held (`k` at its count) is a closed one too.
     """
     kept: dict[Side, list[tuple[Fraction, Fraction]]] = {side: [] for side in Side}
+    names: dict[Side, set[str]] = {side: set() for side in Side}
     for family in pool:
         mods = [entry for entry in family.mods if allowed_by_tags(entry.mod, blocked) and (tag is None or tag in entry.mod.implicit_tags)]
         weight = sum((entry.weight for entry in mods), ZERO)
         if weight > 0:
             kept[family.side].append((weight, sum((entry.weight for entry in mods if passing[entry.mod.id]), ZERO)))
+            names[family.side].add(family.family)
     # a family with no mod left in the draw still leaves the pool when held, but takes no weight from it: dropping it from the sides changes no ratio
     sides = {side: _Side(kept[side]) for side in Side}
     room = {side: max(0, free[side]) for side in Side}
+    spread = {(source, side): held[source].most(frozenset(names[side])) for source in Side for side in Side}
     best = ZERO
-    taken = {side: range(0, min(room[side], sides[side].count) + 1) for side in Side}
-    for a in taken[Side.PREFIX]:
-        for b in taken[Side.SUFFIX]:
-            live = [(sides[side], k) for side, k in ((Side.PREFIX, a), (Side.SUFFIX, b)) if k < room[side] and k < sides[side].count]
-            if not live or sum(side.wanted for side, _ in live) == 0:
-                continue
-            best = max(best, _scenario_chance(live))
+    for open_prefix in (False, True) if room[Side.PREFIX] else (False,):
+        for open_suffix in (False, True) if room[Side.SUFFIX] else (False,):
+            count = {Side.PREFIX: room[Side.PREFIX] - open_prefix, Side.SUFFIX: room[Side.SUFFIX] - open_suffix}
+            opened = [side for side, flag in ((Side.PREFIX, open_prefix), (Side.SUFFIX, open_suffix)) if flag]
+            if any(sides[side].count == 0 for side in opened):
+                continue  # nothing to draw there: the same as the side closed, which holds as many or more
+            caps = [min(sides[side].count - 1, sum(spread[source, side] * count[source] for source in Side)) for side in opened]
+            for ks in itertools.product(*(range(cap + 1) for cap in caps)):
+                live = [(sides[side], k) for side, k in zip(opened, ks)]
+                if not live or sum(side.wanted for side, _ in live) == 0:
+                    continue
+                best = max(best, _scenario_chance(live))
     return best
 
 
