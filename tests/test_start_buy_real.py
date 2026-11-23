@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 import yaml
 from abstraction_support import real_game_data
+from trade_support import key_in_older_file
 
 from crafting_system.cli import RESTART, make_plan
 from crafting_system.planner._plan import PlanError, resolve_start_price
@@ -59,12 +60,12 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 OTHER_ITEM = {
     "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
     "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; a normal item cannot carry an influence, #515) and no file has a line for an influenced Heavy Belt: it has no body",
-    "r05-strength-ring": "#483 the exact item has 0 listings: the stored price is for any ring of item level 75 or more",
-    "r10-fractured-boots": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
-    "r10-fractured-boots-70-life": "#483 the exact item has 9 listings (rail 10): the stored price is for item level 84 or more",
-    "r11-reservation-helmet": "#483 the exact item has 3 listings (rail 10): the stored price is for item level 84 or more",
-    "r12-lightning-amulet": "#483 the exact item has 1 listing (rail 10): the stored price is for any amulet of item level 75 or more",
-    "r14-hunter-bow": "#601 (and #483) the exact item, a magic Hunter bow, has 0 listings: the stored price is for any non-unique rarity of item level 78 or more",
+    "r05-strength-ring": "#483 the exact item has 1 listing, at 12,905 Chaos on 2026-11-10: the stored price is hand-set (OR-44) from a search of any ring of item level 75 or more",
+    "r10-fractured-boots": "#483 the exact item has 9 listings (rail 10): the stored price is hand-set (OR-44) from a search of item level 84 or more",
+    "r10-fractured-boots-70-life": "#483 the exact item has 9 listings (rail 10): the stored price is hand-set (OR-44) from a search of item level 84 or more",
+    "r11-reservation-helmet": "#483 the exact item has 3 listings (rail 10): the stored price is hand-set (OR-44) from a search of item level 84 or more",
+    "r12-lightning-amulet": "#483 the exact item has 1 listing (rail 10): the stored price is hand-set (OR-44) from a search of any amulet of item level 75 or more",
+    "r14-hunter-bow": "#601 (and #483) the exact item, a magic Hunter bow, has 0 listings: the stored price is hand-set (OR-44) from a search of any non-unique rarity of item level 78 or more",
     "r08-energy-shield-boots": "#494 point 2 the key names a rare item with no mods, the stored price is of a normal base plus a typed Alchemy",
     "r09-life-boots": "#494 point 2 and #483 the stored price is of a normal base plus a typed Alchemy, taken for any of the three Two-Toned Boots",
     "r04-penetrating-quiver": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
@@ -185,7 +186,8 @@ def price_row(stem: str):
 @pytest.mark.parametrize("stem", [price_row(stem) for stem in stems() if bought(stem)])
 def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_file_that_has_it(stem):
     key = expected_keys()[stem]
-    committed = [path.name for path in sorted(PRICES.glob("*.json")) if key in json.loads(path.read_text(encoding="utf-8"))["prices"]]
+    older = key_in_older_file(key)  # R11 and R12: the files before the week-one ones keep the key their tier-1 reading had (#522)
+    committed = [path.name for path in sorted(PRICES.glob("*.json")) if {key, older} & set(json.loads(path.read_text(encoding="utf-8"))["prices"])]
 
     # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries; the veiled file is R07's own
     # (`price_file:`) and holds a copy of the 2026-11-10 file (#146); the references file is R17's and R24's own since #901: the

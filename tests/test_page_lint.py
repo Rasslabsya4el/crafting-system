@@ -141,6 +141,9 @@ UNRECORDED = "Prismatic Fossil: 0.2 Chaos, poe.ninja exchange, Allflame, 2026-10
 UNRECORDED_WORDS = "where this price comes from is not recorded"
 UNRECORDED_INPUT = f"The price of Prismatic Fossil is 0.2 Chaos, an approximate input: {UNRECORDED_WORDS}. Source: poe.ninja exchange, Allflame, 2026-10-31."
 WIDER = "Thicket Bow, magic, item level 78-79, Hunter influence: 13 Chaos, trade site, instant buyout, Allflame, 2026-11-07, taken for a wider item (any rarity), 5 units behind it, the plan buys about 900"
+HAND_SET = "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed: 17 Chaos, set by hand from trade listings, Allflame, 2026-11-10, taken for a wider item (item level 84 or more), 5 units behind it"
+HAND_SET_WORDS = "a price set by hand: the exact item's own listings (few or none) are not what a player pays; price of a wider item; the exact item has 9 listings at 249 Chaos"
+HAND_SET_INPUT = f"The price of Sorcerer Boots, item level 84, fractured 30% increased Movement Speed is 17 Chaos, an approximate input: {HAND_SET_WORDS}. Source: set by hand from trade listings, Allflame, 2026-11-10."
 fixtures(
     pl.check_price_source_shown,
     counter={
@@ -160,6 +163,7 @@ fixtures(
         "a stand-in marked approximate": page(route(goal(("Prices", LEAGUE, WIDER + "; approximate: price of a wider item; the exact item has 0 listings"), ("Approximate inputs", "The price of Thicket Bow, magic, item level 78-79, Hunter influence is 13 Chaos, an approximate input: price of a wider item; the exact item has 0 listings. Source: trade site, instant buyout, Allflame, 2026-11-07.")), AUG)),
         "a price with no recorded provenance, marked approximate and listed as an input": page(route(goal(("Prices", LEAGUE, UNRECORDED + "; approximate: " + UNRECORDED_WORDS), ("Approximate inputs", UNRECORDED_INPUT)), FOSSIL_STEP)),
         "a Chaos Orb has no price line": page(route(goal(("Prices", LEAGUE)), step(1, "Chaos Orb", ("Cost per use", "1 × Chaos Orb 1 c")))),
+        "#483: a hand-set price of the tests' file names its source, marked approximate and listed as an input": page(route(goal(("Prices", LEAGUE, HAND_SET + "; approximate: " + HAND_SET_WORDS), ("Approximate inputs", HAND_SET_INPUT)), AUG)),
     },
 )
 

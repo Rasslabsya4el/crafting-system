@@ -36,6 +36,7 @@ NAME_BUILDERS = {
     "prices/trade_query.py::_parse_spec": "reads a spec file whose name the file gives; it derives nothing",
     "planner/_decide.py::decide": "`replace(level, name=...)` renames a search level, not a buy spec",
     "cli/_route_card.py::_properties": "the words of the route card's item line, not a price name",
+    "cli/_route_view.py::_any_base": "`replace(card, name=...)` names an item card's base as any base of its kind (#937), not a price name",
     "cli/_route_trade.py::_accepts": "the lines of the page that say what a buy spec accepts, not a price name",
     "prices/query_compare.py::_level_words": "the words that say how two stored searches differ, not a price name",
     "web/_work.py::plan_request": "the target's name on the website's route page and policy (`target_name`), not a price name (#961)",

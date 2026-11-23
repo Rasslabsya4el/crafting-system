@@ -398,6 +398,7 @@ def test_two_spellings_of_one_item_share_a_key():
     assert respelled.document["target"] == other  # the store keeps what the user wrote; only the key is canonical
     assert target_form(respelled.target) == target_form(written.target)
     tier_two = r12_target(requirements=[{"stat": "+1 to Level of all Lightning Skill Gems"}, {"family": "LightningResistance", "min_tier": 2}])
+    del tier_two["start_item"]["mods"][0]["any_tier"]  # a start mod bought at any tier needs a requirement that takes any tier (#522)
     assert parse_request({"target": tier_two}, "poe1", world).key != written.key
 
 

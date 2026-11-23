@@ -15,6 +15,8 @@ its depth in units is at least the units the plan expects to use. Every other pr
   every reason against the market price its chain rests on (the anchor: its league, its day, its depth), each said with the
   anchor's name. One unit of a tier `k` tiers below the anchor is a `3**k`-th of an anchor unit, so the anchor's depth is
   compared with the plan's uses divided by that;
+* "a price set by hand: ..." (OR-44) (a number the tests' price file sets by hand where the market is plainly not what a player pays,
+  #483); one set from a wider item's search says so with the stand-in's words, and its reading day is not judged against the file's;
 * "an estimate: no market lists this item" (a number set by hand where neither poe.ninja nor the trade history has the item, #885;
   unlike a hand override it is not the user's own number, so it is never a plain fact);
 * "the trade offers beside it were not read: <why>" (beside any other reason, a previous league's price included, when the recorded price carries `trade_unread`; a deep-enough plain fact needs none).
@@ -34,6 +36,7 @@ from .price_file import MAX_AGE_DAYS, PriceEntry, PriceFile
 from .provenance import (
     DEFAULT,
     ESTIMATE,
+    HAND_SET,
     EXCHANGE,
     HISTORY,
     OBSERVATIONS,
@@ -68,6 +71,7 @@ THIN = "thin-market"
 OLD_THIN = "old-price"
 FROM_RECIPE = "upgrade-recipe"
 ESTIMATED = "estimate"
+HAND_SET_MARK = "hand-set"
 
 
 @dataclass(frozen=True)
@@ -113,6 +117,9 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
         return _recipe_marks(entry, price_file, uses)
     if p.kind == ESTIMATE:
         return (PriceMark(ESTIMATED, "an estimate: no market lists this item"),)
+    if p.kind == HAND_SET:  # OR-44: set by hand and marked; a number set from a wider item's search names that item and the exact one's listings
+        hand = PriceMark(HAND_SET_MARK, "a price set by hand: the exact item's own listings (few or none) are not what a player pays")
+        return (hand, PriceMark(STAND_IN, _stand_in_words(p))) if p.item == WIDER else (hand,)
     if p.kind == PREVIOUS_LEAGUE:
         found.append(PriceMark(EARLIER, f"previous league's price ({p.league}, {p.date})"))
     elif p.kind == STANDARD:

@@ -9,7 +9,10 @@ a plain fact or an approximate input; this module only holds the record, writes 
   the trade site's instant-buyout listings, a hand price, a default, or the vendor upgrade recipe (a lower essence tier priced as
   one third of the next tier up, `essence_recipe.py`, #885: its `league` and `date` are those of the price it rests on), or an
   estimate (a number set by hand for an item no market lists: OR-23's
-  best estimate, always marked; its `note` says what it rests on; `league` and `date` say for which economy and day it was set).
+  best estimate, always marked; its `note` says what it rests on; `league` and `date` say for which economy and day it was set), or
+  a hand-set price of the tests' price file (OR-44: the market of the exact item is plainly not what a player pays, so the file sets
+  a number by hand and marks it; its `note` says what it rests on, `league` and `date` are the reading it was set from, and a number
+  set from a wider item's search keeps `item` `wider`, its `for_item` and the exact item's `exact_listings` and `exact_price`, #483).
 * `league`, `date`: the league and the UTC day the reading is of.
 * `depth` and `depth_unit`: how much stood behind the number. For an exchange line it is the units traded on the day
   (poe.ninja's `volumePrimaryValue`, in Chaos, divided by the price), unit `units`. For a trade price it is the units
@@ -48,7 +51,8 @@ OVERRIDE = "override"
 DEFAULT = "default"
 RECIPE = "upgrade-recipe"
 ESTIMATE = "estimate"
-KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVERRIDE, DEFAULT, RECIPE, ESTIMATE)
+HAND_SET = "hand-set"
+KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVERRIDE, DEFAULT, RECIPE, ESTIMATE, HAND_SET)
 
 UNITS = "units"
 OBSERVATIONS = "observations"
@@ -74,6 +78,7 @@ SOURCE_WORDS = {
     DEFAULT: "default price",
     RECIPE: "vendor upgrade recipe",
     ESTIMATE: "estimate, no market lists it",
+    HAND_SET: "set by hand from trade listings",  # OR-44: a number the tests' file sets by hand; a page says it in a player's words, no rule id (#483)
 }  # in a player's words, for the page and the report
 
 # the source strings of a price entry (`PriceEntry.source`) and the kind each one means
@@ -90,6 +95,7 @@ KIND_OF_SOURCE = {
     "default": DEFAULT,
     "upgrade-recipe": RECIPE,
     "estimate": ESTIMATE,
+    "hand-set": HAND_SET,
 }
 
 

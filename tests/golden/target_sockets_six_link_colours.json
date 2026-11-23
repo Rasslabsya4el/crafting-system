@@ -88,5 +88,6 @@
     "green": 2,
     "blue": 2
   },
-  "item_level_floor": null
+  "item_level_floor": null,
+  "start_any_tier": []
 }

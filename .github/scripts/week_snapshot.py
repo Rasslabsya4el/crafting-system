@@ -7,6 +7,8 @@
         --out tests/fixtures/prices/routes-allflame-2026-07-31.json --cache .claude/scratch/838-cache
 
 The rule of each price is `crafting_system.prices.week_snapshot`. The templates give the names (the first one wins for a stand-in);
+a hand-set entry (OR-44, #483) is kept as its template holds it, so a rebuild of a file that holds hand-set start prices passes that
+file itself as its first `--template`;
 `--spends` adds every name a method in scope spends (`crafting_system.prices.spends`, #885; it reads the game data), and
 `--wanted-file` the names of a text file, one per line. The lower essence tiers come out priced from the vendor upgrade recipe.
 With `--end` (and `--previous-end`), the last day poe.ninja has data for the league (`maxDate` of the same dump), a beast is read

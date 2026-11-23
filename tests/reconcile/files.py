@@ -3,7 +3,8 @@
 Formats (learned from `src/crafting_system/targets/` and `.../prices/`, not imported):
 
 - target: `base`, `item_level`, `influence`, `start` (`bought` or `given`, #505), `start_item` (`rarity`, `mods`: `mod`, `tier`,
-  `values`, `fractured`), `price_file`. A target without `start_item` starts from a normal item; a `start_item` without `rarity` is
+  `values`, `fractured`, `any_tier`), `price_file`. A start mod with `any_tier: true` (#522) is bought at any tier of its family: its
+  buy spec mod asks no minimum, and the price key names it `+#% ... (any tier)`. A target without `start_item` starts from a normal item; a `start_item` without `rarity` is
   rare when it lists mods, else normal. A target file no longer names its price (#474): `start_price` is the price key of the
   start item, taken from the hand-written table `expected_keys.txt` by the target's file stem (`read_expected_keys`). A bought
   start item has a row in it, a given one has none (J01).
@@ -42,6 +43,7 @@ class StartMod:
     mod: str
     values: tuple
     fractured: bool
+    any_tier: bool = False  # bought at any tier of its family (`any_tier: true`, #522): the buy spec asks no minimum
 
 
 @dataclass(frozen=True)
@@ -114,6 +116,7 @@ def read_target(path: Path) -> Target:
                 mod=entry["mod"],
                 values=tuple(entry.get("values") or ()),
                 fractured=bool(entry.get("fractured", False)),
+                any_tier=bool(entry.get("any_tier", False)),
             )
             for entry in (start.get("mods") or ())
         )

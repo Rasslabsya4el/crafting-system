@@ -5,10 +5,11 @@ that body did, the price is not the price of the item the key names. `other_item
 the report and the page print that next to the price, so a number is never shown as the price of a narrower item than it is.
 """
 
+import dataclasses
 from collections.abc import Mapping
 from typing import Any
 
-from .trade_query import BuySpec
+from .trade_query import INFLUENCE_STAT_IDS, BuySpec
 
 
 def _filters(body: Mapping[str, Any], group: str) -> Mapping[str, Any]:
@@ -43,7 +44,7 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
         another = True
     stored_type, category = query.get("type"), (type_filters.get("category") or {}).get("option")
     if spec.base_type is not None and stored_type is None:
-        parts.append(f"any {_category_words(category)} base" if category else "any base")
+        parts.append(f"any {category_words(category)} base" if category else "any base")
     elif spec.base_type is not None and stored_type != spec.base_type:
         parts.append(f"base {stored_type}")
         another = True
@@ -89,6 +90,43 @@ def other_item(spec: BuySpec, stored: Mapping[str, Any]) -> str | None:
     return f"price taken for {'another' if another else 'a wider'} item ({', '.join(parts)})"
 
 
+def searched_spec(spec: BuySpec, stored: Mapping[str, Any]) -> BuySpec:
+    """`spec` as the stored search asked for it: the item a price was taken for, for the page to name (#937, OR-7).
+
+    The rarity, the base type (none: any base of the category), the item-level window, the influences, the corruption and each mod's
+    minimum are the stored body's; the mods keep `spec`'s stats, matched to the stored filters of their group (`fractured`, `implicit`,
+    `explicit`) in order, and a mod whose group the stored search has no filter of is left out (the search did not ask for it).
+    """
+    query = stored.get("query") if isinstance(stored.get("query"), Mapping) else stored
+    type_filters = _filters(query, "type_filters")
+    misc = _filters(query, "misc_filters")
+    level = misc.get("ilvl") or {}
+    ids = [found for group in query.get("stats") or [] for found in group.get("filters") or []]
+    minimums: dict[str, list[float | None]] = {}
+    for found in ids:
+        group = str(found["id"]).split(".", 1)[0]
+        if group != "pseudo":
+            minimums.setdefault(group, []).append((found.get("value") or {}).get("min"))
+    mods = []
+    for mod in spec.mods:
+        left = minimums.get("implicit" if mod.implicit else "fractured" if mod.fractured else "explicit") or []
+        if left:
+            mods.append(dataclasses.replace(mod, minimum=left.pop(0)))
+    stored_type = query.get("type")
+    influences = tuple(name for name, stat in INFLUENCE_STAT_IDS.items() if stat in {str(found["id"]) for found in ids})
+    return dataclasses.replace(
+        spec,
+        base_type=stored_type if isinstance(stored_type, str) else None,
+        category=(type_filters.get("category") or {}).get("option") or spec.category,
+        rarity=(type_filters.get("rarity") or {}).get("option") or spec.rarity,
+        item_level_min=level.get("min"),
+        item_level_max=level.get("max"),
+        influences=influences,
+        corrupted=(misc.get("corrupted") or {}).get("option") == "true",
+        mods=tuple(mods),
+    )
+
+
 def wider_words(phrase: str | None) -> str | None:
     """`other_item`'s "price taken for a wider item (item level 84 or more)" as what it is taken for: "item level 84 or more"; None stays None."""
     if phrase is None:
@@ -100,6 +138,6 @@ def wider_words(phrase: str | None) -> str | None:
 _CATEGORY_WORDS = {"armour.chest": "body armour"}
 
 
-def _category_words(category: str) -> str:
+def category_words(category: str) -> str:
     """The trade site's category option in words (`accessory.ring` -> `ring`): a page never prints the option itself (#553, #481)."""
     return _CATEGORY_WORDS.get(category, category.rsplit(".", 1)[-1])

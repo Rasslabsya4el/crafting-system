@@ -45,7 +45,7 @@ def test_the_accepts_lines_are_the_buy_filter_one_per_line():
     step = buy_step(R12_SPEC, "Allflame", MODS, STATS)
 
     assert step.accepts == (
-        "Rare",
+        "Rare, any amulet base",  # a spec with no base type takes any base of its category (#937)
         "item level 75 or more",
         "no influence",
         "not corrupted",
@@ -107,3 +107,69 @@ def test_equal_ends_of_the_item_level_window_read_as_one_level_not_as_84_to_84()
 
     assert buy_step(one, "Allflame", MODS, STATS).accepts[1] == "item level 84"
     assert buy_step(two, "Allflame", MODS, STATS).accepts[1] == "item level 84 to 85"
+
+
+WIDER_RING = {
+    "query": {
+        "status": {"option": "securable"},
+        "stats": [{"type": "and", "filters": [{"id": "fractured.stat_1379411836", "disabled": False, "value": {"min": 13}}]}],
+        "filters": {
+            "type_filters": {"filters": {"rarity": {"option": "rare"}, "category": {"option": "accessory.ring"}}},
+            "misc_filters": {"filters": {"ilvl": {"min": 75}, "corrupted": {"option": "false"}, "fractured_item": {"option": "true"}}},
+        },
+    },
+    "sort": {"price": "asc"},
+}  # R05's stored search (2026-11-10): any ring base of item level 75 or more, no `type`
+
+
+def test_a_start_priced_from_a_wider_search_links_that_search_and_says_it_in_words():
+    """#937 (OR-7): R05's ring is priced from a search of any ring base of item level 75 or more, so the step links that search itself
+    (the listings the price came from) and says that item, not the Amethyst Ring of item level 75 the plan is worked out on."""
+    from crafting_system.prices.query_compare import searched_spec
+
+    spec = BuySpec(
+        "Amethyst Ring, item level 75, fractured +(13-16) to all Attributes", base_type="Amethyst Ring", category="accessory.ring",
+        item_level_min=75, item_level_max=75, mods=(BuyMod("+(13-16) to all Attributes", 13, fractured=True),),
+    )  # fmt: skip
+    wider = searched_spec(spec, WIDER_RING)
+    step = buy_step(wider, "Allflame", MODS, STATS, WIDER_RING)
+
+    assert (wider.base_type, wider.category, wider.item_level_min, wider.item_level_max) == (None, "accessory.ring", 75, None)
+    assert wider.name == spec.name and [(mod.minimum, mod.fractured) for mod in wider.mods] == [(13, True)]
+    assert query_of(step.url) == WIDER_RING
+    assert step.accepts[:2] == ("Rare, any ring base", "item level 75 or more")
+    assert step.accepts[-1] == "fractured: +# to all Attributes (at least 13)"
+    assert step.item == "any ring, item level 75 or more, fractured +# to all Attributes (at least 13)"
+
+
+WIDER_BOW = {
+    "query": {
+        "status": {"option": "securable"},
+        "type": "Thicket Bow",
+        "stats": [{"type": "and", "filters": [{"id": "pseudo.pseudo_has_hunter_influence", "disabled": False, "value": {"min": 1}}]}],
+        "filters": {
+            "type_filters": {"filters": {"rarity": {"option": "nonunique"}, "category": {"option": "weapon.bow"}}},
+            "misc_filters": {"filters": {"ilvl": {"min": 78}, "corrupted": {"option": "false"}, "mirrored": {"option": "false"}}},
+        },
+    },
+    "sort": {"price": "asc"},
+}  # R14's stored search (2026-11-10): a Thicket Bow of any rarity but unique, item level 78 or more, Hunter influence
+
+
+def test_a_wider_search_of_any_rarity_but_unique_with_an_influence_is_said_in_words():
+    """#937 (OR-7), R14: the magic Thicket Bow of item level 78-79 is priced from a search of any rarity but unique and item level 78 or
+    more, with the Hunter influence; the step says that item, never the trade site's option `nonunique`, and keeps the influence."""
+    from crafting_system.prices.query_compare import searched_spec
+
+    spec = BuySpec(
+        "Thicket Bow, magic, item level 78-79, Hunter influence", base_type="Thicket Bow", category="weapon.bow", rarity="magic",
+        item_level_min=78, item_level_max=79, influences=("hunter",),
+    )  # fmt: skip
+    wider = searched_spec(spec, WIDER_BOW)
+    step = buy_step(wider, "Allflame", MODS, STATS, WIDER_BOW)
+
+    assert (wider.rarity, wider.base_type, wider.item_level_min, wider.item_level_max, wider.influences) == ("nonunique", "Thicket Bow", 78, None, ("hunter",))
+    assert query_of(step.url) == WIDER_BOW
+    assert step.accepts[:2] == ("Any rarity but unique Thicket Bow", "item level 78 or more")
+    assert step.item == "Thicket Bow, any rarity but unique, item level 78 or more, Hunter influence"
+    assert "nonunique" not in step.item and not any("nonunique" in line for line in step.accepts)

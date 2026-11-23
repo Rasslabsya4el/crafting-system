@@ -19,8 +19,9 @@ import itertools
 import math
 import time
 from collections.abc import Callable, Iterable, Mapping, Sequence
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 from fractions import Fraction
+from typing import Any
 
 from crafting_system import parallel
 from crafting_system.abstraction import _pattern
@@ -114,6 +115,7 @@ class StartPrice:
     taken_for: str | None = None  # "price taken for a wider item (...)": the stored search is not the item the key names (#474, OR-7)
     given: bool = False
     mark: str | None = None  # a thin market's price is marked (OR-8): "old price, read on <date>, ..." or "few offers: ..."; None for an unmarked price
+    searched: Mapping[str, Any] | None = field(default=None, compare=False)  # the stored search body when `taken_for` is set: the page names and links it (#937)
 
     def __post_init__(self) -> None:
         if self.given and self.chaos != 0:
@@ -416,7 +418,8 @@ def resolve_start_price(
     if refusal is not None:  # a poe.ninja line has no base id: for a name that several bases share it prices none of them (#471)
         raise PlanError(refusal)
     stored = (entry.detail or {}).get("query")
-    return StartPrice(name, entry.chaos, entry.source, other_item(spec, stored) if isinstance(stored, dict) else None, mark=planned.mark)
+    taken_for = other_item(spec, stored) if isinstance(stored, dict) else None
+    return StartPrice(name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=stored if taken_for else None)
 
 
 def _override(override: float) -> float:

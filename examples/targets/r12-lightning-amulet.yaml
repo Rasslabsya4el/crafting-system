@@ -51,6 +51,9 @@ start_item:
       values: [14]
       # Locked in place by a Fracturing Orb.
       fractured: true
+      # Bought at any tier (#522, OR-3, OR-4): the guide's step 1 names no tier, the requirement takes any tier, and a fractured
+      # mod never changes, so the buy spec asks no minimum and the price key says "(any tier)".
+      any_tier: true
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it.

@@ -234,4 +234,5 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `allow_corrupted` | abstraction/_goal.py |  |
 | `sockets` | planner/_finish.py, planner/_plan.py |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
+| `start_any_tier` | **nothing** |  |
 

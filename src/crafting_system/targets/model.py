@@ -303,6 +303,7 @@ class Target:
     allow_corrupted: bool = False
     sockets: SocketRequirement | None = None
     item_level_floor: int | None = None
+    start_any_tier: frozenset[str] = frozenset()  # start mods bought at any tier of their family (`any_tier: true`, #522): the buy spec asks no minimum
 
     @property
     def bought(self) -> bool:

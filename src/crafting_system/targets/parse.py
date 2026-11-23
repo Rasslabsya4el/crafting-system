@@ -99,7 +99,7 @@ GROUP_KEYS = ("at_least", "of")
 START_ITEM_KEYS = (
     "rarity", "corrupted", "mods", "implicits", "quality", "sockets", "enchantment", "veil_offer", "memory_strands",
 )  # fmt: skip
-START_MOD_KEYS = ("mod", "values", "fractured", "crafted")
+START_MOD_KEYS = ("mod", "values", "fractured", "crafted", "any_tier")
 START_IMPLICIT_KEYS = ("mod", "values", "grade")
 START_QUALITY_KEYS = ("type", "percent")
 VEILED_DOMAIN = "veiled"
@@ -208,6 +208,7 @@ class _Reader:
         self.base_dir = base_dir
         self.resolver = Resolver(data)
         self.corrupted = CorruptedResolver(self.resolver)
+        self.any_tier: dict[str, int] = {}  # start mods bought at any tier of their family (#522): mod id -> its line
 
     def fail(self, line: int, path: str, problem: str) -> NoReturn:
         where = f"{path}: " if path else ""
@@ -258,9 +259,10 @@ class _Reader:
         item_level_floor = self.read_item_level_floor(root, item_level) if "item_level_floor" in root else None
         if sockets is not None:
             self.check_socket_scope(root, requirements, start_item)
+        any_tier = self.check_any_tier(requirements)
         return Target(
             base_id, item_level, influences, requirements, start_item, start, price_file, implicits, quality,
-            None, enchantment, allow_corrupted, sockets, item_level_floor,
+            None, enchantment, allow_corrupted, sockets, item_level_floor, any_tier,
         )  # fmt: skip
 
     def read_item_level_floor(self, root: LineMap, item_level: int) -> int:
@@ -1176,7 +1178,35 @@ class _Reader:
                 if not isinstance(entry[key], bool):
                     self.fail(entry.key_lines[key], f"{path}.{key}", f"must be true or false, got {describe(entry[key])}")
                 flags[key] = entry[key]
+        if "any_tier" in entry:
+            if not isinstance(entry["any_tier"], bool):
+                self.fail(entry.key_lines["any_tier"], f"{path}.any_tier", f"must be true or false, got {describe(entry['any_tier'])}")
+            if entry["any_tier"] and not flags.get("fractured"):
+                self.fail(entry.key_lines["any_tier"], f"{path}.any_tier", "only a fractured start mod is bought at any tier (its tier never changes)")
+            if entry["any_tier"]:
+                self.any_tier[mod_id] = entry.key_lines["any_tier"]
         return ExplicitMod(mod_id, values, **flags)
+
+    def check_any_tier(self, requirements: tuple[Node, ...]) -> frozenset[str]:
+        """The start mods bought at any tier, each counted by a leaf that accepts every tier of it (`min_tier: any`, #522, OR-3, OR-4)."""
+        leaves: list[Requirement] = []
+
+        def walk(node: Node) -> None:
+            if isinstance(node, KOfN):
+                for member in node.of:
+                    walk(member)
+            else:
+                leaves.append(node)
+
+        for node in requirements:
+            walk(node)
+        for mod_id, line in self.any_tier.items():
+            if not any(leaf.any_tier and mod_id in leaf.mod_ids for leaf in leaves):
+                self.fail(
+                    line, "start_item.mods.any_tier",
+                    f"{mod_id} is bought at any tier, so a requirement must accept every tier of it (`min_tier: any`); none does",
+                )  # fmt: skip
+        return frozenset(self.any_tier)
 
     def is_veiled(self, mod_id: object) -> bool:
         """Whether `mod_id` is written as the id of a veiled placeholder."""

@@ -23,6 +23,9 @@ overview). For each name of the templates, in order:
    name that did not: the rarer tiers of a kind may have moved otherwise, so the estimate is as good as the evidence and no
    better. A scaled stand-in keeps its reading's day (marked as a later day's) and no depth (marked as such), and its `detail`
    holds the reading, the divisor and the sample.
+4. A **hand-set** entry (OR-44, #483: a number the tests' file sets by hand and marks, with its own note) is kept exactly as the
+   template holds it, note included, and named in the notes. So a rebuild that keeps the hand-set start prices of a file passes
+   that file itself as its first template.
 
 A **wanted** name (what a method spends, `spends.py`, #885) that no template holds is read by steps 1 and 2 only: with no template
 reading there is nothing to stand in, so a name neither league has a row for gets no price and a note that says so. A hand-made
@@ -47,7 +50,7 @@ from .poe_ninja import HISTORY_SOURCE, history_slug
 from .ninja_items import BEAST, STASH_TYPES
 from .previous_league import PREVIOUS_SOURCE
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
-from .provenance import ESTIMATE, EXCHANGE, HISTORY, KIND_OF_SOURCE, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
+from .provenance import ESTIMATE, EXCHANGE, HAND_SET, HISTORY, KIND_OF_SOURCE, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
 
 __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
 
@@ -135,6 +138,10 @@ def build_snapshot(
         prices[name] = found  # a stand-in's place is kept; it is made below, from what was read on the day
     for name in left:
         label, entry = names[name]
+        if entry.provenance is not None and entry.provenance.kind == HAND_SET:  # OR-44: set by hand, kept with its own note (#483)
+            prices[name] = entry
+            stand_ins[name] = f"{name}: hand-set (OR-44), kept as {label} sets it"
+            continue
         drift = _drift(name, label, names, prices) if wants_history(entry) else None
         prices[name] = _stand_in(entry, label, league, as_of, back, name, drift, leagues[label])
         stand_ins[name] = f"{name}: stand-in, the reading of {_day_of(entry, label)} from {label}" + ("" if drift is None or drift[1] == 0 else f", divided by {drift[0]:.4g}")

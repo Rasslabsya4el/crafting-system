@@ -6,10 +6,11 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from targets_support import AMULET, BELT, DATA, EXAMPLES, belt, roll
+from trade_support import key_in_older_file
 
 from crafting_system.items import CatalystType, ExplicitMod, Quality, Rarity, mod_tier
 from crafting_system.prices import load_price_file
-from crafting_system.targets import KOfN, Requirement, TargetError, buy_spec_of, load_target, start_price_key
+from crafting_system.targets import KOfN, Requirement, TargetError, buy_spec_of, load_target, parse_target, start_price_key
 
 R12 = EXAMPLES / "r12-lightning-amulet.yaml"
 R13 = EXAMPLES / "r13-life-resist-belt.yaml"
@@ -17,7 +18,7 @@ PRICES = EXAMPLES.parents[1] / "tests" / "fixtures" / "prices" / "routes-allflam
 # route: target file, the text of the fractured mod of the start item as the buy spec searches it, and its minimum (the lowest roll of the mod)
 ROUTES = {
     "r10": ("r10-fractured-boots.yaml", "30% increased Movement Speed", 30),
-    "r11": ("r11-reservation-helmet.yaml", "+(31-35)% to Chaos Resistance", 31),
+    "r11": ("r11-reservation-helmet.yaml", "+(31-35)% to Chaos Resistance", None),  # bought at any tier (#522): no minimum
     "r05": ("r05-strength-ring.yaml", "+(13-16) to all Attributes", 13),
 }
 
@@ -242,7 +243,7 @@ def test_the_buy_spec_computed_from_a_route_target_is_its_fractured_start_mod_an
 
     assert spec.rarity == "rare" and spec.corrupted is False
     assert [(mod.stat, mod.minimum, mod.fractured) for mod in spec.mods] == [(stat, minimum, True)]
-    assert spec.name == start_price_key(real, target) and spec.name in load_price_file(PRICES).prices
+    assert spec.name == start_price_key(real, target) and key_in_older_file(spec.name) in load_price_file(PRICES).prices
 
 
 @pytest.mark.parametrize("route", ROUTES)
@@ -385,16 +386,28 @@ def test_the_r11_target_asks_for_any_chaos_resistance_a_shrieking_or_deafening_r
     assert all(real.mods[mod_id].generation_type == "suffix" for member in finish.of for mod_id in member.mod_ids)
 
 
-def test_the_r11_start_helmet_is_the_top_chaos_resistance_and_the_buy_minimum_is_the_lowest_roll_of_it(real):
-    target = load_target(EXAMPLES / "r11-reservation-helmet.yaml", real)
-    spec = buy_spec_of(real, target)
-    top, next_down = real.mods["ChaosResist6"], real.mods["ChaosResist5"]
-    minimum = spec.mods[0].minimum
+def test_the_r11_and_r12_start_resistances_are_bought_at_any_tier_as_the_leaf_takes_any_tier(real):
+    """#522 (OR-3, OR-4): the guides name no tier of the fractured resistance and the leaf takes any tier, so the buy spec asks no
+    minimum and the key says "(any tier)"; the mod written on the start item is the one the plan holds, and it meets the leaf."""
+    for name, written, text in (
+        ("r11-reservation-helmet.yaml", "ChaosResist6", "Lion Pelt, item level 84, fractured +#% to Chaos Resistance (any tier)"),
+        ("r12-lightning-amulet.yaml", "LightningResist2", "Paua Amulet, item level 84, fractured +#% to Lightning Resistance (any tier)"),
+    ):
+        target = load_target(EXAMPLES / name, real)
+        spec = buy_spec_of(real, target)
 
-    assert mod_tier(real, target.base_id, "ChaosResist6") == 1 and mod_tier(real, target.base_id, "ChaosResist5") == 2
-    assert [(mod.stat, mod.minimum) for mod in spec.mods] == [("+(31-35)% to Chaos Resistance", 31)]
-    assert top.stats[0].min == minimum and next_down.stats[0].max < minimum  # tier 2 cannot pass the buy spec
-    assert target.requirements[0].is_met_by(target.start_item)
+        assert target.start_any_tier == frozenset({written})
+        assert spec.name == text
+        assert [(mod.minimum, mod.fractured) for mod in spec.mods] == [(None, True)]
+        assert any(node.is_met_by(target.start_item) for node in target.requirements)
+
+
+def test_any_tier_needs_a_fractured_start_mod_and_a_leaf_that_takes_every_tier_of_it(real):
+    text = (EXAMPLES / "r11-reservation-helmet.yaml").read_text(encoding="utf-8")
+    with pytest.raises(TargetError, match="needs|only a fractured"):
+        parse_target(text.replace("      fractured: true\n", "      fractured: false\n", 1), real)
+    with pytest.raises(TargetError, match="accept every tier"):
+        parse_target(text.replace("    min_tier: any\n", "    min_tier: 1\n", 1), real)
 
 
 def test_the_r11_helmet_needs_a_shrieking_or_deafening_reservation_evasion_of_tier_1_to_3_tier_1_life_and_a_top_crafted_suffix(real):
