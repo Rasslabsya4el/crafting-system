@@ -20,9 +20,13 @@ tiers a draw can add) is a fact about items, and a block's members can differ in
 
 The chances of a row are the exact mixture of those of its states (OR-20): the sum over the states of (expected
 visits x chance) over the expected visits of the row (`_route_flow`). Chance per use lists the outcomes that do not lose
-a wanted mod, one line per place they lead to: the target, the same step again ("nothing gained"), another step.
-On failure lists the outcomes that lose a wanted mod (a leaf of the target that was met and no longer is), restart the item, or land
-in a step that restarts or has no action (PRES-6: never decided by what the item still costs to finish). A branch whose
+a wanted mod, one line per place they lead to: the target, the same step again ("not yet, this step again"), another step, each
+named by the item that goes there and the action it goes on with (", then Orb of Annulment", #1442). On failure lists the outcomes that
+lose a wanted mod the item came to the step with (a leaf of the target that was met and no longer is; a mod only an earlier use of the same
+step gave is a miss, not a loss, #889), or land in a step that restarts or has no action (PRES-6: never decided by what the item still costs
+to finish). A restart's own row says where it goes under "Next step": buying the item again is that step, not its failure (#892). Uses on
+average, when an item comes to a step more than once in a run (restarts, returns), says the uses each time, the times and the sum (#892).
+A use that consumes nothing (an unveil, a pick, the draw of a bought listing) costs "free", never the planner's epsilon (#1442). A branch whose
 landing items differ from the card after the step has its own item card under it. Tier chances (OR-31): when the step
 can add a mod of a family the target wants, one line per family with the chance of each tier and of none (`_route_tiers`),
 mixed the same way. Accepts, on a craft with several outcomes, says how many mods the accepted results may have (when
@@ -36,8 +40,8 @@ empty`. A given route that does what the planner's policy does is not drawn agai
 card says so in a line; one that differs is drawn with its differing steps only, linking the shared ones.
 
 Words about the item come from the compressed states of the step's outcomes: a requirement leaf that
-becomes met or is lost, a mod fractured, crafted mods added or removed. When no such difference tells two outcomes
-apart the line names the row the outcome leads to instead ("the item of step 4").
+becomes met or is lost, a mod fractured, crafted mods added or removed, else the wanted mods or open slots its items have and the
+other branches' lack (`item_words`). When nothing tells two outcomes apart the line names the action the item goes on with.
 
 Numbers: money is `≈ 12 c` (3 significant digits, thousands commas, `≈` only when rounded), chances
 `37%`, `≈4.3%`, `0.093%`, uses `≈ 1.1`. A route that never finishes has no cost numbers at all.
@@ -58,9 +62,10 @@ from pathlib import Path
 import numpy as np
 
 from crafting_system.actions import DRAW_LABEL
+from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
-from crafting_system.items import Item, Rarity
+from crafting_system.items import Item, Rarity, Side
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
@@ -74,9 +79,10 @@ from ._price_marks import price_uses, use_line
 from ._report import Report
 from ._report_net import ask
 from ._route import RESTART, Route, RouteResult
-from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
+from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
 from ._route_chain import chain_of_packed_policy
-from ._route_flow import Chain, Edge, Flow, LossReader, Step, chain_of_policy, flow_limits, flow_of
+from ._route_flow import _blocks as _route_flow_blocks
+from ._route_flow import Chain, Edge, Flow, LossReader, Step, arrived, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
@@ -99,6 +105,9 @@ class PageError(ValueError):
 NEVER_FINISHES = "never finishes from here"
 SURE_NEXT = "Next step, by the item it is used on"  # the field of a sure action's branches, in place of "Chance per use" (#984)
 GAPS = "never finishes: the route has gaps"
+AGAIN = "not yet, this step again"  # an outcome that leaves the item in the same step: the player uses the action again (#889)
+NEXT = "Next step"  # the field of a restart, in place of "On failure": buying the item again is the step, not a failure of it (#892)
+FREE = "free"  # the cost of a use that consumes nothing (an unveil, a pick): the planner's epsilon is no price a player pays (#1442)
 NEVER = "never finishes"
 
 # --- the model of the page -------------------------------------------------------------------------------
@@ -252,6 +261,13 @@ def _divine(chaos: float, chaos_per_divine: float) -> str:
 # --- the lines of a card -------------------------------------------------------------------------------------
 
 
+def _open(count_: int, side: str) -> str:
+    """"no open prefix", "1 open suffix", "2 open prefixes"."""
+    if count_ == 0:
+        return f"no open {side}"
+    return f"{count_} open {side}{'es' if count_ > 1 else ''}"
+
+
 def _plain(label: str, *texts: str, tone: str = "") -> Field | None:
     return Field(label, tuple(Line(text) for text in texts), tone) if texts else None
 
@@ -264,7 +280,9 @@ def _lost_leaves(chain: Chain, src: np.ndarray, dst: np.ndarray) -> tuple[range,
     """For each edge `src -> dst` of the chain (item states), which leaves of the target the use stops meeting: the wanted mods it loses.
 
     A leaf is lost on an edge when the item before has it met (PASSING) and the item after has not. Read on item states, so an Augmentation
-    never loses one and a Remove Crafted Mods loses only what a crafted mod gave.
+    never loses one and a Remove Crafted Mods loses only what a crafted mod gave. The flow counts the loss only on the uses where the item
+    has just come to the step holding the mod (`_route_flow.arrived`): a mod that an earlier use of the same step gave and the next use rerolls
+    away is a miss of that step, not a loss; an essence used again on boots never "loses" the Life only its last roll gave (#889).
     """
     width = len(chain.states[0].status)
     status = np.array([state.status for state in (*chain.states, *chain.goals)], dtype=np.int8).reshape(chain.m + len(chain.goals), width)
@@ -279,7 +297,54 @@ def _leaves_met(chain: Chain) -> np.ndarray:
     return np.unique(met, axis=0, return_inverse=True)[1].reshape(-1)
 
 
-LOST_LEAVES = LossReader(_lost_leaves, _leaves_met)
+def _met(chain: Chain) -> np.ndarray:
+    """The leaves of the target each state and each goal of `chain` meets (rows: states, then goals), kept on the chain."""
+    cached = chain.__dict__.get("_met")
+    if cached is None:
+        width = len(chain.states[0].status)
+        status = np.array([state.status for state in (*chain.states, *chain.goals)], dtype=np.int8).reshape(chain.m + len(chain.goals), width)
+        cached = status == int(Status.PASSING)
+        object.__setattr__(chain, "_met", cached)
+    return cached
+
+
+def _given(chain: Chain) -> np.ndarray:
+    """Per key of `chain` (a step), the leaves a use of that step can make met on an item that stays in the step: what its own rolls give.
+
+    Read once per (kernel, step, leaves met) triple, kept on the chain. An Annulment or a removal gives none; an essence, a Chaos Orb, a fossil
+    give the leaves of the mods they can roll.
+    """
+    cached = chain.__dict__.get("_given")
+    if cached is None:
+        met = _met(chain)
+        m = chain.m
+        cached = np.zeros((len(chain.keys), met.shape[1]), dtype=bool)
+        acting = np.flatnonzero(chain.kernel >= 0)
+        if acting.size:
+            classes = _leaves_met(chain)
+            _, first = np.unique(np.stack([chain.kernel[acting], chain.key[acting], classes[acting]], axis=1), axis=0, return_index=True)
+            reps = acting[first]
+            table = chain.kernels
+            sizes = table.kernel_sizes()[chain.kernel[reps]]
+            for a, b in _route_flow_blocks(np.concatenate(([0], np.cumsum(sizes)))):
+                ask()  # the report's memory net (#1381)
+                src = np.repeat(reps[a:b], sizes[a:b])
+                dst = table.k_succ[expand_ranges(table.k_ptr[chain.kernel[reps[a:b]]], sizes[a:b])].astype(np.int64)
+                stays = (dst < m) & (chain.key[np.minimum(dst, m - 1)] == chain.key[src])
+                gained = ~met[src] & met[dst] & stays[:, None]
+                np.logical_or.at(cached, chain.key[src], gained)
+        object.__setattr__(chain, "_given", cached)
+    return cached
+
+
+def _own_losses(chain: Chain, src: np.ndarray, dst: np.ndarray) -> np.ndarray:
+    """Per edge `src -> dst`: whether every leaf it loses is one its step's own uses can give (`_given`), so that it may be the step's own roll (#889)."""
+    met = _met(chain)
+    lost = met[src] & ~met[dst]
+    return ~(lost & ~_given(chain)[chain.key[src]]).any(axis=1)
+
+
+LOST_LEAVES = LossReader(_lost_leaves, _leaves_met, arrived, _own_losses)
 
 
 def steps_of_chain(chain: Chain) -> Flow:
@@ -440,13 +505,15 @@ class _View:
     def edge_phrase(self, step: Step, edge: Edge) -> tuple[str, bool]:
         """What happens on the item at an edge, in words and without its chance; `True` when the words only name the row it leads to.
 
-        A goal edge is "the target", an edge to the same step is "nothing gained", a failure is the wanted mods a use loses, or
-        the restart / the dead end it lands in; any other edge says what every landing item has that the step's items lack.
+        A goal edge is "the target", an edge to the same step is "not yet, this step again", a failure is the wanted mods a use loses (of
+        those the item came to the step with, `_lost_leaves`), or the restart / the dead end it lands in; any other edge says what every
+        landing item has that the step's items lack, else what its items have, or lack, that the items of the step's other branches do not
+        (`item_words`): the item by which a player tells where it goes (#1442). Only when nothing tells them apart do the words name the row.
         """
         if edge.kind == "goal" or edge.to is None:
             return "the target", False
         if edge.kind == "again":
-            return "nothing gained, this step again", False
+            return AGAIN, False
         if edge.kind == "failure":
             if step.action is not None and step.action.label == RESTART:
                 return f"the start item {'made again at the vendor' if self.first is not None else 'bought again'}", False
@@ -459,7 +526,52 @@ class _View:
                 return "the item is restarted", True
         elif appeared := self.appeared(step, edge):
             return " and ".join(appeared), False
+        if words := self.item_words(step, edge):
+            return words, False
         return f"the item of step {edge.to + 1}", True
+
+    def _free_slots(self, state: CompressedState) -> tuple[int, int] | None:
+        """The open prefixes and suffixes of an item state; None when the abstraction does not keep every mod (then they are not known)."""
+        if not self.reader.tracked:
+            return None
+        rarity = state.flags.rarity
+        if rarity is Rarity.NORMAL:
+            return None
+        held = Counter(slot.side for slot in state.slots)
+        for entry in state.fractured:
+            held[self.reader.fractured(entry.mod_id, entry.contribution)[0]] += 1
+        sides = (Side.PREFIX, Side.SUFFIX)
+        return tuple(max(0, _capacity(self.data, self.ab.base_id, side, rarity) - held[side]) for side in sides)  # type: ignore[return-value]
+
+    def item_words(self, step: Step, edge: Edge) -> str:
+        """The item of a branch, by what a player sees on it that the items of the step's other branches do not all share (#1442).
+
+        The wanted mods every item of the branch holds and some item of another branch lacks ("with ..."), those none of them holds and
+        some item of another branch does ("without ..."); when no wanted mod tells them apart, the open prefixes and suffixes every item of the
+        branch has and some other has not. "" when nothing does (the branches differ only in what the page cannot name).
+        """
+        mine = edge.states
+        others = [state for other in step.edges if other is not edge for state in other.states]
+        if not mine or not others:
+            return ""
+        width = len(self.plan.leaf_labels)
+
+        def met(state, i: int) -> bool:
+            return state.status[i] is Status.PASSING
+
+        held = [i for i in range(width) if all(met(state, i) for state in mine) and not all(met(state, i) for state in others)]
+        lacked = [i for i in range(width) if not any(met(state, i) for state in mine) and any(met(state, i) for state in others)]
+        parts = []
+        if held:
+            parts.append("with " + "; ".join(dict.fromkeys(self.leaf_text(i) for i in held)))
+        if lacked:
+            parts.append("without " + "; ".join(dict.fromkeys(self.leaf_text(i) for i in lacked)))
+        if parts:
+            return ", ".join(parts)
+        free = {self._free_slots(state) for state in mine}
+        if len(free) == 1 and (shared := next(iter(free))) is not None and any(self._free_slots(state) != shared for state in others):
+            return "with " + " and ".join(_open(count_, side) for count_, side in zip(shared, ("prefix", "suffix")))
+        return ""
 
     @staticmethod
     def sure(action: Action) -> bool:
@@ -489,18 +601,33 @@ class _View:
             lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1, None, always=names_row))
         return lines
 
-    def phrases(self, step: Step, edges: list[Edge]) -> list[tuple[str, bool]]:
-        """`edge_phrase` of each edge, and where two read alike, the action each goes on with: ", then Fracturing Orb".
-
-        Two branches that lead to different steps differ in what the player does next, and that is the one thing a player sees of
-        them when the item reads the same; branches to the same step are one edge already.
-        """
-        found = [self.edge_phrase(step, edge) for edge in edges]
-        counts = Counter(what for what, _ in found)
+    def restart_lines(self, step: Step, edges: list[Edge]) -> list[Line]:
+        """Where a restart goes: the start item again, a line per step it leads to, with the chance only when there are several (#892)."""
+        many = len(edges) > 1
         return [
-            (f"{what}, then {self.next_title(edge)}" if counts[what] > 1 and edge.to is not None else what, names_row)
-            for edge, (what, names_row) in zip(edges, found)
+            self.link(f"{what}{f' ({chance_text(edge.chance)})' if many else ''}", edge.to + 1, None, always=names_row)
+            for edge, (what, names_row) in zip(edges, self.phrases(step, edges))
         ]
+
+    def phrases(self, step: Step, edges: list[Edge]) -> list[tuple[str, bool]]:
+        """`edge_phrase` of each edge, with the action each goes on with when it leads to another step: ", then Fracturing Orb" (#1442).
+
+        A player who holds the item of a branch must be told what to do with it next, not only which row to read; a branch that leads back to
+        the same step with a mod lost says so (", this step again"). A phrase that only names the row ("the item of step 4") becomes the action.
+        """
+        found = []
+        for edge, (what, names_row) in zip(edges, (self.edge_phrase(step, edge) for edge in edges)):
+            if edge.to is None or edge.kind in ("goal", "again") or (step.action is not None and step.action.label == RESTART):
+                found.append((what, names_row))
+            elif edge.to == step.number:
+                found.append((f"{what}, this step again", names_row))
+            elif names_row and what.startswith("the item of step"):
+                found.append((f"then {self.next_title(edge)}", True))
+            elif names_row:
+                found.append((what, names_row))
+            else:
+                found.append((f"{what}, then {self.next_title(edge)}", names_row))
+        return found
 
     def next_title(self, edge: Edge) -> str:
         """The action of the step an edge leads to, as its row is titled."""
@@ -582,9 +709,10 @@ class _View:
             mark = self.plan.start_price.mark
             return [money(self.plan.start_price.chaos), *([mark] if mark else [])]  # OR-8: a thin market's price carries its mark
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price was paid in row 1 and is paid again by every restart
-            counted = money(self.plan.offer_of(action).cost)
-            return [f"free: the listing's price is paid in step 1 and again by each restart; counted as {counted} so that every step has a positive cost"]
+            return [f"{FREE}: the listing's price is paid in step 1 and again by each restart"]
         priced = self.plan.offer_of(action)
+        if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
+            return [FREE]
         lines = [f"{count_} × {name} {money(chaos)}" for name, count_, chaos, _ in priced.parts]
         if len(priced.parts) > 1:
             lines.append(f"total {money(priced.cost)}")
@@ -711,10 +839,11 @@ class _View:
         never = step.never_finishes
         step_cost = step.step_cost
         sure = self.sure(action) and not restart
-        uses = [NEVER_FINISHES] if never else [] if step.uses is None else [self.uses_text(step.uses, step.reached, sure)]
+        leave = math.fsum(edge.chance for edge in step.edges if edge.to != step.number)  # the chance a use takes the item out of the step
+        uses = [NEVER_FINISHES] if never else [] if step.uses is None else [self.uses_text(step.uses, step.reached, sure or restart, leave)]
         if uses and not never and step.reached is not None and step.reached < 0.9995:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
-        chances = self.chance_lines(step, action, shown, number + 1, sure)
+        chances = [] if restart else self.chance_lines(step, action, shown, number + 1, sure)
         if restart:
             after = self.start_card()
         else:
@@ -728,19 +857,39 @@ class _View:
             self.tier_field(step, action),
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
-            _plain("Step cost", money(step_cost)) if step_cost is not None else None,
-            Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing else None,
+            _plain("Step cost", FREE if self.free(action) else money(step_cost)) if step_cost is not None else None,
+            Field(NEXT, tuple(self.restart_lines(step, failing))) if failing and restart else None,
+            Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing and not restart else None,
             _plain("Note", *self.notes(action, step, restart)),
         )
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after))
 
+    def free(self, action: Action) -> bool:
+        """Whether a use of the action consumes nothing a player pays for: the draw of a bought listing, an unveil, a pick (#1442)."""
+        if action.label == RESTART:
+            return False
+        return action.label == DRAW_LABEL or not self.plan.offer_of(action).parts
+
     @staticmethod
-    def uses_text(uses: float, reached: float | None, sure: bool) -> str:
+    def uses_text(uses: float, reached: float | None, sure: bool, leave: float | None = None) -> str:
         """The expected uses of a step in a run. A sure action is used once each time the run reaches it, so it reads as one use, and as the
-        times a run that reaches the step is there when that is more than once: never as a use that may miss (#984)."""
+        times a run that reaches the step is there when that is more than once: never as a use that may miss (#984).
+
+        Any other action, when an item comes to the step more than once in a run (a restart buys a new one, a later miss sends it back): the
+        uses each time an item comes, the times, and the sum. `leave` is the chance one use takes the item out of the step, so an item that
+        comes uses it `1 / leave` times and the step is come to `uses x leave` times in a run (#892: 107 Augmentations are one on each of 107
+        helmets, never 107 on one). Without `leave` the sum alone."""
         if not sure:
-            return count(uses)
+            if not leave or not math.isfinite(uses):
+                return count(uses)
+            arrivals = uses * leave
+            times = arrivals / reached if reached else arrivals
+            if times < 1.05:  # an item comes once: the uses are those on one item
+                return count(uses)
+            each = count(1.0 / leave).replace("≈ ", "≈")
+            run = "in a run that reaches it" if reached else "in a run"
+            return f"{count(uses)} in all: {each} each time an item comes to this step, {count(times).replace('≈ ', '≈')} times {run}"
         if not reached:  # no reach solved: the times a run is at the step are not known, each of them is still one sure use
             return "1 each time"
         times = count(uses / reached)

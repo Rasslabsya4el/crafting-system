@@ -34,8 +34,8 @@ def test_a_policy_with_a_branch_has_one_block_for_each_action_and_the_page_s_cha
     assert [title for _, title, _ in blocks] == ["Essence of Hysteria", "Chaos Orb"]  # 2 actions, though the policy holds more states than that
     assert len(report.states) > len(blocks)
     essence, chaos = blocks
-    assert [words for _, words in essence[2]] == ["the target", "step 3: Chaos Orb"]  # the branches are grouped by where they lead
-    assert [words for _, words in chaos[2]] == ["the target", "nothing gained, this step again"]
+    assert [words for _, words in essence[2]] == ["the target", "without +# to maximum Life, any tier; next step 3: Chaos Orb"]  # the branches are grouped by where they lead
+    assert [words for _, words in chaos[2]] == ["the target", "not yet, this step again"]
 
 
 def test_the_block_of_several_states_shows_the_mixture_of_their_chances_once():

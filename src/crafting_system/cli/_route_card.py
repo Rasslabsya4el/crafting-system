@@ -53,8 +53,9 @@ tracked (`tracks_junk`), a slot of no kind that gives no leaf is junk: counted p
 the smallest count over the states, `any mod or empty` for the spread, `empty` for the rest of the
 capacity; a slot of a family told apart is a mod of that family. Without it (rerolls only: the junk is
 erased by every action), everything besides the fractured, crafted and wanted slots is `any mod or
-empty`, and `empty` on a normal item. With several states, a row every state has is plain, a row only
-some have carries the note `in some`, and a property that differs reads `Magic or Rare` or `(some)`.
+empty`, and `empty` on a normal item. With several states, a row every state has is plain; a row only some have is no line of
+the item (a card is an item a player can hold, never a blend of outcomes: six prefixes on a Rare, #889), its slot is `any mod` or `any mod
+or empty` and the row is listed once under the heading `VARIES` with its side; a property that differs reads `Magic or Rare` or `(some)`.
 
 Reaches into the abstraction beyond its public names, because it exposes no public way to ask: the
 `tracked` flag of `abstraction._kinds` (in `tracks_junk`) and `abstraction._drawn_contribution(mod)` (what
@@ -697,10 +698,6 @@ class _StateReader:
         return _Rows(rows, junk)
 
 
-def _some(row: Slot) -> Slot:
-    return replace(row, note=_note(row.note, "in some"))
-
-
 def _rank(row: Slot) -> int:
     """Fractured rows first, then wanted, other mods, crafted ones."""
     if "fractured" in row.marks:
@@ -708,17 +705,15 @@ def _rank(row: Slot) -> int:
     return {"wanted": 1, "crafted": 3}.get(row.tone, 2)
 
 
-def _join_rows(per_state: list[list[Slot]]) -> list[Slot]:
-    """The rows every state has, plain; the rows only some have, with the note `in some`."""
-    if len(per_state) == 1:
-        return list(per_state[0])
+VARIES = "only on some of these items, each in a slot marked any:"  # the heading of the rows only some states of a card hold (#889)
+
+
+def _shared_rows(per_state: list[list[Slot]]) -> tuple[list[Slot], list[list[Slot]]]:
+    """The rows every state has (as many times as each has it at least), and per state the rows it has beside them."""
     counts = [Counter(rows) for rows in per_state]
     shared = reduce(and_, counts)
-    joined: list[Slot] = []
-    for row in dict.fromkeys(row for rows in per_state for row in rows):
-        extra = max(count[row] for count in counts) - shared[row]
-        joined += [row] * shared[row] + [_some(row)] * extra
-    return sorted(joined, key=_rank)
+    rest = [list((count - shared).elements()) for count in counts]
+    return sorted(shared.elements(), key=_rank), rest
 
 
 def _join_properties(states: Sequence[CompressedState], item_level: int) -> tuple[str, ...]:
@@ -749,12 +744,14 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
     only_normal = all(state.flags.rarity is Rarity.NORMAL for state in states)
     only_magic = all(state.flags.rarity is Rarity.MAGIC for state in states)  # a Magic item draws its own one prefix and one suffix (#962)
     sides: dict[Side, tuple[Slot, ...]] = {}
+    varies: list[Slot] = []
     for side in SIDES:
-        rows = _join_rows([entry.rows[side] for entry in read])
+        rows, rest = _shared_rows([entry.rows[side] for entry in read])
         limit = _capacity(data, base_id, side, Rarity.MAGIC if only_magic else Rarity.RARE)
+        varies += [replace(row, marks=(*row.marks, side.value)) for row in dict.fromkeys(row for each in rest for row in each) if row.tone != "any"]
         if reader.tracked:
-            counts = [entry.junk[side] for entry in read]
-            rows += [ANY_MOD] * min(counts)
+            counts = [entry.junk[side] + len(each) for entry, each in zip(read, rest)]  # what a state holds beside the shared rows
+            rows += [ANY_MOD] * min(min(counts), max(0, limit - len(rows)))
             spread = max(counts) - min(counts)
             rows += [ANY_OR_EMPTY] * max(0, min(spread, limit - len(rows)))
             sides[side] = _fill(rows, limit)
@@ -767,6 +764,7 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         (),
         sides[Side.PREFIX],
         sides[Side.SUFFIX],
+        groups=(Group(VARIES, tuple(sorted(varies, key=_rank))),) if varies else (),
     )
 
 

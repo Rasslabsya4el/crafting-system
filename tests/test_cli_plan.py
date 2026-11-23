@@ -87,7 +87,7 @@ def test_the_text_tree_shows_the_main_line_the_miss_the_odds_the_mean_and_p90(tm
     assert "the item: rare; fractured +#% to Lightning Resistance; lacks +1 to Level of all Lightning Skill Gems" in text
     assert "cost per use: 50 Primal Crystallised Lifeforce = 0.50 Chaos" in text
     assert f"{q * 100:.2f}%  the target" in text
-    assert f"{(1 - q) * 100:.2f}%  nothing gained, this step again" in text
+    assert f"{(1 - q) * 100:.2f}%  not yet, this step again" in text
     assert "the mean cost" in text and "the cost 9 runs in 10 stay under" in text and "Divine" in text
     assert "risk figures" in text and "JSON policy written to" in text
     assert text.isascii()

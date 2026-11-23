@@ -245,12 +245,17 @@ class LossReader:
     """What the uses of a step lose of the wanted mods.
 
     `lost(chain, src, dst)` gives `(items, matrix)`: for the edges `src[e] -> dst[e]` (states, or `m + j` for goal `j`) which of `items` they
-    lose. `classes(chain)` gives a number per state such that what an edge loses depends on its source only through that number (the wanted
+    lose. `share(chain)` gives per state the share of its visits on which that loss counts (the rest of the uses of a losing edge lose
+    nothing and are grouped with those that do not lose); None counts every visit. `own(chain, src, dst)` says per edge whether every mod it
+    loses is one the step's own uses can give; the share applies only to those edges (an Annulment never gives a mod, so what it takes the
+    item held before the step, whatever use of the step made the item's state). `classes(chain)` gives a number per state such that what an edge loses depends on its source only through that number (the wanted
     mods it holds); the edges are then read once per (kernel, step, class) with one state standing for the class. None: every state its own class.
     """
 
     lost: Callable[[Chain, np.ndarray, np.ndarray], tuple[Sequence, np.ndarray]]
     classes: Callable[[Chain], np.ndarray] | None = None
+    share: Callable[[Chain], np.ndarray] | None = None  # per state, the share of its visits on which what a use loses counts as lost (`arrived`); None: all of them
+    own: Callable[[Chain, np.ndarray, np.ndarray], np.ndarray] | None = None  # per edge, whether all it loses is what its step's own uses can give: only then does `share` apply
 
 
 def empty_kernels() -> Kernels:
@@ -396,12 +401,21 @@ def flow_of[S: Hashable](
     mass_parts: list[np.ndarray] = []
     pair_parts: list[np.ndarray] = []
     lost_parts: dict = {}
-    for src, dst, mass in _edges_by_class(chain, step, mix, reader):
+    for src, dst, whole, counted in _edges_by_class(chain, step, mix, reader):
         into_goal = dst >= m
         target = np.where(into_goal, _GOAL, step[np.minimum(dst, m - 1)])
         items, lost_matrix = ((), np.zeros((len(dst), 0), dtype=bool)) if reader is None else reader.lost(chain, src, dst)
         lost_edge = lost_matrix.any(axis=1) if lost_matrix.shape[1] else np.zeros(len(dst), dtype=bool)
         lost_edge &= ~into_goal & ~restarting[step[src]]  # a restart is one failure whatever it throws away
+        if reader is not None and reader.own is not None:  # a mod the step can never give (an Annulment's) was on the item before any use of it
+            counted = np.where(np.asarray(reader.own(chain, src, dst), dtype=bool), counted, whole)
+        # a losing edge is two parts: its uses on which the loss counts (`counted`), and the rest, which lose nothing (#889); a part of no mass is none
+        first = ~lost_edge | (counted > 0.0) | (whole <= 0.0)  # an edge of no mass at all (a state that cannot finish) stays as it was
+        rest = lost_edge & (whole > counted)
+        mass = np.concatenate((np.where(lost_edge, counted, whole)[first], (whole - counted)[rest]))
+        src, dst, target = (np.concatenate((each[first], each[rest])) for each in (src, dst, target))
+        lost_matrix = np.concatenate((lost_matrix[first], np.zeros((int(rest.sum()), lost_matrix.shape[1]), dtype=bool)))
+        lost_edge = np.concatenate((lost_edge[first], np.zeros(int(rest.sum()), dtype=bool)))
         code = ((step[src] * (nsteps + 1) + (target + 1)) * 2 + lost_edge).astype(np.int64)
         found, at = np.unique(code, return_inverse=True)
         code_parts.append(found)
@@ -538,6 +552,47 @@ def _blocks(ptr: np.ndarray) -> list[tuple[int, int]]:
     return blocks
 
 
+def arrived(chain: Chain) -> np.ndarray:
+    """Per state of `chain`: the share of its expected visits on which the item has just come to its step, from the start or from a use in
+    another step, rather than from a use of its own step (#889).
+
+    What a use takes from an item that has just come is a mod the item came with; what it takes from an item its own step made (an essence
+    used again on the essence's last roll) is a miss of the step. The visits are those of the flow (`_solved`); a state with no solved
+    visits counts 1 when an item can come to it from outside its step, else 0. Read once per (kernel, step) pair, kept on the chain.
+    """
+    cached = chain.__dict__.get("_arrived")
+    if cached is None:
+        m = chain.m
+        outside = np.zeros(m, dtype=bool)
+        within = np.zeros(m)
+        if m:
+            outside[0] = True
+            done = _solved(chain)
+            visits = done.visits if done.solved else np.zeros(m)
+            acting = np.flatnonzero(chain.kernel >= 0)
+            if acting.size:
+                pairs, which = np.unique(np.stack([chain.kernel[acting], chain.key[acting]], axis=1), axis=0, return_inverse=True)
+                weight = np.bincount(which.reshape(-1), weights=visits[acting], minlength=len(pairs))
+                table = chain.kernels
+                moves, keys = pairs[:, 0], pairs[:, 1]
+                sizes = table.kernel_sizes()[moves]
+                for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):
+                    ask()  # the report's memory net (#1381)
+                    edge = expand_ranges(table.k_ptr[moves[a:b]], sizes[a:b])
+                    dst = table.k_succ[edge].astype(np.int64)
+                    into = dst < m
+                    same = into & (chain.key[np.minimum(dst, m - 1)] == np.repeat(keys[a:b], sizes[a:b]))
+                    outside[dst[into & ~same]] = True
+                    np.add.at(within, dst[same], (np.repeat(weight[a:b], sizes[a:b]) * table.k_prob[edge])[same])
+        with np.errstate(divide="ignore", invalid="ignore"):
+            share = np.where(within > 0.0, np.clip(1.0 - within / visits, 0.0, 1.0), 1.0) if m else np.zeros(0)
+        cached = np.where(visits > 0.0, share, outside.astype(np.float64)) if m else share
+        if m:
+            cached = np.where(outside, cached, 0.0)  # an item never comes to it from outside: every visit is the step's own
+        object.__setattr__(chain, "_arrived", cached)
+    return cached
+
+
 def _can_finish(chain: Chain) -> np.ndarray:
     """The states with an action from which some run reaches a goal through states that have an action, found a block of edges at a time."""
     m, ptr, dst = chain.m, chain.ptr, chain.dst
@@ -656,7 +711,8 @@ def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: Los
     `CHUNK_EDGES` edges at a time (a kernel with more is a chunk of its own).
 
     `src` is the first state of the class (it stands for all: they share the outcomes and what each loses), `dst` where an edge leads and
-    `mass` the sum over the class's states of their mixture weight `mix` times the edge's chance.
+    `mass` the sum over the class's states of their mixture weight `mix` times the edge's chance, `counted` the same with each weight times the
+    state's `LossReader.share` (the part of the mass on which a loss counts; `mass` when the reader has no share).
     """
     acting = np.flatnonzero(chain.kernel >= 0)
     if reader is None:
@@ -670,6 +726,8 @@ def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: Los
     _, first, which = np.unique(np.stack([chain.kernel[acting], step[acting], classes[acting]], axis=1), axis=0, return_index=True, return_inverse=True)
     which = which.reshape(-1)
     weight = np.bincount(which, weights=mix[acting], minlength=len(first))
+    shares = None if reader is None or reader.share is None else np.asarray(reader.share(chain), dtype=np.float64)
+    counted = weight if shares is None else np.bincount(which, weights=(mix * shares)[acting], minlength=len(first))
     rep = acting[first]
     table = chain.kernels
     moves = chain.kernel[rep]
@@ -677,7 +735,11 @@ def _edges_by_class(chain: Chain, step: np.ndarray, mix: np.ndarray, reader: Los
     for a, b in _blocks(np.concatenate(([0], np.cumsum(sizes)))):
         ask()  # the report's memory net, between two blocks of edges (#1381; nothing outside `_report_net.report_net`)
         edge = expand_ranges(table.k_ptr[moves[a:b]], sizes[a:b])
-        yield np.repeat(rep[a:b], sizes[a:b]), table.k_succ[edge].astype(np.int64), np.repeat(weight[a:b], sizes[a:b]) * table.k_prob[edge]
+        prob = table.k_prob[edge]
+        yield (
+            np.repeat(rep[a:b], sizes[a:b]), table.k_succ[edge].astype(np.int64), np.repeat(weight[a:b], sizes[a:b]) * prob,
+            np.repeat(counted[a:b], sizes[a:b]) * prob,
+        )  # fmt: skip
 
 
 def _solved(chain: Chain) -> _Solved:

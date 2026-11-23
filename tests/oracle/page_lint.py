@@ -539,7 +539,7 @@ def check_bought_item_not_empty(page: Page) -> list[Fault]:
             empties = [slot for slot in step.after.slots if slot.tone == "empty"]
             if empties:
                 faults.append(_fault("OR-17", check_bought_item_not_empty, where, f"the bought item is drawn with {len(empties)} empty slot(s)"))
-            count = sum(1 for slot in step.after.slots if slot.tone != "implicit")
+            count = sum(len(slots) for caption, slots in step.after.sides if caption in ("Prefixes", "Suffixes"))  # the item's own lines, not the list of what some items hold (#889)
             if first_count is None:
                 first_count = (count, step.number)
             elif count < first_count[0]:

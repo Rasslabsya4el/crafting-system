@@ -20,6 +20,8 @@ from crafting_system.cli._route_card import (
     _leaf_slot,
     Group,
     ItemCard,
+    ANY_OR_EMPTY,
+    VARIES,
     Slot,
     _StateReader,
     card_of_item,
@@ -530,13 +532,26 @@ def test_a_join_of_states_with_different_junk_counts_is_any_mod_then_any_mod_or_
     assert card.suffixes == expected
 
 
-def test_a_row_only_some_states_have_carries_the_note_in_some_and_a_shared_row_stays_plain():
+def test_a_row_only_some_states_have_is_no_line_of_the_item_but_listed_apart_and_a_shared_row_stays_plain():
+    """#889: a card is an item a player can hold; what only some of the joined items hold is listed once under its own heading."""
     fractured = roll(FIRE, fractured=True)
 
     card = belt_join(belt(fractured), belt(fractured, roll(LIFE_3)))
 
     assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"), EMPTY, EMPTY)
-    assert card.prefixes == (Slot("+# to maximum Life", "wanted", note="any tier, in some"), EMPTY, EMPTY)
+    assert card.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY)
+    assert card.groups == (Group(VARIES, (Slot("+# to maximum Life", "wanted", ("prefix",), "any tier"),)),)
+    assert not any("in some" in slot.note for slot in (*card.prefixes, *card.suffixes))
+
+
+def test_a_join_never_draws_more_lines_on_a_side_than_the_item_holds():
+    """#889: R10's card drew six prefix lines on a Rare (three hold one wanted mod, three another): the side keeps its capacity."""
+    a, b = belt(roll(LIFE_3)), belt(roll(FIRE, fractured=True))
+
+    card = belt_join(a, b)
+
+    assert len(card.prefixes) == 3 and len(card.suffixes) == 3
+    assert {slot.text for slot in card.groups[0].members} == {"+# to maximum Life", "+(6-11)% to Fire Resistance"}
 
 
 def test_properties_that_differ_between_the_joined_states_say_so():
