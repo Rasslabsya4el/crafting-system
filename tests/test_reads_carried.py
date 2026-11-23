@@ -13,7 +13,6 @@ from contract_support import CONTRACT_DATA, contract_pairs, fixture_items
 from crafting_system.actions.beast_mods import BeastSideSwap
 from crafting_system.actions.errors import ActionError, NotApplicableError
 from crafting_system.actions.finite import Finite
-from crafting_system.actions.pool import build_pool, partners
 from crafting_system.items import ExplicitMod, Item, ItemError, Side
 from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
@@ -53,20 +52,24 @@ def _carried_junk(data, item: Item, sides) -> list[int]:
 def carried_swaps(action, item: Item, data, per_mod: int = 8) -> tuple[list[tuple[str, str]], int]:
     """For `action` declaring `Reads.carried`: each junk mod of `item` on a carried side swapped for up to `per_mod` ordinary mods of that side,
     where the answer is not the answer before with the mod swapped: (the mod, its swap); and how many swaps were tried. An item whose pool
-    holds a family on both sides is not tried (the declaration excludes it)."""
+    the action declares no draw for is not tried, nor a mod that shares a family with the draw's pool (the declaration excludes both)."""
     sides = action.reads(data).carried
-    if partners(build_pool(data, item)):
+    drawn = action.added_draw(data, item)
+    if drawn is None:
         return [], 0
+    pooled = {family for entry in drawn.pool for pooled_mod in entry.mods for family in pooled_mod.mod.families}
     before = _answer(action, data, item)
     changed, tried_all = [], 0
     for index in _carried_junk(data, item, sides):
         entry = item.mods[index]
         mod = data.mods[entry.mod_id]
+        if not pooled.isdisjoint(mod.families):
+            continue
         tried = 0
         for other in data.mods.values():
             if tried >= per_mod:
                 break
-            if other.id == mod.id or other.generation_type != mod.generation_type or other.domain != mod.domain:
+            if other.id == mod.id or other.generation_type != mod.generation_type or other.domain != mod.domain or not pooled.isdisjoint(other.families):
                 continue
             new = ExplicitMod(other.id, tuple(min(stat.min, stat.max) for stat in other.stats))
             try:

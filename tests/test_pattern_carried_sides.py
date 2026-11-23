@@ -10,17 +10,19 @@ and R04's quiver), and the view itself on members made by hand.
 
 import contextlib
 import dataclasses
+import random
 from pathlib import Path
 
 from abstraction_support import real_game_data
 from pattern_support import pushed as pushed_through_key
-from test_abstraction_pattern import ACTIONS, BOW, GOAL, LEVEL, STARTS, build, pattern_data
+from test_abstraction_pattern import ACTIONS, BOW, ESSENCE_ONLY, EXTRA_SUFFIXES, GOAL, LEVEL, STARTS, build, pattern_data
 from test_pattern_items_kept import same_model
 from test_pattern_member_views import _frozen, walked_states
 
 from crafting_system.abstraction import Abstraction, _pattern
-from crafting_system.abstraction._pattern import Pattern, PatternOffer, build_pattern_model
+from crafting_system.abstraction._pattern import Pattern, PatternOffer, _Carried, build_pattern_model
 from crafting_system.abstraction._state import CompressedState, Slot
+from crafting_system.actions import ActionError
 from crafting_system.actions.beast_mods import BeastSideSwap
 from crafting_system.cli import make_plan
 from crafting_system.items import Side
@@ -60,18 +62,79 @@ def test_a_side_swap_carries_the_side_it_removes_from_and_no_other_action_carrie
     assert all(not action.reads(data).carried for action in ACTIONS.values())
     _, ab, pattern = world()
     key = pattern.key(ab.compress(build(data, BOW, STARTS[0])))
-    assert pattern.carried_sides(SWAPS[0], key) == frozenset({Side.SUFFIX})
+    assert pattern.carried_sides(SWAPS[0], key) == _Carried(frozenset({Side.SUFFIX}), frozenset())
     assert pattern.carried_sides(ACTIONS["exalted"], key) is None
     with every_member():
         assert pattern.carried_sides(SWAPS[0], key) is None
 
 
-def test_a_pool_with_a_family_on_both_sides_carries_no_side(monkeypatch):
-    """A family held on the carried side would leave the draw on the other side too: no side is carried then (`carried_sides`)."""
+def test_a_swap_that_declares_no_draw_carries_no_side(monkeypatch):
+    """Where the pool at the beast's level holds a family on both sides the swap declares no draw (`added_draw`): nothing is carried."""
     data, ab, pattern = world()
     key = pattern.key(ab.compress(build(data, BOW, STARTS[0])))
-    monkeypatch.setattr(Pattern, "_has_partners", lambda self, influences: True)
+    monkeypatch.setattr(BeastSideSwap, "added_draw", lambda self, data, item: None)
     assert pattern.carried_sides(SWAPS[0], key) is None
+
+
+def essence_world():
+    """The hand-worked world with the essence's forced prefix (outside the pool) of the family of a suffix the pool holds: that prefix takes
+    the suffix out of a swap's draw (the checker's case of #1192)."""
+    data = pattern_data()
+    family = EXTRA_SUFFIXES[0][0]
+    data = dataclasses.replace(data, mods={**data.mods, ESSENCE_ONLY: dataclasses.replace(data.mods[ESSENCE_ONLY], families=(family,))})
+    actions = (*ACTIONS.values(), *SWAPS[:2])
+    ab = Abstraction(data, GOAL, BOW, LEVEL, actions, metamods=True)
+    return data, ab, Pattern(ab, True, list(actions))
+
+
+def _walked(ab: Abstraction, actions, seed: int) -> list:
+    """`walked_states` for the essence world, whose made-up family makes some kernels no item (`ValueError`): a walk stops there."""
+    rng = random.Random(seed)
+    states: dict = {}
+    for start in [ab.compress(build(ab.data, BOW, ids)) for ids in STARTS]:
+        for _ in range(40):
+            state = start
+            for _ in range(8):
+                states[state] = None
+                try:
+                    kernel = ab.kernel(state, rng.choice(actions))
+                except ActionError:
+                    continue
+                except ValueError:
+                    break
+                state = rng.choices(list(kernel), weights=[float(chance) for chance in kernel.values()])[0]
+    return list(states)
+
+
+def test_a_carried_slot_of_a_family_the_draw_holds_is_read_as_it_is():
+    """The essence's prefix shares a family with the suffix pool: the swap that adds a suffix reads its kind; the other swap reads no kind."""
+    data, ab, pattern = essence_world()
+    key = pattern.key(ab.compress(build(data, BOW, STARTS[0])))
+    kind = _pattern._base(ab.kind_of(data.mods[ESSENCE_ONLY]))
+    assert pattern.carried_sides(SWAPS[1], key).blockers == {kind}  # adds a suffix, carries the prefixes
+    assert pattern.carried_sides(SWAPS[0], key).blockers == frozenset()
+
+
+def test_on_the_essence_world_the_members_of_one_carried_view_give_one_kernel():
+    """Every member of every key a seeded walk meets: with that prefix read as it is, the members of one carried view give one kernel (as
+    the prefix's view alone they did not: 110 of 2,161 groups differed)."""
+    data, ab, pattern = essence_world()
+    groups = blocked = 0
+    for key in dict.fromkeys(map(pattern.key, _walked(ab, [*ACTIONS.values(), *SWAPS[:2]], 1192))):
+        for swap in SWAPS[:2]:
+            carried = pattern.carried_sides(swap, key)
+            by_view: dict = {}
+            for member in pattern.members(key, *pattern.asked(swap, key)):
+                by_view.setdefault(pattern.carried_view(member, carried), []).append(member)
+            for view, members in by_view.items():
+                try:
+                    answers = {_frozen(pushed_through_key(pattern, ab, member, swap)) for member in members}
+                except ValueError:  # the made-up family gives the essence's prefix a type the pool lacks: no item there
+                    continue
+                assert len(answers) == 1, (key, swap)
+                groups += 1
+                blocked += any(_pattern._base(slot.kind) in carried.blockers for slot in view[1])
+    assert groups > 1_000 and blocked > 50
 
 
 def test_the_carried_view_holds_what_the_key_reads_of_a_carried_slot_and_the_other_side_whole():
@@ -85,12 +148,15 @@ def test_the_carried_view_holds_what_the_key_reads_of_a_carried_slot_and_the_oth
     def member(*slots):
         return CompressedState(None, (), (), tuple(slots))
 
-    carried = frozenset({Side.SUFFIX})
+    carried = _Carried(frozenset({Side.SUFFIX}), frozenset())
     assert pattern.carried_view(member(p1, s1), carried) == pattern.carried_view(member(p1, s2), carried)
     assert pattern.carried_view(member(p1, s1), carried) != pattern.carried_view(member(p2, s1), carried)
     assert pattern.carried_view(member(p1, s1), carried) == (frozenset({((Side.SUFFIX, (), zero), 1)}), (p1,))
     crafted = Slot(Side.SUFFIX, "~3", zero, crafted=True)  # a crafted slot is the key's: it is in no view
     assert pattern.carried_view(member(p1, crafted), carried) == (frozenset(), (p1,))
+    blocking = _Carried(frozenset({Side.SUFFIX}), frozenset({"~3"}))  # a kind some mod of a family of the draw's pool has: read as it is
+    assert pattern.carried_view(member(p1, s1), blocking) == (frozenset(), (p1, s1))
+    assert pattern.carried_view(member(p1, s1), blocking) != pattern.carried_view(member(p1, s2), blocking)
 
 
 def test_on_the_hand_worked_world_the_members_of_one_carried_view_give_one_kernel():
