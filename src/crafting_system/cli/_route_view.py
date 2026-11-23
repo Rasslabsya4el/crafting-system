@@ -395,12 +395,11 @@ class _View:
     def anchor(self, number: int) -> str:
         return f"{self.prefix}s{number}"
 
-    def link(self, text: str, number: int, below: int | None, *, always: bool = False) -> Line:
-        """`text` with a link to row `number`; the arrow is left out when that row is right below row `below`."""
-        href = f"#{self.anchor(number)}"
-        if always:
-            return Line(text, href)
-        return Line(text) if number == below else Line(text, href, f"→ step {number}")
+    def link(self, text: str, number: int, below: int | None = None) -> Line:
+        """`text` with a link to row `number` and its arrow ("→ step 7"); the arrow is left out only when that row is right below row
+        `below`, which a caller passes only for the one place a step leads to: where a step has several, every one names its step, and a
+        step whose one place is not the row below names it too, so that a loop back to an earlier step reads as one (#1442)."""
+        return Line(text) if number == below else Line(text, f"#{self.anchor(number)}", f"→ step {number}")
 
     # -- what changes ----------------------------------------------------------------------------------------
 
@@ -522,8 +521,8 @@ class _View:
             there = self.flow.steps[edge.to - 1].action  # `edge.to` is a step number (from 1)
             if there is None:
                 return "the route has no step for this item", True
-            if there.label == RESTART:
-                return "the item is restarted", True
+            if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442)
+                return f"the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
         elif appeared := self.appeared(step, edge):
             return " and ".join(appeared), False
         if words := self.item_words(step, edge):
@@ -584,29 +583,32 @@ class _View:
 
         For a sure action (`sure`) the lines are the shares of its uses that go on to each step, by the item it was used on (`step_row`
         titles them so): a chance of a sure use would read as a miss (#984). A restart is never sure here: what it buys is a new random item."""
-        if len(shown) == 1 and self.sure(action):  # one place and one outcome says nothing
-            return []
         if len(shown) == 1:
-            return [Line(chance_text(shown[0].chance))]
+            edge = shown[0]
+            onward = edge.kind not in ("goal", "again") and edge.to is not None and edge.to + 1 != below
+            if self.sure(action):  # one place and one outcome: said only when that place is not the row below (a loop back, a jump)
+                return [self.link(f"then {self.next_title(edge)}", edge.to + 1)] if onward else []
+            text = chance_text(edge.chance)
+            return [self.link(f"{text}, then {self.next_title(edge)}", edge.to + 1)] if onward else [Line(text)]
         lines = []
-        for edge, (what, names_row) in zip(shown, self.phrases(step, shown)):
+        for edge, (what, _) in zip(shown, self.phrases(step, shown)):
             text = f"{what}: {chance_text(edge.chance)}" + (" of uses" if sure else "")
-            lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1, below, always=names_row))
+            lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1))
         return lines
 
     def failure_lines(self, step: Step, failing: list[Edge], below: int) -> list[Line]:
         """One line per place a use that loses a wanted mod, or restarts the item, leads to."""
         lines = []
-        for edge, (what, names_row) in zip(failing, self.phrases(step, failing)):
-            lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1, None, always=names_row))
+        for edge, (what, _) in zip(failing, self.phrases(step, failing)):
+            lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1))
         return lines
 
     def restart_lines(self, step: Step, edges: list[Edge]) -> list[Line]:
         """Where a restart goes: the start item again, a line per step it leads to, with the chance only when there are several (#892)."""
         many = len(edges) > 1
         return [
-            self.link(f"{what}{f' ({chance_text(edge.chance)})' if many else ''}", edge.to + 1, None, always=names_row)
-            for edge, (what, names_row) in zip(edges, self.phrases(step, edges))
+            self.link(f"{what}{f' ({chance_text(edge.chance)})' if many else ''}", edge.to + 1)
+            for edge, (what, _) in zip(edges, self.phrases(step, edges))
         ]
 
     def phrases(self, step: Step, edges: list[Edge]) -> list[tuple[str, bool]]:
@@ -853,7 +855,7 @@ class _View:
             _plain("Goal", *goal),
             _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
-            Field(SURE_NEXT if sure else "Chance per use", tuple(chances)) if chances else None,
+            Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else "Chance per use", tuple(chances)) if chances else None,
             self.tier_field(step, action),
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
