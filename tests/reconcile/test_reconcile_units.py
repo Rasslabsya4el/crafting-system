@@ -712,6 +712,14 @@ def test_the_spec_mod_must_select_the_start_mods_tier(tmp_path, spec_change, slo
     assert slot in result
 
 
+def test_a_start_mod_bought_at_any_tier_needs_a_spec_mod_with_no_minimum(tmp_path):
+    any_tier = lambda d: d["start_item"]["mods"][0].update(any_tier=True)  # #522
+
+    assert _bad(_run(tmp_path, target=any_tier, spec=lambda d: d["mods"][0].pop("minimum"))) == {}
+    result = _bad(_run(tmp_path, target=any_tier, spec=lambda d: d["mods"][0].update(minimum=12)))
+    assert result["start_mod.ResA2.buy_minimum"]  # the tier's own minimum prices one tier, not any
+
+
 def test_the_minimum_may_be_anywhere_from_just_above_the_lower_tier_to_the_start_roll(tmp_path):
     for minimum in (12, 13, 14):
         assert _bad(_run(tmp_path, spec=lambda d, m=minimum: d["mods"][0].update(minimum=m))) == {}

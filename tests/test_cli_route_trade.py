@@ -140,3 +140,36 @@ def test_a_start_priced_from_a_wider_search_links_that_search_and_says_it_in_wor
     assert step.accepts[:2] == ("Rare, any ring base", "item level 75 or more")
     assert step.accepts[-1] == "fractured: +# to all Attributes (at least 13)"
     assert step.item == "any ring, item level 75 or more, fractured +# to all Attributes (at least 13)"
+
+
+WIDER_BOW = {
+    "query": {
+        "status": {"option": "securable"},
+        "type": "Thicket Bow",
+        "stats": [{"type": "and", "filters": [{"id": "pseudo.pseudo_has_hunter_influence", "disabled": False, "value": {"min": 1}}]}],
+        "filters": {
+            "type_filters": {"filters": {"rarity": {"option": "nonunique"}, "category": {"option": "weapon.bow"}}},
+            "misc_filters": {"filters": {"ilvl": {"min": 78}, "corrupted": {"option": "false"}, "mirrored": {"option": "false"}}},
+        },
+    },
+    "sort": {"price": "asc"},
+}  # R14's stored search (2026-11-10): a Thicket Bow of any rarity but unique, item level 78 or more, Hunter influence
+
+
+def test_a_wider_search_of_any_rarity_but_unique_with_an_influence_is_said_in_words():
+    """#937 (OR-7), R14: the magic Thicket Bow of item level 78-79 is priced from a search of any rarity but unique and item level 78 or
+    more, with the Hunter influence; the step says that item, never the trade site's option `nonunique`, and keeps the influence."""
+    from crafting_system.prices.query_compare import searched_spec
+
+    spec = BuySpec(
+        "Thicket Bow, magic, item level 78-79, Hunter influence", base_type="Thicket Bow", category="weapon.bow", rarity="magic",
+        item_level_min=78, item_level_max=79, influences=("hunter",),
+    )  # fmt: skip
+    wider = searched_spec(spec, WIDER_BOW)
+    step = buy_step(wider, "Allflame", MODS, STATS, WIDER_BOW)
+
+    assert (wider.rarity, wider.base_type, wider.item_level_min, wider.item_level_max, wider.influences) == ("nonunique", "Thicket Bow", 78, None, ("hunter",))
+    assert query_of(step.url) == WIDER_BOW
+    assert step.accepts[:2] == ("Any rarity but unique Thicket Bow", "item level 78 or more")
+    assert step.item == "Thicket Bow, any rarity but unique, item level 78 or more, Hunter influence"
+    assert "nonunique" not in step.item and not any("nonunique" in line for line in step.accepts)

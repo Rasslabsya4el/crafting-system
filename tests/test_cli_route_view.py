@@ -1092,3 +1092,59 @@ def test_512_the_page_and_the_text_report_give_the_same_sentence_for_a_subcritic
     assert fields["9 runs in 10"] == NOT_COMPUTED["subcritical"]
     assert row[2 + ROW_WIDTH :] == fields["9 runs in 10"]
     assert not re.search(r"#\d", fields["9 runs in 10"])  # no ticket number reaches the player
+
+
+def _hand_set_wider_plan(provenance_of, any_base: bool = False):
+    """R12 priced from a stored search wider than its item (#483, #937): hand-set (OR-44), with `provenance_of(the stored body)`'s
+    exact-item listings; `any_base` drops the search's base type, so it takes any amulet base."""
+    from crafting_system.prices.provenance import HAND_SET, Provenance
+
+    target = load_target(R12, DATA)
+    spec = buy_spec_of(DATA, target)
+    body = build_query(spec, [resolve_buy_mod(mod, list(DATA.mods.values()), STATS) for mod in spec.mods]).body()
+    del body["query"]["filters"]["misc_filters"]["filters"]["ilvl"]
+    if any_base:
+        body["query"].pop("type", None)
+        body["query"]["filters"].setdefault("type_filters", {"filters": {}})["filters"]["category"] = {"option": "accessory.amulet"}
+    prices = price_file(start=None)
+    provenance = provenance_of(Provenance)
+    prices.prices[spec.name] = PriceEntry(4.0, "hand-set", "a hand-set note", {"query": body}, dataclasses.replace(provenance, kind=HAND_SET))
+    return judged_plan(target, prices, ()), spec, body
+
+
+@pytest.mark.parametrize(
+    ("listings", "price", "words"),
+    [
+        (0, None, "the exact item had no listings on 2026-11-10"),  # R14: the exact item has no market at all
+        (1, 20.0, "the exact item had 1 listing on 2026-11-10, at 20 c,"),
+        (3, 3616.73, "the exact item had 3 listings on 2026-11-10, at "),
+    ],
+)
+def test_the_advice_line_says_what_the_exact_item_had_on_the_market(listings, price, words):
+    """#483, #937: the line a player acts on names the exact item's listings, none included, and their price when it has some."""
+    plan, _, _ = _hand_set_wider_plan(lambda P: P("trade", "Allflame", "2026-11-10", 5.0, item="wider", for_item="any item level", exact_listings=listings, exact_price=price))
+    advice = lines_of(build_section(route_input(plan), DATA).rows[0], "Cost per use")[-1]
+
+    assert advice.startswith("what to do: buy the cheapest item the trade link shows; the plan is worked out on Paua Amulet")
+    assert words in advice and advice.endswith("so a player buys the wider item")
+    assert ("on average" in advice) == (listings > 1)
+
+
+def test_a_start_priced_as_any_base_of_its_kind_draws_no_base_name_and_no_implicit():
+    """#937, outside a golden: a search with no base type (R05's any ring) prices any base of the kind, so no card of the route names
+    the planned base or draws its implicit; the buy step's title and Accepts say the base is any."""
+    from crafting_system.cli._route_view import _any_base
+    from crafting_system.prices.query_compare import searched_spec
+
+    plan, spec, body = _hand_set_wider_plan(lambda P: P("trade", "Allflame", "2026-11-10", 5.0, item="wider", exact_listings=1, exact_price=20.0), any_base=True)
+    buy = buy_step(searched_spec(spec, body), "Allflame", MODS, STATS, body)
+    section = build_section(route_input(plan), DATA, buy)
+    cards = [row.after for row in section.rows] + [branch.card for row in section.rows for branch in row.branches] + [section.goal.target]
+
+    assert buy.accepts[0] == "Rare, any amulet base"
+    assert section.rows[0].title == "Buy any amulet, fractured +#% to Lightning Resistance"  # this search has no item level filter
+    assert all(card.name != "Paua Amulet" for card in cards)
+    assert any(card.name == "Amulet, any base" for card in cards)
+    assert all(card.implicits == () for card in cards if card.name == "Amulet, any base")
+    other = dataclasses.replace(section.rows[0].after, name="Coral Amulet")
+    assert _any_base(other, ("Paua Amulet", "Amulet, any base")) is other  # a card of another base is left as it is

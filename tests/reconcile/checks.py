@@ -18,7 +18,8 @@ Slots (the rule behind all of them is OR-3, "the target, the buy spec and the pr
 - `start_mod.<mod>.ladder`, `.values`: a start mod can spawn on every base the target names and has one tier on them (the tier is the
   game data's since #484: a target file writes none), and its hand-written values against the game data.
 - `start_mod.<mod>.buy_mod`, `.buy_minimum`: a start mod against the buy spec's mod of the same text,
-  and the spec's minimum against the tier (the tier the price was taken for).
+  and the spec's minimum against the tier (the tier the price was taken for); a start mod bought at any tier (`any_tier: true`,
+  #522) needs a spec mod with no minimum.
 - `buy_mod.<stat>.in_target`: a buy spec mod the target's start item does not have.
 - `price.entry`, `price.base`, `price.item_level`, `price.source`, `price.pool`: the start-price entry
   against the target's base by base id (several bases share a name), item level (as the entry records
@@ -308,9 +309,13 @@ def reconcile(
         ranges = stat_ranges(record)
         if len(ranges) != 1:
             raise FileFormatError(f"{mod.mod} has {len(ranges)} stats; the buy spec minimum check reads one-stat mods only")
+        if mod.any_tier:  # bought at any tier of its family (#522): the spec must ask no minimum, so every tier matches
+            if buy.minimum is not None:
+                add(f"start_mod.{mod.mod}.buy_minimum", f"{written}: any tier", f"{where_spec}: {buy.stat!r} minimum = {buy.minimum}", "any tier: no minimum", f"minimum {buy.minimum}")
+            continue
         if derived_tier is None:
             continue  # the ladder slot already says why
-        first = next(i for i, t in _tiers_of(export, base_ids, mod.mod, target.influence).items() if t is not None)
+        first =next(i for i, t in _tiers_of(export, base_ids, mod.mod, target.influence).items() if t is not None)
         lower = [
             stat_ranges(export.mods[other])[0][1]
             for other, tier in _ladder_on(export, first, mod.mod, target.influence).items()

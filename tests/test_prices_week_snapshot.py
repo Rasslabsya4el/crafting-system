@@ -16,7 +16,7 @@ from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write
 from crafting_system.prices.http_json import SourceError
 from crafting_system.prices.ninja_history import StashDay, exchange_readings, exchange_rows, stash_readings
 from crafting_system.prices.price_marks import DEPTH, EARLIER, LATER, NO_DEPTH, OLD, OLD_THIN, price_marks
-from crafting_system.prices.provenance import EXCHANGE, HISTORY, PREVIOUS_LEAGUE, STASH, TRADE, Provenance
+from crafting_system.prices.provenance import EXCHANGE, HAND_SET, HISTORY, PREVIOUS_LEAGUE, STASH, TRADE, Provenance
 from crafting_system.prices.week_snapshot import DayRow, build_snapshot, reading_on, wants_history
 
 SCRIPT = Path(__file__).resolve().parents[1] / ".github" / "scripts" / "week_snapshot.py"
@@ -224,6 +224,19 @@ def test_a_scaled_trade_stand_in_keeps_its_source_and_the_day_it_was_read():
     scaled = snapshot.prices["Muttering Essence of Fear"]
 
     assert (scaled.chaos, scaled.source, scaled.detail["date"], scaled.detail["league"]) == (pytest.approx(300.0), "trade-api", "2026-11-10", "Allflame")
+
+
+def test_a_hand_set_entry_of_the_first_template_is_kept_whole_with_its_own_note():
+    """#483, OR-44: a start price the tests' file sets by hand keeps its number, note and provenance on a rebuild that passes the
+    file itself as its first template; a later template's trade reading of the same name does not replace it."""
+    hand = PriceEntry(20.0, "hand-set", "hand-set start price (OR-44, #483): ...", {"league": "Allflame", "date": "2026-11-10", "query": {"query": {}}}, Provenance(HAND_SET, "Allflame", "2026-11-10"))
+    trade = PriceEntry(3616.7, "trade-api", "mean of the 3 cheapest", {"league": "Allflame", "date": "2026-11-10", "query": {"query": {}}}, Provenance(TRADE, "Allflame", "2026-11-10", 3.0))
+    week = PriceFile("Allflame", END, 600.0, {"Divine Orb": PriceEntry(600.0, "poe.ninja"), "Lion Pelt": hand})
+    end = PriceFile("Allflame", END, 600.0, {"Divine Orb": PriceEntry(600.0, "poe.ninja"), "Lion Pelt": trade})
+    snapshot, notes = build_snapshot([("week.json", week), ("end.json", end)], lambda league, slug: [DayRow(AS_OF, 200.0, 10.0)] if slug == "divine-orb" else [], "Allflame", START, AS_OF, None)
+
+    assert snapshot.prices["Lion Pelt"] == hand
+    assert "Lion Pelt: hand-set (OR-44), kept as week.json sets it" in notes
 
 
 def test_a_scaled_reading_with_no_recorded_day_has_no_date_and_the_league_of_its_template():

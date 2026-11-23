@@ -667,10 +667,10 @@ def check_approximate_marked(page: Page) -> list[Fault]:
     return faults
 
 
-_SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price", "vendor upgrade recipe", "the unit every price is in", "the price file's Divine rate")  # the unit and the rate: the Chaos Orb and a Divine Orb with no row of its own (#983); "vendor upgrade recipe": a lower essence tier priced as a third of the tier above (#885); always marked approximate
+_SOURCES = ("poe.ninja exchange", "poe.ninja daily rows", "poe.ninja stash overview", "poe.ninja, previous league", "poe.ninja, Standard", "poe.watch", "trade site, instant buyout", "hand price", "default price", "vendor upgrade recipe", "the unit every price is in", "the price file's Divine rate", "hand-set for the tests (OR-44)")  # the unit and the rate: the Chaos Orb and a Divine Orb with no row of its own (#983); "vendor upgrade recipe": a lower essence tier priced as a third of the tier above (#885); always marked approximate; "hand-set for the tests (OR-44)": the tests' price file sets the number by hand (#483)
 _COST_LINE = re.compile(r"^\d+ × (?P<name>.+?) (?:≈ )?[\d.,]+ c(?:\s|$)")
 _PLAIN_CURRENCY = ("Chaos Orb", "Divine Orb")
-_MARKET_SOURCES = tuple(source for source in _SOURCES if source not in ("hand price", "default price", "vendor upgrade recipe", "the unit every price is in", "the price file's Divine rate"))  # a price of these rests on trades or listings: a plain fact shows how many
+_MARKET_SOURCES = tuple(source for source in _SOURCES if source not in ("hand price", "hand-set for the tests (OR-44)", "default price", "vendor upgrade recipe", "the unit every price is in", "the price file's Divine rate"))  # a price of these rests on trades or listings: a plain fact shows how many
 
 
 _BEHIND = re.compile(r"(?P<depth>[\d,]+(?:\.\d+)?) units behind it, the plan buys about (?P<uses>[\d,]+(?:\.\d+)?)")

@@ -1874,10 +1874,7 @@
                 "filters": [
                   {
                     "disabled": false,
-                    "id": "fractured.stat_2923486259",
-                    "value": {
-                      "min": 31
-                    }
+                    "id": "fractured.stat_2923486259"
                   }
                 ],
                 "type": "and"
@@ -1892,11 +1889,11 @@
             "price": "asc"
           }
         },
-        "query_hash": "619adea02934d4015fa357f00c4f0aa3c28c5a9032587c3a4cff95ee852c81f2",
+        "query_hash": "f0b800e732e0e1bae980f36470e6f53df42b35d876c66689afd9b7b17f8bd266",
         "usable": 10,
         "used": 5
       },
-      "note": "hand-set start price (OR-44, #483): the exact item has 3 listings at 3,617 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (item level 84 or more): the mean of the 5 cheapest instant-buyout listings of 43 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
+      "note": "hand-set start price (OR-44, #483): the exact item has 3 listings at 3,617 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (item level 84 or more): the mean of the 5 cheapest instant-buyout listings of 43 on the site; the stored query is that search with its fractured Chaos Resistance minimum of 31 (tier 1) taken off by hand (#522: the start is bought at any tier); the 20 Chaos is the reading of the search with the minimum, kept. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
