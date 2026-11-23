@@ -79,12 +79,15 @@ def test_the_scan_covers_the_solver_files():
 
 
 PACKED_ALLOWED = {"numpy"}  # the packed solve (ticket #374, ADR-0063) is the one part of `solver/` that uses numpy
+SCIPY_FILES = {"_packed_ilu.py"}  # ... and its preconditioned solve the one file that uses scipy (#1484, ADR-0010 amended): an incomplete LU, imported only when an iteration stalls
 
 
-def test_the_solver_uses_only_the_standard_library_but_the_packed_files_use_numpy():
+def test_the_solver_uses_only_the_standard_library_but_the_packed_files_use_numpy_and_one_of_them_scipy():
     outside = {}
     for path in sorted(SOLVER_DIR.rglob("*.py")):
         allowed = PACKED_ALLOWED if path.name.startswith("_packed") else set()
+        if path.name in SCIPY_FILES:
+            allowed = allowed | {"scipy"}
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             names = []
             if isinstance(node, ast.Import):

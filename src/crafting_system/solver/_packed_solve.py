@@ -630,15 +630,51 @@ def policy_solver(work: Work, leave: np.ndarray, chosen: np.ndarray, position: n
     return ChainSolver(m, ptr, target[inside], prob[inside], leave[chosen], leak, shared_of, shared, progress=progress)
 
 
+def policy_system(work: Work, leave: np.ndarray, chosen: np.ndarray, states: np.ndarray, position: np.ndarray) -> _packed_linear.Sparse:
+    """The policy's system in its sparse form with one extra unknown per kernel it uses (`_packed_linear.Sparse`, for the preconditioned solve, #1484).
+
+    A state that `policy_terms` sums on its kernel's shared sum has the row `(leave[s] + own[s]) x[s] - y[k] = cost[s]` (the row of `I - T` times
+    `leave[s]`), and each such kernel `k` the row `y[k] - sum over its successors t in the policy of p[k, t] x[t] = 0`, the own term included: no
+    kernel is expanded state by state (R17's first plan: 1,024,996 states and 301,629 kernels in 5.2M entries, 3.6M edges had they been expanded).
+    A state `Work.edgewise` names keeps its edges, the row `leave[s] x[s] - sum over t != s of p[s, t] x[t] = cost[s]`, with no own term to take off.
+    A successor outside the policy (a goal, a state solved) is 0.
+    """
+    g, m = work.g, len(states)
+    wise = work.edgewise[chosen]
+    by_edges = np.flatnonzero(wise)
+    shared = np.flatnonzero(~wise)
+    kernels, slot = np.unique(g.act_kernel[chosen[shared]], return_inverse=True)
+    k = len(kernels)
+    sizes = work.ksize[kernels]
+    idx = expand_ranges(g.k_ptr[kernels], sizes)
+    kernel_column = position[g.k_succ[idx]]
+    kernel_row = m + np.repeat(np.arange(k, dtype=np.int64), sizes)
+    inside = kernel_column < m
+    kernels_e = g.act_kernel[chosen[by_edges]]
+    sizes_e = work.ksize[kernels_e]
+    idx_e = expand_ranges(g.k_ptr[kernels_e], sizes_e)
+    edge_target = g.k_succ[idx_e]
+    edge_column = position[edge_target]
+    keep = (edge_column < m) & (edge_target != np.repeat(states[by_edges], sizes_e))
+    tail = m + np.arange(k, dtype=np.int64)
+    row = np.concatenate((shared, shared, kernel_row[inside], tail, by_edges, np.repeat(by_edges, sizes_e)[keep]))
+    col = np.concatenate((shared, m + slot, kernel_column[inside], tail, by_edges, edge_column[keep]))
+    value = np.concatenate((
+        leave[chosen[shared]] + work.self_mass[chosen[shared]], -np.ones(len(shared)), -g.k_prob[idx][inside], np.ones(k),
+        leave[chosen[by_edges]], -g.k_prob[idx_e][keep],
+    ))  # fmt: skip
+    return _packed_linear.Sparse(m + k, row, col, value, leave[chosen])
+
+
 class _PolicyTerms(_packed_linear.Terms):
     """The policy's system `x[s] = cost[s] / leave[s] + sum over t != s of (p[s, t] / leave[s]) x[t]` for the one linear solve (`_packed_linear`).
 
     Up to `dense_limit` states it is held as a dense matrix; above, as `policy_terms` (each kernel summed once, memory O(edges)). Its exact solve is the
-    one by the cycles of the policy's chain (`policy_solver`).
+    one by the cycles of the policy's chain (`policy_solver`), its sparse form the one with an unknown per kernel (`policy_system`).
     """
 
     def __init__(self, work: Work, leave: np.ndarray, chosen: np.ndarray, states: np.ndarray, position: np.ndarray, dense: bool, info: dict) -> None:
-        self.work, self.leave, self.chosen, self.position = work, leave, chosen, position
+        self.work, self.leave, self.chosen, self.states, self.position = work, leave, chosen, states, position
         self.n = m = len(states)
         if dense:
             g = work.g
@@ -664,6 +700,18 @@ class _PolicyTerms(_packed_linear.Terms):
     def exact(self):
         return policy_solver(self.work, self.leave, self.chosen, self.position)
 
+    def sparse(self) -> _packed_linear.Sparse:
+        return policy_system(self.work, self.leave, self.chosen, self.states, self.position)
+
+
+def _preconditioned_words(tried: dict) -> str:
+    """What the preconditioned solve did, for the words of a refusal (#1484); empty when it was not tried."""
+    if not tried:
+        return ""
+    if "why" in tried:
+        return f"; {tried['why']}"
+    return f"; the preconditioned solve reached a backward error of {tried['backward']:.3g} (forward estimate {tried['forward']:.3g}) after {tried['seconds']:.0f} s of factorisation"
+
 
 def evaluate_policy(
     work: Work, leave: np.ndarray, policy: np.ndarray, start: np.ndarray, dense_limit: int, tol: float, info: dict
@@ -675,7 +723,8 @@ def evaluate_policy(
     stagnates. What is taken is judged by what bounds its error, never by a residual alone (#699): the forward estimate (the residual against the
     right-hand side, or the componentwise backward error times the amplification measured by one more solve). Above `ACCEPT_ERROR` the exact solve by
     the cycles of the policy's chain is made, whatever the number of states (`policy_solver`: components inverted without a subtraction, the rows many
-    states share cut and put back by the Woodbury identity, then refined while the backward error falls). It costs the cells of the cut rows, not a
+    states share cut and put back by the Woodbury identity, then refined while the backward error falls); when that cannot be made
+    and the iteration stalled, the same BiCGSTAB preconditioned by an incomplete LU of the system with one unknown per kernel (`policy_system`, #1484). The exact solve costs the cells of the cut rows, not a
     count of states; when they do not fit in `_packed_chain.WOODBURY_CELLS` the approximate answer stays, accepted only if its backward error is
     within `ACCEPT_BOUND` (the certificate that follows bounds the error of the values), else `ConvergenceError` says what the exact solve would have
     cost. `info["linear_limit"]` holds what remained.
@@ -699,6 +748,12 @@ def evaluate_policy(
     if found.iterate is not None:
         info["linear_residual_iterate"] = found.iterate[1]
         info["linear_forward_iterate"] = found.iterate[2]
+    if found.preconditioned:  # the plain iteration stalled: the preconditioned solve was tried (#1484), with its time
+        info["linear_preconditioned"] = info.get("linear_preconditioned", 0) + 1
+        info["seconds_preconditioned"] = info.get("seconds_preconditioned", 0.0) + found.preconditioned.get("seconds", 0.0)
+        info["preconditioned"] = dict(found.preconditioned)  # (the last of this solve; over the solves of a search, a record of the worst, `_envelope.add_solve_info`)
+    if found.how == "preconditioned":
+        info["linear_preconditioned_taken"] = info.get("linear_preconditioned_taken", 0) + 1
     if found.how == "exact":
         info["linear_cycles"] = info.get("linear_cycles", 0) + 1
         info["linear_cut_rows"] = found.cut_rows
@@ -712,7 +767,7 @@ def evaluate_policy(
         if not found.backward <= ACCEPT_BOUND:  # a stop-and-say-so rail: an answer this far off is not one the certificate could accept
             raise ConvergenceError(
                 f"the evaluation of a policy of {m:,} states did not reach a backward error of {ACCEPT_BOUND:g} (it is {found.backward:.3g}) "
-                f"and the exact solve by its cycles could not be made: {found.why}",
+                f"and the exact solve by its cycles could not be made: {found.why}" + _preconditioned_words(found.preconditioned),
                 INF,
             )
         if found.residual >= info.get("linear_limit", {}).get("residual", 0.0):  # (the worst of the evaluations of a solve is the one that is said)

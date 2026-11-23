@@ -389,6 +389,7 @@ def test_a_policy_whose_packed_exact_does_not_fit_and_whose_true_residual_is_lar
     info = {}
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
     monkeypatch.setattr(ps, "policy_solver", tangled)
+    monkeypatch.setattr(ps._PolicyTerms, "sparse", lambda self: None)  # nor the preconditioned solve of #1484, which would answer it: what remains when no method does
 
     with pytest.raises(ConvergenceError, match="backward error"):
         evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
@@ -401,6 +402,7 @@ def test_a_policy_whose_packed_exact_does_not_fit_keeps_an_iterate_whose_true_re
     info = {}
     monkeypatch.setattr(lin, "BICGSTAB_ITERATIONS", 1)
     monkeypatch.setattr(ps, "policy_solver", tangled)
+    monkeypatch.setattr(ps._PolicyTerms, "sparse", lambda self: None)  # nor the preconditioned solve of #1484, which would answer it: what remains when no method does
     monkeypatch.setattr(ps, "ACCEPT_BOUND", 10.0)  # the backward error after one step is below this
 
     values = evaluate_policy(work, leave, np.array([0, 1, 2, 3, 4, -1]), np.zeros(6), 4, 1e-13, info)
@@ -753,6 +755,7 @@ def test_a_stagnated_iterate_is_run_again_from_its_best_only_when_the_packed_exa
     work, leave = prepared(LINE)
     calls = stub_bicgstab(monkeypatch, 2.0)
     monkeypatch.setattr(ps, "policy_solver", tangled)
+    monkeypatch.setattr(ps._PolicyTerms, "sparse", lambda self: None)  # nor the preconditioned solve of #1484, which would answer it: what remains when no method does
     monkeypatch.setattr(ps, "ACCEPT_BOUND", 10.0)
     info = {}
 
