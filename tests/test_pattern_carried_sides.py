@@ -222,3 +222,26 @@ def test_on_r04s_quiver_the_bound_built_once_per_carried_view_is_the_bound_built
     assert new.start_value == old.start_value
     assert len(new.model.keys) > 300 and new.model.stats.pairs == old.model.stats.pairs
     assert new.model.stats.view_pairs > old.model.stats.view_pairs + 1_000 and new.model.stats.kernels < old.model.stats.kernels
+
+
+def test_the_whole_model_of_the_essence_world_is_the_model_built_at_every_member():
+    """With blocker kinds (the essence's prefix of a suffix family): a complete build both ways from two starts with the essence offered, the
+    same keys, rows and kernels, from fewer kernels."""
+    data, _, _ = essence_world()
+    names = ("annul", "exalted", "essence-outside-pool", "bench-craft")
+    offers = [PatternOffer(name, ACTIONS[name], 1.0 + n) for n, name in enumerate(names)]
+    offers += [PatternOffer(swap.label(data) + swap.variant, swap, 2.5 + n) for n, swap in enumerate(SWAPS)]
+    blocked = 0
+    for ids in STARTS[:2]:
+
+        def made(before: bool):
+            ab = Abstraction(data, GOAL, BOW, LEVEL, tuple(offer.action for offer in offers), metamods=True)
+            start = ab.compress(build(data, BOW, ids))
+            with every_member() if before else contextlib.nullcontext():
+                return build_pattern_model(ab, start, offers, tags=True), Pattern(ab, True, [offer.action for offer in offers]), start
+
+        (old, _, _), (new, pattern, start) = made(True), made(False)
+        same_model(old, new)
+        assert new.stopped is None and new.stats.kernels < old.stats.kernels
+        blocked += bool(pattern.carried_sides(SWAPS[1], pattern.key(start)).blockers)
+    assert blocked == 2
