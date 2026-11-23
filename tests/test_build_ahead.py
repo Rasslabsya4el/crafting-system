@@ -111,8 +111,77 @@ def test_a_pool_that_meets_the_memory_net_is_dropped_and_the_build_goes_on_alone
     alone, _ = _grown(1, offers=offers)
     ahead, builder = _grown(3, offers=offers)
     _same_bound(alone, ahead)
-    # a pool of three met the net: one of two forked next, met it too: none again
-    assert builder.ahead.stopped is not None and builder.ahead.pools == 2 and builder.ahead.count == 1 and builder.ahead.taken == 0
+    # a pool of three met the net: none again in this build (#1488: a smaller pool forked again meets it again later in the pass)
+    assert builder.ahead.stopped is not None and builder.ahead.pools == 1 and builder.ahead.count == 1 and builder.ahead.taken == 0
+
+
+def test_the_rows_sent_back_before_the_memory_net_are_taken_and_no_pool_forks_again(world, pooled, monkeypatch):  # noqa: F811
+    # #1488: the build's net, asked between two keys, is reached while a window of rows sent back is not yet all taken, and is not reached
+    # once the pool is gone: it was the workers' memory. The rows of that window are taken here (none made again), no pool forks again in
+    # the build, and the model is the model of one process
+    from crafting_system.abstraction import _pattern
+
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)  # the net asked at every key and offer
+    offers = pattern_offers(world[2])
+    built, kept = [], []
+
+    def stop():
+        ahead = built[0].ahead if built else None
+        if ahead is not None and ahead.open and len(ahead.memo) >= 2 and not kept:
+            kept.append((len(ahead.memo), ahead.taken))
+            return "the process held 13,000 MB, the limit is 12,288 MB"
+        return None
+
+    fresh = abstraction()
+    alone = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=1).extend(offers)
+    fresh = abstraction()
+    builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=3, stop=stop)
+    built.append(builder)
+    model = builder.extend(offers)
+    assert _model(model) == _model(alone) and model.stopped is None
+    ahead = builder.ahead
+    assert ahead.pools == 1 and ahead.count == 1 and ahead.stopped is not None
+    rows, taken = kept[0]
+    # every row kept at the stop was taken here, at its key, after the row being taken when the net was asked (between two of its offers)
+    assert rows >= 2 and ahead.taken == taken + 1 + rows and ahead.left == 0
+    assert not ahead.memo
+
+
+def test_a_wait_stopped_by_the_builds_net_tells_the_workers_memory_from_its_time(world, pooled, monkeypatch):  # noqa: F811
+    # `gather`'s own question (`Stopped`): asked again once the pool is gone, a net no more reached was the workers' memory (no pool again in
+    # this build); a net reached still was its time (one worker fewer next, and the build stops where one process stops)
+    offers = pattern_offers(world[2])
+    fresh = abstraction()
+    alone = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=1).extend(offers)
+    forgot = []
+    monkeypatch.setattr(parallel, "forget_reading", lambda: forgot.append(1))
+    for reached_after, count in ((None, 1), ("the time limit of 1 seconds was reached", 2)):
+        def gather(self, futures, stop=None):
+            self.abandon()
+            raise parallel.Stopped("the process held 13,000 MB, the limit is 12,288 MB")
+
+        monkeypatch.setattr(parallel.WorkerPool, "gather", gather)
+        built = []
+
+        asked = []
+
+        def stop(reached_after=reached_after):
+            if built and built[0].ahead.pools:
+                asked.append(len(forgot))
+                return reached_after
+            return None
+
+        fresh = abstraction()
+        builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=3, stop=stop)
+        built.append(builder)
+        forgot.clear()
+        model = builder.extend(offers)
+        assert builder.ahead.pools == 1 and builder.ahead.count == count
+        assert asked and asked[0] >= 1  # the memory was read anew before the net was asked again
+        if reached_after is None:
+            assert builder.ahead.stopped is not None and model.stopped is None and _model(model) == _model(alone)
+        else:
+            assert builder.ahead.stopped is None and model.stopped is not None
 
 
 def test_a_row_made_on_a_universe_that_grew_since_the_fork_is_not_taken(world, pooled, monkeypatch):  # noqa: F811
@@ -214,8 +283,9 @@ def test_a_growing_builder_forks_a_pool_a_pass_and_closes_it_at_the_pass_end(wor
 
 
 def test_a_net_reached_only_with_the_workers_alive_stops_the_workers_and_not_the_build(world, pooled, monkeypatch):  # noqa: F811
-    # The build's net reads the workers' memory too: where it is reached with a pool open, the pool goes (one worker fewer next time) and
-    # the net is asked again (R17: a bound one process built whole was stopped at 12,543 MB with six workers beside it, #1384)
+    # The build's net reads the workers' memory too: where it is reached with a pool open, the pool goes and the net is asked again (R17: a
+    # bound one process built whole was stopped at 12,543 MB with six workers beside it, #1384); reached no more, it was the workers' memory,
+    # so no pool forks again in this build (#1488)
     from crafting_system.abstraction import _pattern
 
     monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)  # the net asked at every key and offer, never on the clock's pace
@@ -232,7 +302,27 @@ def test_a_net_reached_only_with_the_workers_alive_stops_the_workers_and_not_the
     built.append(builder)
     model = builder.extend(offers)
     assert model.stopped is None and _model(model) == _model(alone)
-    assert builder.ahead.pools >= 1 and builder.ahead.count < 3
+    assert builder.ahead.pools == 1 and builder.ahead.count == 1 and builder.ahead.stopped is not None
+
+
+def test_a_net_on_time_reached_with_the_workers_alive_stops_the_build_and_cuts_one_worker(world, pooled, monkeypatch):  # noqa: F811
+    # Reached still once the pool is gone, the net is the build's own (its time): the build stops where one process would, and the next
+    # pool, had the build gone on, would fork one worker fewer, as before #1488
+    from crafting_system.abstraction import _pattern
+
+    monkeypatch.setattr(_pattern, "POLL_SECONDS", 0.0)
+    offers = pattern_offers(world[2])
+    built = []
+
+    def stop():
+        return "the time limit of 1 seconds was reached" if built and (built[0].ahead.open or built[0].ahead.pools) else None
+
+    fresh = abstraction()
+    builder = PatternBuilder(fresh, fresh.compress(START_ITEM), workers=3, stop=stop)
+    built.append(builder)
+    model = builder.extend(offers)
+    assert model.stopped is not None
+    assert builder.ahead.pools == 1 and builder.ahead.count == 2 and builder.ahead.stopped is None
 
 
 def test_a_pool_whose_rows_cost_here_what_a_worker_spends_is_idle(world):  # noqa: F811

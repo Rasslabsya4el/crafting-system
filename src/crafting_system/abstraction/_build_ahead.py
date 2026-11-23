@@ -36,11 +36,16 @@ reads of a pass never push out what the fork gave). A pass's workers together ma
 share of the keys, and the pool closes at the pass end; what comes back is the rows and the outcomes of the kernels made, never a memo. (With
 each memo cut to `1/workers` of its size, the reads of a pass pushed the inherited entries out: on R04's spread pass of model 10, 229 s with
 six workers where one process took 123 s, its kernels made again.) The wait on the workers reads this process's and their memory against the run's
-net (`parallel.WorkerPool.gather`); once it is reached the workers are stopped, and the next pool forks one worker fewer (`_cut`): a worker
+net (`parallel.WorkerPool.gather`); once it is reached the workers are stopped, and no pool forks again in this build (`_cut`): a worker
 holds what it copied of this process's pages (a fork shares them until either side writes, and reading an object writes its count) and what
-it made, so where the net is near fewer of them fit. Below two workers no pool forks again in this build. The build's own net, asked between
-two offers or keys, reads the workers too: reached with a pool open, the pool is cut and the net asked again (`asked`), so the workers never
-stop a build one process would have built whole (R17).
+it made, and what it made grows with the keys it expands over its pass, so a pool that fitted until it met the net meets it again however
+few workers come back (#1488: R20's lock round, six workers on a 12,288 MB net, met it at 111 s, then with five, four and three workers, its
+windows in flight dropped and the heavy keys' kernels made again in each fresh worker each time, and gave no plan in the hour where one
+process closed the round in 1,594 s at 3.9 GB). The rows the workers had sent back are kept and taken here. The build's own net, asked
+between two offers or keys, reads the workers too: reached with a pool open, the pool is stopped and the net asked again (`asked`), so the
+workers never stop a build one process would have built whole (R17); reached no more once the pool is gone, it was the workers' memory, and
+no pool forks again in this build either. Reached still, it was the net of the build (its time), which the build meets as one process does
+(the next pool, if the build goes on, forks one worker fewer, as before #1488).
 
 A pool whose rows cost this process what they save (`_idle`: taking a row, its kernels' outcomes numbered here, takes as long as a worker took
 to make it) is let go for the rest of the pass (R17: keys of 100,000 kernels each). Tried and dropped: a pool kept from pass to pass (its
@@ -87,7 +92,7 @@ class KeysAhead:
     def __init__(self, builder: object, workers: int, *, poll: float = 0.5) -> None:
         self.builder = builder
         self.workers = workers  # the machine's setting (`CRAFTING_WORKERS`)
-        self.count = workers  # the workers a pool forks: one fewer each time a pool met the memory net, none below two (`_cut`)
+        self.count = workers  # the workers a pool forks: none again once a pool met the memory net; one fewer after a stop by the build's net (`_cut`)
         self.poll = poll
         self.stopped: str | None = None  # the memory net a pool met: no pool again in this build
         self.fork: float | None = None  # seconds of the fork of one worker, at the last pool (its first `submit`, over its workers)
@@ -234,11 +239,18 @@ class KeysAhead:
         try:
             tally = self.builder.tally  # the net on the clock, asked while this process waits as it is asked between two offers (a count is not)
             results = self.pool.gather(futures, stop=self.builder.stop if tally is None else tally.then)
-        except (parallel.MemoryNetReached, budget.BudgetExceeded) as reached:  # the workers' memory passed the net (or the run's net was met):
-            self._cut(str(reached))  # they are stopped, and the next pool forks one worker fewer
+        except parallel.MemoryNetReached as reached:  # the workers' memory passed the net: they are stopped, and no pool forks again in this build
+            self._cut(str(reached), memory=True)
             return
-        except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): stopped as in `asked`
-            self._cut(f"the build's net was reached with the workers alive: {reached}")
+        except budget.BudgetExceeded as reached:  # the run's net was met: the build meets it as one process does
+            self._cut(str(reached), memory=False)
+            return
+        except parallel.Stopped as reached:  # the build's net was met while waiting (the workers' memory counts in it): told apart as in `asked`
+            workers = self.pool.workers
+            self._drop(keep=True)
+            parallel.forget_reading()  # the question below reads the memory anew, without the workers stopped here (as in `asked`)
+            again = self.builder.stop() if self.builder.stop is not None else reached
+            self._cut(f"the build's net was reached with the workers alive: {reached}", memory=again is None, workers=workers)
             return
         except Exception as failed:  # noqa: BLE001  (the pool broke: this process goes on alone, and forks none again in this build)
             self._stop(f"the pool of the keys failed: {failed!r}")
@@ -276,39 +288,48 @@ class KeysAhead:
         return replay >= worker  # the workers make rows while this process takes them: a pool's pace is the slower of the two
 
     def asked(self, stop) -> str | None:
-        """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first (one
-        worker fewer next time, `_cut`) and the net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the
-        one process built whole was stopped at 12,543 MB with six workers beside it, #1384)."""
+        """The build's net, asked between two offers or two keys: where it is reached while a pool is open, the pool is stopped first and the
+        net asked again, since the workers' memory counts in it (R17: a bound of 773,092 kernels the one process built whole was stopped at
+        12,543 MB with six workers beside it, #1384). Reached no more, it was the workers' memory: no pool again in this build (`_cut`)."""
         reason = stop()
         if reason is not None and self.pool is not None:
-            self._cut(f"the build's net was reached with the workers alive: {reason}")
-            reason = stop()
+            workers = self.pool.workers
+            self._drop(keep=True)
+            parallel.forget_reading()  # the question below reads the memory anew: the last full reading held the workers stopped here
+            again = stop()
+            self._cut(f"the build's net was reached with the workers alive: {reason}", memory=again is None, workers=workers)
+            reason = again
         return reason
 
-    def _cut(self, reason: str) -> None:
-        """A pool met the memory net: the next forks one worker fewer, and below two none forks again in this build. A worker's own memory is
-        what it copied of this process's pages and what it made in its pass (R04, 12 GB net: six workers took about 1.2 GB each beside this
-        process's 4.8 GB, #1384), so fewer of them fit where the net is near."""
-        self.count = min(self.count, self.pool.workers if self.pool is not None else self.count) - 1
+    def _cut(self, reason: str, *, memory: bool, workers: int | None = None) -> None:
+        """A pool was stopped by a net. By the memory net (`memory`): no pool forks again in this build, and the rows the workers sent back are
+        taken here (the module's note, #1488: a worker's memory is what it copied of this process's pages and what it made, which grows with
+        its keys, so a smaller pool forked again meets the net again later in the pass). By the build's or the run's net on its time: the next
+        pool, if the build goes on, forks one worker fewer, and below two none. `workers` is the stopped pool's, where it was dropped already."""
+        if workers is None:
+            workers = self.pool.workers if self.pool is not None else self.count
         parallel.forget_reading()  # the next question reads the memory anew: the last full reading held the workers stopped here
+        self.count = 1 if memory else min(self.count, workers) - 1
         if self.count < 2:
-            self._stop(reason)
+            self._stop(reason, keep=memory)
             return
         self._drop()
         if self.builder.progress is not None:
             self.builder.progress(f"keys' workers: stopped ({reason}); the next pool forks {self.count}")
 
-    def _stop(self, reason: str) -> None:
-        """No pool again in this build: the build says why, and goes on in this process alone."""
+    def _stop(self, reason: str, *, keep: bool = False) -> None:
+        """No pool again in this build: the build says why, and goes on in this process alone (with `keep`, taking first the rows its
+        workers sent back: `take` reads them while no pool is open, `_apply` refuses one made on a universe that grew since)."""
         self.stopped = reason
-        self._drop()
+        self._drop(keep=keep)
         if self.builder.progress is not None:
             self.builder.progress(f"keys' workers: stopped ({reason}); the build goes on in one process")
 
-    def _drop(self) -> None:
+    def _drop(self, *, keep: bool = False) -> None:
         pool, self.pool = self.pool, None
         self.pending.clear()
-        self.memo.clear()
+        if not keep:
+            self.memo.clear()
         if pool is not None:
             pool.abandon()
 
