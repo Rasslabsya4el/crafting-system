@@ -74,9 +74,8 @@ from fractions import Fraction
 import numpy as np
 
 from crafting_system.abstraction import Abstraction, CompressedState, Status, add_bound, declared_add_bound, declared_bounds, reach_bound
-from crafting_system.actions import BLOCKED_TAG, BLOCKING, LOCKED_SIDE, NotApplicableError, OutOfScopeError
+from crafting_system.actions import BLOCKED_TAG, BLOCKING, LOCKED_SIDE, NotApplicableError, OutOfScopeError, build_pool
 from crafting_system.data import GameData
-from crafting_system.actions.pool import build_pool
 from crafting_system.items import Item, Metamod, Rarity
 from crafting_system.solver import linear_solve
 
