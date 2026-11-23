@@ -632,46 +632,52 @@ def _lock_grower(table, under_suffix_only=False):
     return grower, plan
 
 
-def test_the_step_s_usual_roles_come_first_and_its_lock_group_right_after_their_round_is_beaten():
+def test_the_lock_group_is_not_named_while_the_usual_roles_name_anything_and_comes_when_they_name_nothing_more():
     table = _lock_world()
     grower, plan = _lock_grower(table)
+    usual = grower._next
+    told: list = []
+    grower._next = lambda: told.append(usual()) or told[-1]  # every reading of the usual roles, in order
     positions, why = grower.next()  # the usual roles first: the adder of A comes in, no lock role
     assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam") and not grower.lock_round
     assert not _names(table, positions) & {"lock suffixes", "lock prefixes", "beast lock", "chaos"}
     grower.ran(positions, plan, False)  # beaten: the plan in hand stays
-    positions, why = grower.next()  # the step's lock group, owed, comes next
+    positions, why = grower.next()  # the usual roles name nothing more for any step: the lock group, the last resort
+    assert told[-1] is None
     assert _names(table, positions) == {"spam", "lock suffixes", "lock prefixes", "beast lock", "chaos", "annul"}
     assert why.startswith("the lock group of the plan's dearest step not yet read, spam") and grower.lock_round
     grower.ran(positions, plan, False)
-    assert grower.next() is None  # one lock group per step in the run, and its usual roles were read
+    assert grower.next() is None  # one lock group per step in the run
 
 
-def test_a_round_of_usual_roles_that_improves_the_plan_owes_no_lock_group_the_step_is_read_again_usual_roles_first():
+def test_a_usual_round_that_stops_ends_the_usual_growth_and_the_lock_groups_come_then_in_main_s_order():
+    # R13: its fifth round stopped and ended main's growth; the lock group comes after it, never before or between the usual rounds
     table = _lock_world()
     grower, plan = _lock_grower(table)
-    positions, _why = grower.next()
-    grower.ran(positions, plan, True)  # the usual round made the plan in hand: the step is read again under it
-    assert grower.owed is None
-    positions, why = grower.next()  # its usual roles name nothing new now (that set was tried), so its lock group comes
-    assert why.startswith("the lock group of the plan's dearest step not yet read, spam") and grower.lock_round
+    positions, why = grower.next()
+    assert why.startswith("the plan's dearest step not yet read, spam")
+    grower.ran(positions, plan, False)
+    positions, why = grower.stop()  # the usual round did not finish within its share: the usual growth ends here
+    assert grower.ended and grower.lock_round and why.startswith("the lock group of the plan's dearest step not yet read, spam")
+    grower.ran(positions, plan, False)
+    assert grower.stop() is None and grower.ended  # a lock group that stops ends nothing more: no lock group, no later group is left
 
 
-def test_a_lock_group_that_does_not_finish_in_its_share_ends_nothing_and_a_side_with_no_reroll_under_its_lock_names_no_lock():
+def test_a_lock_group_that_improves_the_plan_lets_the_usual_roles_read_the_new_plan_and_a_side_with_no_reroll_under_its_lock_names_no_lock():
     table = _lock_world()
     grower, plan = _lock_grower(table, under_suffix_only=True)
     # no reroll is ranked under the prefix lock: the prefix lock is not named; the beast puts the suffix lock back, so it stays
     assert _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset())) == {"lock suffixes", "beast lock", "chaos"}
-    positions, why = grower.next()
-    assert why.startswith("the plan's dearest step not yet read, spam")
+    positions, _why = grower.next()
     grower.ran(positions, plan, False)
     positions, why = grower.next()
     assert why.startswith("the lock group") and grower.lock_round
-    grower.ran(positions, plan, False)
-    assert grower.stop() is None and not grower.ended  # its build stopped: the growth reads on (here no step names more)
-    grower2, plan2 = _lock_grower(_lock_world())
-    positions, _why = grower2.next()
-    grower2.ran(positions, plan2, False)
-    assert grower2.stop() is None and grower2.ended  # a usual round that stops ends the growth, as before, owed lock group or not
+    start, goal = _State("start", (Status.ABSENT, Status.ABSENT), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
+    view = {start: Action("chaos", 1.0, (Outcome(goal, 1), Outcome(start, 99)))}  # the new plan: chaos under the lock
+    better = _Plan(mean_remaining=100.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
+    grower.ran(positions, better, True)
+    positions, why = grower.next()  # the usual roles read the new plan's step first
+    assert why.startswith("the plan's dearest step not yet read, chaos") and not grower.lock_round
 
 
 def test_a_step_that_can_lose_a_mod_has_no_lock_group_its_usual_roles_name_its_protectors():

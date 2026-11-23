@@ -39,13 +39,17 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
 * **The lock group** (`Grower.lock_group`, #1420, hypothesis H16 of #1434). A step whose `W` holds a prefix and a suffix (`side_of`) and
-  that can lose nothing (`K` empty: a spam from a bare rare only waits) is read for its locks after its usual roles: the lock of one side
-  lets a reroll make the other while the side already made stays, and with nothing at risk no protector names a lock. Its lock group comes
-  when its usual roles name nothing new, or right after the round of its usual roles is beaten (`Grower.owed`); a round of them that
-  improves the plan leaves the step to be read again under the new plan, its usual roles first. Read before them, the lock group spent
-  the time a usual round needed: on R13 4,346.05 c against main's 2,066.12 c at 600 s, the Orb of Annulment's round two rounds later. A
-  step that can lose a mod has its protectors in its usual roles, so it has no lock group. Its round holds the offers the next round
-  holds already, the cheapest cleaner, and the lock role (`OfferTable.lock_roles`), alone:
+  that can lose nothing (`K` empty: a spam from a bare rare only waits) is read for its locks, as the last resort of the growth: the lock
+  of one side lets a reroll make the other while the side already made stays, and with nothing at risk no protector names a lock. The
+  lock groups come only when the usual roles name nothing for any step (`Grower.last_lock`): where the growth would go to its later
+  group, or a round that did not finish within its share ends the usual growth (`Grower.stop`). So the usual rounds come in main's
+  order, each with its share; a lock group has the growth's share like any round (half the time left), and the rounds after the growth
+  the other half. Read earlier, before a step's usual roles or right after they were beaten, a lock group took the time a usual round
+  needed: on R13 at 600 s 4,346.05 c against main's 2,066.12 c, its Orb of Annulment round two rounds later. On R14 the earlier order
+  gave 3,429.31 c at 600 s, a lock group on the Augmentation step that named the Orb of Alteration; here that step's usual roles come
+  first and improve the plan (5,897.11 c), after which no step that can lose nothing waits on both sides, so R14 stays at main's
+  5,725.49 c. A step that can lose a mod has its protectors in its usual roles, so it has no lock group. Its round holds the offers the
+  next round holds already, the cheapest cleaner, and the lock role (`OfferTable.lock_roles`), alone:
   - for each side, every offer that may add its lock and keeps the mods it is given (`lockers`: no reroll at any shape): the bench lock, and
     what puts it back once a reroll of the other side has taken it off with that side (a beast that draws a metamod keeps the mods);
   - for each waited mod `x` and each side, the `PER_ROLE` rerolls of least cost over chance at the item under that lock (`under_lock`): the
@@ -59,10 +63,10 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     206,331.71 c: with it (Matron, 238 c) Influence comes first, (150.65 + 238) / 4.97% against the Chaos Orb's (1 + 238) / 2.02%.
   A side under whose lock no reroll is ranked names nothing (a lock pays only with a reroll under it). The lock role is never read in
   one round with the usual roles (on R20 that made a round of 15 offers that did not build in its share); a lock group that does not
-  finish within its share ends nothing, the next step's usual roles come next (`Grower.stop`). A step is read in the order of the steps
-  (the dearest not yet read first), and each step, with its `W` and shapes, has one lock group in the run, also when a later plan
-  improves (a lock group beaten under one plan is not run again). On R20 the essence step's usual roles are beaten (125 s), and its lock
-  group comes next.
+  finish within its share ends nothing, the next lock group or the later group comes (`Grower.stop`). The plan's steps are read the
+  dearest first, and each step, with its `W` and shapes, has one lock group in the run, also when a later plan improves. A lock group
+  that improves the plan, before the usual growth ended, lets the usual roles read the new plan. On R20 the usual roles of the essence
+  step are beaten (about 120 s), nothing more is named, and its lock group comes: 206,331.71 c within the hour.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
   a restore brings the imprints and an imprint the restores.
@@ -613,7 +617,6 @@ class Grower:
         self.later_done = not self.later_ones
         self.ended = False
         self.lock_round = False  # the last round named was a lock group (`stop`)
-        self.owed: tuple | None = None  # the step whose usual roles the last round read, with what its lock group needs (`_next`)
         self.locks_read: set[tuple] = set()  # (step, its W, its shapes) whose lock group was read (module text, the lock group)
         table.held_back = self.later_ones
 
@@ -642,12 +645,12 @@ class Grower:
         return tuple(sorted(chosen)), f"the later group of the methods that fan out over two random choices or copy the item, after a plan proved without them: {self._labels(self.later_named)}"
 
     def stop(self) -> tuple[tuple[int, ...], str] | None:
-        """A growth round did not finish within its share (`_rounds.widen`): the growth ends, after the later group when it is owed. A lock
-        group that did not finish ends nothing: the next step's usual roles come next, as they would have without it (module text)."""
+        """A growth round did not finish within its share (`_rounds.widen`): the usual growth ends; the lock groups not yet read come, then
+        the later group when it is owed. A lock group that did not finish ends nothing (module text)."""
         if self.lock_round:
             return self.next()
         self.ended = True
-        return self.later()
+        return self.last_lock() or self.later()
 
     def seed(self) -> tuple[tuple[int, ...], str] | None:
         self._named_later(self.table.seed)
@@ -669,8 +672,8 @@ class Grower:
         chosen = frozenset(positions)
         self.tried.append(chosen)
         self.last = chosen
-        if improved:  # a lock group owed under the plan before is read again under this one, after the step's usual roles
-            self.plan, self.plan_set, self.diagnosed, self.owed = plan_in_hand, chosen, set(), None
+        if improved:
+            self.plan, self.plan_set, self.diagnosed = plan_in_hand, chosen, set()
 
     def say(self, text: str) -> None:
         """A line for a measuring script (`_packed.PROGRESS`, never set by the library)."""
@@ -683,17 +686,21 @@ class Grower:
         return not any(chosen <= tried for tried in self.tried)
 
     def next(self) -> tuple[tuple[int, ...], str] | None:
-        """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends). When nothing
-        new is named without the methods that fan out, their later group comes first (module text)."""
+        """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends). When the
+        usual roles name nothing more, the lock groups come (`last_lock`), then the later group of the methods that fan out (module text)."""
         self.lock_round = False
-        if self.ended:
-            return None
-        found = self._next()
-        if found is not None or self.later_done:
+        if not self.ended:
+            found = self._next()
+            if found is not None:
+                return found
+            if not self.later_done and self.plan is None:  # no round proved a plan without them: they are held back no longer, and the start is read again with them
+                self.later_done, self.table.held_back = True, frozenset()
+                return self._next()
+        found = self.last_lock()
+        if found is not None:
             return found
-        if self.plan is None:  # no round proved a plan without them: they are held back no longer, and the start is read again with them
-            self.later_done, self.table.held_back = True, frozenset()
-            return self._next()
+        if self.ended or self.later_done:
+            return self.later()
         return self.later() or self._next()
 
     def _next(self) -> tuple[tuple[int, ...], str] | None:
@@ -707,12 +714,6 @@ class Grower:
             if named and self._new(chosen):
                 return tuple(sorted(chosen)), f"no plan yet, so methods named at the start item (it waits for {self._names(waits)}; at risk: {self._names(risks)})"
             return None
-        owed, self.owed = self.owed, None
-        if owed is not None:  # the usual roles of a step that can lose nothing were beaten: its lock group comes next
-            found = self.lock_group(*owed)
-            if found is not None:
-                self.lock_round = True
-                return found
         support = self.support(plan)
         shares = step_shares(plan)
         at_states = self.waits_at_states(shares)  # read once per plan: it does not depend on the step diagnosed
@@ -729,14 +730,25 @@ class Grower:
             named |= narrowers | (table.crafted_roles(current | named | narrowers) if narrowers else set())
             chosen = table.closure(set(current) | named)
             if named - current and self._new(chosen):
-                # its lock group is owed: it comes next when this round is beaten (`ran`, `_next`)
-                self.owed = (label, share, waits, shapes, current) if not risks else None
                 also = f"; and, at the states where the plan's drawing additions act, {self._labels(narrowers)}" if narrowers else ""
                 return tuple(sorted(chosen)), (
                     f"the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}{also}"
                 )
-            # its usual roles name nothing new: its lock group, when it can lose nothing
-            found = self.lock_group(label, share, waits, shapes, current) if not risks else None
+        return None
+
+    def last_lock(self) -> tuple[tuple[int, ...], str] | None:
+        """The lock groups, the last resort (module text): once the usual roles name nothing for any step, the first lock group not yet
+        read among the plan's steps, the dearest first, of a step that can lose nothing; None when there is none."""
+        if self.plan is None:
+            return None
+        current = frozenset(self.support(self.plan) | self.asked)
+        for label, share, acts in step_shares(self.plan):
+            if label not in self.by_label:
+                continue
+            waits, risks, shapes, _fractured = read_step(acts, len(self.table.goal.leaves))
+            if risks:
+                continue
+            found = self.lock_group(label, share, waits, shapes, current)
             if found is not None:
                 self.lock_round = True
                 return found
