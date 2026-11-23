@@ -220,9 +220,9 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 
 | Target field | Read by | Audit |
 |---|---|---|
-| `base_id` | cli/_benchmark_outcomes.py, cli/_route_card.py, cli/_start_step.py, planner/_bought_starts.py, planner/_finish.py, and 2 more |  |
-| `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_finish.py, planner/_growth.py, planner/_plan.py |  |
-| `influences` | cli/_route_card.py, planner/_bought_starts.py |  |
+| `base_id` | cli/_benchmark_outcomes.py, cli/_route_card.py, cli/_route_view.py, cli/_start_step.py, planner/_bought_starts.py, and 3 more |  |
+| `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, cli/_route_view.py, planner/_finish.py, planner/_growth.py, and 1 more |  |
+| `influences` | cli/_route_card.py, cli/_route_view.py, planner/_bought_starts.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
 | `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_entry.py, planner/_finish.py, and 5 more |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
