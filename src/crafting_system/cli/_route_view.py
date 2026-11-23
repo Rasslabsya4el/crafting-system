@@ -1531,7 +1531,7 @@ def any_base_words(buy: BuyStep | None) -> str | None:
 
 
 def page_title(data: GameData, target: Target, wider: str | None = None) -> str:
-    """The page's title: the item the route makes, as a player names it ("Shaper Elder Eternal Burgonet, item level 86"), never the target's
+    """The page's title: the item the route makes, as a player names it ("Elder Shaper Eternal Burgonet, item level 86"), never the target's
     file name (#893, #1442). A start bought as any base of its kind is named as the cards name it ("Ring, any base", #937)."""
     influences = " ".join(influence.value.title() for influence in sorted(target.influences))
     base = wider or data.base_items[target.base_id].name

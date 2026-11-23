@@ -691,16 +691,24 @@ class _StateReader:
         """The mods of the slot's family a slot of that kind can hold, as the abstraction finds them (`_kinds._find_mod`): the base's domain and the
         extra explicit ones, never a crafted mod nor a mod unveiled from the pool, which has a kind of its own (#1442: a Jun mod read as a ring's
         Mana prefix). The mods that spawn on the base come first; a family none of whose mods does is one only an essence gives (Avoid being
-        Frozen on boots), said by those mods."""
+        Frozen on boots), said by the mods an essence forces on this base, each with its essence; none forced here leaves "any mod"."""
         domains = ({self.data.base_items[self.ab.base_id].domain} | EXPLICIT_EXTRA_DOMAINS) - {CRAFTED_DOMAIN, UNVEILED_DOMAIN}
         held = [
             mod
             for mod_id, mod in self.data.mods.items()
             if mod.generation_type == slot.side.value and mod.domain in domains and ("|".join(mod.families) or f"#{mod_id}") == slot.kind
         ]
-        family = [mod for mod in held if mod.id in self.tiers] or [mod for mod in held if mod.is_essence_only]
-        if not family:
-            return ANY_MOD
+        family = [mod for mod in held if mod.id in self.tiers]
+        if not family:  # a family only an essence gives on this base: its mods, each with the essence that forces it, as a leaf line says it
+            forced = [(mod, essence_tier(self.data, self.ab.base_id, mod.id)) for mod in held if mod.is_essence_only]
+            forced = [(mod, note) for mod, note in forced if note]
+            if not forced:
+                return ANY_MOD
+            if len(forced) == 1:
+                mod, note = forced[0]
+                return Slot(mod_text(mod), "mod", tuple(mark for mark in _marks(mod) if mark != "essence only"), note)
+            text = _tiers_joined(_hashes(mod_text_of(mod)) for mod, _ in forced)
+            return Slot(text, "mod", tuple(mark for mark in _marks(forced[0][0]) if mark != "essence only"), " or ".join(dict.fromkeys(note for _, note in forced)))
         ordered = sorted(family, key=lambda mod: (self.tiers.get(mod.id, 0), mod.id))
         if len(ordered) == 1:
             return Slot(mod_text(ordered[0]), "mod", _marks(ordered[0]), _tier_note(self.tiers, [ordered[0].id]))
