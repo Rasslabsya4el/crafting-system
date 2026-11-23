@@ -91,3 +91,63 @@ def test_a_plan_made_on_other_game_data_is_refused(planned, tmp_path: Path, monk
 
     with pytest.raises(PlanFileError, match="other game data"):
         load_plan(path, DATA)
+
+
+def test_a_plan_saved_by_another_python_is_refused_before_it_is_read(planned, tmp_path: Path, monkeypatch):
+    from crafting_system.cli import _plan_file
+
+    plan, target = planned
+    path = save_plan(tmp_path / "two.plan", plan, target, DATA, "two.yaml")
+    monkeypatch.setattr(_plan_file, "_python", lambda: ("cpython", 3, 99, 0))
+    monkeypatch.setattr(_plan_file._Reader, "load", lambda self: pytest.fail("the plan was read"))  # its closures are another Python's bytecode
+
+    with pytest.raises(PlanFileError, match="another Python"):
+        load_plan(path, DATA)
+
+
+def test_a_plan_made_by_changed_planning_code_is_refused(planned, tmp_path: Path, monkeypatch):
+    from crafting_system.cli import _plan_file
+
+    plan, target = planned
+    path = save_plan(tmp_path / "two.plan", plan, target, DATA, "two.yaml")
+    hashed = _plan_file._source_hash
+    monkeypatch.setattr(_plan_file, "_source_hash", lambda module: "edited" if module.startswith("crafting_system.planner.") else hashed(module))
+
+    with pytest.raises(PlanFileError, match=r"other code than this one \(crafting_system\.planner\."):
+        load_plan(path, DATA)
+
+
+def test_a_plan_is_drawn_again_after_the_page_code_changed(planned, tmp_path: Path, monkeypatch):
+    """The page's own modules are not stamped: a page change is checked against an old plan, which is what the file is for."""
+    from crafting_system.cli import _plan_file
+
+    plan, target = planned
+    path = save_plan(tmp_path / "two.plan", plan, target, DATA, "two.yaml")
+    hashed = _plan_file._source_hash
+    page_code = ("crafting_system.cli._route", "crafting_system.cli._page_main", "crafting_system.cli._report")
+    monkeypatch.setattr(_plan_file, "_source_hash", lambda module: "edited" if module.startswith(page_code) else hashed(module))
+
+    assert _page(load_plan(path, DATA).plan) == _page(plan)
+
+
+def test_a_plan_file_of_the_first_format_is_refused_in_words(tmp_path: Path):
+    import pickle
+
+    path = tmp_path / "old.plan"
+    path.write_bytes(pickle.dumps(("0.0-test, 107 mods, 18 bases", None, None, "")))  # the first format: the data's identity, then the plan
+
+    with pytest.raises(PlanFileError, match="older version of --save-plan"):
+        load_plan(path, DATA)
+
+
+def test_two_saves_to_one_path_write_two_temp_files(tmp_path: Path, monkeypatch):
+    from crafting_system.cli import _plan_file
+
+    parts = []
+    replace = Path.replace
+    monkeypatch.setattr(Path, "replace", lambda self, target: (parts.append(self.name), replace(self, target))[1])
+    save_plan(tmp_path / "one.plan", 1, None, DATA)
+    save_plan(tmp_path / "one.plan", 2, None, DATA)
+
+    assert len(set(parts)) == 2 and all(name.startswith(f"one.plan.{_plan_file.os.getpid()}.") for name in parts)
+    assert load_plan(tmp_path / "one.plan", DATA).plan == 2
