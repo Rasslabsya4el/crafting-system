@@ -50,8 +50,11 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     keeps, so one that takes the locked side off scores nothing there, and a reroll the lock refuses (an essence) is not ranked. Read at the
     bare item the cheap rerolls of the whole item lead instead: on R20 Harvest Reforge Fire is 13th there on Burning Damage, first under the
     suffix lock (#1429).
-  The step stays undiagnosed, so the round after the lock group reads its usual roles (a lock group of 15 offers with them did not build
-  in its share on R20, its 7 alone did). Each step, with its `W` and shapes, has one lock group.
+  A side under whose lock no reroll is ranked names nothing (a lock pays only with a reroll under it). The step stays undiagnosed, so the
+  round after the lock group reads its usual roles (on R20 the lock role read with them made a round of 15 offers that did not build in its
+  share); a lock group that does not finish within its share ends nothing, its step's usual roles come next (`Grower.stop`). A step is
+  read in the order of the steps (the dearest not yet read first), and each step, with its `W` and shapes, has one lock group in the run,
+  also when a later plan improves (a lock group beaten under one plan is not run again).
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
   a restore brings the imprints and an imprint the restores.
@@ -386,12 +389,15 @@ class OfferTable:
             lockers = self.lockers(side)
             if not lockers:
                 continue
-            named.update(lockers)
+            rerolls: set[int] = set()
             for shape in sorted(shapes, key=str):
                 for leaf in sorted(waits):
                     other = frozenset(each for each in waits if each != leaf and self.side_of(each) == side)
                     ranked = [position for _ratio, position in self.under_lock(side, shape, leaf, other) if position not in held]
-                    named.update(ranked[:PER_ROLE])
+                    rerolls.update(ranked[:PER_ROLE])
+            if rerolls:  # a lock pays only with a reroll under it: with none ranked there the side names nothing
+                named.update(lockers)
+                named |= rerolls
         return named
 
     def under_lock(self, side: str, shape: Rarity, leaf: int, other: frozenset[int]) -> list[tuple[float, int]]:
@@ -401,9 +407,12 @@ class OfferTable:
         counts what the reroll keeps, so a reroll that takes the locked side off scores nothing there. Read once each; empty when the item
         cannot be made (a wanted mod no mod of that side can be, no room, no lock that names its mod)."""
         key = (side, shape, leaf, other)
-        if key in self.under:
-            return self.under[key]
-        self.under[key] = found = []
+        if key not in self.under:
+            self.under[key] = self._read_under_lock(side, shape, leaf, other)
+        return self.under[key]
+
+    def _read_under_lock(self, side: str, shape: Rarity, leaf: int, other: frozenset[int]) -> list[tuple[float, int]]:
+        found: list[tuple[float, int]] = []
         view = self.views.get(shape)
         lockers = [self.entries[position] for position in self.lockers(side)]
         if view is None or self.locking is None or not lockers:
@@ -419,7 +428,7 @@ class OfferTable:
                     return found
                 item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.max for stat in mod.stats)))
             named = self.actions[lock.position].adds(data, item).named or ()
-            mod = next((data.mods[mod_id] for mod_id in sorted(named) if mod_id in data.mods and set(data.mods[mod_id].families) & set(_LOCKS)), None)
+            mod = next((data.mods[mod_id] for mod_id in sorted(named) if mod_id in data.mods and any(getattr(_LOCKS.get(family), "value", None) == side for family in data.mods[mod_id].families)), None)
             if mod is None:
                 return found
             item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.min for stat in mod.stats), crafted=True))
@@ -593,6 +602,7 @@ class Grower:
         self.later_named: set[int] = set()
         self.later_done = not self.later_ones
         self.ended = False
+        self.lock_round = False  # the last round named was a lock group (`stop`)
         self.locks_read: set[tuple] = set()  # (step, its W, its shapes) whose lock group was read (module text, the lock group)
         table.held_back = self.later_ones
 
@@ -621,7 +631,10 @@ class Grower:
         return tuple(sorted(chosen)), f"the later group of the methods that fan out over two random choices or copy the item, after a plan proved without them: {self._labels(self.later_named)}"
 
     def stop(self) -> tuple[tuple[int, ...], str] | None:
-        """A growth round did not finish within its share (`_rounds.widen`): the growth ends, after the later group when it is owed."""
+        """A growth round did not finish within its share (`_rounds.widen`): the growth ends, after the later group when it is owed. A lock
+        group that did not finish ends nothing: the step's usual roles come next, as they would have without it (module text)."""
+        if self.lock_round:
+            return self.next()
         self.ended = True
         return self.later()
 
@@ -661,6 +674,7 @@ class Grower:
     def next(self) -> tuple[tuple[int, ...], str] | None:
         """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends). When nothing
         new is named without the methods that fan out, their later group comes first (module text)."""
+        self.lock_round = False
         if self.ended:
             return None
         found = self._next()
@@ -692,6 +706,7 @@ class Grower:
             current = frozenset(support | self.asked)
             found = self.lock_group(label, share, waits, shapes, current)
             if found is not None:  # the step stays undiagnosed: the round after it reads its usual roles
+                self.lock_round = True
                 return found
             self.diagnosed.add(label)
             pending = pending_at(acts, len(table.goal.leaves))

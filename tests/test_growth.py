@@ -633,3 +633,24 @@ def test_the_lock_group_comes_before_the_step_s_usual_roles_and_the_step_is_read
     grower.ran(positions, plan, False)  # beaten: the plan in hand stays
     positions, why = grower.next()  # the same step, read again by its usual roles: the adder of A comes in, no lock group again
     assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam")
+
+
+def test_a_lock_group_that_does_not_finish_in_its_share_ends_nothing_and_a_side_with_no_reroll_under_its_lock_names_no_lock():
+    table = _lock_world()
+    table.entries.append(dataclasses.replace(_entry("add A", 5.0, at=RARE, chance={A: Fraction(1, 10)}), position=len(table.entries)))
+    keys = (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))
+    table.under = {key: ([(50.0, 5)] if key[0] == "suffix" else []) for key in keys}
+    # no reroll is ranked under the prefix lock: the prefix lock is not named; the beast puts the suffix lock back, so it stays
+    assert _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset())) == {"lock suffixes", "beast lock", "chaos"}
+    start, goal = _State("start", (Status.ABSENT, Status.ABSENT), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
+    view = {start: Action("spam", 25.0, (Outcome(goal, 1), Outcome(start, 999)))}
+    plan = _Plan(mean_remaining=25000.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
+    grower = Grower(table, ())
+    grower.ran((0,), plan, True)
+    positions, why = grower.next()
+    assert why.startswith("the lock group") and grower.lock_round
+    grower.ran(positions, plan, False)
+    positions, why = grower.stop()  # its build stopped at its share: the step's usual roles come next, and the growth goes on
+    assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam") and not grower.ended
+    grower.ran(positions, plan, False)
+    assert grower.stop() is None and grower.ended  # a usual round that stops ends the growth, as before
