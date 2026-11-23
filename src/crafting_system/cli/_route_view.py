@@ -21,7 +21,9 @@ tiers a draw can add) is a fact about items, and a block's members can differ in
 The chances of a row are the exact mixture of those of its states (OR-20): the sum over the states of (expected
 visits x chance) over the expected visits of the row (`_route_flow`). Chance per use lists the outcomes that do not lose
 a wanted mod, one line per place they lead to: the target, the same step again ("not yet, this step again"), another step, each
-named by the item that goes there and the action it goes on with (", then Orb of Annulment", #1442). On failure lists the outcomes that
+named by the item that goes there and the action it goes on with (", then Orb of Annulment", #1442), and by its step ("→ step 7"): only a
+step whose one place is the row right below leaves it to the arrow between the rows, so that a loop back to an earlier step reads as one (a
+sure step's one outcome included, under "Next step"). On failure lists the outcomes that
 lose a wanted mod the item came to the step with (a leaf of the target that was met and no longer is; a mod only an earlier use of the same
 step gave is a miss, not a loss, #889), or land in a step that restarts or has no action (PRES-6: never decided by what the item still costs
 to finish). A restart's own row says where it goes under "Next step": buying the item again is that step, not its failure (#892). Uses on
@@ -524,7 +526,10 @@ class _View:
             if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442)
                 return f"the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
         elif appeared := self.appeared(step, edge):
-            return " and ".join(appeared), False
+            # what the use gave, and, when another branch of the step got the same (a sure craft's every branch), what tells this one apart
+            alike = [other for other in step.edges if other is not edge and other.kind == "forward" and self.appeared(step, other) == appeared]
+            tell = self.item_words(step, edge, alike) if alike else ""
+            return " and ".join(appeared) + (f", {tell}" if tell else ""), False
         if words := self.item_words(step, edge):
             return words, False
         return f"the item of step {edge.to + 1}", True
@@ -542,15 +547,15 @@ class _View:
         sides = (Side.PREFIX, Side.SUFFIX)
         return tuple(max(0, _capacity(self.data, self.ab.base_id, side, rarity) - held[side]) for side in sides)  # type: ignore[return-value]
 
-    def item_words(self, step: Step, edge: Edge) -> str:
-        """The item of a branch, by what a player sees on it that the items of the step's other branches do not all share (#1442).
+    def item_words(self, step: Step, edge: Edge, among: list[Edge] | None = None) -> str:
+        """The item of a branch, by what a player sees on it that the items of the step's other branches (or of `among`) do not all share (#1442).
 
         The wanted mods every item of the branch holds and some item of another branch lacks ("with ..."), those none of them holds and
         some item of another branch does ("without ..."); when no wanted mod tells them apart, the open prefixes and suffixes every item of the
         branch has and some other has not. "" when nothing does (the branches differ only in what the page cannot name).
         """
         mine = edge.states
-        others = [state for other in step.edges if other is not edge for state in other.states]
+        others = [state for other in (step.edges if among is None else among) if other is not edge for state in other.states]
         if not mine or not others:
             return ""
         width = len(self.plan.leaf_labels)

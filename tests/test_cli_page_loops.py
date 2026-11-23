@@ -6,9 +6,13 @@ step nor what the restart costs. Small hand-made policies on a belt, drawn throu
 """
 
 from items_support import DATA
-from route_view_support import COLD_REQ, FRACTURED_COLD, LIFE, belt, hand_input
+from route_view_support import COLD_REQ, DAMAGE, FRACTURED_COLD, HYSTERIA_REQ, LIFE, belt, hand_input
 
-from crafting_system.cli._route_view import NEXT, build_section
+from crafting_system.abstraction import Status
+from crafting_system.cli._route_view import NEXT, SURE_NEXT, build_section
+from crafting_system.targets import Requirement
+
+DAMAGE_REQ = Requirement("AllDamage", None, frozenset({DAMAGE}))
 
 
 def _junk(state) -> int:
@@ -53,3 +57,20 @@ def test_a_sure_step_whose_one_outcome_is_the_row_below_says_nothing_more():
     assert bench.title.startswith("Benchcraft") and chaos.title == "Chaos Orb"
 
     assert lines(bench, NEXT) == []  # the arrow between the rows says it
+
+
+def bench_then_by_life(state, ab):
+    """The bench craft on any item with no crafted mod; then the essence on the item that has life, a Chaos Orb on the one that has not."""
+    if not state.crafted:
+        return "Benchcraft: All Damage"
+    return "Essence of Hysteria" if state.status[1] is Status.PASSING else "Chaos Orb"
+
+
+def test_the_branches_of_a_sure_craft_that_all_get_the_crafted_mod_are_told_apart_by_the_item():
+    """Every branch of the bench craft gets the crafted mod, so that mod tells none apart (R13 step 7, #1442): each says what its item has."""
+    section = build_section(hand_input(belt(FRACTURED_COLD), (COLD_REQ, LIFE, HYSTERIA_REQ, DAMAGE_REQ), bench_then_by_life), DATA)
+    bench = section.rows[1]
+
+    onward = {line.text.split(", then ")[-1].split(":")[0]: line.text for line in lines(bench, SURE_NEXT) if not line.text.startswith("the target")}
+    assert set(onward) == {"Chaos Orb", "Essence of Hysteria"}
+    assert "without +# to maximum Life" in onward["Chaos Orb"] and "with +# to maximum Life" in onward["Essence of Hysteria"]
