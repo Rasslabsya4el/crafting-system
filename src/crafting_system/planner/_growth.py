@@ -45,6 +45,19 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   dependencies; never the union of the earlier rounds. A set held by an earlier round names nothing new: the step is marked diagnosed and the
   next dearest is read. When no step names anything new the growth ends, and the rounds of `_rounds.widen` follow with the plan's support as
   their base.
+* **The later group** (#1440, hypothesis H11 of #1434). A method one use of which fans out over two random choices, or copies the item, is
+  named by no role until a round without it has proved a plan (`OfferTable.held_back`): each state it reaches is two draws deep, or doubled
+  by a held copy, so a round that holds it with the rest is a model of every pairing, which on R14 and R04 stopped the build of the round
+  that first held the Exalted Orb with its narrower (#1423's hand probe: the guide's own set built in 12 s and 37 s, the same set with one
+  such method stopped before a first bound). The class is read from the offer (`Entry.fans`), never from a list of names: it makes,
+  replaces or restores an imprint (`Action.imprint_move`); or it is an addition one of whose outcomes at a shape's item lacks a mod the item
+  held that was not fractured (it removes a random mod as it adds one: the Beastcraft side swaps, Harvest's add-remove crafts); or the draw
+  it declares there (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own: the beast recipe
+  that adds an influence's mod, the side swaps' draw at the beast's level). The roles are read as before with these offers held out (the
+  next cheapest takes their place), and what they would have named of them is kept. When nothing new is named without them, or a round
+  does not finish within its share, one later group runs with a plan in hand: the plan's support, the named offers and the methods of the
+  class the roles named, its words naming them (the page shows them). After it nothing is held back. Nothing is dropped (OR-12, OR-13): that
+  group still runs, and every offer keeps its group in the widening rounds after the growth.
 
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
@@ -61,6 +74,7 @@ import numpy as np
 from crafting_system.abstraction import Abstraction, CompressedState, Status, add_bound, declared_add_bound, declared_bounds, reach_bound
 from crafting_system.actions import BLOCKED_TAG, BLOCKING, LOCKED_SIDE, NotApplicableError, OutOfScopeError
 from crafting_system.data import GameData
+from crafting_system.actions.pool import build_pool
 from crafting_system.items import Item, Metamod, Rarity
 from crafting_system.solver import linear_solve
 
@@ -72,6 +86,9 @@ PER_ROLE = 2  # the offers of least cost over chance a wanted mod brings for one
 KEEPS_MODS = (ADD, *FINISHING)  # the kinds that keep the mods they are given and add one: what an adder is (a reroll is not)
 _LOCKS = {metamod.value: side for metamod, side in LOCKED_SIDE.items()}
 _TAGS = {metamod.value: tag for metamod, tag in BLOCKED_TAG.items()}
+COPIES = "it copies the item (it makes, replaces or restores an imprint)"  # the three reasons an offer waits for the later group (#1440)
+REMOVES_AND_ADDS = "it removes a random mod as it adds a random one"
+OWN_POOL = "it adds a mod drawn from a pool of its own"
 _SIDES = frozenset({"prefix", "suffix"})  # the sides a rolled mod sits on (`Mod.generation_type`)
 
 
@@ -97,6 +114,7 @@ class Entry:
     locks: frozenset = frozenset()  # the sides whose lock it may add
     keeps_out: frozenset[str] = frozenset()  # the tags it may keep out of the draws
     more_crafted: bool = False  # it may add the metamod of more crafted mods
+    fans: str = ""  # why one use fans out over two random choices or copies the item (module text, the later group; #1440), or ""
     need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
 
     def acts_at(self, shapes) -> bool:
@@ -115,7 +133,11 @@ class Entry:
 
 
 class OfferTable:
-    """The offers of a run as the growth reads them (module text): `entries[i]` is the offer at position `i` of `offers`."""
+    """The offers of a run as the growth reads them (module text): `entries[i]` is the offer at position `i` of `offers`.
+
+    `held_back` are the offers no role names while the methods that fan out wait for their later group (`Grower`)."""
+
+    held_back: frozenset[int] = frozenset()
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
                  ask: Callable[[], None] | None = None) -> None:  # fmt: skip
@@ -163,6 +185,8 @@ class OfferTable:
                         if finishes(goal.leaves[leaf], named, made):
                             entry.chance[(rarity, leaf)] = Fraction(1)
                 elif kind == ADD:
+                    if not entry.fans:
+                        entry.fans = self._fans_at(action, view)
                     declared = action.added_draw(data, view) is not None
                     for leaf in self.open:
                         chance = declared_add_bound(abstraction, action, view, (leaf,)) if declared else add_bound(abstraction, bare, action, (leaf,))
@@ -203,6 +227,8 @@ class OfferTable:
         entry.fractures, entry.draws = bool(adds.fractures), bool(adds.draws)
         entry.makes_imprint = move is not None and not move.restore
         entry.restores = move is not None and move.restore
+        if move is not None:
+            entry.fans = COPIES
         entry.needs_veiled, entry.veils, entry.needs_crafted = bool(reads.needs_veiled), bool(adds.veils), bool(reads.needs_crafted)
         entry.crafted = bool(adds.crafted) and bool(adds.named)
         entry.removes = adds.named == frozenset() and not adds.draws and CRAFT in entry.kinds.values()
@@ -215,6 +241,30 @@ class OfferTable:
         entry.keeps_out = frozenset(_TAGS[family] for family in families if family in _TAGS)
         entry.more_crafted = Metamod.MULTIPLE_CRAFTED_MODS.value in families
 
+    def _fans_at(self, action, view: Item) -> str:
+        """Why an addition at `view`'s shape fans out over two random choices (module text, the later group), or "": one of its outcomes at
+        `view` lacks a mod `view` held that was not fractured (it removes a random mod as it adds one), or the draw it declares there
+        (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own)."""
+        data = self.data
+        held = {entry.mod_id for entry in view.mods if not entry.fractured}
+        try:
+            results = getattr(action.outcomes(data, view), "results", None) if held else None
+            if results and any(held - {entry.mod_id for entry in after.mods} for _chance, after in results):
+                return REMOVES_AND_ADDS
+            draw = action.added_draw(data, view)
+            if draw is None:
+                return ""
+            sides = {side for side, room in draw.free.items() if room}
+            own = {each.mod.id for family in draw.pool if family.side in sides for each in family.mods}
+            return OWN_POOL if own != self.pool_ids(view, sides) else ""
+        except (NotApplicableError, OutOfScopeError, ValueError):  # refused or out of the model's scope at this shape: nothing read here
+            return ""
+
+    def pool_ids(self, view: Item, sides) -> set[str]:
+        """The mods of the item's own pool on `sides` at `view`'s shape (its fractured mods and nothing else)."""
+        bare = view.changed(self.data, mods=tuple(entry for entry in view.mods if entry.fractured))
+        return {each.mod.id for family in build_pool(self.data, bare) if family.side in sides for each in family.mods}
+
     def seed(self, per_role: int = PER_ROLE) -> set[int]:
         """Round 0: per wanted mod not passing at the start, the `per_role` offers of least cost over chance on it, any kind, any shape."""
         chosen: set[int] = set()
@@ -225,7 +275,7 @@ class OfferTable:
     def _best(self, leaf: int, allowed: Callable[[Entry], bool], count: int, shapes: Sequence[Rarity] | None = None, held: frozenset[int] = frozenset()) -> list[int]:
         ranked = sorted(
             (ratio, entry.position) for entry in self.entries
-            if entry.position not in held and allowed(entry) and math.isfinite(ratio := entry.ratio(leaf, shapes)[0])
+            if entry.position not in held and entry.position not in self.held_back and allowed(entry) and math.isfinite(ratio := entry.ratio(leaf, shapes)[0])
         )  # fmt: skip
         return [position for _ratio, position in ranked[:count]]
 
@@ -257,7 +307,7 @@ class OfferTable:
         return named
 
     def cheapest(self, allowed: Callable[[Entry], bool], held: frozenset[int] = frozenset()) -> int | None:
-        found = [(entry.cost, entry.position) for entry in self.entries if entry.position not in held and allowed(entry)]
+        found = [(entry.cost, entry.position) for entry in self.entries if entry.position not in held and entry.position not in self.held_back and allowed(entry)]
         return min(found)[1] if found else None
 
     def roles(self, waits: set[int], risks: set[int], shapes: frozenset[Rarity], fractured: bool, held: frozenset[int], current: frozenset[int],
@@ -442,8 +492,45 @@ class Grower:
         self.plan_set: frozenset[int] = frozenset()  # the offers of the round that made the plan in hand
         self.last: frozenset[int] = frozenset()
         self.by_label = {entry.label: entry.position for entry in table.entries}
+        # the methods that fan out (module text, the later group): no role names them until a round without them has proved a plan; what the
+        # roles would have named of them is kept for that group. An offer the target names is in every round, so it is never held back
+        self.later_ones = frozenset(entry.position for entry in table.entries if entry.fans) - self.asked
+        self.later_named: set[int] = set()
+        self.later_done = not self.later_ones
+        self.ended = False
+        table.held_back = self.later_ones
+
+    def _named_later(self, named: Callable[[], set[int]]) -> None:
+        """Keep for the later group what `named()` names of the methods that fan out when no offer is held back."""
+        if self.later_done:
+            return
+        table = self.table
+        held, table.held_back = table.held_back, frozenset()
+        try:
+            self.later_named |= table.closure(set(named())) & self.later_ones
+        finally:
+            table.held_back = held
+
+    def later(self) -> tuple[tuple[int, ...], str] | None:
+        """The later group (module text), once: the plan's support, the named offers and the methods that fan out the roles named, with a
+        plan in hand; None when there is none to run. After it no offer is held back."""
+        if self.later_done or self.plan is None:
+            return None
+        self.later_done, self.table.held_back = True, frozenset()
+        if not self.later_named:
+            return None
+        chosen = self.table.closure(set(self.support(self.plan)) | set(self.asked) | self.later_named)
+        if not self._new(chosen):
+            return None
+        return tuple(sorted(chosen)), f"the later group of the methods that fan out over two random choices or copy the item, after a plan proved without them: {self._labels(self.later_named)}"
+
+    def stop(self) -> tuple[tuple[int, ...], str] | None:
+        """A growth round did not finish within its share (`_rounds.widen`): the growth ends, after the later group when it is owed."""
+        self.ended = True
+        return self.later()
 
     def seed(self) -> tuple[tuple[int, ...], str] | None:
+        self._named_later(self.table.seed)
         chosen = self.table.closure(self.table.seed() | self.asked)
         if not chosen:
             return None
@@ -476,11 +563,21 @@ class Grower:
         return not any(chosen <= tried for tried in self.tried)
 
     def next(self) -> tuple[tuple[int, ...], str] | None:
-        """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends)."""
+        """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends). When nothing
+        new is named without the methods that fan out, their later group comes first (module text)."""
+        if self.ended:
+            return None
+        found = self._next()
+        if found is not None or self.later_done:
+            return found
+        return self.later() or self._next()
+
+    def _next(self) -> tuple[tuple[int, ...], str] | None:
         table, plan = self.table, self.plan
         if plan is None:  # no plan in hand: the roles read at the start
             base = set(self.last)
             waits, risks = self._start_reading(base)
+            self._named_later(lambda: table.roles(waits, risks, frozenset({table.start_rarity}), False, self.last, frozenset(base)))
             named = table.roles(waits, risks, frozenset({table.start_rarity}), False, self.last, frozenset(base))
             chosen = table.closure(base | named | self.asked)
             if named and self._new(chosen):
@@ -495,7 +592,9 @@ class Grower:
             self.diagnosed.add(label)
             waits, risks, shapes, fractured = read_step(acts, len(table.goal.leaves))
             current = frozenset(support | self.asked)
-            named = table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending_at(acts, len(table.goal.leaves)))
+            pending = pending_at(acts, len(table.goal.leaves))
+            self._named_later(lambda: table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending))
+            named = table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending)
             narrowers = self.state_narrowers(shares, current | named, at_states) - current - named
             named |= narrowers | (table.crafted_roles(current | named | narrowers) if narrowers else set())
             chosen = table.closure(set(current) | named)

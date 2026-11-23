@@ -392,3 +392,122 @@ def test_the_dearest_step_is_read_when_the_weights_are_integers_past_float_s_ran
     shares = step_shares(SimpleNamespace(start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None)))
     assert [label for label, _share, _acts in shares] == ["reroll", "craft A"]
     assert shares[0][1] == pytest.approx(10.0) and shares[1][1] == pytest.approx(6.0)
+
+
+# --- the later group of the methods that fan out (#1440) ---------------------------------------------------------------------------
+
+
+def _mod(mod_id, fractured=False):
+    return SimpleNamespace(mod_id=mod_id, fractured=fractured)
+
+
+class _Addition:
+    """An addition as `OfferTable._fans_at` reads it: its outcomes at an item (the mods of each result) and the draw it declares."""
+
+    def __init__(self, results, pool=None):
+        self._results, self._pool = results, pool
+
+    def outcomes(self, data, item):
+        return SimpleNamespace(results=tuple((Fraction(1, len(self._results)), SimpleNamespace(mods=tuple(_mod(m) for m in mods))) for mods in self._results))
+
+    def added_draw(self, data, item):
+        if self._pool is None:
+            return None
+        return SimpleNamespace(pool=(SimpleNamespace(side=Side.SUFFIX, mods=tuple(SimpleNamespace(mod=SimpleNamespace(id=m)) for m in self._pool)),), free={Side.SUFFIX: 1, Side.PREFIX: 0})
+
+
+def test_an_addition_fans_out_when_an_outcome_loses_a_mod_the_item_held_or_its_draw_is_over_a_pool_of_its_own():
+    # the item holds P (a prefix, not fractured) and F (fractured); its own pool on the suffixes is {S1, S2}
+    table = _table()
+    table.pool_ids = lambda view, sides: {"S1", "S2"} if sides == {Side.SUFFIX} else set()
+    view = SimpleNamespace(mods=(_mod("P"), _mod("F", fractured=True)), rarity=RARE)
+    swap = _Addition([("F", "S1"), ("F", "S2"), ("P", "F", "S1")])  # adds a suffix and takes P off in two of its three outcomes
+    exalt = _Addition([("P", "F", "S1"), ("P", "F", "S2")])  # keeps every mod: it adds one
+    own = _Addition([("P", "F", "H1")], pool=("H1",))  # keeps every mod, from a pool that is not the item's own
+    same = _Addition([("P", "F", "S1")], pool=("S1", "S2"))  # a declared draw over the item's own pool
+    lone_fractured = _Addition([("F", "S1")])  # nothing but a fractured mod held: no mod can be lost, so no removal is read
+    assert table._fans_at(swap, view) == _growth.REMOVES_AND_ADDS
+    assert table._fans_at(exalt, view) == "" and table._fans_at(same, view) == ""
+    assert table._fans_at(own, view) == _growth.OWN_POOL
+    assert table._fans_at(lone_fractured, SimpleNamespace(mods=(_mod("F", fractured=True),), rarity=RARE)) == ""
+
+
+def test_an_offer_that_makes_replaces_or_restores_an_imprint_copies_the_item():
+    table = _table(_entry("imprint", 1.0, kind="terminal"), _entry("restore", 1.0, kind="refused"), _entry("regal", 1.0))
+    adds = SimpleNamespace(fractures=False, draws=False, veils=False, crafted=False, named=frozenset())
+    reads = SimpleNamespace(needs_veiled=False, needs_crafted=False, families=None)
+    for entry, move in zip(table.entries, (SimpleNamespace(restore=False), SimpleNamespace(restore=True), None)):
+        action = SimpleNamespace(adds=lambda data, item: adds, reads=lambda data: reads, imprint_move=lambda move=move: move)
+        table._read_declarations(entry, SimpleNamespace(offer=SimpleNamespace(action=action)), None)
+    assert [entry.fans for entry in table.entries] == [_growth.COPIES, _growth.COPIES, ""]
+
+
+def _later_world():
+    """Offers 0 the base's tool (10 Chaos alone), 1 G (adds A, 5 Chaos with it), 2 F (adds A at half G's cost over chance, 3 Chaos with it, and
+    it fans out: it removes a random mod as it adds one)."""
+    table = _table(
+        _entry("base", 1.0, kind="reroll", chance={A: Fraction(1, 10)}),
+        _entry("G", 1.0, chance={A: 1}),
+        _entry("F", 0.5, chance={A: 1}, fans=_growth.REMOVES_AND_ADDS),
+    )
+    start, goal = _State("start", (Status.ABSENT, Status.PASSING)), _State("goal", (Status.PASSING, Status.PASSING))
+
+    def plan_of(chosen):
+        labels = {offer.label for offer in chosen}
+        for label, cost in (("F", 3.0), ("G", 5.0)):
+            if label in labels:
+                view = {start: Action(label, 1.0, (Outcome(goal, 1),))}
+                return _Plan(mean_remaining=cost, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None), search=SimpleNamespace(lower=cost, bound_stopped=None))
+        view = {start: Action("base", 1.0, (Outcome(goal, 1), Outcome(start, 9)))}
+        return _Plan(mean_remaining=10.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None), search=SimpleNamespace(lower=10.0, bound_stopped=None))
+
+    offers = tuple(SimpleNamespace(label=entry.label, kind=entry.label) for entry in table.entries)
+    groups = (_rounds.Group((0,), ("base",), frozenset()), _rounds.Group((1,), ("G",), frozenset({"junk"})), _rounds.Group((2,), ("F",), frozenset({"junk", "f"})))
+    return table, offers, plan_of, groups
+
+
+def test_a_method_that_fans_out_is_named_in_a_later_group_of_its_own_after_a_round_without_it_proved_a_plan():
+    table, offers, plan_of, groups = _later_world()
+    seen = []
+
+    def run(chosen, call):
+        seen.append(tuple(sorted(offer.label for offer in chosen)))
+        plan = plan_of(chosen)
+        if call.upper is not None and plan.mean_remaining >= call.upper:
+            raise _rounds.Beaten(call.upper)
+        return plan
+
+    grower = Grower(table, ())
+    grower.seed = lambda: ((0,), "the seed")
+    widened = _widen(groups, offers, run, grower)
+    # F is the cheapest adder over chance of A, yet the step of the base names G alone; F comes in the later group, with the plan's support
+    assert seen[:3] == [("base",), ("G", "base"), ("F", "G")]
+    assert widened.plan.mean_remaining == 3.0
+    later = widened.records[2]
+    assert later.growth.startswith("the later group of the methods that fan out") and later.growth.endswith(": F")
+    assert table.held_back == frozenset()  # after its later group no offer is held back
+    # an offer the target names is in every round: it is never held back
+    assert Grower(_later_world()[0], (2,)).later_ones == frozenset()
+
+
+def test_the_later_group_still_runs_when_a_round_without_it_did_not_finish_within_its_share():
+    table, offers, plan_of, groups = _later_world()
+    seen = []
+
+    def run(chosen, call):
+        labels = tuple(sorted(offer.label for offer in chosen))
+        seen.append(labels)
+        if labels == ("G", "base"):  # its bound's build stopped at its share
+            return _Plan(**{**vars(plan_of(chosen[:1])), "search": SimpleNamespace(lower=1.0, bound_stopped="the share ended")})
+        return plan_of(chosen)
+
+    def ended(plan):
+        return (_rounds.STOPPED, "the round's share of the time ended") if plan.search.bound_stopped else (_rounds.CLOSED, "")
+
+    grower = Grower(table, ())
+    grower.seed = lambda: ((0,), "the seed")
+    widened = _widen(groups, offers, run, grower, ended)
+    assert seen[:3] == [("base",), ("G", "base"), ("F", "base")]  # the plan in hand is the seed's: its support with F
+    assert "the growth of the methods ended here" in widened.records[1].reason and widened.records[2].growth.startswith("the later group")
+    assert widened.plan.mean_remaining == 3.0
+    assert all(record.growth is None for record in widened.records[3:])  # then the widening, not more growth

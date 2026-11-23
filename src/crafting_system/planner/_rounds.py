@@ -427,7 +427,7 @@ def widen(
             grow.ran(positions, best, improved)
             plan = None
             gc.collect()
-            step = None if ends else grow.next()
+            step = grow.stop() if ends else grow.next()  # a growth that ends still runs its later group once (`_growth`, #1440)
         grown = best is not None  # (with no plan in hand the rounds below are main's, from their first)
         if best is not None:
             base = sorted(grow.support(best) | grow.asked)
