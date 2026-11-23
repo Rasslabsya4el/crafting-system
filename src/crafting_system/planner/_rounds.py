@@ -73,7 +73,11 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   round after it and still closes. The proof comes back in one place: when every round closed and groups were set aside so, one last round
   holds them with the base, that is every offer; if it closes the set-aside groups count as closed again and the plan is the cheapest of
   every method, as when they were carried. That round runs only when the whole proof is in reach; its offers become the plan's only when it
-  makes a cheaper plan, which then needs them.
+  makes a cheaper plan, which then needs them. A round its share stopped while a plan was in hand, that did not lower it, is set aside the same
+  way (#1500): it proved nothing, so the answer counts it closed only once that last round, which holds its offers with every other, closes.
+  Before, it joined no later round and kept the last round from ever being due, so no round held every offer: R12's Harvest likelihood
+  round stopped at its share and its 9,297 offers were never searched together, though the missing mods' table of that last round reaches the
+  plan's own cost (40.93 c) at once.
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
   figure no plan of its offers costs less than (OR-13). When no round made a plan, the answer says that no plan of the offered methods
@@ -156,11 +160,15 @@ class RoundRecord:
     # a round of the plan-led growth (`_growth`, #1414): why it holds what it holds. Its `kinds` are then its offers' labels, and its proof covers
     # them alone (they are not the methods of every round before it), so the whole proof never rests on it (`all_closed`)
     growth: str | None = None
+    # a round its share stopped with a plan in hand it did not lower, set aside, whose group the last round held again with every offer and
+    # that round closed (#1500): the last round's proof covers its offers, though its own search did not finish
+    held_again: bool = False
 
     @property
     def closed(self) -> bool:
-        """It closed, and every round after it held its group: only then does the last round's proof cover its offers too."""
-        return self.status in (CLOSED, WITHIN, BEATEN, NONE) and self.carried
+        """It closed (or it stopped and the closed last round held it again with every offer), and every round after it held its group: only
+        then does the last round's proof cover its offers too."""
+        return (self.status in (CLOSED, WITHIN, BEATEN, NONE) or (self.status == STOPPED and self.held_again)) and self.carried
 
     def document(self) -> dict:
         """The record as the JSON says it."""
@@ -168,6 +176,7 @@ class RoundRecord:
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
             "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
             "carried": self.carried, **({} if self.states is None else {"states": self.states}), **({} if self.growth is None else {"growth": self.growth}),
+            **({"held_again": True} if self.held_again else {}),
         }  # fmt: skip
 
 
@@ -496,8 +505,9 @@ def widen(
             positions = sorted({*base, *group.positions})
             records[earlier_place] = replace(records[earlier_place], reason=records[earlier_place].reason + "; set aside, since the round after it was refused too")
         refused_last = (place, group.positions) if status == REFUSED and k > 0 else None
-        if held and not improved and status in (CLOSED, WITHIN, BEATEN, NONE) and ahead > 1:
-            # proved unable to beat the plan in hand (beaten, closed with no cheaper plan, or closed with no plan at all): its group is not carried
+        if held and not improved and status in (CLOSED, WITHIN, BEATEN, NONE, STOPPED) and ahead > 1:
+            # proved unable to beat the plan in hand (beaten, closed with no cheaper plan, or closed with no plan at all), or stopped by its share
+            # without lowering it (#1500: nothing proved, so the last round must hold it again): its group is not carried
             # into the rounds after it (#1080, #1091, #1097). Its proof covers its offers with the base only, not with a later group's, so the
             # answer no longer counts it as closed (`RoundRecord.closed`) and names it with its lower figure. Carrying it kept R05's 1,192 fossil
             # sets (their round closed at the plan in hand's cost) in every later round and in the plan's offers, and the solve after the net
@@ -539,7 +549,8 @@ def widen(
             gave_way = []
         if k == closing and records[place].closed:
             for aside, _ in set_aside:
-                records[aside] = replace(records[aside], carried=True, reason=records[aside].reason + "; the last round held them again, with every method")
+                records[aside] = replace(records[aside], carried=True, held_again=records[aside].status == STOPPED,
+                                         reason=records[aside].reason + "; the last round held them again, with every method")  # fmt: skip
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
     return Widened(best, tuple(records), error or proof)
@@ -609,9 +620,10 @@ def _stated(lower: float | None, cut: float | None) -> float | None:
 
 
 def _all_ended(records: Sequence[RoundRecord]) -> bool:
-    """Every round so far closed (exactly, within the gap, beaten, or with no plan): only then is the last round that holds the set-aside
-    groups again due."""
-    return all(record.status in (CLOSED, WITHIN, BEATEN, NONE) for record in records)
+    """Every round so far closed (exactly, within the gap, beaten, or with no plan) or was set aside after its share stopped it (#1500): only
+    then is the last round that holds the set-aside groups again due. A round stopped and not set aside (no plan in hand, or one it lowered)
+    keeps it from being due, as before."""
+    return all(record.status in (CLOSED, WITHIN, BEATEN, NONE) or (record.status == STOPPED and not record.carried) for record in records)
 
 
 def _bare(error: BaseException) -> BaseException:
