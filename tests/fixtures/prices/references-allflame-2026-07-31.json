@@ -1902,7 +1902,7 @@
         "kind": "hand-set",
         "league": "Allflame",
         "listings": 5,
-        "for_item": "item level 84 or more"
+        "for_item": "item level 84 or more, whose cheapest listings were most likely of item level 85"
       },
       "source": "hand-set"
     },
@@ -3856,7 +3856,7 @@
         "kind": "hand-set",
         "league": "Allflame",
         "listings": 5,
-        "for_item": "item level 84 or more"
+        "for_item": "item level 84 or more, whose cheapest listings were most likely of item level 85"
       },
       "source": "hand-set"
     },
