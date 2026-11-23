@@ -60,7 +60,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 OTHER_ITEM = {
     "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
     "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; a normal item cannot carry an influence, #515) and no file has a line for an influenced Heavy Belt: it has no body",
-    "r05-strength-ring": "#483 the exact item has 0 listings: the stored price is hand-set (OR-44) from a search of any ring of item level 75 or more",
+    "r05-strength-ring": "#483 the exact item has 1 listing, at 12,905 Chaos on 2026-11-10: the stored price is hand-set (OR-44) from a search of any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the exact item has 9 listings (rail 10): the stored price is hand-set (OR-44) from a search of item level 84 or more",
     "r10-fractured-boots-70-life": "#483 the exact item has 9 listings (rail 10): the stored price is hand-set (OR-44) from a search of item level 84 or more",
     "r11-reservation-helmet": "#483 the exact item has 3 listings (rail 10): the stored price is hand-set (OR-44) from a search of item level 84 or more",

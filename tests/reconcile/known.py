@@ -65,7 +65,7 @@ KNOWN: dict[tuple[str, str], Known] = _known(
         ("r04-penetrating-quiver", "price.source"): ("#426", "OR-7", "the start price is a poe.ninja stand-in", "trade-api", "poe.ninja"),
         ("r17-lightning-talisman", "price.item_level"): ("#1046", "OR-3", "the hand-set week-one price records no item level: the check cannot tell (#901)", "85", "cannot tell (label 85)"),
         ("r17-lightning-talisman", "price.source"): ("#1046", "OR-44", "the start price is hand-set: the week-one file has no line for the Talisman (#901)", "trade-api", "hand"),
-        ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has no market (0 listings)", "Amethyst Ring", "any accessory.ring"),
+        ("r05-strength-ring", "price.base"): ("#483", "OR-3", "the price entry is a search by category only: it prices any ring; the exact item has 1 listing (12,905 Chaos on 2026-11-10)", "Amethyst Ring", "any accessory.ring"),
         ("r05-strength-ring", "price.pool"): ("#483", "OR-3", "the price entry accepts the Unset Ring and the Bone Ring; the exact item has no market", "Amethyst Ring", f"{_RING}Ring15 (+3 -0); {_RING}Ring16 (+23 -0)"),
         ("r08-energy-shield-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),
         ("r09-life-boots", "price.rarity"): ("#494", "OR-16", "the target starts rare, the price entry is of a normal base: the Alchemy is typed into the price (#494 point 2, was #417)", "rare", "normal"),

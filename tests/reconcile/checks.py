@@ -315,7 +315,7 @@ def reconcile(
             continue
         if derived_tier is None:
             continue  # the ladder slot already says why
-        first =next(i for i, t in _tiers_of(export, base_ids, mod.mod, target.influence).items() if t is not None)
+        first = next(i for i, t in _tiers_of(export, base_ids, mod.mod, target.influence).items() if t is not None)
         lower = [
             stat_ranges(export.mods[other])[0][1]
             for other, tier in _ladder_on(export, first, mod.mod, target.influence).items()
