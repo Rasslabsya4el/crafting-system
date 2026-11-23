@@ -166,7 +166,7 @@ def load_plan(path: Path, data: GameData) -> SavedPlan:
             raise PlanFileError(f"{path} was saved by an older version of --save-plan: plan again")
         _, python, identity, stamp = header
         if python != _python():
-            raise PlanFileError(f"{path} was saved by another Python ({_python_words(python)}) than this one ({_python_words(_python())}): plan again")
+            raise PlanFileError(f"{path} was saved by another version of the program's interpreter ({_python_words(python)}) than this one ({_python_words(_python())}): plan again")
         if not all(isinstance(module, str) and module.startswith(PACKAGE + ".") for module in stamp):  # never look up a name read from a file outside it
             raise PlanFileError(f"{path} is not a plan this code can read: its code stamp names modules of no planner")
         if identity != _identity(data):

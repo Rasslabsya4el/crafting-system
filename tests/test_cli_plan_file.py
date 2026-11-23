@@ -101,7 +101,7 @@ def test_a_plan_saved_by_another_python_is_refused_before_it_is_read(planned, tm
     monkeypatch.setattr(_plan_file, "_python", lambda: ("cpython", 3, 99, 0))
     monkeypatch.setattr(_plan_file._Reader, "load", lambda self: pytest.fail("the plan was read"))  # its closures are another Python's bytecode
 
-    with pytest.raises(PlanFileError, match="another Python"):
+    with pytest.raises(PlanFileError, match="another version of the program.s interpreter"):
         load_plan(path, DATA)
 
 
