@@ -11,7 +11,7 @@ price is stored under; the trade query is `build_query` of the spec. Nothing is 
   of the base, not a bought mod. Where they read alike (the two Penetrating Arrow Quivers share an implicit and a mod pool) nothing can tell
   them apart. Either way the price key says which base is meant (`Two-Toned Boots [BootsAtlas1]`), so the key is the target's base and
   never a neighbour's.
-* **The category** is `TRADE_CATEGORY`, from the base's item class.
+* **The category** is `trade_category`: `TRADE_CATEGORY` of the base's item class (a cluster jewel's is its domain's).
 * **The item level window** runs from the target's level up to the highest level whose mod pool is the same (`floor.level_groups`): any mod
   gained anywhere in the pool changes the odds of the craft, so the whole-pool window is the exact one. A window that runs to the highest
   item level has no maximum in the query.
@@ -45,7 +45,9 @@ from .floor import level_groups
 from .model import Target
 
 __all__ = [
+    "NO_TRADE_CATEGORY",
     "TRADE_CATEGORY",
+    "TRADE_CATEGORY_OF_DOMAIN",
     "StartBuyError",
     "base_in_words",
     "base_line_name",
@@ -57,9 +59,14 @@ __all__ = [
     "same_name_bases",
     "shared_name_refusal",
     "start_price_key",
+    "trade_category",
 ]
 
-# raw item class -> the trade site's `category` option: a fact about the trade site.
+# raw item class -> the trade site's `category` option: a fact about the trade site. It holds every item class of the bases a player crafts on
+# (`prices.spends.EQUIPMENT_DOMAINS`, gear, jewels and flasks, the `HiddenItem` class left out) whose bases can take an explicit mod, save the one
+# class in `NO_TRADE_CATEGORY` (#1491; `tests/test_targets_start_buy.py` walks the game data). The options are Craft of Exile's own trade link
+# (its emulator maps each of its bases to the trade site's category; the copy read is `.claude/scratch/coe/site/packages/package.js`, 2026-11-18):
+# a Thrusting One Hand Sword is searched as a one-handed melee weapon there, as here, and the base's name in the query picks the base.
 TRADE_CATEGORY = {
     "Amulet": "accessory.amulet",
     "Ring": "accessory.ring",
@@ -72,7 +79,40 @@ TRADE_CATEGORY = {
     "Quiver": "armour.quiver",
     "Bow": "weapon.bow",
     "Wand": "weapon.wand",  # R07 (ticket #146)
+    "Claw": "weapon.claw",
+    "Dagger": "weapon.basedagger",
+    "Rune Dagger": "weapon.runedagger",
+    "One Hand Axe": "weapon.oneaxe",
+    "One Hand Mace": "weapon.basemace",
+    "Sceptre": "weapon.sceptre",
+    "One Hand Sword": "weapon.onesword",
+    "Thrusting One Hand Sword": "weapon.onemelee",
+    "Staff": "weapon.basestaff",
+    "Warstaff": "weapon.warstaff",
+    "Two Hand Axe": "weapon.twoaxe",
+    "Two Hand Mace": "weapon.twomace",
+    "Two Hand Sword": "weapon.twosword",
+    "Jewel": "jewel.base",
+    "AbyssJewel": "jewel.abyss",
+    "LifeFlask": "flask",
+    "ManaFlask": "flask",
+    "HybridFlask": "flask",
+    "UtilityFlask": "flask",
 }
+
+# The bases of a domain whose trade category is not their class's: a cluster jewel is of the class Jewel and is searched as a cluster jewel.
+TRADE_CATEGORY_OF_DOMAIN = {"affliction_jewel": "jewel.cluster"}
+
+# A crafted-on class with no trade category, and why: nothing the repo holds names the trade site's option for it (#1492 is to record the site's list).
+NO_TRADE_CATEGORY = {
+    "FishingRod": "Craft of Exile has no trade link for it and the repo holds no record of the trade site's option for a fishing rod",
+}
+
+
+def trade_category(base: BaseItem) -> str | None:
+    """The trade site's `category` option of a base: its domain's where `TRADE_CATEGORY_OF_DOMAIN` has one, else its class's; None where none is known."""
+    return TRADE_CATEGORY_OF_DOMAIN.get(base.domain) or TRADE_CATEGORY.get(base.item_class)
+
 
 NOT_FOR_SALE_TAG = "not_for_sale"
 ROYALE_MARKER = "Royale"
@@ -153,9 +193,10 @@ def buy_spec_of(data: GameData, target: Target, *, strands: int = 0) -> BuySpec:
     """
     item = target.start_item
     base = data.base_items[target.base_id]
-    category = TRADE_CATEGORY.get(base.item_class)
+    category = trade_category(base)
     if category is None:
-        raise StartBuyError(f"no trade category is known for the item class {base.item_class!r} (base {base.name}): add it to TRADE_CATEGORY")
+        why = NO_TRADE_CATEGORY.get(base.item_class, "add it to TRADE_CATEGORY")
+        raise StartBuyError(f"no trade category is known for the item class {base.item_class!r} (base {base.name}): {why}")
     low, high = item_level_window(data, target)
     rarity = item.rarity
     influences = canonical_influences(influence.value for influence in item.influences)
