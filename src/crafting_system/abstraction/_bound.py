@@ -84,10 +84,9 @@ import itertools
 from collections.abc import Hashable, Iterable, Mapping, Sequence
 from fractions import Fraction
 
-from crafting_system.actions import BLOCKED_TAG, Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, allowed_by_tags, guaranteed_candidates, partners
+from crafting_system.actions import BLOCKED_TAG, Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, allowed_by_tags, guaranteed_candidates, item_tags, partners
 from crafting_system.budget import checkpoint
 from crafting_system.data import Mod
-from crafting_system.actions.pool import item_tags
 from crafting_system.data.elevated import load_elevated
 from crafting_system.items import Item, ItemError, Rarity, Side
 from crafting_system.items.model import CRAFTED_DOMAIN, EXPLICIT_EXTRA_DOMAINS
