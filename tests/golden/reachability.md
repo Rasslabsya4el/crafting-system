@@ -151,7 +151,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `recipe_starts` | [planner] | `true` | read | planner/_starts.py: _with_starts (used in an operation; on the planning path) |
 | `recombinator_junk_craft` | [planner] | `false` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path) |
 | `max_imprints` | [planner] | `1` | read | cli/_benchmark.py: benchmark_main (passed to `imprints_held_at_most` (outside src); on the planning path); cli/_benchmark.py: render_summary (used as an index or container; on the planning path); and 2 more |
-| `price_source` | [planner] | `both` | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
+| `price_source` | [planner] | `both` | read | planner/_plan.py: widened_plan (read from `**kwargs`; on the planning path); planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); and 2 more |
 | `price_gap_percent` | [planner] | `20.0` | read | cli/_benchmark.py: render_summary (used as an index or container; on the planning path); cli/_inputs.py: write_json (passed to `json.dumps` (outside src); on the planning path); and 7 more |
 | `time_limit_seconds` | [planner] | `600.0` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 8 more |
 | `memory_limit_mb` | [planner] | `share` | read | budget.py: Binding.early (used in an operation; not on the planning path); budget.py: Binding.words (formatted into text; on the planning path); and 10 more |
@@ -169,7 +169,7 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--net` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path) |
 | `--no-recipe-starts` | command `plan` |  | read | cli/_main.py: main (used in an operation; on the planning path) |
 | `--out` | command `benchmark` |  | read | cli/_benchmark.py: benchmark_main (decides a branch; on the planning path); cli/_benchmark.py: benchmark_main (passed to `Path` (outside src); on the planning path) |
-| `--price-source` | command `plan` |  | read | planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); planner/_starts.py: plan_with_starts (passed on in `**`; on the planning path) |
+| `--price-source` | command `plan` |  | read | planner/_plan.py: widened_plan (read from `**kwargs`; on the planning path); planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); and 2 more |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
 | `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 2 more |
@@ -222,11 +222,11 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_finish.py, planner/_growth.py, planner/_plan.py |  |
 | `influences` | cli/_route_card.py, planner/_bought_starts.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_finish.py, planner/_growth.py, and 4 more |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_entry.py, planner/_finish.py, and 5 more |  |
 | `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
-| `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_implicit_finish.py, planner/_plan.py |  |
-| `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_plan.py, planner/_quality_finish.py |  |
+| `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_entry.py, planner/_implicit_finish.py, planner/_plan.py |  |
+| `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_entry.py, planner/_plan.py, planner/_quality_finish.py |  |
 | `actions` | cli/_benchmark_outcomes.py, planner/_implicit_finish.py, planner/_plan.py, planner/_quality_finish.py |  |
 | `enchantment` | planner/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
