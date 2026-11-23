@@ -29,7 +29,7 @@ from veiled_support import veiled_mods
 
 from crafting_system.abstraction import Abstraction, Goal, Status, Wanted
 from crafting_system.abstraction._pattern import PatternOffer
-from crafting_system.actions import AlterationOrb, AnnulmentOrb, ChaosOrb, ExaltedOrb
+from crafting_system.actions import NotApplicableError, AlterationOrb, AnnulmentOrb, ChaosOrb, ExaltedOrb
 from crafting_system.actions.beast_mods import BeastSideSwap
 from crafting_system.actions.bench import BenchCraft, RemoveCraftedMods
 from crafting_system.actions.harvest_likelihood import HarvestReforgeLikelihood
@@ -335,3 +335,24 @@ def test_a_refusal_that_reads_a_mod_is_not_read_as_the_shapes():
     assert not refused_by_shape(TOY, rare, swap) and not refused_by_shape(TOY, rare, exalt)
     assert refused_by_shape(TOY, magic, swap) and refused_by_shape(TOY, normal, swap) and refused_by_shape(TOY, normal, exalt)
     assert not refused_by_shape(TOY, normal, TOY_ACTIONS["transmute"][0]) and not refused_by_shape(TOY, magic, TOY_ACTIONS["augment"][0])
+
+
+class _RefusesOnQuality:
+    """A craft refused by what a state of a shape may differ in: by an identity test of the quality (no poison sees it), or by its value."""
+
+    def __init__(self, by_identity):
+        self.by_identity = by_identity
+
+    def outcomes(self, data, item):
+        if self.by_identity and item.quality is None:
+            raise NotApplicableError("needs quality")
+        if not self.by_identity and item.quality is not None and item.quality.value > 0:
+            raise NotApplicableError("refused on quality")
+        raise NotApplicableError("refused on the mods") if len(item.mods) > 9 else NotApplicableError("refused")
+
+
+def test_a_refusal_that_reads_a_field_a_state_may_differ_in_is_not_the_shapes():
+    """The probe's poisons and its None probe: a refusal by the quality, read by value or by an identity test, is not read as the shape's."""
+    rare = Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE)
+    assert not refused_by_shape(TOY, rare, _RefusesOnQuality(by_identity=True))
+    assert not refused_by_shape(TOY, rare, _RefusesOnQuality(by_identity=False))

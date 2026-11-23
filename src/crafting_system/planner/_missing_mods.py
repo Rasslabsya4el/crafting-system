@@ -175,18 +175,20 @@ VARYING = ("mods", "implicits", "quality", "veil_offer", "enchantment", "sockets
 
 def refused_by_shape(data, item, action) -> bool:
     """Whether `action` is refused at every in-model state of the shape of `item` (THE LAWS, "Refused by its shape"): its `outcomes` raise
-    NotApplicableError at the shape's bare item (no imprint, no Memory Strand) with every field of `VARYING` poisoned, in two probes: the
-    optional fields as poisons and as the bare item's own values (so a test `is None` read by identity, which no poison sees, gives the
-    refusal both ways or the probe fails). False on any read of a poisoned field, on any other error, and when the outcomes are given."""
+    NotApplicableError at the shape's bare item (no imprint, no Memory Strand) with every field of `VARYING` poisoned, in three probes: the
+    optional fields as poisons, as None where the bare item has none (a poison elsewhere), and all None (so a test `is None` read by identity,
+    which no poison sees, gives the refusal both ways or the probe fails). False on any read of a poisoned field, on any other error, and when the outcomes are given."""
     bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured), imprints=(), memory_strands=0)
-    for optional in (True, False):
+    for optional in ("poison", "bare", "none"):
         probe = copy.copy(bare)
         for name in VARYING:
             value = getattr(bare, name)
             if isinstance(value, tuple):
                 object.__setattr__(probe, name, _PoisonTuple(value))
-            elif optional or value is not None:
+            elif optional == "poison" or (optional == "bare" and value is not None):
                 object.__setattr__(probe, name, _PoisonValue())
+            else:
+                object.__setattr__(probe, name, None)
         try:
             action.outcomes(data, probe)
         except NotApplicableError:
