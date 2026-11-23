@@ -44,9 +44,10 @@ from abstraction_support import GOALS, PASSING, real_game_data
 from items_support import AMULET
 
 from crafting_system.abstraction import Abstraction, add_bound
-from crafting_system.abstraction._bound import _added_chance
+from crafting_system.abstraction import Goal, Wanted
+from crafting_system.abstraction._bound import Holdable, _added_chance, holdable
 from crafting_system.actions import ExaltedOrb, HarvestAddRemove, NotApplicableError, PoolFamily, PoolMod
-from crafting_system.items import Rarity, Side
+from crafting_system.items import ExplicitMod, Item, Rarity, Side
 from crafting_system.planner import _offer_kinds
 
 CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
@@ -125,13 +126,140 @@ def test_a_metamod_that_keeps_tagged_mods_out_raises_the_share_and_the_bound_tak
         family("wanted", Side.PREFIX, 1, wanted=True), family("spell", Side.PREFIX, 9, tags=("caster",)), family("hit", Side.SUFFIX, 5, tags=("attack",))
     )
     free = {Side.PREFIX: 1, Side.SUFFIX: 0}
+    held = singles(pool)
 
-    assert _added_chance(pool, free, None, frozenset(), passing) == Fraction(1, 10)
-    assert _added_chance(pool, free, None, frozenset({"caster"}), passing) == 1
+    assert _added_chance(pool, free, None, frozenset(), passing, held) == Fraction(1, 10)
+    assert _added_chance(pool, free, None, frozenset({"caster"}), passing, held) == 1
     # an open suffix side whose one family is held is closed again: holding it is one of the counts the bound ranges over
-    assert _added_chance(pool, {Side.PREFIX: 1, Side.SUFFIX: 1}, None, frozenset(), passing) == Fraction(1, 10)
+    assert _added_chance(pool, {Side.PREFIX: 1, Side.SUFFIX: 1}, None, frozenset(), passing, held) == Fraction(1, 10)
     # a draw of one tag (a Harvest addition) keeps only the mods of that tag
-    assert _added_chance(pool, free, "caster", frozenset(), passing) == 0
+    assert _added_chance(pool, free, "caster", frozenset(), passing, held) == 0
+
+
+def singles(pool) -> dict[Side, Holdable]:
+    """Each side able to hold a one-family mod of every family of `pool` on that side, and no mod of several families."""
+    return {side: Holdable(frozenset(entry.family for entry in pool if entry.side is side), ()) for side in Side}
+
+
+def test_a_held_mod_of_several_families_takes_them_all_out_and_a_hybrid_of_the_other_side_counts_on_this_one():
+    # #1489, the checker's toy pool: four suffix families of one weight, FireRes wanted, room for one more suffix
+    pool, passing = pool_of(*(family(name, Side.SUFFIX, 100, wanted=name == "FireRes") for name in ("Str", "Dex", "FireRes", "ColdRes")))
+    free = {Side.PREFIX: 0, Side.SUFFIX: 2}
+    one = singles(pool)
+    two = {Side.PREFIX: Holdable(frozenset(), ()), Side.SUFFIX: Holdable(frozenset({"Str", "Dex", "FireRes", "ColdRes"}), (frozenset({"Str", "Dex"}),))}
+    # one family per held slot gives 1/3; a Str/Dex hybrid held takes two out, FireRes then has half of the weight left
+    assert _added_chance(pool, free, None, frozenset(), passing, one) == Fraction(1, 3)
+    assert _added_chance(pool, free, None, frozenset(), passing, two) == Fraction(1, 2)
+    # a prefix that holds suffix families (none in the game data, but the item model does not forbid one) takes them out of the suffix draw
+    cross = {Side.PREFIX: Holdable(frozenset(), (frozenset({"Str", "Dex", "Mana"}),)), Side.SUFFIX: Holdable(frozenset(), ())}
+    assert _added_chance(pool, {Side.PREFIX: 1, Side.SUFFIX: 1}, None, frozenset(), passing, cross) == Fraction(1, 2)
+    # a family not in the draw takes nothing out of it: the count is the families of this draw only
+    other = {Side.PREFIX: Holdable(frozenset(), ()), Side.SUFFIX: Holdable(frozenset({"Str"}), (frozenset({"Str", "Elsewhere"}),))}
+    assert _added_chance(pool, free, None, frozenset(), passing, other) == Fraction(1, 3)
+
+
+def brute_added_chance(pool, free, passing, mods_by_side) -> Fraction:
+    """The largest chance of X over every set of held mods (each side at most its free slots, `mods_by_side` the family sets each side may
+    hold, no family twice): the exact chance at each such item, with a side open while it holds fewer mods than its room."""
+    best = Fraction(0)
+    choices = {side: [()] + [combo for count in range(1, free[side] + 1) for combo in itertools.combinations(mods_by_side[side], count)] for side in Side}
+    for prefixes in choices[Side.PREFIX]:
+        for suffixes in choices[Side.SUFFIX]:
+            groups = [*prefixes, *suffixes]
+            gone = set().union(*groups) if groups else set()
+            if sum(len(group) for group in groups) != len(gone):
+                continue  # two held mods of one family: no such item
+            open_sides = {side for side, held in ((Side.PREFIX, prefixes), (Side.SUFFIX, suffixes)) if len(held) < free[side]}
+            left = [entry for entry in pool if entry.side in open_sides and entry.family not in gone]
+            whole = sum((entry.weight for entry in left), Fraction(0))
+            if whole:
+                best = max(best, sum((entry.weight for entry in left if passing[entry.family]), Fraction(0)) / whole)
+    return best
+
+
+def test_the_bound_is_never_below_the_brute_force_over_random_pools_whose_sides_hold_hybrids():
+    # #1489: random pools of both sides, each side able to hold every one-family mod of its families and a few hybrids (some of them across the
+    # sides); the bound is never below the exact chance at any item of held mods, and is reached when the hybrids are the only way to it
+    import random
+
+    rng = random.Random(1489)
+    reached = 0
+    for _ in range(150):
+        names = {side: [f"{side.value[0]}{index}" for index in range(rng.randint(1, 4))] for side in Side}
+        entries = [family(name, side, rng.randint(1, 9), wanted=rng.random() < 0.3) for side in Side for name in names[side]]
+        pool, passing = pool_of(*entries)
+        free = {side: rng.randint(0, 2) for side in Side}
+        everyone = [name for side in Side for name in names[side]]
+        hybrids = {side: [frozenset(rng.sample(everyone, min(len(everyone), rng.randint(2, 3)))) for _ in range(rng.randint(0, 2))] for side in Side}
+        mods_by_side = {side: [frozenset({name}) for name in names[side]] + hybrids[side] for side in Side}
+        held = {side: Holdable(frozenset(names[side]), tuple(hybrids[side])) for side in Side}
+        bound = _added_chance(pool, free, None, frozenset(), passing, held)
+        exact = brute_added_chance(pool, free, passing, mods_by_side)
+        assert exact <= bound, (names, free, hybrids)
+        reached += exact == bound
+    assert reached > 100  # the bound is loose only where the counts admit sets of families no held mods make
+
+
+# The toy pool of #1489 on the real data: an amulet whose suffixes are Strength, Dexterity, Fire and Cold Resistance at one weight, a Lightning
+# Resistance fractured (two suffix slots left), Life and Mana prefixes, and the crafted Strength and Dexterity suffix, which holds two families.
+HYBRID = "JunMasterStrengthAndDexterity1"
+TOY_SUFFIXES = ("Strength1", "Dexterity1", "FireResist1", "ColdResist1")
+TOY_PREFIXES = ("IncreasedLife1", "IncreasedMana1")
+TOY_FRACTURED = "LightningResist1"
+REAL_AMULET = "Metadata/Items/Amulets/Amulet1"
+
+
+def toy_data():
+    from crafting_system.data.model import Weight
+
+    data = real_game_data()
+    mods = {}
+    for mod_id in (*TOY_SUFFIXES, *TOY_PREFIXES, TOY_FRACTURED, HYBRID):
+        mod = data.mods[mod_id]
+        if mod.domain == "item":
+            mod = dataclasses.replace(mod, spawn_weights=(Weight("amulet", 100), Weight("default", 0)))
+        mods[mod_id] = mod
+    return dataclasses.replace(data, mods=mods)
+
+
+def toy_roll(data, mod_id: str, **flags) -> ExplicitMod:
+    return ExplicitMod(mod_id, tuple(min(stat.min, stat.max) for stat in data.mods[mod_id].stats), crafted=data.mods[mod_id].domain == "crafted", **flags)
+
+
+def toy_item(data, *mod_ids: str) -> Item:
+    mods = (toy_roll(data, TOY_FRACTURED, fractured=True), *(toy_roll(data, mod_id) for mod_id in mod_ids))
+    return Item.build(data, base_id=REAL_AMULET, item_level=LEVEL, rarity=Rarity.RARE, mods=mods)
+
+
+def toy_members(ab, data):
+    """Every member of the toy shape without Fire Resistance (a suffix side full is left out: no Exalted Orb there), with the exact chance
+    that one Exalted Orb puts Fire Resistance on it."""
+    suffixes = [(), *((mod,) for mod in TOY_SUFFIXES if mod != "FireResist1"), (HYBRID,)]
+    for prefixes in itertools.product(*((None, mod) for mod in TOY_PREFIXES)):
+        for first, second in itertools.combinations_with_replacement(range(len(suffixes)), 2):
+            held = [mod for mod in prefixes if mod] + [*suffixes[first], *suffixes[second]]
+            if len(set(held)) != len(held) or (HYBRID in held and {"Strength1", "Dexterity1"} & set(held)):
+                continue
+            try:
+                kernel = ab.kernel(ab.compress(toy_item(data, *held)), EXALTED)
+            except NotApplicableError:
+                continue
+            yield tuple(held), sum((chance for state, chance in kernel.items() if state.status[0] == PASSING), Fraction(0))
+
+
+def test_the_toy_pool_with_a_hybrid_held_through_the_bound_s_entry_and_every_member_of_its_shape():
+    # #1489: before, the bound counted one family out per held slot and gave 1/3, below the 1/2 of the item that holds the hybrid
+    data = toy_data()
+    ab = Abstraction(data, Goal((Wanted(frozenset({"FireResist1"})),)), REAL_AMULET, LEVEL, [EXALTED])
+    assert holdable(data, REAL_AMULET)[Side.SUFFIX].most(frozenset({"Strength", "Dexterity", "FireResistance", "ColdResistance"})) == 2
+    bound = add_bound(ab, ab.compress(toy_item(data)), EXALTED, (0,))
+    chances = dict(toy_members(ab, data))
+    assert chances[(*TOY_PREFIXES, HYBRID)] == Fraction(1, 2)  # both prefixes held too: Fire and Cold Resistance alone are left in the draw
+    assert chances[(HYBRID,)] == Fraction(1, 4)
+    assert chances[()] == Fraction(1, 6)
+    assert len(chances) > 20
+    assert all(chance <= bound for chance in chances.values()), max(chances.items(), key=lambda pair: pair[1])
+    assert bound == Fraction(1, 2) == max(chances.values())
 
 
 def test_the_bound_with_metamods_modelled_is_never_below_the_bound_without():
