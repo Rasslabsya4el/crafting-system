@@ -46,8 +46,8 @@ from items_support import AMULET
 from crafting_system.abstraction import Abstraction, add_bound
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.abstraction._bound import Holdable, _added_chance, holdable
-from crafting_system.actions import ExaltedOrb, HarvestAddRemove, NotApplicableError, PoolFamily, PoolMod
-from crafting_system.items import ExplicitMod, Item, Rarity, Side
+from crafting_system.actions import ExaltedOrb, HarvestAddRemove, NotApplicableError, OutOfScopeError, PoolFamily, PoolMod
+from crafting_system.items import ExplicitMod, Item, ItemError, Rarity, Side
 from crafting_system.planner import _offer_kinds
 
 CLASSIC_OFFERS = True  # tests/conftest.py: this module plans with `cli_support.CLASSIC_KINDS` (#886)
@@ -325,3 +325,68 @@ def test_through_the_entry_r12_with_the_exalted_orb_offered_gets_its_exact_plan_
     # the round's lower figure is the plan's cost (to the float slack of rho), not one orb's price: the round ends on it, it is not cut
     assert exalted.status in ("closed", "beaten") and exalted.lower >= search.upper * (1 - 1e-9)
     assert search.lower >= search.upper * (1 - 1e-9)
+
+
+# #1506: R20's Shaper/Elder Eternal Burgonet. A suffix of the Essence of Horror (family Supported) and a Crusader suffix (MinionLife) share a
+# family with a Shaper prefix, so a held one takes that prefix out of the draw; #1490's count, read per base, raised every addition's bound
+# to the Area Damage prefix at the magic shape, where neither can be held (an essence makes a rare; the shape's influences are Shaper and Elder).
+R20_HELMET = "Metadata/Items/Armours/Helmets/HelmetStr11"
+AREA_PREFIX = "AreaDamageSupportedUber3"
+HORROR_SUFFIX = "SocketedGemsDealMoreElementalDamageEssence1"
+
+
+def r20_item(data, rarity: Rarity, *mod_ids: str) -> Item:
+    from crafting_system.items import Influence
+
+    mods = tuple(toy_roll(data, mod_id) for mod_id in mod_ids)
+    return Item.build(data, base_id=R20_HELMET, item_level=86, rarity=rarity, mods=mods, influences=frozenset({Influence.SHAPER, Influence.ELDER}))
+
+
+def test_below_rare_the_held_mods_are_what_a_pool_draw_or_the_bench_gives_the_shape_and_its_own_mods():
+    data = real_game_data()
+    rare, magic = holdable(data, R20_HELMET), holdable(data, R20_HELMET, r20_item(data, Rarity.MAGIC))
+    for family in ("Supported", "MinionLife"):
+        assert rare[Side.SUFFIX].most(frozenset({family})) == 1
+        assert magic[Side.SUFFIX].most(frozenset({family})) == 0
+    assert holdable(data, R20_HELMET, r20_item(data, Rarity.RARE)) is rare  # a rare shape keeps #1490's count
+    assert magic[Side.SUFFIX].most(frozenset({"Strength", "Dexterity"})) == 2  # the bench's hybrid attribute suffix is still held
+    given = holdable(data, R20_HELMET, r20_item(data, Rarity.MAGIC), (HORROR_SUFFIX,))  # a mod the shape's item was given counts again
+    assert given[Side.SUFFIX].most(frozenset({"Supported"})) == 1
+
+
+def test_the_bound_on_r20_s_area_prefix_at_the_magic_shape_covers_every_member_and_the_order_s_figure_is_not_a_bound():
+    from crafting_system.actions.magic import AugmentationOrb
+    from crafting_system.actions.pool import item_tags
+    from crafting_system.actions.scour import ScouringOrb
+    from crafting_system.items.spawn import spawn_weight
+
+    data = real_game_data()
+    augment = AugmentationOrb()
+    ab = Abstraction(data, Goal((Wanted(frozenset({AREA_PREFIX})),)), R20_HELMET, 86, [augment], metamods=True)
+    plain = Abstraction(data, Goal((Wanted(frozenset({AREA_PREFIX})),)), R20_HELMET, 86, [augment])
+    bare = r20_item(data, Rarity.MAGIC)
+    tags = frozenset(item_tags(data, bare))
+    klass = data.base_items[R20_HELMET].item_class
+    crafted = {option.actions.add_explicit_mod for option in data.bench_options if klass in option.item_classes and option.actions.add_explicit_mod}
+    suffixes = [mod.id for mod in data.mods.values() if mod.domain == "item" and mod.generation_type == "suffix" and spawn_weight(mod, tags) > 0]
+    suffixes += sorted(mod_id for mod_id in crafted if data.mods[mod_id].generation_type == "suffix")
+    # a rare with the Horror suffix and Suffixes Cannot Be Changed, scoured, is a magic helmet that holds the Horror suffix
+    lock = next(mod.id for mod in data.mods.values() if mod.domain == "crafted" and "ItemGenerationCannotChangeSuffixes" in mod.families)
+    scoured = ScouringOrb().outcomes(data, r20_item(data, Rarity.RARE, HORROR_SUFFIX, lock)).retained
+    assert scoured.rarity is Rarity.MAGIC and [entry.mod_id for entry in scoured.mods] == [HORROR_SUFFIX]
+    for abstraction in (ab, plain):
+        bound = add_bound(abstraction, abstraction.compress(bare), augment, (0,))
+        ranked = add_bound(abstraction, abstraction.compress(bare), augment, (0,), ranking=True)
+        chances = {}
+        for suffix in (None, HORROR_SUFFIX, *suffixes):  # every magic member with the prefix side open, the scoured one among them
+            try:
+                item = bare if suffix is None else r20_item(data, Rarity.MAGIC, suffix)
+                kernel = abstraction.kernel(abstraction.compress(item), augment)
+            except (ItemError, OutOfScopeError):  # a bench suffix this base refuses, a metamod the plain model leaves out
+                continue
+            chances[suffix] = sum((chance for state, chance in kernel.items() if state.status[0] == PASSING), Fraction(0))
+        assert len(chances) > 50
+        assert all(chance <= bound for chance in chances.values()), max(chances.items(), key=lambda pair: pair[1])
+        assert ranked < bound  # the order's figure leaves the Horror suffix out of the magic shape (R20: 0.015362 against 0.019014)
+    # ... and so it is not a bound: below the chance at the scoured member (0.013968 against 0.013775), which is why no floor reads it
+    assert ranked < chances[HORROR_SUFFIX]

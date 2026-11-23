@@ -81,14 +81,17 @@ exact engine on random pools.
 """
 
 import itertools
-from collections.abc import Hashable, Mapping, Sequence
+from collections.abc import Hashable, Iterable, Mapping, Sequence
 from fractions import Fraction
 
 from crafting_system.actions import BLOCKED_TAG, Action, Fixed, OutOfScopeError, PoolFamily, Rerolled, allowed_by_tags, guaranteed_candidates, partners
 from crafting_system.budget import checkpoint
 from crafting_system.data import Mod
-from crafting_system.items import ItemError, Side
-from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS
+from crafting_system.actions.pool import item_tags
+from crafting_system.data.elevated import load_elevated
+from crafting_system.items import Item, ItemError, Rarity, Side
+from crafting_system.items.model import CRAFTED_DOMAIN, EXPLICIT_EXTRA_DOMAINS
+from crafting_system.items.spawn import spawn_weight
 
 from ._goal import Status
 from ._kernel import Abstraction
@@ -437,7 +440,9 @@ def declared_bounds(abstraction: Abstraction, state: CompressedState, actions: S
     return found
 
 
-def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, leaves: Sequence[int]) -> Fraction | None:
+def add_bound(
+    abstraction: Abstraction, state: CompressedState, action: Action, leaves: Sequence[int], also: Iterable[str] = (), *, ranking: bool = False
+) -> Fraction | None:
     """An upper bound, over EVERY state with the flags and the fractured mods of `state` (whatever else it holds) at which one leaf of `leaves`
     is not PASSING, on the chance that one use of the adding action `action` puts on the item a mod that makes that leaf PASSING (#1072).
 
@@ -445,7 +450,9 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
     pool of the item less the families it holds, on a side with room (`Reads.pool_weight`; an Exalted Orb, an Orb of Augmentation; not a Harvest
     add/remove craft, which also removes a mod, so its result is not one drawn mod: None; see "One added mod" in the module text for the argument and what it takes on the contract). Returns None when the
     action at `state` is not one such draw: a part that is not a pool draw, a draw count other than one, or a fracture; and when the item holds
-    Memory Strands and the action's draw is cut by them (the count, and so the cut, differs between the states of the shape). Raises what the action
+    Memory Strands and the action's draw is cut by them (the count, and so the cut, differs between the states of the shape). With `ranking`
+    (the growth's order alone, #1506) the held mods are read per shape (`holdable` with the item, `also` the mods the shape's item was
+    given), and the figure is then NOT a bound. Raises what the action
     raises at `state` (`NotApplicableError`, `OutOfScopeError`): a refusal at the bare item says nothing of the states that hold more mods.
     """
     checkpoint()
@@ -463,7 +470,7 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
         return None
     components = outcomes.components
     tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
-    held = holdable(abstraction.data, abstraction.base_id)
+    held = holdable(abstraction.data, abstraction.base_id, prepared.item, (*also, *(entry.mod_id for entry in prepared.item.mods))) if ranking else holdable(abstraction.data, abstraction.base_id)
     memo: dict = {}
     best = ZERO
     for _share, part in components:
@@ -479,12 +486,15 @@ def add_bound(abstraction: Abstraction, state: CompressedState, action: Action, 
     return min(ONE, best)
 
 
-def declared_add_bound(abstraction: Abstraction, action: Action, item, leaves: Sequence[int]) -> Fraction | None:
+def declared_add_bound(
+    abstraction: Abstraction, action: Action, item, leaves: Sequence[int], also: Iterable[str] = (), *, ranking: bool = False
+) -> Fraction | None:
     """`add_bound` for an action whose one added mod its class declares (`Action.added_draw`, #1074): the same bound, read from the declared
     draw of the shape of `item` instead of the action's result at the bare item, which refuses it (a Beastcraft side swap has nothing to remove
     there, an Eldritch Exalted Orb no dominant side). None when the class declares no draw for `item`, or when the item holds Memory Strands and
     the draw is cut by them (as in `add_bound`). The argument is the one of "One added mod": the declaration says the draw at every item of the
     shape is one mod from the declared pool less the families held and the blocked tags, on one side with room, which `_added_chance` ranges over.
+    `ranking` as in `add_bound`: the order's figure, not a bound.
     """
     checkpoint()
     leaves = tuple(leaves)
@@ -499,7 +509,7 @@ def declared_add_bound(abstraction: Abstraction, action: Action, item, leaves: S
         return None
     _guard(draw.pool)
     tag_sets = _blocked_sets() if abstraction.models_metamods else (frozenset(),)
-    held = holdable(data, item.base_id)
+    held = holdable(data, item.base_id, item, (*also, *(entry.mod_id for entry in item.mods))) if ranking else holdable(data, item.base_id)
     memo: dict = {}
     best = ZERO
     for leaf in leaves:
@@ -536,32 +546,61 @@ class Holdable:
         return found
 
 
-_HOLDABLE: dict[tuple[int, str], tuple[object, dict[Side, Holdable]]] = {}
+_HOLDABLE: dict[tuple, tuple[object, dict[Side, Holdable]]] = {}
+BELOW_RARE = frozenset({Rarity.NORMAL, Rarity.MAGIC})
 
 
-def holdable(data, base_id: str) -> dict[Side, Holdable]:
-    """The `Holdable` of each side of an item of `base_id`: every mod the item model admits on that side of that base (`Item._check_slot`: its
-    generation type, and its domain the base's or crafted, delve, veiled or unveiled), whatever puts it there: the pool, the bench, an essence, an
-    unveil, the start item. Read from the data, so the largest count is what the data holds (3 for a crafted local weapon suffix), not a constant.
+def holdable(data, base_id: str, item: Item | None = None, also: Iterable[str] = ()) -> dict[Side, Holdable]:
+    """The `Holdable` of each side of an item of `base_id`: the families the mods a state of the shape can hold take out of a draw (#1489).
+
+    With no `item`, or at a rare shape: every mod the item model admits on that side of that base (`Item._check_slot`: its generation type,
+    and its domain the base's or crafted, delve, veiled or unveiled), whatever puts it there. Read from the data, so the largest count is
+    what the data holds (3 for a crafted local weapon suffix), not a constant. This is the count of the BOUND: `add_bound` and
+    `declared_add_bound` read it for every floor and proof.
+
+    With a normal or magic `item` (#1506): a narrower set, for the ORDER of the growth only (`ranking=True` of the two functions, read by
+    `OfferTable` alone): the mods a pool draw gives an item of the shape's tags (`item_tags`: the base's and its own influences'), the
+    Elevated mods an Orb of Dominance makes of those, a bench craft or a beast's metamod of its item class, and the mods it was given
+    (`also`). It is NOT an upper bound of the chance and nothing that proves reads it: a rare with Suffixes Cannot Be Changed and the Essence
+    of Horror's suffix, scoured, is a magic item that holds that suffix (`ScouringOrb` keeps a locked side; one mod left makes it magic), and
+    an Orb of Augmentation there has the chance 0.013968 on R20's Area Damage prefix, above the 0.013775 this count gives
+    (`tests/test_add_bound.py`). It serves the order because such a state is rare in a plan: counted per base, the Horror suffix's
+    cross-side family (Supported, also a Shaper prefix's) raised every addition's figure on R20's magic helmet, an Orb of Augmentation took a
+    seed place from the Orb of Alchemy, and the lock group that gives R20's plan was never reached (#1506).
     """
-    domain = data.base_items[base_id].domain
-    key = (id(data), domain)
+    rarity = item.rarity if item is not None else None
+    below = rarity in BELOW_RARE
+    also = frozenset(also) if below else frozenset()
+    influences = item.influences if below else frozenset()
+    key = (id(data), data.base_items[base_id].domain if not below else base_id, below, influences, also)
     cached = _HOLDABLE.get(key)
     if cached is not None and cached[0] is data:
         return cached[1]
-    domains = {domain} | EXPLICIT_EXTRA_DOMAINS
+    domains = {data.base_items[base_id].domain} | EXPLICIT_EXTRA_DOMAINS
+    sides = {side.value for side in Side}
+    admitted = [mod for mod in data.mods.values() if mod.domain in domains and mod.generation_type in sides]
+    if below:
+        try:
+            tags = frozenset(item_tags(data, item))
+        except OutOfScopeError:  # an influence the class has no key for: its pool is not modelled, so nothing is cut
+            return holdable(data, base_id)
+        drawn = {mod.id for mod in admitted if mod.domain != CRAFTED_DOMAIN and spawn_weight(mod, tags) > 0}
+        elevated = load_elevated().for_data(data)
+        drawn |= {elevated[mod_id] for mod_id in drawn if mod_id in elevated}
+        klass = data.base_items[base_id].item_class
+        drawn |= {option.actions.add_explicit_mod for option in data.bench_options if klass in option.item_classes and option.actions.add_explicit_mod}
+        drawn |= also
+        admitted = [mod for mod in admitted if mod.id in drawn]
     singles: dict[Side, set[str]] = {side: set() for side in Side}
     several: dict[Side, set[frozenset[str]]] = {side: set() for side in Side}
-    for mod in data.mods.values():
-        if mod.domain not in domains or mod.generation_type not in {side.value for side in Side}:
-            continue
+    for mod in admitted:
         side = Side(mod.generation_type)
         if len(mod.families) == 1:
             singles[side].add(mod.families[0])
         elif mod.families:
             several[side].add(frozenset(mod.families))
     found = {side: Holdable(frozenset(singles[side]), tuple(sorted(several[side], key=sorted))) for side in Side}
-    if len(_HOLDABLE) >= 32:
+    if len(_HOLDABLE) >= 64:
         _HOLDABLE.pop(next(iter(_HOLDABLE)))
     _HOLDABLE[key] = (data, found)
     return found

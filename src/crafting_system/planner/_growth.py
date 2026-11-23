@@ -201,6 +201,7 @@ class OfferTable:
         data, goal, rarity = self.data, self.goal, view.rarity
         self.views.setdefault(rarity, view)
         bare = replace(abstraction.compress(view), slots=())
+        held = tuple(entry.mod_id for entry in view.mods)  # the mods this shape's item was given: a state of the shape may hold them (#1506)
         rerolls: dict[type, list[int]] = {}
         for position, offer in enumerate(priced):
             if ask is not None and position % 256 == 0:
@@ -225,7 +226,9 @@ class OfferTable:
                         entry.fans = self._fans_at(action, view)
                     declared = action.added_draw(data, view) is not None
                     for leaf in self.open:
-                        chance = declared_add_bound(abstraction, action, view, (leaf,)) if declared else add_bound(abstraction, bare, action, (leaf,))
+                        chance = (  # the order's figure (#1506): the held mods read per shape, not a bound, and no floor reads `entry.chance`
+                            declared_add_bound(abstraction, action, view, (leaf,), ranking=True) if declared else add_bound(abstraction, bare, action, (leaf,), held, ranking=True)
+                        )
                         if chance is not None and chance > 0:
                             entry.chance[(rarity, leaf)] = chance
                 elif kind == REROLL:
