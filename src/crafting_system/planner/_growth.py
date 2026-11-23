@@ -38,6 +38,35 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     at the others, where the guide keeps the attack tag out (#1423). A drawing reroll is not read so (only additions are).
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
+* **The lock group** (`Grower.lock_group`, #1420, hypothesis H16 of #1434). A step whose `W` holds a prefix and a suffix (`side_of`) and
+  that can lose nothing (`K` empty: a spam from a bare rare only waits) is read for its locks, as the last resort of the growth: the lock
+  of one side lets a reroll make the other while the side already made stays, and with nothing at risk no protector names a lock. The
+  lock groups come only when the usual roles name nothing for any step (`Grower.last_lock`): where the growth would go to its later
+  group, or a round that did not finish within its share ends the usual growth (`Grower.stop`). So the usual rounds come in main's
+  order, each with its share; a lock group has the growth's share like any round (half the time left), and the rounds after the growth
+  the other half. Read earlier, before a step's usual roles or right after they were beaten, a lock group took the time a usual round
+  needed: on R13 at 600 s 4,346.05 c against main's 2,066.12 c, its Orb of Annulment round two rounds later. On R14 the earlier order
+  gave 3,429.31 c at 600 s, a lock group on the Augmentation step that named the Orb of Alteration; here that step's usual roles come
+  first (5,897.11 c, then 5,725.49 c in the next round), and no step of those plans that can lose nothing waits on both sides, so no
+  lock group is named and R14 stays at main's 5,725.49 c. A step that can lose a mod has its protectors in its usual roles, so it has no lock group. Its round holds the offers the
+  next round holds already, the cheapest cleaner, and the lock role (`OfferTable.lock_roles`), alone:
+  - for each side, every offer that may add its lock and keeps the mods it is given (`lockers`: no reroll at any shape): the bench lock, and
+    what puts it back once a reroll of the other side has taken it off with that side (a beast that draws a metamod keeps the mods);
+  - for each waited mod `x` and each side, the `PER_ROLE` rerolls of least cost over chance at the item under that lock (`under_lock`): the
+    shape's item with its fractured mods, a mod of each other waited mod of that side and the lock's crafted mod, read on the model of the
+    metamods. The chance is that one use leaves `x` and every held waited mod passing (`reach_bound` over them): it counts what the reroll
+    keeps, so one that takes the locked side off scores nothing there, and a reroll the lock refuses (an essence) is not ranked. Its cost
+    is its price and the cheapest locker's: a reroll under the lock rerolls the other side, and the lock, a crafted mod of that side, goes
+    with it, so each use pays a lock again. Read at the bare item the cheap rerolls of the whole item lead instead: on R20 Harvest Reforge
+    Fire is 13th there on Burning Damage, first under the suffix lock (#1429); and without the lock's price the Chaos Orb (1 c) leads Harvest
+    Reforge Influence (150.65 c) on Concentrated Effect under it, and the set it names plans at 429,990.79 c against the guide's
+    206,331.71 c: with it (Matron, 238 c) Influence comes first, (150.65 + 238) / 4.97% against the Chaos Orb's (1 + 238) / 2.02%.
+  A side under whose lock no reroll is ranked names nothing (a lock pays only with a reroll under it). The lock role is never read in
+  one round with the usual roles (on R20 that made a round of 15 offers that did not build in its share); a lock group that does not
+  finish within its share ends nothing, the next lock group or the later group comes (`Grower.stop`). The plan's steps are read the
+  dearest first, and each step, with its `W` and shapes, has one lock group in the run, also when a later plan improves. A lock group
+  that improves the plan, before the usual growth ended, lets the usual roles read the new plan. On R20 the usual roles of the essence
+  step are beaten (about 120 s), nothing more is named, and its lock group comes: 206,331.71 c within the hour.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
   a restore brings the imprints and an imprint the restores.
@@ -76,7 +105,7 @@ import numpy as np
 from crafting_system.abstraction import Abstraction, CompressedState, Status, add_bound, declared_add_bound, declared_bounds, reach_bound
 from crafting_system.actions import BLOCKED_TAG, BLOCKING, LOCKED_SIDE, NotApplicableError, OutOfScopeError, build_pool
 from crafting_system.data import GameData
-from crafting_system.items import Item, Metamod, Rarity
+from crafting_system.items import ExplicitMod, Item, Metamod, Rarity
 from crafting_system.solver import linear_solve
 
 from ._offer_kinds import ADD, CRAFT, FINISHING, REFUSED, REROLL, RESTART_KIND, _kind_of, finishes
@@ -139,10 +168,15 @@ class OfferTable:
     `held_back` are the offers no role names while the methods that fan out wait for their later group (`Grower`)."""
 
     held_back: frozenset[int] = frozenset()
+    views: Mapping[Rarity, Item] = {}  # the item of each shape the offers turn the start item into (`_read_shape`)
+    actions: Sequence = ()  # `actions[i]` is the action of the offer at position `i`
+    locking: Callable[[], Abstraction] | None = None  # the model the items under a lock are read on (metamods modelled), made when first asked
+    under: dict  # (side, shape, leaf, held) -> the rerolls ranked at the item under the lock (`under_lock`), read once each
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
-                 ask: Callable[[], None] | None = None) -> None:  # fmt: skip
+                 ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None) -> None:  # fmt: skip
         self.data, self.goal = data, abstraction.goal
+        self.views, self.actions, self.locking, self.under = {}, [p.offer.action for p in priced], locking, {}
         shape = abstraction.compress(item) if getattr(start.flags, "unopened", False) else start
         self.start_rarity = item.rarity
         self.open = tuple(index for index in range(len(self.goal.leaves)) if shape.status[index] is not Status.PASSING)
@@ -165,6 +199,7 @@ class OfferTable:
 
     def _read_shape(self, abstraction: Abstraction, view: Item, priced: Sequence[PricedOffer], ask) -> None:
         data, goal, rarity = self.data, self.goal, view.rarity
+        self.views.setdefault(rarity, view)
         bare = replace(abstraction.compress(view), slots=())
         rerolls: dict[type, list[int]] = {}
         for position, offer in enumerate(priced):
@@ -346,6 +381,88 @@ class OfferTable:
             named |= self.crafted_roles(current | named)
         return named
 
+    def lockers(self, side: str) -> list[int]:
+        """Every offer that may add the lock of `side` and keeps the mods it is given (a reroll at no shape): the bench lock, and what puts
+        it back once a reroll of the other side has taken it off (a beast that adds a metamod draws which one, but keeps the mods)."""
+        return [
+            entry.position for entry in self.entries
+            if entry.position not in self.held_back and REROLL not in entry.kinds.values() and any(getattr(each, "value", each) == side for each in entry.locks)
+        ]  # fmt: skip
+
+    def lock_roles(self, waits: set[int], shapes: frozenset[Rarity], held: frozenset[int]) -> set[int]:
+        """The locks and the rerolls under them for a step that waits for wanted mods on both sides (module text, #1420): for each side,
+        every offer that adds its lock (`lockers`), and for each waited mod the `PER_ROLE` rerolls of least cost over chance at the item
+        under that lock (`under_lock`), among the offers `held` does not hold."""
+        sides = {self.side_of(leaf) for leaf in waits}
+        if not _SIDES <= sides:
+            return set()
+        named: set[int] = set()
+        for side in sorted(_SIDES):
+            lockers = self.lockers(side)
+            if not lockers:
+                continue
+            rerolls: set[int] = set()
+            for shape in sorted(shapes, key=str):
+                for leaf in sorted(waits):
+                    other = frozenset(each for each in waits if each != leaf and self.side_of(each) == side)
+                    ranked = [position for _ratio, position in self.under_lock(side, shape, leaf, other) if position not in held]
+                    rerolls.update(ranked[:PER_ROLE])
+            if rerolls:  # a lock pays only with a reroll under it: with none ranked there the side names nothing
+                named.update(lockers)
+                named |= rerolls
+        return named
+
+    def under_lock(self, side: str, shape: Rarity, leaf: int, other: frozenset[int]) -> list[tuple[float, int]]:
+        """The rerolls at `shape` ranked by cost over chance at the item under the lock of `side` (module text, #1420): the shape's item
+        with its fractured mods, a mod of each wanted mod of `other` (the step's other waited mods on that side) and the lock's own mod, read
+        on the model of the metamods. The chance is that one use leaves `leaf` and every mod of `other` passing (`reach_bound` over them): it
+        counts what the reroll keeps, so a reroll that takes the locked side off scores nothing there. Read once each; empty when the item
+        cannot be made (a wanted mod no mod of that side can be, no room, no lock that names its mod)."""
+        key = (side, shape, leaf, other)
+        if key not in self.under:
+            self.under[key] = self._read_under_lock(side, shape, leaf, other)
+        return self.under[key]
+
+    def _read_under_lock(self, side: str, shape: Rarity, leaf: int, other: frozenset[int]) -> list[tuple[float, int]]:
+        found: list[tuple[float, int]] = []
+        view = self.views.get(shape)
+        lockers = [self.entries[position] for position in self.lockers(side)]
+        if view is None or self.locking is None or not lockers:
+            return found
+        data = self.data
+        lock = min(lockers, key=lambda entry: (entry.draws, entry.cost, entry.position))  # the item is made with a lock that names its mod
+        # a reroll under the lock rerolls the other side, and the lock, a crafted mod of that side, goes with it: each use pays a lock again
+        relock = min(entry.cost for entry in lockers)
+        try:
+            item = view.changed(data, mods=tuple(entry for entry in view.mods if entry.fractured))
+            for each in sorted(other):
+                mod = next((data.mods[mod_id] for mod_id in sorted(self.goal.leaves[each].tier_ok or self.goal.leaves[each].mod_ids)
+                            if mod_id in data.mods and data.mods[mod_id].generation_type == side and item.can_add(data, data.mods[mod_id])), None)  # fmt: skip
+                if mod is None:
+                    return found
+                item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.max for stat in mod.stats)))
+            named = self.actions[lock.position].adds(data, item).named or ()
+            mod = next((data.mods[mod_id] for mod_id in sorted(named) if mod_id in data.mods and any(getattr(_LOCKS.get(family), "value", None) == side for family in data.mods[mod_id].families)), None)
+            if mod is None:
+                return found
+            item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.min for stat in mod.stats), crafted=True))
+            abstraction = self.locking()
+            state = abstraction.compress(item)
+        except (NotApplicableError, OutOfScopeError, ValueError):  # the item cannot be made or read on the model: no reroll is read under it
+            return found
+        leaves = tuple(sorted({*other, leaf}))
+        for entry in self.entries:
+            if entry.position in self.held_back or entry.kinds.get(shape) != REROLL or not math.isfinite(entry.need):
+                continue
+            try:
+                bound = reach_bound(abstraction, state, self.actions[entry.position], leaves)
+            except (NotApplicableError, OutOfScopeError, ValueError):  # refused under the lock (an essence), or out of the model's scope
+                continue
+            if bound is not None and bound > 0:
+                found.append((float(Fraction(entry.cost + entry.need + relock) / bound), entry.position))
+        found.sort()
+        return found
+
     def crafted_roles(self, holding) -> set[int]:
         """The crafts that add no mod and need a crafted one when `holding` holds a crafted mod, and the cheapest of more crafted mods when
         it holds two (module text): a narrower counts, it is a crafted mod held."""
@@ -499,6 +616,8 @@ class Grower:
         self.later_named: set[int] = set()
         self.later_done = not self.later_ones
         self.ended = False
+        self.lock_round = False  # the last round named was a lock group (`stop`)
+        self.locks_read: set[tuple] = set()  # (step, its W, its shapes) whose lock group was read (module text, the lock group)
         table.held_back = self.later_ones
 
     def _named_later(self, named: Callable[[], set[int]]) -> None:
@@ -526,9 +645,12 @@ class Grower:
         return tuple(sorted(chosen)), f"the later group of the methods that fan out over two random choices or copy the item, after a plan proved without them: {self._labels(self.later_named)}"
 
     def stop(self) -> tuple[tuple[int, ...], str] | None:
-        """A growth round did not finish within its share (`_rounds.widen`): the growth ends, after the later group when it is owed."""
+        """A growth round did not finish within its share (`_rounds.widen`): the usual growth ends; the lock groups not yet read come, then
+        the later group when it is owed. A lock group that did not finish ends nothing (module text)."""
+        if self.lock_round:
+            return self.next()
         self.ended = True
-        return self.later()
+        return self.last_lock() or self.later()
 
     def seed(self) -> tuple[tuple[int, ...], str] | None:
         self._named_later(self.table.seed)
@@ -564,16 +686,21 @@ class Grower:
         return not any(chosen <= tried for tried in self.tried)
 
     def next(self) -> tuple[tuple[int, ...], str] | None:
-        """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends). When nothing
-        new is named without the methods that fan out, their later group comes first (module text)."""
-        if self.ended:
-            return None
-        found = self._next()
-        if found is not None or self.later_done:
+        """The next round's offers and the words that say why, or None: nothing new is named for any step (the growth ends). When the
+        usual roles name nothing more, the lock groups come (`last_lock`), then the later group of the methods that fan out (module text)."""
+        self.lock_round = False
+        if not self.ended:
+            found = self._next()
+            if found is not None:
+                return found
+            if not self.later_done and self.plan is None:  # no round proved a plan without them: they are held back no longer, and the start is read again with them
+                self.later_done, self.table.held_back = True, frozenset()
+                return self._next()
+        found = self.last_lock()
+        if found is not None:
             return found
-        if self.plan is None:  # no round proved a plan without them: they are held back no longer, and the start is read again with them
-            self.later_done, self.table.held_back = True, frozenset()
-            return self._next()
+        if self.ended or self.later_done:
+            return self.later()
         return self.later() or self._next()
 
     def _next(self) -> tuple[tuple[int, ...], str] | None:
@@ -593,9 +720,9 @@ class Grower:
         for label, share, acts in shares:
             if label in self.diagnosed or label not in self.by_label:
                 continue
-            self.diagnosed.add(label)
             waits, risks, shapes, fractured = read_step(acts, len(table.goal.leaves))
             current = frozenset(support | self.asked)
+            self.diagnosed.add(label)
             pending = pending_at(acts, len(table.goal.leaves))
             self._named_later(lambda: table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending))
             named = table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending)
@@ -608,6 +735,44 @@ class Grower:
                     f"the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), waits for {self._names(waits)} and can lose {self._names(risks)}{also}"
                 )
         return None
+
+    def last_lock(self) -> tuple[tuple[int, ...], str] | None:
+        """The lock groups, the last resort (module text): once the usual roles name nothing for any step, the first lock group not yet
+        read among the plan's steps, the dearest first, of a step that can lose nothing; None when there is none."""
+        if self.plan is None:
+            return None
+        current = frozenset(self.support(self.plan) | self.asked)
+        for label, share, acts in step_shares(self.plan):
+            if label not in self.by_label:
+                continue
+            waits, risks, shapes, _fractured = read_step(acts, len(self.table.goal.leaves))
+            if risks:
+                continue
+            found = self.lock_group(label, share, waits, shapes, current)
+            if found is not None:
+                self.lock_round = True
+                return found
+        return None
+
+    def lock_group(self, label: str, share: float, waits: set[int], shapes: frozenset[Rarity], current: frozenset[int]) -> tuple[tuple[int, ...], str] | None:
+        """The lock group of a step that waits on both sides (module text, #1420), once per step, its `W` and its shapes: the offers the next
+        round holds already, the lock role (`OfferTable.lock_roles`) and the cheapest cleaner; None when the role names nothing new."""
+        key = (label, frozenset(waits), shapes)
+        if key in self.locks_read:
+            return None
+        self.locks_read.add(key)
+        table = self.table
+        named = table.lock_roles(waits, shapes, current | self.plan_set)
+        if not named - current:
+            return None
+        cleaner = table.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
+        chosen = table.closure(set(current) | named | ({cleaner} if cleaner is not None else set()))
+        if not self._new(chosen):
+            return None
+        return tuple(sorted(chosen)), (
+            f"the lock group of the plan's dearest step not yet read, {label} ({share:,.2f} Chaos of the plan), which waits for mods on both sides "
+            f"({self._names(waits)}): {self._labels(named - current)}"
+        )
 
     def state_narrowers(self, shares, holding, at_states: set[frozenset[int]] | None = None) -> set[int]:
         """The narrowers of each state where a drawing adder of the plan in hand acts (module text, #1423): from the wanted mods it waits for
@@ -674,7 +839,16 @@ def growth_table(data: GameData, goal, target, priced: Sequence[PricedOffer], li
         data, goal, target.base_id, target.item_level, enabled, metamods=holds, enchantment=target.start_item.enchantment, allow_inputs=True
     )  # fmt: skip
     start = abstraction.compress(listing or target.start_item)
-    return OfferTable(data, abstraction, start, target.start_item, priced, ask)
+    made: list[Abstraction] = []
+
+    def locking() -> Abstraction:  # the model of the items under a lock (`OfferTable.under_lock`): the same, with the metamods modelled
+        if not made:
+            made.append(abstraction if holds else Abstraction(
+                data, goal, target.base_id, target.item_level, enabled, metamods=True, enchantment=target.start_item.enchantment, allow_inputs=True
+            ))  # fmt: skip
+        return made[0]
+
+    return OfferTable(data, abstraction, start, target.start_item, priced, ask, locking)
 
 
 __all__ = ["Grower", "OfferTable", "PER_ROLE", "growth_table", "pending_at", "read_step", "step_shares"]
