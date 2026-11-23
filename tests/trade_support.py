@@ -27,7 +27,7 @@ R12_KEY = "Paua Amulet, item level 84-100, fractured +(12-17)% to Lightning Resi
 # start readings under the keys they were read for: a search of the tier the target then wrote (R11 tier 1, a roll of 31 or more) and
 # of item level 84 or more, the level the targets then planned. Since #522 the targets buy that mod at any tier and their key says so,
 # and since #1472 R10 and R11 plan the start at item level 85, where a player buys it, priced by hand from the 84-or-more reading of
-# 2026-11-10 (whose cheapest listings were of 85); the old readings are not relabelled.
+# 2026-11-10 (whose cheapest listings were most likely of 85); the old readings are not relabelled.
 KEYS_IN_OLDER_FILES = {
     "Sorcerer Boots, item level 85, fractured 30% increased Movement Speed": "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed",
     "Lion Pelt, item level 85-100, fractured +#% to Chaos Resistance (any tier)": "Lion Pelt, item level 84, fractured +(31-35)% to Chaos Resistance",
