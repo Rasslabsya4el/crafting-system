@@ -583,7 +583,17 @@ class _View:
         free = {self._free_slots(state) for state in mine}
         if len(free) == 1 and (shared := next(iter(free))) is not None and any(self._free_slots(state) != shared for state in others):
             return "with " + " and ".join(_open(count_, side) for count_, side in zip(shared, ("prefix", "suffix")))
-        return ""
+        theirs = [self._free_slots(state) for state in others]
+        if None in free or None in theirs:
+            return ""
+        words = []  # the items of a branch hold different counts, but a side's count still parts them from the others' (R14 step 5, #1442)
+        for k, side in enumerate(("prefix", "suffix")):
+            low, high = min(f[k] for f in free), max(f[k] for f in free)
+            if low > max(f[k] for f in theirs):
+                words.append(f"at least {_open(low, side)}" if low < high else _open(low, side))
+            elif high < min(f[k] for f in theirs):
+                words.append(_open(0, side) if high == 0 else f"at most {_open(high, side)}" if low < high else _open(high, side))
+        return "with " + " and ".join(words) if words else ""
 
     @staticmethod
     def sure(action: Action) -> bool:

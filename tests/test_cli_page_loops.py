@@ -94,3 +94,20 @@ def test_a_wanted_mod_a_fracturing_orb_hits_is_named_though_the_state_holds_it_a
 
     assert named[False].text == FAMILY_TYPE_TEXT
     assert named[True].text != FAMILY_TYPE_TEXT and named[True].tone == "wanted" and "fractured" in named[True].marks
+
+
+def test_a_branch_whose_items_hold_different_counts_of_open_slots_is_told_by_the_range_that_parts_it_from_the_others():
+    """R04 step 10: the items that go on to the Exalted Orb have 1 or 2 open prefixes, the others none; "at least 1 open prefix" says it."""
+    from test_cli_page_spends_and_sure_steps import START, bench_then_by_the_item
+
+    from crafting_system.cli._route_view import _View
+
+    view = _View(hand_input(START, (COLD_REQ, LIFE), bench_then_by_the_item), DATA, None, "", True)
+    (bench,) = [step for step in view.flow.steps if step.action is not None and step.action.label.startswith("Benchcraft")]
+    mine, other = sorted((edge for edge in bench.edges if edge.kind == "forward"), key=lambda edge: -len(edge.states))
+    assert len(mine.states) >= 2
+    counts = {state: (1 + k % 2, 1) for k, state in enumerate(mine.states)} | {state: (0, 1 + k % 2) for k, state in enumerate(other.states)}
+    view._free_slots = counts.get  # the counts of open slots, made to differ inside a branch
+
+    words = view.item_words(bench, mine, [other])
+    assert words == "with at least 1 open prefix"
