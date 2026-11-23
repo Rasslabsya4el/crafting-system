@@ -893,6 +893,18 @@ def _strand_kinds_absent(start_item: Item) -> frozenset[str]:
     return frozenset(entry.name for entry in kinds() if entry.needs_strands)
 
 
+def unmodelled_labels(data: GameData, start_item: Item, labels: Iterable[str]) -> tuple[str, ...]:
+    """The labels of `labels` that no planner action of the catalog bears on the start item or on an empty item of its base at any rarity
+    (`_probe_items`), sorted: the actions the model does not hold for this item, such as a deferred method (OR-37) or a misspelt label.
+    The kind name of Hinekora's Lock is left out: the plan offers it as a Peek (`_foresight`), not as an action of the catalog."""
+    asked = {label for label in labels if label != LOCK_KIND}
+    if not asked:
+        return ()
+    usable = {entry.name for entry in kinds(planner_only=True)}
+    known = {action.label(data) for probe in _probe_items(data, start_item) for action in catalog(data, probe, planner_only=True, names=usable)}
+    return tuple(sorted(asked - known))
+
+
 def _split_names(data: GameData, start_item: Item, names: Collection[str] | None) -> tuple[frozenset[str] | None, frozenset[str]]:
     """The run's methods (`PlanSettings.methods`, #405) as (kinds, labels): a name is a kind of the catalog, else the label of one action.
 
@@ -907,8 +919,7 @@ def _split_names(data: GameData, start_item: Item, names: Collection[str] | None
     kind_names = {name for name in names if name in exist}
     absent = _strand_kinds_absent(start_item)  # a kind that needs Memory Strands is no kind of this item's catalog until the planner passes `strands` (#277)
     unready = sorted((kind_names - usable) | (kind_names & absent))
-    labels = {action.label(data) for probe in _probe_items(data, start_item) for action in catalog(data, probe, planner_only=True, names=usable)}
-    unknown = sorted(name for name in names if name not in exist and name not in labels)
+    unknown = list(unmodelled_labels(data, start_item, [name for name in names if name not in exist]))
     problems = []
     if unknown:
         problems.append(f"unknown action kind(s) or action label(s) {', '.join(unknown)}")

@@ -195,6 +195,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("actions/locus.py", "_locus", ("ValueError",), EITHER, "after the clause for a model gap, so no model gap reaches it: a class with no corrupted pool (the game) or a base the data lacks lists no Locus of Corruption, silent"),
     ("actions/recombinator.py", "Recombinator.outcomes", ("TypeError", "ValueError", "OverflowError"), NOT_A_REFUSAL, "the exponent of the reading is no number; no action is called"),
     ("cli/_benchmark.py", "benchmark_main", ("DataError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the command"),
+    ("cli/_benchmark.py", "_guide_plan_of", ("PlanError",), EITHER, "the guide's route of a site plan cannot be priced on its own offers (an action the model does not hold, #1442, or another refusal of its plan): the entry says so by name in `guide_not_evaluable` and the plan stands"),
     ("cli/_benchmark.py", "run_route", ("ValueError", "OSError", "DataError", "PriceFileNotFound", "ConvergenceError"), EITHER, "`ROUTE_ERRORS`: ValueError is the parent of both families and of every other error of a route; the entry carries the text of whichever"),
     ("planner/_decide.py", "measure_solve_rate_detail", ("ConvergenceError", "ValueError"), NOT_A_REFUSAL, "the solver on the pilot graph; it calls no action. Written as the reason the rate was guessed (M2)"),
     ("planner/_plan.py", "_make_plan", ("ValueError",), EITHER, "`offers_for` failed: the text becomes the `PlanError`, whichever family or error it was"),

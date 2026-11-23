@@ -7,7 +7,7 @@ left `cli` (with `recipe_starts` off it is `_plan.make_plan`).
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
 from crafting_system.budget import Budget
@@ -16,9 +16,10 @@ from crafting_system.prices import PriceFile
 from crafting_system.prices.price_source import DEFAULT_GAP_PERCENT, DEFAULT_PRICE_SOURCE
 from crafting_system.targets import Target
 
-from . import _packed
+from . import _implicit_finish, _packed, _quality_finish
 from ._envelope import Standing
-from ._plan import Plan
+from ._offers import unmodelled_labels
+from ._plan import Plan, PlanError, StartPrice, make_plan
 from ._starts import plan_with_starts
 
 
@@ -69,6 +70,56 @@ def plan_target(data: GameData, target: Target, prices: PriceFile, settings: Pla
         solver=settings.solver, judges_route=settings.judges_route, watch=settings.watch,
         route_actions=settings.route_actions, methods=settings.methods,
     )  # fmt: skip
+
+
+class NotModelled(PlanError):
+    """A given route names an action the model does not hold for its target's item (a deferred method, OR-37, or a label no action bears):
+    its route cannot be priced, and `labels` are the actions, by name (#1442)."""
+
+    def __init__(self, labels: tuple[str, ...]) -> None:
+        self.labels = labels
+        super().__init__(f"{', '.join(labels)} {'is' if len(labels) == 1 else 'are'} not modelled")
+
+
+def guide_plan(data: GameData, target: Target, prices: PriceFile, labels: tuple[str, ...], settings: PlanSettings = PlanSettings()) -> Plan:
+    """The plan a given route (a guide's) is priced on with its OWN actions (#1442): the target's own start item, and the actions of the
+    catalog that bear the route's `labels` (`cli._route.route_actions`) as the offers, priced at `prices`, with nothing solved.
+
+    The route is a fixed policy, evaluated exactly on its own reach (`cli._route.evaluate_route`), so its cost needs no search and no plan of
+    the planner's: only its actions, the model of the item they act on and the start. It is therefore the same whichever offers the
+    planner's own search happened to run (the groups of `_rounds`). The plan is made as one a route is judged against (`judges_route`): the
+    quality and the implicit stay in the model, since a guide may name the catalyst or the orb that sets them. A catalyst quality or a base
+    implicit that NO action of the route changes is left out of the model instead, as the planner's own plan leaves it to a finish after
+    the mods (`_quality_finish`, `_implicit_finish`): the route could never reach it, and the plan's cost it is compared with holds the mods
+    alone; a finish the route keeps in its model is in its cost, and the caller compares it with the plan's mods and that finish
+    (`Plan.quality_finish_value`, `Plan.implicit_finish_value`). Raises `NotModelled` naming each label no action of the catalog bears on this item, and `PlanError` as `make_plan` does (a label
+    the catalog bears but the item never takes, no price for the start item)."""
+    if not labels:
+        raise PlanError("the guide's route names no action (only `restart`, or a file that cannot be read): there is nothing to price")
+    missing = unmodelled_labels(data, target.start_item, labels)
+    if missing:
+        raise NotModelled(missing)
+
+    def made(asked: Target, start: StartPrice | None = None) -> Plan:
+        return make_plan(
+            data, asked, prices, start_price=settings.start_price, start_price_of=start, price_source=settings.price_source, solve_it=False,
+            with_risk=False, judges_route=True, route_actions=labels, methods=labels, strands=settings.strands,
+        )  # fmt: skip
+
+    plan = made(target)
+    named = [priced.offer.action for priced in plan.offers if priced.label in labels]
+    # an action that sets, changes or reads the quality (or the implicits), or corrupts the item, keeps it in the model, as `holds` keeps it for the planner
+    quality_left = _quality_finish.applies(target) and not any(
+        (adds := action.adds(data)).quality or adds.only_quality or adds.corrupts or action.reads(data).quality for action in named
+    )
+    implicit_left = _implicit_finish.applies(data, target) and not any(
+        (adds := action.adds(data)).implicits or adds.corrupts or action.reads(data).implicits for action in named
+    )
+    if not (quality_left or implicit_left):
+        return plan
+    # the start item is the one the target describes, priced as it (OR-3): its key is computed from the whole target (`make_plan`'s `priced_as`)
+    mods = replace(target, quality=None if quality_left else target.quality, implicits=() if implicit_left else target.implicits)
+    return made(mods, plan.start_price)
 
 
 def progress() -> Callable[[str], None] | None:
