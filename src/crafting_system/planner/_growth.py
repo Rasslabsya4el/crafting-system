@@ -38,7 +38,7 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     at the others, where the guide keeps the attack tag out (#1423). A drawing reroll is not read so (only additions are).
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
-* **The lock group** (`Grower.lock_group`, #1420, hypothesis H16 of #1434). A step whose `W` holds a prefix and a suffix (`side_of`) and
+* **The lock group** (`Grower.lock_group`, #1420, hypothesis H16 of #1434). A step whose `W` holds a prefix and a suffix (`side_of`, read among the mods the item can hold) and
   that can lose nothing (`K` empty: a spam from a bare rare only waits) is read for its locks, as the last resort of the growth: the lock
   of one side lets a reroll make the other while the side already made stays, and with nothing at risk no protector names a lock. The
   lock groups come only when the usual roles name nothing for any step (`Grower.last_lock`): where the growth would go to its later
@@ -172,11 +172,14 @@ class OfferTable:
     actions: Sequence = ()  # `actions[i]` is the action of the offer at position `i`
     locking: Callable[[], Abstraction] | None = None  # the model the items under a lock are read on (metamods modelled), made when first asked
     under: dict  # (side, shape, leaf, held) -> the rerolls ranked at the item under the lock (`under_lock`), read once each
+    named_ids: set[str] | frozenset[str] = frozenset()  # the mods an offer names at the start item or gives by a finishing kind at a shape (`item_mod_ids`)
+    _item_ids: frozenset[str] | None = None  # `item_mod_ids`, read once
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
                  ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None) -> None:  # fmt: skip
         self.data, self.goal = data, abstraction.goal
         self.views, self.actions, self.locking, self.under = {}, [p.offer.action for p in priced], locking, {}
+        self.named_ids = set()
         shape = abstraction.compress(item) if getattr(start.flags, "unopened", False) else start
         self.start_rarity = item.rarity
         self.open = tuple(index for index in range(len(self.goal.leaves)) if shape.status[index] is not Status.PASSING)
@@ -216,6 +219,7 @@ class OfferTable:
                 except (NotApplicableError, OutOfScopeError, ValueError):
                     pass
                 if kind in FINISHING:
+                    self.named_ids |= named
                     made = bool(action.adds(data, view).crafted)
                     for leaf in self.open:
                         if finishes(goal.leaves[leaf], named, made):
@@ -259,6 +263,8 @@ class OfferTable:
             adds, reads = action.adds(data, item), action.reads(data)
         except (NotApplicableError, OutOfScopeError, ValueError):
             return
+        if adds.named:
+            self.named_ids |= adds.named
         move = action.imprint_move()
         entry.fractures, entry.draws = bool(adds.fractures), bool(adds.draws)
         entry.makes_imprint = move is not None and not move.restore
@@ -315,10 +321,32 @@ class OfferTable:
         )  # fmt: skip
         return [position for _ratio, position in ranked[:count]]
 
+    def item_mod_ids(self) -> frozenset[str]:
+        """The mods this item can hold (#1502): its own pool on both sides at each shape the offers reach (`pool_ids`), the mods those
+        items hold, and the mods an offer names (`named_ids`: a craft's, an essence's, a veiled choice's). Empty for a table read with no
+        item. Read once."""
+        if self._item_ids is None:
+            found = set(self.named_ids)
+            for view in self.views.values():
+                found |= {entry.mod_id for entry in view.mods}
+                try:
+                    found |= self.pool_ids(view, _SIDES)
+                except (NotApplicableError, OutOfScopeError, ValueError):  # no pool read at this shape: its offers name the rest
+                    continue
+            self._item_ids = frozenset(found)
+        return self._item_ids
+
     def side_of(self, leaf: int) -> str | None:
-        """The side of the wanted mod `leaf` when every prefix or suffix that can pass it is on one side, else None (a unique's or another
-        source's mod that passes it too is never rolled on the item, so it names no side)."""
-        sides = {self.data.mods[mod_id].generation_type for mod_id in self.goal.leaves[leaf].mod_ids if mod_id in self.data.mods} & _SIDES
+        """The side of the wanted mod `leaf` (#1502): the side of the prefixes and suffixes that pass it among the mods this item can hold
+        (`item_mod_ids`), so a requirement written as a stat that other bases' mods carry on the other side (X1's Physical Damage over
+        Time Multiplier: a suffix on a wand, a prefix elsewhere) has the side of its own base. None when those mods sit on both sides: the
+        item can roll it either as a prefix or as a suffix, so no one side's lock protects it and no step waits for it on one side. When
+        the item can hold none of them (a mod the table reads no source of, a table read with no item), every prefix or suffix that passes
+        it is read, as before. A unique's or another source's mod that passes it is never rolled on the item and names no side."""
+        mods, ids = self.data.mods, self.goal.leaves[leaf].mod_ids
+        sides = {mods[mod_id].generation_type for mod_id in ids & self.item_mod_ids() if mod_id in mods} & _SIDES
+        if not sides:
+            sides = {mods[mod_id].generation_type for mod_id in ids if mod_id in mods} & _SIDES
         return next(iter(sides)) if len(sides) == 1 else None
 
     def tags_of(self, leaves) -> frozenset[str]:
