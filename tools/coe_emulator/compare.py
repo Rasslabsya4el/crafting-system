@@ -71,6 +71,7 @@ NOT_IN_EMULATOR = {
     "TalismanFracture": "the emulator has no talisman fracture",
 }
 OUR_SAMPLES = 20000
+FALLBACK_LEVEL = 3  # the match key of this level is a fallback, kept only where the texts are the same (#1457)
 INFLUENCE_GROUP = {"2": "shaper", "3": "elder", "4": "crusader", "5": "hunter", "6": "warlord", "7": "redeemer"}
 
 
@@ -111,11 +112,11 @@ class Coe:
     def _keys(self, crafted: bool, side: str, level, ranges, groups, text: str) -> tuple:
         """The keys a mod is matched by, strictest first: (level, values, group), (values, group) for a crafted
         mod's bench level, and (level, group, stat text) for values in other units (life regeneration per minute)."""
-        # the stats in sorted order: the two sides list a support mod's stats in opposite orders (#1457: Level 20 Trap And Mine Damage)
-        spans, groups = tuple(sorted(self._spans(ranges))), tuple(sorted(groups))
-        # last, (level, group) alone: a display stat one side has and the other not (an aura's "increased Elemental Damage taken", #1457)
+        spans, groups = self._spans(ranges), tuple(sorted(groups))
+        # A fallback after them (#1457), whose hits must also have the same text (`mod_text`, `coe_text`): the values in sorted order,
+        # since the two sides list a support mod's stats in opposite orders (Level 20 Trap And Mine Damage).
         return ((crafted, side, int(level), spans, groups), (crafted, side, spans, groups), (crafted, side, int(level), groups, text),
-                (crafted, side, int(level), groups))
+                (crafted, side, int(level), tuple(sorted(spans)), groups))
 
     def _our_keys(self, mod) -> tuple:
         return self._keys(mod.domain == "crafted", mod.generation_type, mod.required_level,
@@ -151,8 +152,10 @@ class Coe:
     def coe_mod(self, coe_base: str, mod_id: str, among: set[str] | None = None) -> tuple[str, int]:
         """The (aid, tindex) of our mod on a CoE base (an aid of `among` when several fit)."""
         mod = self.data.mods[mod_id]
-        for index, key in zip(self._coe_index(coe_base), self._our_keys(mod)):
+        for level, (index, key) in enumerate(zip(self._coe_index(coe_base), self._our_keys(mod))):
             hits = sorted(set(index.get(key, [])))
+            if level >= FALLBACK_LEVEL:
+                hits = [hit for hit in hits if coe_text(self.modifiers[hit[0]]) == mod_text(mod)]
             if among is not None and len(hits) > 1:
                 hits = [hit for hit in hits if hit[0] in among] or hits
             if len(hits) > 1:
@@ -170,8 +173,10 @@ class Coe:
         if entry["tindex"] == "e" or entry["aid"] in ("-1", "0"):
             return f"coe:{entry['aid']}:{entry['tindex']}"
         name = coe_text(self.modifiers[entry["aid"]])
-        for index, key in zip(self._our_index(), self._coe_keys(coe_base, entry["aid"], int(entry["tindex"]))):
+        for level, (index, key) in enumerate(zip(self._our_index(), self._coe_keys(coe_base, entry["aid"], int(entry["tindex"])))):
             hits = index.get(key, [])
+            if level >= FALLBACK_LEVEL:
+                hits = [h for h in hits if mod_text(self.data.mods[h]) == name]
             if pool is not None and len(hits) > 1:
                 hits = [h for h in hits if h in pool] or hits
             if len(hits) > 1:  # one mod group, same tiers (Fire, Cold, Spell damage): the stat text tells them apart
@@ -241,12 +246,18 @@ class Coe:
 def mod_text(mod) -> str:
     """Our mod's text as Craft of Exile names a modifier: every number and range a #, lines joined by ", "."""
     text = re.sub(r"\(-?\d+(\.\d+)?--?\d+(\.\d+)?\)|-?\d+(\.\d+)?", "#", mod.text or "")
-    return ", ".join(sorted(line.strip() for line in text.splitlines()))  # sorted: the two sides order a support mod's lines differently (#1457)
+    return _fragments(", ".join(line.strip() for line in text.splitlines()))
 
 
 def coe_text(modifier: dict) -> str:
-    """A Craft of Exile modifier's name in the form of `mod_text`: its lines sorted."""
-    return ", ".join(sorted(part.strip() for part in modifier["name_modifier"].split(", ")))
+    """A Craft of Exile modifier's name in the form of `mod_text`."""
+    return _fragments(modifier["name_modifier"])
+
+
+def _fragments(text: str) -> str:
+    """The text's ", "-separated fragments in sorted order: the two sides order a support mod's lines differently, and both split
+    the same way, so a line that itself holds ", " stays comparable (#1457)."""
+    return ", ".join(sorted(part.strip() for part in text.split(", ")))
 
 
 def build_item(data, spec: dict) -> Item:

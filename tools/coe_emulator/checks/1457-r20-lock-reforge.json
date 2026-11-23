@@ -48,7 +48,7 @@
  {
   "id": "r04-scour-under-lock",
   "route": "R04",
-  "note": "#1457: R04's Scour loop under Suffixes Cannot Be Changed: the essence suffixes Pierce and Strength, the prefix Additional Arrow, and the crafted lock. Scouring and Annulment: what stays, is the lock removed?",
+  "note": "#1457: R04's Scour loop under Suffixes Cannot Be Changed: the essence prefix Pierce, the suffixes Strength (essence) and Additional Arrow, and the crafted lock (a prefix). Scouring, Annulment and Chaos Orb: what stays, is the lock removed?",
   "base": "Metadata/Items/Quivers/QuiverNew5",
   "item_level": 81,
   "rarity": "rare",
