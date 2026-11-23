@@ -27,7 +27,11 @@
    bound asked, it is measured again on the operator with the self-loops divided out, as the solve divides them (`_divided`,
    #585, #841): a state that stays with chance 1 - 1e-12 is then certified to its own condition, not to `1 / leave`.
    The operator is the one WITHOUT the self-loop compiled out, so the certificate is also an independent check of the
-   merge and of the solve: it is run on the unmerged graph with the class values copied back to the members.
+   merge and of the solve: it is run on the unmerged graph with the class values copied back to the members. Where that float measure
+   refuses what the quotient's certified (a class whose members hand the run to each other is a cycle of many states here and one state with
+   a divided-out self-loop there: R17's seed round, 1.7e12 c, 0.00092 on the quotient and 0.0737 here, #1412), the merge is checked exact in
+   integers instead (`_packed_merge.lumps_exactly`) and the quotient's certificate is carried to the members (`Certificate.lumped`); a merge
+   that is not exact is refused as before.
 
 The bound may exceed `tolerance` when the values are large next to the cheapest action (rounding amplification, as in
 `_certify.py`); the loop stops when the residuals reach the tolerance or the rounding floor. A solve the certificate then refuses (a bound above
@@ -52,7 +56,7 @@ from ._packed import PackedGraph, expand_ranges, kernel_any, kernel_min, kernel_
 from . import _packed_linear
 from ._packed_chain import ChainSolver
 from ._packed_linear import DENSE_LIMIT, backward_error  # noqa: F401  (DENSE_LIMIT: the default of `solve_graph`, read by callers; backward_error: by tests)
-from ._packed_merge import exact_classes, identity_classes, quotient
+from ._packed_merge import exact_classes, identity_classes, lumps_exactly, quotient
 from ._packed_exact import exact_quotient
 
 EPS = sys.float_info.epsilon
@@ -77,6 +81,7 @@ class Certificate:
     rounded_once: bool = False  # the bound given is measured with every Bellman sum rounded once (`_packed.kernel_sums_rounded_once`, #867), not once a term
     term_bound: float | None = None  # with `rounded_once`: the bound of the measure with a rounding a term, which the caller did not accept
     exact: bool = False  # the values are the exact optimum rounded once to float64 (`_packed_exact`, #1380): `bound` is that rounding
+    lumped: float | None = None  # the bound is the quotient's, carried to the whole graph by its merge checked exact (`lumps_exactly`, #1412); this is what the whole graph's own measure gave
 
 
 @dataclass(frozen=True, slots=True, eq=False)
@@ -224,6 +229,8 @@ def _own_text(certificate: Certificate) -> str:
     """What the certificate against each state's own cheapest cost alone gives, when that is not the bound given (#769)."""
     if certificate.exact:
         return " (solved exactly in rational numbers)"
+    if certificate.lumped is not None:
+        return f" (the quotient's, carried by its merge checked exact in integers: measured on the whole graph itself, {certificate.lumped:.3g})"
     if certificate.rounded_once:
         return f" (measured with every sum rounded once; with a rounding a term: {certificate.term_bound:.3g})"
     if certificate.own_bound is None or certificate.window == 0:
@@ -926,6 +933,12 @@ def solve_packed(
     certificate = core.certificate if core.certificate.exact else certify(graph, value, solved, wanted=accept_bound)
     info["certify_seconds"] = round(time.perf_counter() - mark, 2)
     info["quotient_bound"] = core.certificate.bound
+    if not certificate.bound <= refuse_above and core.certificate.bound <= refuse_above and lumps_exactly(graph, cls, reduced, kernel_map):
+        # float64 cannot measure on the whole graph what it measured on the quotient (#1412): a class whose members pass a run among themselves
+        # is one state with a self-loop on the quotient, divided out there (`_divided`), and a cycle of many states here, whose margin is one
+        # step. The merge, checked exact in integers on the graph itself, carries the quotient's certificate to the members
+        info["graph_bound"] = certificate.bound
+        certificate = replace(core.certificate, lumped=certificate.bound)
     if not certificate.bound <= refuse_above:
         raise ConvergenceError(
             f"the values of the merged graph do not satisfy the Bellman equation of the whole graph to {refuse_above} "

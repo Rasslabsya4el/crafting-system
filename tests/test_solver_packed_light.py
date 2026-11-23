@@ -796,7 +796,10 @@ def test_solve_graph_accepts_a_bound_up_to_the_one_accepted_and_refuses_the_next
     [(0.25, True), (ACCEPTED, True), (math.nextafter(ACCEPTED, 1.0), False), (1.0, False), (INF, False), (math.nan, False)],
 )
 def test_solve_packed_accepts_a_bound_of_the_whole_graph_up_to_the_one_accepted_and_refuses_the_next_float(monkeypatch, bound, accepted):
-    stub_certify(monkeypatch, 0.0, bound)  # the quotient's certificate is perfect: only the check on the whole graph can refuse
+    # the quotient's certificate is perfect: only the check on the whole graph can refuse, and since #1412 it refuses only a merge that is not
+    # checked exact (here the check is made to say so; a merge truly not exact: `test_solver_packed_lumped_certificate.py`)
+    stub_certify(monkeypatch, 0.0, bound)
+    monkeypatch.setattr(ps, "lumps_exactly", lambda *_args: False)
 
     if accepted:
         assert solve_packed(GEO, accept_bound=ACCEPTED).error_bound == bound
@@ -804,6 +807,17 @@ def test_solve_packed_accepts_a_bound_of_the_whole_graph_up_to_the_one_accepted_
         with pytest.raises(ConvergenceError, match="do not satisfy the Bellman equation of the whole graph") as refused:
             solve_packed(GEO, accept_bound=ACCEPTED)
         assert refused.value.error_bound == bound or (math.isnan(bound) and math.isnan(refused.value.error_bound))
+
+
+@pytest.mark.parametrize("bound", [math.nextafter(ACCEPTED, 1.0), 1.0, INF, math.nan])
+def test_solve_packed_carries_the_quotients_certificate_over_a_refused_whole_graph_when_the_merge_is_exact(monkeypatch, bound):
+    # #1412: the cases the test above refuses, with GEO's own merge, which is exact: the bound is the quotient's, the whole graph's is kept
+    stub_certify(monkeypatch, 0.0, bound)
+
+    solved = solve_packed(GEO, accept_bound=ACCEPTED)
+
+    assert solved.error_bound == 0.0
+    assert solved.info["graph_bound"] == bound or (math.isnan(bound) and math.isnan(solved.info["graph_bound"]))
 
 
 # The rounding allowance of the step that improves a policy: an action takes the place of the current one only when its Q is lower by more
