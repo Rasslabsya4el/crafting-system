@@ -430,8 +430,9 @@ def test_a_use_that_loses_nothing_wanted_reads_under_chance_per_use_whatever_the
 
     essence = section.rows[1]
     target, onward = [line for field in essence.fields if field.label == "Chance per use" for line in field.lines]
-    # the item that goes on is named by what it lacks and the action it goes on with, never "the item of step 3" (#1442); step 3 is the row below
-    assert (target.text, onward.text, onward.href) == ("the target: ≈84%", "without +# to maximum Life · any tier, then Chaos Orb: ≈16%", None)
+    # the item that goes on is named by what it lacks and the action it goes on with, never "the item of step 3" (#1442); step 3 is the row
+    # below, and it is named all the same: where a step leads to several places, every one says its step (#1442, tpage2)
+    assert (target.text, onward.text, onward.href, onward.anchor) == ("the target: ≈84%", "without +# to maximum Life · any tier, then Chaos Orb: ≈16%", "#s3", "→ step 3")
     assert "On failure" not in labels_of(essence)  # the 16% lose no wanted mod (PRES-6: the cost to finish from there decides nothing)
 
 
@@ -734,6 +735,10 @@ def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan)
     assert lines_of(restart, "Cost per use") == ["4 c"]
     failure = restart.fields[-1].lines[0]
     assert failure.text == "the start item bought again" and failure.href == "#s2"
+    # a step whose failure restarts the item says the restart's step and what it costs: its row may be far from this one (#1442)
+    restarted = [line for row in section.rows for field in row.fields if field.label == "On failure" for line in field.lines if "restarted" in line.text]
+    assert restarted and all(line.text.startswith("the item is restarted: a new start item for 4 c (") for line in restarted)
+    assert {line.anchor for line in restarted} == {f"→ step {restart.number}"}
     # a bought rare: the other mods are not known
     assert restart.after.suffixes[0].text == "any mod or empty" and restart.after.properties == ("Rare", "item level 84")
     assert section.goal.fields[0].lines[0].text == "Given route: Restart on a lone gem"

@@ -606,8 +606,13 @@ class _StateReader:
         return self._fractured[key]
 
     def _fractured_row(self, mod_id: str, contribution: tuple[Status, ...]) -> tuple[Side, Slot]:
-        if mod_id not in self.data.mods:  # held as its family type: the state knows its side, not which mod it is
-            return self.ab._kinds.side_of(mod_id), Slot(FAMILY_TYPE_TEXT, "mod", ("fractured",))
+        if mod_id not in self.data.mods:  # held as its family type: the state knows its side and what it gives the goal, not which mod it is
+            side = self.ab._kinds.side_of(mod_id)
+            best = max(contribution, default=Status.ABSENT)
+            if best is Status.ABSENT:
+                return side, Slot(FAMILY_TYPE_TEXT, "mod", ("fractured",))
+            wanted = self.wanted([i for i, status in enumerate(contribution) if status is best], best)  # a wanted mod fractured: named (#1442)
+            return side, replace(wanted, tone="wanted" if best is Status.PASSING else "mod", marks=("fractured", *wanted.marks))
         mod = self.data.mods[mod_id]
         kind = (mod.families, mod.generation_type, mod.domain)
         own = [held for held in self._held if (held.families, held.generation_type, held.domain) == kind and self.ab._drawn_contribution(held) == contribution]

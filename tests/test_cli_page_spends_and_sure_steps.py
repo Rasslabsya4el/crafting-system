@@ -150,7 +150,7 @@ def test_an_edge_that_crafts_the_wanted_mod_names_it_once():
 
     assert len(branches) == 2
     for line in branches:
-        named = line.split(", then ")[0]
+        named = line.split(", then ")[0].split(", with")[0]  # what the craft gave; what tells the branches apart follows it (#1442)
         assert named.count(DATA.mods[DAMAGE].text) == 1, line
         assert " and " not in named, line
 

@@ -55,6 +55,8 @@ from ._report_net import report_net
 from ._route import evaluate_route, load_route, route_actions
 from ._route_report import render_route_text, route_document
 from ._route_view import write_route_page
+from ._page_main import page_main
+from ._plan_file import save_plan
 from ._trade import trade_main
 from ._verify import DEFAULT_RUNS, DEFAULT_SEED, verify
 
@@ -144,10 +146,14 @@ def main(
     if arguments[:1] == ["trade"]:
         return trade_main(arguments[1:], env=env, data=data)
 
+    if arguments[:1] == ["page"]:
+        return page_main(arguments[1:], env=env, data=data)
+
     parser = argparse.ArgumentParser(
         prog=COMMAND, description="Find the cheapest crafting policy for a target item (YAML in, text and JSON out)."
     )
     parser.add_argument("target", help="the target YAML file (see examples/targets/)")
+    parser.add_argument("--save-plan", metavar="PATH", help=f"also save the finished plan to PATH, so that its route view can be written again with `{COMMAND} page PATH` without planning again (for the same code and game data only)")
     parser.add_argument("--json", metavar="PATH", help="where to write the JSON policy (default: the output folder, named after the target)")
     parser.add_argument("--start-price", type=float, metavar="CHAOS", help="what the start item costs, in Chaos; wins over the price file")
     parser.add_argument("--route", metavar="ROUTE.yaml", help="also evaluate this given route (rules in YAML, see examples/routes/) as a fixed policy and compare it with the policy")
@@ -224,6 +230,11 @@ def main(
         name = target_path.name
         out = Path(args.json) if args.json else config.output_dir / f"{target_path.stem}.policy.json"
         write_json(out, plan_record(plan, target_name=name))  # the plan's record first: what follows may stop at the memory net, the plan is kept (#1381)
+        if args.save_plan:
+            try:
+                print(f"Plan saved to {save_plan(Path(args.save_plan), plan, target, game, name)}")
+            except Exception as error:  # a plan that cannot be saved (whatever it holds that does not pickle) still gets its report and page
+                print(f"Plan not saved: {error}", file=sys.stderr)
         written = printed = False  # whether the JSON policy has replaced the record, and whether the text report was printed
         check = None
         page_path = out.parent / f"{target_path.stem}.route.html"

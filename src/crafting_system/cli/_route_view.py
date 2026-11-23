@@ -21,7 +21,9 @@ tiers a draw can add) is a fact about items, and a block's members can differ in
 The chances of a row are the exact mixture of those of its states (OR-20): the sum over the states of (expected
 visits x chance) over the expected visits of the row (`_route_flow`). Chance per use lists the outcomes that do not lose
 a wanted mod, one line per place they lead to: the target, the same step again ("not yet, this step again"), another step, each
-named by the item that goes there and the action it goes on with (", then Orb of Annulment", #1442). On failure lists the outcomes that
+named by the item that goes there and the action it goes on with (", then Orb of Annulment", #1442), and by its step ("→ step 7"): only a
+step whose one place is the row right below leaves it to the arrow between the rows, so that a loop back to an earlier step reads as one (a
+sure step's one outcome included, under "Next step"). On failure lists the outcomes that
 lose a wanted mod the item came to the step with (a leaf of the target that was met and no longer is; a mod only an earlier use of the same
 step gave is a miss, not a loss, #889), or land in a step that restarts or has no action (PRES-6: never decided by what the item still costs
 to finish). A restart's own row says where it goes under "Next step": buying the item again is that step, not its failure (#892). Uses on
@@ -395,12 +397,10 @@ class _View:
     def anchor(self, number: int) -> str:
         return f"{self.prefix}s{number}"
 
-    def link(self, text: str, number: int, below: int | None, *, always: bool = False) -> Line:
-        """`text` with a link to row `number`; the arrow is left out when that row is right below row `below`."""
-        href = f"#{self.anchor(number)}"
-        if always:
-            return Line(text, href)
-        return Line(text) if number == below else Line(text, href, f"→ step {number}")
+    def link(self, text: str, number: int) -> Line:
+        """`text` with a link to row `number` and its arrow ("→ step 7"). Every line that names a place a step leads to has one, but the one
+        place of a step that is the row right below, which `chance_lines` leaves to the arrow between the rows (#1442)."""
+        return Line(text, f"#{self.anchor(number)}", f"→ step {number}")
 
     # -- what changes ----------------------------------------------------------------------------------------
 
@@ -417,8 +417,17 @@ class _View:
     def _passing_in_all(self, states) -> set[int]:
         return {i for i in range(len(self.plan.leaf_labels)) if all(state.status[i] is Status.PASSING for state in states)}
 
-    def _fractured(self, state: CompressedState) -> set[str]:
-        return {entry.mod_id for entry in state.fractured}
+    def _fractured(self, state: CompressedState) -> set:
+        """The fractured entries of a state: a mod held as its family type ("~3") is told by what it gives the goal, so a fractured Life T1
+        and a fractured junk mod of one family type are two entries (#1442)."""
+        return set(state.fractured)
+
+    def _fractured_text(self, entry) -> str:
+        """A fractured mod in words: the wanted mod it is when it gives the goal a leaf, even when the state holds it as a family type (#1442)."""
+        if entry.mod_id in self.data.mods:
+            return f"{self._mod(entry.mod_id)} · fractured"
+        slot = self.reader.fractured(entry.mod_id, entry.contribution)[1]
+        return f"{slot.text} · {slot.note} · fractured" if slot.note else f"{slot.text} · fractured"
 
     def _crafted(self, state: CompressedState) -> set[str]:
         return {slot.kind for slot in state.slots if slot.crafted}
@@ -442,8 +451,8 @@ class _View:
         mods, explained = [], set()  # a new fractured or crafted mod, and the leaves it meets (named once, as the mod)
         for state in landing:
             for entry in state.fractured:
-                if entry.mod_id not in before_fractured:
-                    mods.append(f"{self._mod(entry.mod_id)} · fractured")
+                if entry not in before_fractured:
+                    mods.append(self._fractured_text(entry))
                     explained |= {i for i, status in enumerate(entry.contribution) if status is Status.PASSING}
             for slot in state.slots:
                 if slot.crafted and slot.kind not in before_crafted:
@@ -479,13 +488,15 @@ class _View:
         before = self._passing(step.states)
         before_fractured = set().union(*(self._fractured(state) for state in step.states))
         before_crafted = set().union(*(self._crafted(state) for state in step.states))
-        new_fractured = sorted(set.intersection(*(self._fractured(state) for state in edge.states)) - before_fractured)
+        new_fractured = sorted(set.intersection(*(self._fractured(state) for state in edge.states)) - before_fractured, key=lambda entry: (entry.mod_id, entry.contribution))
         new_crafted = sorted(set.intersection(*(self._crafted(state) for state in edge.states)) - before_crafted)
+        each = [self._fractured(state) - before_fractured for state in edge.states]  # what each item had fractured by this use
+        mixed = not new_fractured and bool(edge.states) and all(each)  # every item had a mod fractured, not the same one (R13 step 10, #1442)
         explained = {
             i
-            for state in edge.states
+            for state, new in zip(edge.states, each)
             for contribution in (
-                *(entry.contribution for entry in state.fractured if entry.mod_id in new_fractured),
+                *(entry.contribution for entry in new if mixed or entry in new_fractured),  # a fractured mod named below, alone or in a list
                 *(slot.contribution for slot in state.slots if slot.crafted and slot.kind in new_crafted),
             )
             for i, status in enumerate(contribution)
@@ -496,7 +507,10 @@ class _View:
             for i in range(len(self.plan.leaf_labels))
             if i not in before and i not in explained and all(state.status[i] is Status.PASSING for state in edge.states)
         ]
-        found += [f"{self._mod(mod_id)} · fractured" for mod_id in new_fractured]
+        found += [self._fractured_text(entry) for entry in new_fractured]
+        if mixed:  # say which they may be
+            texts = sorted({self._fractured_text(entry).removesuffix(" · fractured") for new in each for entry in new})
+            found.append(f"{texts[0]} · fractured" if len(texts) == 1 else f"one of these fractured: {'; '.join(texts)}")
         found += [f"{self._mod(mod_id)} · crafted" for mod_id in new_crafted]
         return list(dict.fromkeys(found))
 
@@ -522,10 +536,14 @@ class _View:
             there = self.flow.steps[edge.to - 1].action  # `edge.to` is a step number (from 1)
             if there is None:
                 return "the route has no step for this item", True
-            if there.label == RESTART:
-                return "the item is restarted", True
+            if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442)
+                return f"the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
         elif appeared := self.appeared(step, edge):
-            return " and ".join(appeared), False
+            # what the use gave, and, when another branch of the step got the same (a sure craft's every branch), what tells this one apart
+            alike = [other for other in step.edges if other is not edge and other.kind == "forward" and self.appeared(step, other) == appeared]
+            mixed = any(text.startswith("one of these fractured") for text in appeared)  # the items differ in what the use gave: say what parts them too
+            tell = self.item_words(step, edge, alike) if alike else self.item_words(step, edge) if mixed else ""
+            return " and ".join(appeared) + (f", {tell}" if tell else ""), False
         if words := self.item_words(step, edge):
             return words, False
         return f"the item of step {edge.to + 1}", True
@@ -543,15 +561,15 @@ class _View:
         sides = (Side.PREFIX, Side.SUFFIX)
         return tuple(max(0, _capacity(self.data, self.ab.base_id, side, rarity) - held[side]) for side in sides)  # type: ignore[return-value]
 
-    def item_words(self, step: Step, edge: Edge) -> str:
-        """The item of a branch, by what a player sees on it that the items of the step's other branches do not all share (#1442).
+    def item_words(self, step: Step, edge: Edge, among: list[Edge] | None = None) -> str:
+        """The item of a branch, by what a player sees on it that the items of the step's other branches (or of `among`) do not all share (#1442).
 
         The wanted mods every item of the branch holds and some item of another branch lacks ("with ..."), those none of them holds and
         some item of another branch does ("without ..."); when no wanted mod tells them apart, the open prefixes and suffixes every item of the
         branch has and some other has not. "" when nothing does (the branches differ only in what the page cannot name).
         """
         mine = edge.states
-        others = [state for other in step.edges if other is not edge for state in other.states]
+        others = [state for other in (step.edges if among is None else among) if other is not edge for state in other.states]
         if not mine or not others:
             return ""
         width = len(self.plan.leaf_labels)
@@ -571,7 +589,17 @@ class _View:
         free = {self._free_slots(state) for state in mine}
         if len(free) == 1 and (shared := next(iter(free))) is not None and any(self._free_slots(state) != shared for state in others):
             return "with " + " and ".join(_open(count_, side) for count_, side in zip(shared, ("prefix", "suffix")))
-        return ""
+        theirs = [self._free_slots(state) for state in others]
+        if None in free or None in theirs:
+            return ""
+        words = []  # the items of a branch hold different counts, but a side's count still parts them from the others' (R14 step 5, #1442)
+        for k, side in enumerate(("prefix", "suffix")):
+            low, high = min(f[k] for f in free), max(f[k] for f in free)
+            if low > max(f[k] for f in theirs):
+                words.append(f"at least {_open(low, side)}" if low < high else _open(low, side))
+            elif high < min(f[k] for f in theirs):
+                words.append(_open(0, side) if high == 0 else f"at most {_open(high, side)}" if low < high else _open(high, side))
+        return "with " + " and ".join(words) if words else ""
 
     @staticmethod
     def sure(action: Action) -> bool:
@@ -584,29 +612,32 @@ class _View:
 
         For a sure action (`sure`) the lines are the shares of its uses that go on to each step, by the item it was used on (`step_row`
         titles them so): a chance of a sure use would read as a miss (#984). A restart is never sure here: what it buys is a new random item."""
-        if len(shown) == 1 and self.sure(action):  # one place and one outcome says nothing
-            return []
         if len(shown) == 1:
-            return [Line(chance_text(shown[0].chance))]
+            edge = shown[0]
+            onward = edge.kind not in ("goal", "again") and edge.to is not None and edge.to + 1 != below
+            if self.sure(action):  # one place and one outcome: said only when that place is not the row below (a loop back, a jump)
+                return [self.link(f"then {self.next_title(edge)}", edge.to + 1)] if onward else []
+            text = chance_text(edge.chance)
+            return [self.link(f"{text}, then {self.next_title(edge)}", edge.to + 1)] if onward else [Line(text)]
         lines = []
-        for edge, (what, names_row) in zip(shown, self.phrases(step, shown)):
+        for edge, (what, _) in zip(shown, self.phrases(step, shown)):
             text = f"{what}: {chance_text(edge.chance)}" + (" of uses" if sure else "")
-            lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1, below, always=names_row))
+            lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1))
         return lines
 
-    def failure_lines(self, step: Step, failing: list[Edge], below: int) -> list[Line]:
+    def failure_lines(self, step: Step, failing: list[Edge]) -> list[Line]:
         """One line per place a use that loses a wanted mod, or restarts the item, leads to."""
         lines = []
-        for edge, (what, names_row) in zip(failing, self.phrases(step, failing)):
-            lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1, None, always=names_row))
+        for edge, (what, _) in zip(failing, self.phrases(step, failing)):
+            lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1))
         return lines
 
     def restart_lines(self, step: Step, edges: list[Edge]) -> list[Line]:
         """Where a restart goes: the start item again, a line per step it leads to, with the chance only when there are several (#892)."""
         many = len(edges) > 1
         return [
-            self.link(f"{what}{f' ({chance_text(edge.chance)})' if many else ''}", edge.to + 1, None, always=names_row)
-            for edge, (what, names_row) in zip(edges, self.phrases(step, edges))
+            self.link(f"{what}{f' ({chance_text(edge.chance)})' if many else ''}", edge.to + 1)
+            for edge, (what, _) in zip(edges, self.phrases(step, edges))
         ]
 
     def phrases(self, step: Step, edges: list[Edge]) -> list[tuple[str, bool]]:
@@ -853,13 +884,13 @@ class _View:
             _plain("Goal", *goal),
             _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
-            Field(SURE_NEXT if sure else "Chance per use", tuple(chances)) if chances else None,
+            Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else "Chance per use", tuple(chances)) if chances else None,
             self.tier_field(step, action),
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
             _plain("Step cost", FREE if self.free(action) else money(step_cost)) if step_cost is not None else None,
             Field(NEXT, tuple(self.restart_lines(step, failing))) if failing and restart else None,
-            Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing and not restart else None,
+            Field("On failure", tuple(self.failure_lines(step, failing)), "warn") if failing and not restart else None,
             _plain("Note", *self.notes(action, step, restart)),
         )
         final = any(edge.kind == "goal" for edge in step.edges)
