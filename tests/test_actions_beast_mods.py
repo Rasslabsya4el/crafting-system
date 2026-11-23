@@ -35,6 +35,7 @@ from beast_mods_support import (
     SMALL,
     item_of,
     outcome_table,
+    results_of,
     roll,
 )
 from contract_support import CONTRACT_DATA, check_action
@@ -286,7 +287,7 @@ def test_a_lock_on_the_losing_side_makes_the_swap_add_without_removing():
     got = tables(WOLF, item)
 
     assert got == table(*(([SCBC, ES1, FIRE, COLD, added], share) for added, share in ((LIFE1, F(2, 5)), (LIFE2, F(2, 5)), (LIGHTNING1, F(1, 5)))))
-    for _, result in WOLF.outcomes(SMALL, item).results:
+    for _, result in results_of(WOLF.outcomes(SMALL, item)):
         assert len(result.mods) == len(item.mods) + 1
 
 
@@ -344,7 +345,7 @@ def test_cannot_roll_caster_filters_the_added_mod_of_the_lynx():
 
 def test_the_added_mod_is_never_one_the_removal_could_take():
     item = item_of(ES1, FIRE, COLD)
-    for _, result in WOLF.outcomes(SMALL, item).results:
+    for _, result in results_of(WOLF.outcomes(SMALL, item)):
         assert len([e for e in result.mods if SMALL.mods[e.mod_id].generation_type == "prefix"]) == 2  # the ES1 and the new prefix
         assert len([e for e in result.mods if SMALL.mods[e.mod_id].generation_type == "suffix"]) == 1
 
@@ -395,7 +396,7 @@ def test_a_beast_level_that_leaves_the_pool_empty_refuses_the_swap_whatever_the_
 
 
 def test_the_added_mod_is_new_at_its_lowest_values():
-    ((_, result),) = [pair for pair in BeastSideSwap(Side.PREFIX, 83).outcomes(SMALL, item_of(COLD)).results if any(e.mod_id == LIGHTNING1 for e in pair[1].mods)]
+    ((_, result),) = [pair for pair in results_of(BeastSideSwap(Side.PREFIX, 83).outcomes(SMALL, item_of(COLD))) if any(e.mod_id == LIGHTNING1 for e in pair[1].mods)]
 
     added = next(e for e in result.mods if e.mod_id == LIGHTNING1)
     assert (added.crafted, added.fractured) == (False, False)

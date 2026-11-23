@@ -22,6 +22,7 @@ from fractions import Fraction
 import pytest
 from abstraction_b2_support import check_layer_1, closure, disagrees
 from abstraction_support import real_game_data
+from beast_mods_support import results_of
 
 from crafting_system.abstraction import Abstraction, Goal, Wanted
 from crafting_system.actions import (
@@ -437,7 +438,7 @@ def test_the_beast_level_leaves_out_mods_that_the_item_level_rolls(boots):
     item = side_swap_starts(boots)["movement_speed"]
     drawn = {
         level: {
-            side: {e.mod_id for _, r in BeastSideSwap(side, beast_level=level).outcomes(boots.data, item).results for e in r.mods} - {e.mod_id for e in item.mods}
+            side: {e.mod_id for _, r in results_of(BeastSideSwap(side, beast_level=level).outcomes(boots.data, item)) for e in r.mods} - {e.mod_id for e in item.mods}
             for side in (Side.PREFIX, Side.SUFFIX)
         }
         for level in (86, 83, 80)
@@ -448,7 +449,7 @@ def test_the_beast_level_leaves_out_mods_that_the_item_level_rolls(boots):
     assert boots.data.mods[mana_1].required_level == 81
     other_mana = boots.of(("MovementVelocity", 3), ("FireResistance", 2), ("ChanceToSuppressSpells", 1))  # without Mana on it the prefix draw could roll it
     mana_drawn = {
-        level: mana_1 in {e.mod_id for _, r in BeastSideSwap(Side.PREFIX, beast_level=level).outcomes(boots.data, other_mana).results for e in r.mods}
+        level: mana_1 in {e.mod_id for _, r in results_of(BeastSideSwap(Side.PREFIX, beast_level=level).outcomes(boots.data, other_mana)) for e in r.mods}
         for level in (86, 83, 80)
     }
     assert mana_drawn == {86: True, 83: True, 80: False}
@@ -464,7 +465,7 @@ def test_layer_1_of_the_side_swaps_of_the_beasts_of_level_83_and_80_on_real_boot
     assert all(applied[action] for action in actions), {a.label(): applied[a] for a in actions}
     # the lock on the suffixes keeps them: the prefix swap adds a prefix and removes nothing; a full prefix side refuses it
     locked = starts["locked_suffixes"]
-    for _, result in BeastSideSwap(Side.PREFIX).outcomes(data, locked).results:
+    for _, result in results_of(BeastSideSwap(Side.PREFIX).outcomes(data, locked)):
         assert len(result.mods) == len(locked.mods) + 1
     assert not check_layer_1(ability, data, starts["prefixes_full"], BeastSideSwap(Side.PREFIX))
     assert check_layer_1(ability, data, starts["prefixes_full"], BeastSideSwap(Side.SUFFIX))

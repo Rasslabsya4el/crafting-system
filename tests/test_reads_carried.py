@@ -11,8 +11,8 @@ import pytest
 from contract_support import CONTRACT_DATA, contract_pairs, fixture_items
 
 from crafting_system.actions.beast_mods import BeastSideSwap
+from beast_mods_support import results_of
 from crafting_system.actions.errors import ActionError, NotApplicableError
-from crafting_system.actions.finite import Finite
 from crafting_system.items import ExplicitMod, Item, ItemError, Side
 from crafting_system.items.model import UNVEILED_DOMAIN, VEILED_DOMAIN
 
@@ -23,9 +23,8 @@ def _answer(action, data, item) -> Counter | str:
         found = action.outcomes_under(data, item)
     except ActionError as refusal:
         return type(refusal).__name__
-    assert isinstance(found, Finite), "the contract of `Reads.carried` is checked on actions that answer with `Finite`"
     out: Counter = Counter()
-    for chance, result in found.results:
+    for chance, result in results_of(found):  # a `Finite`'s results, or a side swap's pool draws with each added mod at its lowest values (#1433)
         out[(result.rarity, tuple(sorted(result.mods, key=repr)))] += chance
     return out
 

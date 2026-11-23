@@ -8,6 +8,8 @@ through the pool code under test.
 
 from fractions import Fraction
 
+from beast_mods_support import results_of
+
 import pytest
 
 from crafting_system.actions import NotApplicableError, catalog
@@ -45,7 +47,7 @@ def rare(data, *mod_ids, item_level=84, **fields):
 
 def table(outcomes):
     """`{ids of the finished item: chance}`."""
-    return {frozenset(e.mod_id for e in result.mods): chance for chance, result in outcomes.results}
+    return {frozenset(e.mod_id for e in result.mods): chance for chance, result in results_of(outcomes)}
 
 
 def raw_pool(data, side: Side, level: int, held_families: set[str]):
