@@ -24,7 +24,7 @@ Start options (the cheapest total of start price and expected cost to craft wins
 What this answer leaves out:
   Not offered: [a list that is not recorded here: every new method changes it] (kinds the run's methods setting does not name). The plan is the cheapest among the kinds offered.
   Not offered: [a list that is not recorded here: every new method changes it] (methods the planner cannot use yet). The plan is the cheapest among the methods the planner can use.
-  Not offered: Vaal Orb, Locus of Corruption (the target takes no corrupted item, so these would only corrupt it). The plan is unaffected: nothing here could be used for this target.
+  Not offered: Vaal Orb, Locus of Corruption (each of these corrupts the item it is used on, and the target takes no corrupted item). The plan is unaffected: nothing here could be used for this target.
   Memory Strands are not considered, 5 in all: Foulborn Augmentation Orb, Foulborn Regal Orb, Foulborn Exalted Orb, Orb of Remembrance, Orb of Unravelling (the start item has none, and the planner cannot plan with them yet). The plan makes no use of Memory Strands.
   The search expanded only what could matter (it looked at the actions of 777 of the 786 states it found and built 971 of the 971 actions offered at them: an action it did not build costs more, even at its best case, than the one it kept). The plan is the cheapest among the methods offered. The cut is exact: nothing was left out for being unlikely or by a tolerance, and the mean cost is that of the best plan.
   A state lists the other mods only as a count per side (the model keeps the mods the target does not ask for by kind, not by name). The odds and costs count every one of them.

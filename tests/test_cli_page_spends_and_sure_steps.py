@@ -64,8 +64,7 @@ def test_a_sure_bench_craft_reads_one_use_each_time_the_run_is_there():
     section = build_section(hand_input(START, (COLD_REQ, LIFE), bench_then_by_the_item), DATA)
     (uses,) = lines(bench_row(section), "Uses on average")
 
-    assert uses.startswith("1 each time, ")  # a run comes back to it after each reroll: one sure use each time, never "≈ 1.4 uses"
-    assert uses.endswith("times in a run that reaches it")
+    assert uses.startswith("an item comes to this step ") and uses.endswith("times in a run that reaches it, 1 use each time")  # a run comes back to it after each reroll: one sure use each time, never "≈ 1.4 uses"
 
 
 def test_a_bench_craft_used_once_a_run_reads_1():
@@ -81,7 +80,7 @@ def test_a_random_action_keeps_its_chance_per_use():
 
     assert lines(chaos, "Chance per use")
     assert lines(chaos, SURE_NEXT) == []
-    assert not lines(chaos, "Uses on average")[0].startswith("1 each time")
+    assert not lines(chaos, "Uses on average")[0].endswith("1 use each time")
 
 
 def test_the_price_list_holds_every_currency_a_step_pays_with_a_bench_crafts_included():
@@ -162,7 +161,7 @@ def test_the_uses_of_a_sure_step_never_read_as_a_fraction_of_a_use():
     assert _View.uses_text(5.0, None, True) == "1 each time"  # never "1" for a step a run may be at five times
     assert _View.uses_text(0.92, 0.92, True) == "1"  # once in each run that reaches it ("reached in 92% of runs" follows)
     assert _View.uses_text(1.0004, 1.0, True) == "1"  # never "≈1 times"
-    assert _View.uses_text(2.4, 0.8, True) == "1 each time, 3 times in a run that reaches it"
+    assert _View.uses_text(2.4, 0.8, True) == "an item comes to this step 3 times in a run that reaches it, 1 use each time"
     assert _View.uses_text(2.4, 0.8, False) == "2.4"
 
 
@@ -170,8 +169,8 @@ def test_uses_summed_over_the_items_that_come_to_a_step_say_the_uses_each_time_a
     """#892: V01's Augmentation is one use on each of about 107 helmets (100% leaves the step), never 107 uses on one item."""
     from crafting_system.cli._route_view import _View
 
-    assert _View.uses_text(107.0, 1.0, False, 1.0) == "107 in all: 1 each time an item comes to this step, 107 times in a run that reaches it"
+    assert _View.uses_text(107.0, 1.0, False, 1.0) == "107 in all: an item comes to this step 107 times in a run that reaches it, 1 use each time"
     # an essence used 20 times each time (5% leaves the step), an item sent back to it 3 times in a run that reaches it half the time
-    assert _View.uses_text(30.0, 0.5, False, 0.05) == "30 in all: 20 each time an item comes to this step, 3 times in a run that reaches it"
+    assert _View.uses_text(30.0, 0.5, False, 0.05) == "30 in all: an item comes to this step 3 times in a run that reaches it, 20 uses each time"
     assert _View.uses_text(20.0, 1.0, False, 0.05) == "20"  # one item, one arrival: the uses are on that item
-    assert _View.uses_text(4.0, None, False, 0.5) == "4 in all: 2 each time an item comes to this step, 2 times in a run"  # no reach solved
+    assert _View.uses_text(4.0, None, False, 0.5) == "4 in all: an item comes to this step 2 times in a run, 2 uses each time"  # no reach solved

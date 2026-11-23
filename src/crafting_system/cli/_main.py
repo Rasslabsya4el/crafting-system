@@ -268,7 +268,7 @@ def main(
                     spec = buy_spec_of(game, target) if target.start is StartKind.BOUGHT else None  # computed from the target: the buy step's link and filter
                     page = write_route_page(
                         page_path, report, game, route=route, given=given,
-                        buy_spec=spec, cache_dir=config.cache_dir, target_name=name,
+                        buy_spec=spec, cache_dir=config.cache_dir,
                     )  # fmt: skip
                     print(f"Route view written to {page}")
         except BudgetExceeded as stop:  # the memory net, met while the outputs of a finished plan were built: said, and the record kept (#1381)

@@ -75,7 +75,7 @@ from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
-from crafting_system.targets import plain_base_names
+from crafting_system.targets import Target, plain_base_names
 from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
 from ._interval import IntervalAnswer
@@ -110,6 +110,7 @@ class PageError(ValueError):
 NEVER_FINISHES = "never finishes from here"
 SURE_NEXT = "Next step, by the item it is used on"  # the field of a sure action's branches, in place of "Chance per use" (#984)
 GAPS = "never finishes: the route has gaps"
+DRAW_TITLE = "Check the mods the bought item came with"  # the step of the draw of a bought listing (`DRAW_LABEL` is the planner's name for it, #1442)
 AGAIN = "not yet, this step again"  # an outcome that leaves the item in the same step: the player uses the action again (#889)
 NEXT = "Next step"  # the field of a restart, in place of "On failure": buying the item again is the step, not a failure of it (#892)
 FREE = "free"  # the cost of a use that consumes nothing (an unveil, a pick): the planner's epsilon is no price a player pays (#1442)
@@ -948,7 +949,8 @@ class _View:
             mark = self.plan.start_price.mark
             return [money(self.plan.start_price.chaos), *([mark] if mark else [])]  # OR-8: a thin market's price carries its mark
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price was paid in row 1 and is paid again by every restart
-            return [f"{FREE}: the listing's price is paid in step 1 and again by each restart"]
+            again = " and again by each restart" if any(step.action is not None and step.action.label == RESTART for step in self.flow.steps) else ""
+            return [f"{FREE}: the listing's price is paid in step 1{again}"]
         priced = self.plan.offer_of(action)
         if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
             return [FREE]
@@ -968,6 +970,8 @@ class _View:
                 return "Restart: make the start item at the vendor again"
             name = self.start_name()
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
+        if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the player reads what the listing came with, he uses nothing
+            return DRAW_TITLE
         offer = self.plan.offer_of(action).offer
         action = offer.action
         adds = action.adds(self.data, self.plan.target.start_item)
@@ -1078,12 +1082,7 @@ class _View:
 
     def buy_spec_words(self) -> str | None:
         """"Ring, any base" when the buy step's first line names no base type ("Rare, any ring base"), else None."""
-        first = self.buy.accepts[0] if self.buy is not None and self.buy.accepts else ""
-        marker = ", any "
-        if marker not in first or not first.endswith(" base"):
-            return None
-        kind = first.split(marker, 1)[1][: -len(" base")]
-        return f"{kind[:1].upper()}{kind[1:]}, any base"
+        return any_base_words(self.buy)
 
     def wider_advice(self) -> str:
         """One line a player acts on when the start is priced as a wider item: what to buy, and what the exact item costs (#483, #937)."""
@@ -1196,11 +1195,11 @@ class _View:
                 return count(uses)
             each = count(1.0 / leave).replace("≈ ", "≈")
             run = "in a run that reaches it" if reached else "in a run"
-            return f"{count(uses)} in all: {each} each time an item comes to this step, {count(times).replace('≈ ', '≈')} times {run}"
+            return f"{count(uses)} in all: an item comes to this step {count(times).replace('≈ ', '≈')} times {run}, {each} {'use' if each in ('1', '≈1') else 'uses'} each time"
         if not reached:  # no reach solved: the times a run is at the step are not known, each of them is still one sure use
             return "1 each time"
         times = count(uses / reached)
-        return "1" if times in ("1", "≈ 1") else f"1 each time, {times.replace('≈ ', '≈')} times in a run that reaches it"
+        return "1" if times in ("1", "≈ 1") else f"an item comes to this step {times.replace('≈ ', '≈')} times in a run that reaches it, 1 use each time"
 
     def start_field(self) -> Field | None:
         """When the start item is made at a vendor: the start options with their totals, so the choice can be read off the page."""
@@ -1478,10 +1477,9 @@ def write_route_page(
     given: RouteResult | None = None,
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
-    target_name: str = "",
 ) -> Path:
     """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
-    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, target_name=target_name)
+    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8", newline="\n")
     return path
@@ -1495,7 +1493,6 @@ def route_page(
     given: RouteResult | None = None,
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
-    target_name: str = "",
 ) -> str:
     """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
     `write_route_page` writes and the website serves (#961).
@@ -1519,4 +1516,23 @@ def route_page(
             given_route_input(plan, route, given), data, buy, prefix="g-", anchor="given", route_field=False
         )
         sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
-    return render_page(Page(target_name or "Route view", sections))
+    wider = any_base_words(buy) if plan.start_price.searched is not None else None
+    return render_page(Page(page_title(data, plan.target, wider), sections))
+
+
+def any_base_words(buy: BuyStep | None) -> str | None:
+    """"Ring, any base" when the buy step's first line names no base type ("Rare, any ring base"), else None."""
+    first = buy.accepts[0] if buy is not None and buy.accepts else ""
+    marker = ", any "
+    if marker not in first or not first.endswith(" base"):
+        return None
+    kind = first.split(marker, 1)[1][: -len(" base")]
+    return f"{kind[:1].upper()}{kind[1:]}, any base"
+
+
+def page_title(data: GameData, target: Target, wider: str | None = None) -> str:
+    """The page's title: the item the route makes, as a player names it ("Elder Shaper Eternal Burgonet, item level 86"), never the target's
+    file name (#893, #1442). A start bought as any base of its kind is named as the cards name it ("Ring, any base", #937)."""
+    influences = " ".join(influence.value.title() for influence in sorted(target.influences))
+    base = wider or data.base_items[target.base_id].name
+    return f"Route to craft: {influences + ' ' if influences else ''}{base}, item level {target.item_level}"

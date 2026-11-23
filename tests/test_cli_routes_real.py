@@ -195,7 +195,7 @@ def route_page(route_id, stem, plan, data, tmp_path) -> str:
     spec = buy_spec_of(data, plan.target)  # computed from the target (#474)
     path = write_route_page(
         tmp_path / f"{stem}.route.html", build_report(plan, data), data, route=route,
-        given=evaluate_route(plan, route, data), buy_spec=spec, cache_dir=cache_dir, target_name=f"{stem}.yaml",
+        given=evaluate_route(plan, route, data), buy_spec=spec, cache_dir=cache_dir,
     )  # fmt: skip
     return path.read_text(encoding="utf-8")
 

@@ -368,3 +368,27 @@ def test_the_report_names_the_free_share_of_a_locus_use_as_the_planner_charged_i
     assert free_action_price(SimpleNamespace(offers=priced)) == charged > 0
     dearer, _ = price_offers(offers, _prices(**{PRICE_NAME: PriceEntry(4.0, "override")}))
     assert free_action_price(SimpleNamespace(offers=dearer)) == 0.0  # no free action left
+
+
+def test_the_corrupting_note_says_each_listed_method_corrupts_and_names_the_bloodstained_fossil_only_for_fossil_sets():
+    """#1442: "2,028 in all: Fossils Bloodstained Fossil + ... (these would only corrupt it)" read as if every fossil corrupts and a set did
+    nothing else. The note says each listed method corrupts the item, and that a fossil set is listed only when it holds a Bloodstained Fossil."""
+    from crafting_system.planner import _limits
+
+    start = STARTS["none"]
+    goal = Goal((Wanted(RESISTS),))  # takes no corrupted item
+    vaal_only = offers_for(DATA, goal, start.base_id, start, kinds_named=("vaal", "locus", "chaos-orb")).limits
+    (note,) = [limit for limit in vaal_only if limit.kind == _limits.CORRUPTING]
+    assert note.why == "each of these corrupts the item it is used on, and the target takes no corrupted item"
+    assert "only corrupt" not in note.why
+    data = real_game_data()  # the toy data holds no fossil; the real dump's ring offers 2,000 sets with a Bloodstained Fossil
+    ring = next(base_id for base_id, base in data.base_items.items() if base.name == "Amethyst Ring")
+    life = frozenset(mod_id for mod_id in data.mods if mod_id.startswith("IncreasedLife"))
+    item = Item.build(data, base_id=ring, item_level=75, rarity=Rarity.RARE)
+    with_fossils = offers_for(data, Goal((Wanted(life),)), ring, item, kinds_named=("fossil-set",)).limits
+    (note,) = [limit for limit in with_fossils if limit.kind == _limits.CORRUPTING]
+    fossil_sets = [label for label in note.labels if "Fossil" in label]
+    assert len(fossil_sets) > 1000 and all("Bloodstained Fossil" in label for label in fossil_sets)
+    assert note.why == (
+        "each of these corrupts the item it is used on (a fossil set is listed only when it holds a Bloodstained Fossil), and the target takes no corrupted item"
+    )
