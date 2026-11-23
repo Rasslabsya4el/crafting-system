@@ -89,7 +89,9 @@ THE LAWS (one row per kind of offer; `_Build`)
   Moebius).
 * **Refused by its shape**: an offer whose `outcomes` raise NotApplicableError at the shape's bare item while reading none of the item's
   fields that differ between the in-model states of the shape (`refused_by_shape`: the mods, implicits, quality, veiled offer, enchantment and
-  sockets are handed in as poisons that raise `_Read` at any read) has read only what every in-model state of the shape shares: the base and
+  sockets are handed in as poisons that raise `_Read` at any read, a type test included; the optional ones also as None and as each kind they
+  may be of, typed poisons and real values at the ends of their ranges; `SHARED` and `VARYING` put every field of the item on one side, with
+  the reason) has read only what every in-model state of the shape shares: the base and
   the item level (the craft's, held by no state), the rarity, corruption, influences and the unopened flag (the shape's `Flags`), no imprint
   and no Memory Strand (phi is OFF on either). The game's answer is a function of those alone, so it refuses the offer at every in-model state
   of the shape: the offer is not available there and puts no term in the min of T (the floors' premise (1), as for a REFUSED entry; the
@@ -126,6 +128,8 @@ from crafting_system.actions.beast_mods import BeastSideSwap
 from crafting_system.actions.harvest_likelihood import HarvestReforgeLikelihood
 from crafting_system.actions.pool import build_pool
 from crafting_system.items.model import Metamod, Rarity, Side, capacity
+from crafting_system.items.quality import MAX_PLAIN_QUALITY, MAX_QUALITY, CatalystType, PlainQuality, Quality
+from crafting_system.items.sockets import SocketColour, Sockets
 
 from . import _offer_kinds as kinds
 from crafting_system import budget
@@ -164,31 +168,78 @@ class _PoisonTuple(tuple):
 
 
 class _PoisonValue:
-    """An optional field of the probe item (a quality, an enchantment, sockets): any read of it raises `_Read`."""
+    """An optional field of the probe item (a quality, an enchantment, sockets): any read of it raises `_Read`, its class included, so that a
+    type test (`isinstance(item.quality, PlainQuality)`), which calls no method of the value, reads it too."""
 
     __getattr__ = __bool__ = __hash__ = __eq__ = __ne__ = __iter__ = __len__ = __lt__ = __le__ = __gt__ = __ge__ = _poisoned
     __getitem__ = __contains__ = __str__ = __repr__ = __int__ = __index__ = __reduce__ = __reduce_ex__ = _poisoned
 
+    @property
+    def __class__(self):  # noqa: PLE0237  (isinstance asks it when the value's own type does not match)
+        raise _Read
 
-VARYING = ("mods", "implicits", "quality", "veil_offer", "enchantment", "sockets")  # the item's fields two in-model states of a shape may differ in
+
+def _typed(kind):
+    """A value of the class `kind` (a quality or sockets kind) whose every attribute read raises `_Read`: a type test sees its kind truly, and
+    any read past the kind (a percent, a catalyst type, a colour, an equality, a hash) raises."""
+    poison = type(f"_Poison{kind.__name__}", (kind,), {"__slots__": (), "__getattribute__": _poisoned, "__eq__": _poisoned, "__hash__": _poisoned,
+                                                        "__repr__": _poisoned, "__bool__": _poisoned})  # fmt: skip
+    return object.__new__(poison)
+
+
+# THE ITEM'S FIELDS (`items.model.Item`), each on one side of the law:
+#   shared by every in-model state of a shape, read freely: `base_id`, `item_level` (the craft's: no state holds either, no offer of the
+#   catalogue changes them), `rarity`, `corrupted`, `influences`, `unopened` (the shape's `Flags`), `imprints` (() : phi is OFF on an
+#   imprint), `memory_strands` (0: phi is OFF on a strand);
+#   VARYING, read only through a poison: `mods` (the fractured ones are the shape's, the rest differ), `implicits` (an Eldritch currency
+#   changes them inside a shape), `quality`, `veil_offer`, `enchantment`, `sockets` (no shape key holds them).
+# A test that adds a field to `Item` fails until the field is put on one side (`test_missing_mods`).
+SHARED = ("base_id", "item_level", "rarity", "corrupted", "influences", "unopened", "imprints", "memory_strands")
+VARYING = ("mods", "implicits", "quality", "veil_offer", "enchantment", "sockets")
+_KINDS = {"quality": (Quality, PlainQuality), "sockets": (Sockets,)}  # the classes an optional field's value may be of
+
+
+def _exact(name):
+    """Real values of each kind of the optional field `name`, at the ends of their ranges: an exact type test (`type(q) is Quality`), which no
+    poison of a subclass passes, sees each kind once."""
+    if name == "quality":
+        return (Quality(CatalystType.ABRASIVE, 0), Quality(CatalystType.ABRASIVE, MAX_QUALITY), PlainQuality(0), PlainQuality(MAX_PLAIN_QUALITY))
+    if name == "sockets":
+        return (Sockets.unlinked((SocketColour.WHITE,)), Sockets((SocketColour.WHITE,) * 6, (6,)))
+    return ("",)  # an enchantment
+
+
+def _probes(bare):
+    """The probe items of `refused_by_shape`: (1) every VARYING field poisoned; (2) the optional ones None where the bare item has None;
+    (3) all None; then, for each optional field in turn, the other fields poisoned and that one (4) a typed poison of each kind it may be of
+    and (5) a real value of each kind at the ends of its range."""
+    optional = [name for name in VARYING if not isinstance(getattr(bare, name), tuple)]
+
+    def probe(values):
+        item = copy.copy(bare)
+        for name in VARYING:
+            value = getattr(bare, name)
+            object.__setattr__(item, name, _PoisonTuple(value) if isinstance(value, tuple) else values.get(name, _PoisonValue()))
+        return item
+
+    yield probe({})
+    yield probe({name: None for name in optional if getattr(bare, name) is None})
+    yield probe({name: None for name in optional})
+    for name in optional:
+        for kind in _KINDS.get(name, ()):
+            yield probe({name: _typed(kind)})
+        for value in _exact(name):
+            yield probe({name: value})
 
 
 def refused_by_shape(data, item, action) -> bool:
     """Whether `action` is refused at every in-model state of the shape of `item` (THE LAWS, "Refused by its shape"): its `outcomes` raise
-    NotApplicableError at the shape's bare item (no imprint, no Memory Strand) with every field of `VARYING` poisoned, in three probes: the
-    optional fields as poisons, as None where the bare item has none (a poison elsewhere), and all None (so a test `is None` read by identity,
-    which no poison sees, gives the refusal both ways or the probe fails). False on any read of a poisoned field, on any other error, and when the outcomes are given."""
+    NotApplicableError at every probe of the shape's bare item (`_probes`: the fields of `VARYING` poisoned, the optional ones also None, of
+    each kind and at real values of each kind) with no poison read. A refusal that holds there reads none of the fields two in-model states of
+    the shape may differ in, beyond an identity test against None (both answers probed) or a type test (every kind probed, typed and exact).
+    False on any read of a poisoned field, on any other error, and when the outcomes are given."""
     bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured), imprints=(), memory_strands=0)
-    for optional in ("poison", "bare", "none"):
-        probe = copy.copy(bare)
-        for name in VARYING:
-            value = getattr(bare, name)
-            if isinstance(value, tuple):
-                object.__setattr__(probe, name, _PoisonTuple(value))
-            elif optional == "poison" or (optional == "bare" and value is not None):
-                object.__setattr__(probe, name, _PoisonValue())
-            else:
-                object.__setattr__(probe, name, None)
+    for probe in _probes(bare):
         try:
             action.outcomes(data, probe)
         except NotApplicableError:

@@ -37,7 +37,14 @@ from crafting_system.actions.magic import AugmentationOrb, RegalOrb, Transmutati
 from crafting_system.actions.scour import ScouringOrb
 from crafting_system.actions.veiled import VeiledExaltedOrb
 from crafting_system.cli import Offer
-from crafting_system.items import Item, Rarity, Side
+from crafting_system.items import ExplicitMod, Item, Rarity, Side
+from crafting_system.items.quality import PlainQuality
+from crafting_system.items.sockets import SocketColour, Sockets
+from crafting_system.actions import drawable_mod_ids
+from crafting_system.planner._offers import offers_for
+from crafting_system.targets import load_target
+from abstraction_support import real_game_data
+from targets_support import EXAMPLES
 from crafting_system.planner import _missing_mods
 from crafting_system.planner._envelope import Beaten
 from crafting_system.planner._envelope_plan import envelope_result
@@ -356,3 +363,66 @@ def test_a_refusal_that_reads_a_field_a_state_may_differ_in_is_not_the_shapes():
     rare = Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE)
     assert not refused_by_shape(TOY, rare, _RefusesOnQuality(by_identity=True))
     assert not refused_by_shape(TOY, rare, _RefusesOnQuality(by_identity=False))
+
+
+class _RefusesOnQualityKind:
+    """A craft a state with plain quality takes, refused otherwise: by a type test (no method of the value called) or an exact type test."""
+
+    def __init__(self, exact):
+        self.exact = exact
+
+    def outcomes(self, data, item):
+        plain = type(item.quality) is PlainQuality if self.exact else isinstance(item.quality, PlainQuality)
+        if not plain:
+            raise NotApplicableError("needs plain quality")
+        return None
+
+
+@pytest.mark.parametrize("exact", [False, True])
+def test_a_refusal_by_the_kind_of_quality_is_not_the_shapes(exact):
+    rare = Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE)
+    assert not refused_by_shape(TOY, rare, _RefusesOnQualityKind(exact))
+
+
+def test_every_field_of_the_item_is_on_one_side_of_the_law():
+    """A field added to `Item` must be put among the shared or the varying ones of `_missing_mods`, with its reason, before the law reads it."""
+    fields = {field.name for field in dataclasses.fields(Item)}
+    assert set(_missing_mods.SHARED) | set(_missing_mods.VARYING) == fields
+    assert not set(_missing_mods.SHARED) & set(_missing_mods.VARYING)
+
+
+def test_every_offer_the_law_drops_on_r10_is_refused_at_real_states_of_its_shape():
+    """The sweep (#1496 checker, audit entry 27) on R10's own catalogue and the real data: at the rare start's shape and the Magic shape of the same item
+    (its fractured Movement Speed kept; a Normal item cannot hold it), every offer `refused_by_shape` drops is refused at real items of that shape:
+    the bare item, one with each of a sample of the pool's mods added, one with plain quality, one with sockets. The law must drop the Eldritch Exalted Orb and both side swaps at the Magic shape, and keep the side swaps at the rare one."""
+    data = real_game_data()
+    target = load_target(EXAMPLES / "r10-fractured-boots.yaml", data)
+    goal = Goal.from_target(target)
+    start = target.start_item
+    actions = [offer.action for offer in offers_for(data, goal, target.base_id, start).offers]
+    fractured = tuple(entry for entry in start.mods if entry.fractured)
+    pool = sorted(drawable_mod_ids(data, start))[::25]
+    dropped = {}
+    for rarity in (Rarity.RARE, Rarity.MAGIC, Rarity.NORMAL):
+        try:
+            shape = start.changed(data, rarity=rarity, mods=fractured)
+        except Exception:  # noqa: BLE001  (a Normal item cannot hold the fractured mod: no such shape)
+            continue
+        states = [shape, shape.changed(data, quality=PlainQuality(20)), shape.changed(data, sockets=Sockets.unlinked((SocketColour.WHITE,) * 4))]
+        for mod_id in pool:
+            mod = data.mods[mod_id]
+            try:
+                states.append(shape.changed(data, mods=(*fractured, ExplicitMod(mod_id, tuple(stat.min for stat in mod.stats)))))
+            except Exception:  # noqa: BLE001  (a mod the rarity cannot hold more of: not a state of the shape)
+                continue
+        for action in actions:
+            if not refused_by_shape(data, shape, action):
+                continue
+            dropped.setdefault(rarity, []).append(action)
+            for state in states:
+                with pytest.raises(NotApplicableError):
+                    action.outcomes(data, state)
+    names = {rarity: {type(a).__name__ for a in dropped.get(rarity, ())} for rarity in (Rarity.RARE, Rarity.MAGIC)}
+    assert {"EldritchExaltedOrb", "BeastSideSwap"} <= names[Rarity.MAGIC]
+    assert "BeastSideSwap" not in names[Rarity.RARE]
+    assert len(dropped[Rarity.MAGIC]) > 10
