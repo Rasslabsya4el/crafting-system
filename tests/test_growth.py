@@ -18,7 +18,7 @@ import pytest
 from test_planner_blocking_crafts import C, E, S, _plan, data, target  # noqa: F401  (the belt world and its fixtures)
 
 from crafting_system.abstraction import Status
-from crafting_system.items import Rarity, Side
+from crafting_system.items import Metamod, Rarity, Side
 from crafting_system.planner import _growth, _rounds
 from crafting_system.planner._growth import Entry, Grower, OfferTable, read_step, step_shares
 from crafting_system.solver import Action, Outcome
@@ -521,3 +521,115 @@ def test_with_no_plan_proved_without_them_the_methods_that_fan_out_are_held_back
     grower.ran((0,), None, False)  # no plan
     step = grower.next()
     assert step is not None and 1 in step[0] and table.held_back == frozenset()
+
+
+# --- the lock group of a step that waits on both sides (#1420, H16 of #1434) ------------------------------------------------------------
+
+
+def _lock_world():
+    """R20's shape on A (a prefix: Concentrated Effect) and B (a suffix: the essence's mod with Trap and Mine). Offers: 0 the step's spam
+    (an essence, a reroll), 1 the suffix lock (a craft), 2 the prefix lock (a craft), 3 a beast that adds a lock (it draws which one, keeps
+    the mods: what puts the lock back), 4 a reroll that adds a lock (it keeps no mod: no locker), 5 "chaos" (1 Chaos), 6 "fire" (2 Chaos),
+    7 "influence" (150 Chaos), 8 an annulment (the cleaner). At the bare item "influence" has the best figure on A (1 in 2: 300 per A) and
+    "chaos" the worst (1 in 1,000); under the suffix lock, with B held, "chaos" keeps B and makes A 1 in 50 (50 per finish), "fire" 1 in 40
+    (80), "influence" 1 in 100 (15,000), and the spam is refused there (an essence on a locked item)."""
+    table = _table(
+        _entry("spam", 25.0, kind="reroll", at=RARE, chance={A: Fraction(1, 1000), B: Fraction(1, 77)}),
+        _entry("lock suffixes", 353.0, kind="craft", locks=frozenset({Side.SUFFIX}), draws=False),
+        _entry("lock prefixes", 353.0, kind="craft", locks=frozenset({Side.PREFIX}), draws=False),
+        _entry("beast lock", 238.0, kind="terminal", locks=frozenset({Side.PREFIX, Side.SUFFIX}), draws=True),
+        _entry("locking reroll", 1.0, kind="reroll", locks=frozenset({Side.SUFFIX})),
+        _entry("chaos", 1.0, kind="reroll", at=RARE, chance={A: Fraction(1, 1000)}),
+        _entry("fire", 2.0, kind="reroll", at=RARE, chance={A: Fraction(1, 1000)}),
+        _entry("influence", 150.0, kind="reroll", at=RARE, chance={A: Fraction(1, 2)}),
+        _entry("annul", 12.7, kind="craft", removes=True, draws=False),
+    )
+    return table
+
+
+def test_the_lock_role_names_every_lock_with_nothing_yet_to_lose_and_the_rerolls_ranked_at_the_item_under_the_lock():
+    table = _lock_world()
+    chaos, fire, influence = 5, 6, 7
+    # the rankings at the item under each lock (`under_lock`, read on the model; here set by hand): (cost over chance, position)
+    table.under = {
+        ("suffix", RARE, A, frozenset({B})): [(50.0, chaos), (80.0, fire), (15000.0, influence)],
+        ("suffix", RARE, B, frozenset()): [(77.0, fire)],
+        ("prefix", RARE, A, frozenset()): [(1000.0, chaos)],
+        ("prefix", RARE, B, frozenset({A})): [],
+    }
+    named = _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset()))
+    # both locks and the beast that puts one back (the reroll that adds a lock keeps no mod: no locker), and the two best rerolls under
+    # the suffix lock for A: "influence", the best at the bare item, is third there and is not named
+    assert named == {"lock suffixes", "lock prefixes", "beast lock", "chaos", "fire"}
+    # an offer the round that made the plan held is not named again: the next best takes its place
+    assert "influence" in _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset({chaos})))
+    # a step that waits on one side alone names no lock role, and the usual roles name no lock for a step that can lose nothing
+    assert table.lock_roles({A}, frozenset({RARE}), frozenset()) == set()
+    assert not _names(table, table.roles({A, B}, set(), frozenset({RARE}), False, frozenset(), frozenset())) & {"lock suffixes", "lock prefixes"}
+
+
+class _Fake:
+    """The pieces `OfferTable.under_lock` reads, on a world of mod ids: an item is its mods, the model compresses it to its mod ids."""
+
+    class Item:
+        def __init__(self, mods):
+            self.mods = tuple(mods)
+
+        def changed(self, data, mods):
+            return _Fake.Item(mods)
+
+        def can_add(self, data, mod):
+            return all(each.mod_id != mod.id for each in self.mods)
+
+        def add_mod(self, data, mod):
+            return _Fake.Item((*self.mods, mod))
+
+
+def test_a_reroll_s_figure_under_the_lock_is_read_at_the_item_holding_the_side_s_other_waited_mods_and_the_lock(monkeypatch):
+    table = _lock_world()
+    stat = SimpleNamespace(min=1, max=1)
+    table.data.mods.update(
+        A1=SimpleNamespace(id="A1", generation_type="prefix", implicit_tags=(), families=(), stats=(stat,)),
+        B1=SimpleNamespace(id="B1", generation_type="suffix", implicit_tags=(), families=(), stats=(stat,)),
+        LOCK=SimpleNamespace(id="LOCK", generation_type="prefix", implicit_tags=(), families=(Metamod.SUFFIXES_CANNOT_CHANGE.value,), stats=(stat,)),
+    )
+    lock_action = SimpleNamespace(adds=lambda data, item: SimpleNamespace(named=frozenset({"LOCK"})))
+    actions = [SimpleNamespace(name=entry.label) for entry in table.entries]
+    actions[1] = lock_action
+    table.actions = actions
+    table.views = {RARE: _Fake.Item([SimpleNamespace(mod_id="F", fractured=True), SimpleNamespace(mod_id="J", fractured=False)])}
+    table.locking = lambda: SimpleNamespace(compress=lambda item: frozenset(entry.mod_id for entry in item.mods))
+    table.under = {}
+    chances = {"chaos": Fraction(1, 50), "fire": Fraction(1, 40), "influence": Fraction(1, 100), "spam": None}
+    seen = []
+
+    def reach(abstraction, state, action, leaves):
+        seen.append((state, tuple(leaves)))
+        if action.name == "spam":
+            raise _growth.NotApplicableError("an essence is refused on an item with a lock")
+        return chances.get(action.name)
+
+    monkeypatch.setattr(_growth, "reach_bound", reach)
+    ranked = table.under_lock("suffix", RARE, A, frozenset({B}))
+    # the item keeps its fractured mod, drops its other one, holds B's mod and the lock's crafted mod; the chance asked is A's and B's together
+    assert {state for state, _leaves in seen} == {frozenset({"F", "B1", "LOCK"})} and {leaves for _state, leaves in seen} == {(A, B)}
+    # 1 / (1/50) = 50, 2 / (1/40) = 80, 150 / (1/100) = 15,000; the refused spam and the offers that are no reroll are not ranked
+    assert [(round(ratio, 6), table.entries[position].label) for ratio, position in ranked] == [(50.0, "chaos"), (80.0, "fire"), (15000.0, "influence")]
+    assert table.under_lock("suffix", RARE, A, frozenset({B})) is ranked  # read once
+
+
+def test_the_lock_group_comes_before_the_step_s_usual_roles_and_the_step_is_read_again_after_it():
+    table = _lock_world()
+    table.entries.append(dataclasses.replace(_entry("add A", 5.0, at=RARE, chance={A: Fraction(1, 10)}), position=len(table.entries)))
+    table.under = {key: [(50.0, 5)] for key in (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))}
+    start, goal = _State("start", (Status.ABSENT, Status.ABSENT), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
+    view = {start: Action("spam", 25.0, (Outcome(goal, 1), Outcome(start, 999)))}  # the spam waits for A and B at once and can lose nothing
+    plan = _Plan(mean_remaining=25000.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
+    grower = Grower(table, ())
+    grower.ran((0,), plan, True)
+    positions, why = grower.next()
+    assert _names(table, positions) == {"spam", "lock suffixes", "lock prefixes", "beast lock", "chaos", "annul"}
+    assert why.startswith("the lock group of the plan's dearest step not yet read, spam")
+    grower.ran(positions, plan, False)  # beaten: the plan in hand stays
+    positions, why = grower.next()  # the same step, read again by its usual roles: the adder of A comes in, no lock group again
+    assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam")
