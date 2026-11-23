@@ -85,6 +85,7 @@ from crafting_system.solver import _packed_linear
 from crafting_system.solver._packed_chain import ChainSolver, CyclesTooTangled, inverse_diagonal
 from crafting_system.solver._packed_linear import DENSE_LIMIT, Terms, backward_error, forward_estimate, gth_inverse
 from crafting_system.solver._packed_lump import lump_states
+from crafting_system.solver._packed_solve import SHARE_MIN
 from crafting_system.planner import STEPS, Limit, claim
 
 from ._reach import policy_states
@@ -195,7 +196,8 @@ class Chain[S]:
     `action_of(i)` is the solver action of state `i` (called for the first state of a step only).
 
     `ptr`, `dst`, `prob` are the edges of every state in CSR form, made when asked and then kept: a copy of its kernel's
-    edges per state, which the page never asks for (only the chance a run visits one state, `reach_of`, and measuring scripts).
+    edges per state, which nothing of the page or the benchmark asks for (measuring scripts and tests do): a kernel that 66,907 states take is
+    4.3 billion edges once copied (R06, #1478), so `reach_of` reads the kernels themselves (`_kernel_rows`).
     """
 
     states: Sequence[S]
@@ -1194,14 +1196,15 @@ def _diagonal(chain: Chain, done: _Solved, say) -> tuple[np.ndarray | None, str 
     The chain is Q on the states that can finish, self-loops included, with `leave` the chance to leave each state (`_system`); the cycles of the
     chain give the diagonal of N = (I - Q)^-1 (`solver/_packed_chain.py`) and, from the same pieces, the row of the start, which must be the visits.
     """
-    system = _system(chain, done.finishing)
-    assert system is not None
-    ptr, column, p = _csr_with_self_loops(system)
-    start = int(system.position[0])
+    pieces = _kernel_rows(chain, done.finishing)
+    start = int(np.cumsum(done.finishing)[0] - 1)
     visits = done.visits[done.finishing]
     with np.errstate(all="ignore"):
         try:
-            diagonal, deviation = inverse_diagonal(system.nt, ptr, column, p, system.leave, start=start, start_row=visits, progress=say, leak=system.leak)
+            diagonal, deviation = inverse_diagonal(
+                pieces.nt, pieces.ptr, pieces.column, pieces.p, pieces.leave, start=start, start_row=visits, progress=say, leak=pieces.leak,
+                shared_of=pieces.shared_of, shared=pieces.shared,
+            )
         except CyclesTooTangled as error:  # not measured, never a guess: the benchmark line shows `?` and says why
             why = f"the cycles of the chain are too tangled to put back within the memory of a run ({error})"
         except MemoryError:
@@ -1214,6 +1217,93 @@ def _diagonal(chain: Chain, done: _Solved, say) -> tuple[np.ndarray | None, str 
             why = f"the cycles of the chain and the visits disagree by {deviation:.3g} (more than {AGREE:g})"
     say(f"visit chances: not measured ({why})")
     return None, why
+
+
+@dataclass(frozen=True)
+class _KernelRows:
+    """The chain on the states that can finish, over their positions, as `inverse_diagonal` takes it (#1478): `ptr`, `column`, `p` the own rows of the
+    states whose kernel no other such state takes (self-loops included, edges to the states that can finish only); a state whose kernel several take has
+    an empty row and `shared_of[s]` names the row `shared[g] = (columns, entries, leak)`, held once. `leave[s]` is the chance to leave `s` for any
+    other state and `leak[s]` the chance to go to a goal or to a state that cannot finish, each a sum of positive terms."""
+
+    nt: int
+    ptr: np.ndarray
+    column: np.ndarray
+    p: np.ndarray
+    leave: np.ndarray
+    leak: np.ndarray
+    shared_of: np.ndarray
+    shared: tuple[tuple[np.ndarray, np.ndarray, float], ...]
+
+
+def _kernel_rows(chain: Chain, finishing: np.ndarray) -> _KernelRows:
+    """The rows of the states that can finish, read from the kernels of `chain` a block at a time: a kernel of at least `SHARE_MIN` edges that two or
+    more states that can finish take is one shared row (`_KernelRows`), and every other kernel is copied for its states (fewer than `SHARE_MIN` edges each,
+    or one state). The memory is the kernels', never the states times their outcomes:
+    R06's plan of 2026-11-23 had one reroll of 64,969 outcomes taken by 66,907 states, 4.3 billion edges once copied per state (`Chain._rows`), and
+    the kernel killed the benchmark at 16 GB while its visit chances were built (#1478)."""
+    ask(fresh=True)  # the report's memory net, read now: the start of a build (#1381)
+    m = chain.m
+    table = chain.kernels
+    position = np.cumsum(finishing) - 1
+    states = np.flatnonzero(finishing)
+    nt = len(states)
+    kernel = chain.kernel[states]  # a state that can finish has an action
+    count = len(table.k_ptr) - 1
+    takers = np.bincount(kernel, minlength=count)
+    group = np.full(count, -1, dtype=np.int64)
+    pooled_kernels = np.flatnonzero((takers > 1) & (table.kernel_sizes() >= SHARE_MIN))  # as the policy's own solve shares a kernel (`_packed_solve.policy_solver`)
+    group[pooled_kernels] = np.arange(len(pooled_kernels))
+    shared_of = group[kernel]
+    leave, leak = np.zeros(nt), np.zeros(nt)
+    sizes = table.kernel_sizes()
+
+    def inside_of(d: np.ndarray) -> np.ndarray:
+        inside = d < m
+        inside[inside] = finishing[d[inside]]
+        return inside
+
+    shared = []
+    pooled = np.flatnonzero(shared_of >= 0)
+    by_group = pooled[np.argsort(shared_of[pooled], kind="stable")]
+    bounds = np.searchsorted(shared_of[by_group], np.arange(len(pooled_kernels) + 1))
+    for g, k in enumerate(pooled_kernels.tolist()):
+        ask()  # the report's memory net, between two rows (#1381)
+        lo, hi = int(table.k_ptr[k]), int(table.k_ptr[k + 1])
+        d, p = table.k_succ[lo:hi].astype(np.int64), table.k_prob[lo:hi]
+        inside = inside_of(d)
+        shared.append((position[d[inside]], p[inside], float(p[~inside].sum())))
+        who = by_group[bounds[g] : bounds[g + 1]]
+        leak[who] = shared[-1][2]
+        # the chance to leave a taker is the row without its own entry: the sums before and after that entry, both of positive terms (no `1 - p`)
+        order = np.argsort(d, kind="stable")
+        ordered = p[order]
+        before = np.concatenate(([0.0], np.cumsum(ordered)))
+        after = np.concatenate((np.cumsum(ordered[::-1])[::-1], [0.0]))
+        first = np.searchsorted(d[order], states[who], side="left")
+        last = np.searchsorted(d[order], states[who], side="right")
+        leave[who] = before[first] + after[last]
+    own = np.flatnonzero(shared_of < 0)
+    own_sizes = sizes[kernel[own]]
+    counts = np.zeros(nt, dtype=np.int64)
+    columns, weights = [], []
+    for a, b in _blocks(np.concatenate(([0], np.cumsum(own_sizes)))):  # a chunk of kernels at a time
+        ask()  # the report's memory net, between two blocks of edges (#1381)
+        rows = own[a:b]
+        edge = expand_ranges(table.k_ptr[kernel[rows]], own_sizes[a:b])
+        local = np.repeat(np.arange(b - a), own_sizes[a:b])
+        d, p = table.k_succ[edge].astype(np.int64), table.k_prob[edge]
+        inside = inside_of(d)
+        other = d != states[rows][local]
+        leave[rows] = np.bincount(local[other], weights=p[other], minlength=b - a)
+        leak[rows] = np.bincount(local[~inside], weights=p[~inside], minlength=b - a)
+        counts[rows] = np.bincount(local[inside], minlength=b - a)
+        columns.append(position[d[inside]])
+        weights.append(p[inside])
+    ptr = np.concatenate(([0], np.cumsum(counts)))
+    column = np.concatenate(columns) if columns else np.zeros(0, dtype=np.int64)
+    p = np.concatenate(weights) if weights else np.zeros(0)
+    return _KernelRows(nt, ptr, column, p, leave, leak, shared_of, tuple(shared))
 
 
 def _entry_chance(system: _System, absorbing: np.ndarray, extra: np.ndarray | None = None, errors: list[float] | None = None) -> float | None:
