@@ -47,6 +47,7 @@ from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, G
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors, shape_of
+from ._missing_mods import MissingModsTable, missing_mods_table
 from ._offer_kinds import SLACK
 from ._offers import BuyStartItem, PricedOffer
 
@@ -55,6 +56,7 @@ FLOOR_COST = 1e-200  # a floor action of cost 0 is carried at this cost, as the 
 BINDING = 1e-12  # relative: the floor action is "the cheapest" at a key when it is below the model's best by more than this
 SOLVE_BYTES = 112  # the memory an action of a grown model takes while it is packed and solved (#1366: R04's models 26 and 27, 27.6 and 54.5 million
 # actions, raised the run's group by 2.8 and 5.5 GB, 101 to 102 bytes an action; rounded up): a property of the solver's arrays, the same on every route
+TABLE_CLOSED = "the missing mods' table at the start reaches the plan in hand"  # the reason of a build the table ended (#1496)
 MIN_OFFERS = 40  # fewer priced offers than this are all built and none is a twin left out (nothing to gain); `_plan` merges twins from this many too
 
 
@@ -78,6 +80,7 @@ class PatternBound:
     share: int | None = None  # the pieces it was given; None for a build on the clock
     late: bool = False  # nearly done when its net was reached, it went on past it (`Growth`, `room` of `pattern_lower_bound`, #1135)
     narrow: Held = field(default_factory=Held, compare=False)  # an offer of the model built at some keys only (#1325): its position in the offers given -> those keys' numbers (`_packed_rows.Held`, #1366)
+    table: MissingModsTable | None = field(default=None, compare=False)  # the missing mods' table of the round (`_missing_mods`, #1496), read per state by the search
 
     def holds(self, k: int, position: int) -> bool:
         """Whether the model built the offer at `position` at key number `k` (an offer of the model held at some keys only is not built elsewhere)."""
@@ -175,6 +178,7 @@ def pattern_lower_bound(
     refuse_above: float | None = None,
     pieces: int | None = None,
     room: Room | None = None,
+    closes: Callable[[float], bool] | None = None,
 ) -> PatternBound:
     """Build and solve the optimistic model of the key for the offers `priced`, from the state `start`.
 
@@ -195,10 +199,15 @@ def pattern_lower_bound(
     tells its nets how far it is (`Growth`, `Pace.grown`: the offers of its first model, of the model solved, of the model being built, of
     those given); the net on the clock (`stop`, when it is a `Pace`: `_envelope_plan.BuildStop`) decides the same of its seconds.
     `PatternBound.late` says it went past its net.
+    With the offers' floors, the missing mods' table of the round is built from them (`_missing_mods`, #1496) and rides on the bound
+    (`PatternBound.table`). `closes` (a round with a plan in hand) says whether a figure at the start already ends the round, by the search's own
+    rule (`_envelope.Search._beaten`): when the table's value at the start does, no model is grown and the start is a tip (phase "table").
     """
     say = progress or (lambda _text: None)
     all_offers = pattern_offers(priced)
     began = time.perf_counter()
+    clock = stop  # the net of the clock and memory: the table's (`missing_mods_table`), which counts no pieces
+    table = None
     tally = None if pieces is None else Tally(pieces, _pieces_words, stop, room=room)
     watched = [net for net in (tally, stop) if hasattr(net, "grown")]  # the nets told how far the build is (`Pace`)
     if tally is not None:
@@ -224,6 +233,13 @@ def pattern_lower_bound(
                 f"offers' floors: rho {floors.rho!r}, {len(floors.chosen)} necessary open leaves; the model starts on {len(order):,} of {len(priced):,} offers "
                 f"({phases['floors']:.1f} s)"
             )
+            mark = time.perf_counter()
+            table = missing_mods_table(floors, clock, say)
+            phases["table"] = time.perf_counter() - mark
+            if table.off is None and closes is not None and closes(table.start):
+                floors_stopped, order = TABLE_CLOSED, []
+                say(f"offers' floors: the missing mods' table at the start, {table.start!r}, already reaches the plan in hand: no model is grown")
+                stop = lambda: TABLE_CLOSED  # noqa: E731  (the builder below ends at once, with every key a tip)
     builder = PatternBuilder(
         abstraction, start, tags=tags, progress=say, max_keys=max_keys, stop=stop, grow=floors is not None,
         approximate=floors is not None if approximate is None else approximate, tally=tally, ruin=Ruin.of(abstraction, all_offers),
@@ -246,14 +262,14 @@ def pattern_lower_bound(
                 reason = model.stopped
                 say(f"model {rounds}: stopped while {len(adding):,} offers were joining ({reason}); the model of round {rounds - 1} stands")
                 model, value, error, order, narrow = kept
-                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow, table=table)
             if kept is not None and (reason := _no_room_to_solve(model)) is not None and builder.ahead.open:  # the keys' workers go before the solve (#1384)
                 builder.close()
                 reason = _no_room_to_solve(model)
             if kept is not None and reason is not None:  # the solve cannot be interrupted: its memory is asked before it
                 say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
                 model, value, error, order, narrow = kept
-                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow, table=table)
             inside = set(order)
             outside = [p for p in range(len(priced)) if p not in inside] if floors is not None else []
             floor = _floor_of(floors, outside, priced, holders) if floors is not None else _tip_floor(priced)
@@ -264,7 +280,7 @@ def pattern_lower_bound(
             if kept is not None and stop is not None and reason is not None:  # the solve cannot be interrupted: the net is asked before it
                 say(f"model {rounds}: the net was reached before the solve ({reason}); the model of round {rounds - 1} stands")
                 model, value, error, order, narrow = kept
-                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow)
+                return _bound(model, value, error, phases, began, order, floors, rounds - 1, reason, "growth", tally, watched, narrow, table=table)
             say(f"model {rounds}: solving the count on {len(model.keys):,} keys and {graph.num_kernels:,} kernels")
             try:
                 solved = solve_packed(graph, progress=None, refuse_above=refuse_above)  # one step the net cannot cut: it overshoots by at most this solve (R04: 0.9 s on 79,000 kernels)
@@ -286,15 +302,15 @@ def pattern_lower_bound(
                 f"{float(solved.value[0])!r} (model {built - mark:.1f} s, solve {solved_at - built:.1f} s)" + (f"; STOPPED: {model.stopped}" if model.stopped else "")
             )
             if model.stopped is not None or floors is None or not (outside or holders):  # every offer built at every key: nothing can join
-                phase = "floors" if floors_stopped else "model" if model.stopped else "complete"
-                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, phase, tally, watched, holders.copy())
+                phase = "table" if floors_stopped == TABLE_CLOSED else "floors" if floors_stopped else "model" if model.stopped else "complete"
+                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, model.stopped, phase, tally, watched, holders.copy(), table=table)
             try:
                 needs, limits = _binding(graph, solved, model, floors, outside, holders, say)
             except FloorsStopped as reached:  # the model of this round is solved and stands; only the offers that would join are not known
                 say(f"model {rounds}: the net was reached while the offers outside the model were examined ({reached.reason}); the model of this round stands")
-                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth", tally, watched, holders.copy())
+                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, reached.reason, "growth", tally, watched, holders.copy(), table=table)
             if not needs:
-                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched, holders.copy())
+                return _bound(model, value, float(solved.error_bound), phases, began, order, floors, rounds, None, "complete", tally, watched, holders.copy(), table=table)
             more = [p for p in needs if p not in inside]
             slot = {p: j for j, p in enumerate(order)}
             spread = {slot[p]: keys for p, keys in needs.items() if p in inside}
@@ -319,11 +335,11 @@ def pattern_lower_bound(
         builder.close()  # the keys' pool kept from pass to pass (`abstraction._build_ahead`, #1384)
 
 
-def _bound(model, value, error, phases, began, order, floors, rounds, stopped, phase, tally: Tally | None = None, watched=(), narrow=None) -> PatternBound:
+def _bound(model, value, error, phases, began, order, floors, rounds, stopped, phase, tally: Tally | None = None, watched=(), narrow=None, table=None) -> PatternBound:
     solve = phases["solve"]
     return PatternBound(
         model, value, float(value[0]), error, time.perf_counter() - began - solve, solve, tuple(order), floors, stopped, phase, dict(phases), rounds,
-        0 if tally is None else tally.done, None if tally is None else tally.cap, any(getattr(net, "late", False) for net in watched), Held.of(narrow),
+        0 if tally is None else tally.done, None if tally is None else tally.cap, any(getattr(net, "late", False) for net in watched), Held.of(narrow), table,
     )  # fmt: skip
 
 

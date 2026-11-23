@@ -88,6 +88,8 @@ class CraftingProblem:
         model = bound.model
         self.index = model.index
         self.floors = bound.floors
+        table = getattr(bound, "table", None)  # the missing mods' table (`_missing_mods`, #1496): read per state, only for the very offers it was built from
+        self.table = table if table is not None and table.off is None and table.serves(self.offers) else None
         self.in_model = frozenset(bound.positions)  # the offers the model holds; the others have a floor and no abstract action (`_pattern_bound`)
         self.holds = bound.holds  # an offer of the model held at some keys only has no abstract action at the others (#1325)
         self.narrow = bound.narrow  # those offers, by key (`_packed_rows.Held.offers_at`): `candidates` reads a key's once
@@ -196,8 +198,10 @@ class CraftingProblem:
         return max(float(self.values[k]), self._at(state))
 
     def _at(self, state: CompressedState) -> float:
-        """The floor of the state's class (`OfferFloors.at`): rho outside E in the start's shape, rho_S in the claim of another known shape, else 0."""
-        return 0.0 if self.floors is None else self.floors.at(self._klass(state))
+        """The floor of the state's class (`OfferFloors.at`): rho outside E in the start's shape, rho_S in the claim of another known shape, else 0;
+        raised to the missing mods' table at this one state (`_missing_mods`: h(phi(state)) <= V*(state), never a figure of a class of states)."""
+        floor = 0.0 if self.floors is None else self.floors.at(self._klass(state))
+        return floor if self.table is None else max(floor, self.table.lower(state))
 
     def split_candidates(self, state: CompressedState) -> tuple[list[tuple[float, int]], list[tuple[float, int]]]:
         """`candidates` in two parts (#1337): the offers whose `la` the state's key of the model gives, and the rest, whose `la` is the offer's
@@ -229,6 +233,7 @@ class CraftingProblem:
         narrow = self.narrow
         here = set(narrow.offers_at(k).tolist()) if found is not None and narrow else ()  # the offers held at some keys only that this key holds
         klass = self._klass(state)
+        least = 0.0 if self.table is None else self.table.lower(state)  # Q*(state, a) >= V*(state) >= the table's figure at the state (#1496)
         out: list[tuple[float, int]] = []
         own = self._own = set()  # the positions whose `la` the key gave (`split_candidates`)
         for position, priced in enumerate(self.offers):
@@ -257,7 +262,7 @@ class CraftingProblem:
                 low = max(low, self.floors.lower(position, klass))  # a floor of the same class as the state's: the bound of the state (`lower`) never exceeds the least of these
                 if low == math.inf:
                     continue  # refused at this state (an unopened listing takes the draw alone)
-            out.append((low, position))
+            out.append((max(low, least), position))
         return out
 
     def tighten(self, state: CompressedState, position: int, best: float) -> float | None:
@@ -265,7 +270,8 @@ class CraftingProblem:
         the offers' floors. Only a reroll of the start's shape has a chance to work out: any other offer keeps the floor `candidates` gave it."""
         if self.floors is None or isinstance(self.offers[position].offer.action, BuyStartItem):
             return None
-        return self.floors.tighten(position, self._klass(state), best)
+        found = self.floors.tighten(position, self._klass(state), best)
+        return found if self.table is None else max(found, self.table.lower(state))
 
     def cost(self, position: int) -> float:
         return self.offers[position].cost
@@ -542,7 +548,7 @@ def _envelope_run(
     if bound is None:
         bound = pattern_lower_bound(
             abstraction, start, offers, progress=say, item=item, stop=build_stop(net, began), refuse_above=figure_error(gap, gap_after),
-            pieces=None if net is None else net.pieces, room=room_of(net),
+            pieces=None if net is None else net.pieces, room=room_of(net), closes=closes_at(beaten_at, gap, gap_after, began),
         )  # fmt: skip
     built = time.perf_counter()
     expanded = sum(bound.model.expanded) if bound.model.expanded else len(bound.model.keys)
@@ -604,7 +610,21 @@ BUILD_PHASES = {  # the phase of a stopped build, as a player reads it
     "model": "counting the kinds of item the crafting can reach",
     "growth": "adding the actions that matter to that count",
     "solve": "solving that count",
+    "table": "counting the mods still missing, which already showed that no plan of these actions is cheaper than the one in hand",
 }
+
+
+def closes_at(beaten_at: float | None, gap: float, gap_after: float | None, began: float) -> Callable[[float], bool] | None:
+    """Whether a lower figure at the start ends the round at once, by the search's own rule (`_envelope.Search._beaten`): it reaches the plan in
+    hand to the certified 1e-6, or within the gap once `gap_after` seconds of this call have passed. None without a plan in hand (#1496)."""
+    if beaten_at is None:
+        return None
+
+    def closes(lower: float) -> bool:
+        within = gap if gap > 0.0 and gap_after is not None and time.perf_counter() - began >= gap_after else 0.0
+        return math.isfinite(lower) and beaten_at <= (1.0 + within) * (1.0 + ACCEPT_BOUND) * lower
+
+    return closes
 
 
 def build_note(bound: PatternBound, expanded: int, offers: int) -> str:
