@@ -38,7 +38,6 @@ from collections.abc import Mapping, Sequence
 from contextlib import ExitStack
 from datetime import UTC, date, datetime
 from pathlib import Path
-from pickle import PicklingError
 
 from crafting_system.actions import NotApplicableError, OutOfScopeError, imprints_held_at_most
 from crafting_system.budget import PROOF_GAP, Budget, BudgetExceeded, default_memory_mb
@@ -234,7 +233,7 @@ def main(
         if args.save_plan:
             try:
                 print(f"Plan saved to {save_plan(Path(args.save_plan), plan, target, game, name)}")
-            except (PicklingError, RecursionError, OSError) as error:  # a plan that cannot be saved still gets its report and page
+            except Exception as error:  # a plan that cannot be saved (whatever it holds that does not pickle) still gets its report and page
                 print(f"Plan not saved: {error}", file=sys.stderr)
         written = printed = False  # whether the JSON policy has replaced the record, and whether the text report was printed
         check = None

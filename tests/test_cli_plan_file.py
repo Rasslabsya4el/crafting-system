@@ -12,7 +12,7 @@ from items_support import DATA
 from test_cli_route_view import TWO_LEAVES, judged_plan
 
 from crafting_system.cli import main
-from crafting_system.cli._plan_file import load_plan, save_plan
+from crafting_system.cli._plan_file import PlanFileError, load_plan, save_plan
 from crafting_system.cli._report import build_report
 from crafting_system.cli._route_view import route_page
 from crafting_system.config import load_config
@@ -60,3 +60,23 @@ def test_a_closure_is_saved_with_its_values(tmp_path: Path):
     path = save_plan(tmp_path / "fn.plan", made(5), None, DATA)
 
     assert load_plan(path, DATA).plan(2) == 7
+
+
+def test_a_file_that_is_not_a_whole_plan_is_refused_in_words(planned, tmp_path: Path, capsys):
+    plan, target = planned
+    path = save_plan(tmp_path / "two.plan", plan, target, DATA, "two.yaml")
+    path.write_bytes(path.read_bytes()[: path.stat().st_size // 2])  # a save stopped half way
+
+    with pytest.raises(PlanFileError):
+        load_plan(path, DATA)
+    assert main(["page", str(path), "--out", str(tmp_path / "p.html")], data=DATA) == 1
+    assert "is not a plan this code can read" in capsys.readouterr().err
+
+
+def test_a_save_that_fails_leaves_no_file(tmp_path: Path):
+    def gen():
+        yield 1
+
+    with pytest.raises(TypeError):
+        save_plan(tmp_path / "bad.plan", gen(), None, DATA)  # a generator does not pickle
+    assert list(tmp_path.iterdir()) == []

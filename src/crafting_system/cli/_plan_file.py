@@ -9,7 +9,11 @@ file is a pickle of the plan and its target with two exceptions, which are what 
   defaults and the values it closes over, and is rebuilt from those.
 
 The file is for the same code and Python that wrote it: a plan written by another version of the planner may not load, and
-nothing reads it but the page tools. It is not a format for users.
+nothing reads it but the page tools. It is not a format for users, and never one read from a user: reading a pickle runs code. The file
+holds the game data's version and size and the reader refuses a plan made on other data.
+
+The recursion limit is raised to 100,000 while a plan is written or read: a stack setting for the depth of the plan's graph of objects,
+not a limit of the planner (OR-12). A function that closes over itself is not supported (its cells are written before it exists).
 """
 
 from __future__ import annotations
@@ -24,6 +28,15 @@ from typing import Any, NamedTuple
 from ..data import GameData
 
 GAME_DATA = "game-data"
+
+
+class PlanFileError(ValueError):
+    """A saved plan that cannot be read: truncated, written by other code, or planned on other game data."""
+
+
+def _identity(data: GameData) -> str:
+    """What names the game data a plan was made on: its pinned version and its counts of mods and bases."""
+    return f"{data.version}, {len(data.mods)} mods, {len(data.base_items)} bases"
 
 
 def _rebuilt_function(code: bytes, module: str, name: str, qualname: str, defaults, kwdefaults, cells: tuple) -> types.FunctionType:
@@ -77,8 +90,13 @@ def save_plan(path: Path, plan: Any, target: Any, data: GameData, target_name: s
     limit = sys.getrecursionlimit()
     sys.setrecursionlimit(max(limit, 100_000))  # a plan's graph of states is deep
     try:
-        with path.open("wb") as file:
-            _Writer(file, data).dump(tuple(SavedPlan(plan, target, target_name)))
+        part = path.with_name(path.name + ".part")  # a save that fails or is stopped leaves no file that reads as a plan
+        try:
+            with part.open("wb") as file:
+                _Writer(file, data).dump((_identity(data), *SavedPlan(plan, target, target_name)))
+            part.replace(path)
+        finally:
+            part.unlink(missing_ok=True)
     finally:
         sys.setrecursionlimit(limit)
     return path
@@ -90,6 +108,12 @@ def load_plan(path: Path, data: GameData) -> SavedPlan:
     sys.setrecursionlimit(max(limit, 100_000))
     try:
         with path.open("rb") as file:
-            return SavedPlan(*_Reader(file, data).load())
+            try:
+                identity, *fields = _Reader(file, data).load()
+            except Exception as error:  # truncated, or written by other code: whatever the unpickler raises
+                raise PlanFileError(f"{path} is not a plan this code can read ({type(error).__name__}: {error})") from error
     finally:
         sys.setrecursionlimit(limit)
+    if identity != _identity(data):
+        raise PlanFileError(f"{path} was planned on other game data ({identity}) than this one ({_identity(data)})")
+    return SavedPlan(*fields)

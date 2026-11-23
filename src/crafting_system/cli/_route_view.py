@@ -397,11 +397,10 @@ class _View:
     def anchor(self, number: int) -> str:
         return f"{self.prefix}s{number}"
 
-    def link(self, text: str, number: int, below: int | None = None) -> Line:
-        """`text` with a link to row `number` and its arrow ("→ step 7"); the arrow is left out only when that row is right below row
-        `below`, which a caller passes only for the one place a step leads to: where a step has several, every one names its step, and a
-        step whose one place is not the row below names it too, so that a loop back to an earlier step reads as one (#1442)."""
-        return Line(text) if number == below else Line(text, f"#{self.anchor(number)}", f"→ step {number}")
+    def link(self, text: str, number: int) -> Line:
+        """`text` with a link to row `number` and its arrow ("→ step 7"). Every line that names a place a step leads to has one, but the one
+        place of a step that is the row right below, which `chance_lines` leaves to the arrow between the rows (#1442)."""
+        return Line(text, f"#{self.anchor(number)}", f"→ step {number}")
 
     # -- what changes ----------------------------------------------------------------------------------------
 
@@ -601,7 +600,7 @@ class _View:
             lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1))
         return lines
 
-    def failure_lines(self, step: Step, failing: list[Edge], below: int) -> list[Line]:
+    def failure_lines(self, step: Step, failing: list[Edge]) -> list[Line]:
         """One line per place a use that loses a wanted mod, or restarts the item, leads to."""
         lines = []
         for edge, (what, _) in zip(failing, self.phrases(step, failing)):
@@ -866,7 +865,7 @@ class _View:
             _plain("Uses on average", *uses),
             _plain("Step cost", FREE if self.free(action) else money(step_cost)) if step_cost is not None else None,
             Field(NEXT, tuple(self.restart_lines(step, failing))) if failing and restart else None,
-            Field("On failure", tuple(self.failure_lines(step, failing, number + 1)), "warn") if failing and not restart else None,
+            Field("On failure", tuple(self.failure_lines(step, failing)), "warn") if failing and not restart else None,
             _plain("Note", *self.notes(action, step, restart)),
         )
         final = any(edge.kind == "goal" for edge in step.edges)

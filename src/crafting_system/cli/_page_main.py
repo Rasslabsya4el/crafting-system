@@ -15,7 +15,7 @@ from crafting_system.config import load_config
 from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.targets import StartKind, buy_spec_of
 
-from ._plan_file import load_plan
+from ._plan_file import PlanFileError, load_plan
 from ._report import build_report
 from ._route_view import write_route_page
 
@@ -40,7 +40,7 @@ def page_main(argv: Sequence[str], *, env: Mapping[str, str] | None = None, data
         spec = buy_spec_of(game, saved.target) if saved.target.start is StartKind.BOUGHT else None
         report = build_report(saved.plan, game)
         page = write_route_page(out, report, game, buy_spec=spec, cache_dir=config.cache_dir, target_name=saved.target_name)
-    except (DataError, OSError) as error:
+    except (DataError, PlanFileError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1
     print(f"Route view written to {page}")
