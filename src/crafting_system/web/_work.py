@@ -79,7 +79,7 @@ def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
                 policy = policy_document(report, None, target_name=name)
                 if plan.approximation is None:  # the page is not built for an approximate answer yet, as on the command line
                     spec = buy_spec_of(world.data, checked.target) if checked.target.start is StartKind.BOUGHT else None
-                    page = route_page(report, world.data, buy_spec=spec, cache_dir=world.config.cache_dir, target_name=name)
+                    page = route_page(report, world.data, buy_spec=spec, cache_dir=world.config.cache_dir)
         except BudgetExceeded as stop:  # past the net after the plan: the plan's record, its stop said, and no page (#1381, OR-13)
             policy, page = plan_record(plan, target_name=name, stopped=stop.binding.words()), None
     summary = {

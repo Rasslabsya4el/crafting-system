@@ -203,7 +203,7 @@ def test_the_route_page_row_1_is_the_recipe_with_the_bill_and_no_trade_link(tmp_
 
     page = tmp_path / "route.html"
     spec = load_buy_spec(R12_SPEC)  # any buy spec: the page leaves the trade link out for a recipe start
-    write_route_page(page, build_report(plan, TOY), TOY, buy_spec=spec, target_name="toy.yaml")
+    write_route_page(page, build_report(plan, TOY), TOY, buy_spec=spec)
     html = page.read_text(encoding="utf-8")
     assert "Vendor recipe: Boots with movement speed" in html and "Hand the vendor" in html
     assert "pathofexile.com/trade" not in html and "Search on the trade site" not in html  # the buy spec describes a bought item

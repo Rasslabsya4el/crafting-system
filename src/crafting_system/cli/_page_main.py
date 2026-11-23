@@ -39,7 +39,7 @@ def page_main(argv: Sequence[str], *, env: Mapping[str, str] | None = None, data
         out = Path(args.out) if args.out else Path(args.plan).with_name(f"{stem}.route.html")
         spec = buy_spec_of(game, saved.target) if saved.target.start is StartKind.BOUGHT else None
         report = build_report(saved.plan, game)
-        page = write_route_page(out, report, game, buy_spec=spec, cache_dir=config.cache_dir, target_name=saved.target_name)
+        page = write_route_page(out, report, game, buy_spec=spec, cache_dir=config.cache_dir)
     except (DataError, PlanFileError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1

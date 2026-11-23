@@ -31,7 +31,7 @@ def planned():
 def _page(plan, target=None) -> str:
     """The page of `plan`; with `target`, with the trade link of its bought start item, as the command draws it."""
     spec = None if target is None else buy_spec_of(DATA, target)
-    return route_page(build_report(plan, DATA), DATA, buy_spec=spec, cache_dir=load_config().cache_dir, target_name="two.yaml")
+    return route_page(build_report(plan, DATA), DATA, buy_spec=spec, cache_dir=load_config().cache_dir)
 
 
 def test_a_saved_plan_read_back_draws_the_same_page(planned, tmp_path: Path):
