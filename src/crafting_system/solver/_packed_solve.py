@@ -31,7 +31,7 @@
    refuses what the quotient's certified (a class whose members hand the run to each other is a cycle of many states here and one state with
    a divided-out self-loop there: R17's seed round, 1.7e12 c, 0.00092 on the quotient and 0.0737 here, #1412), the merge is checked exact in
    integers instead (`_packed_merge.lumps_exactly`) and the quotient's certificate is carried to the members (`Certificate.lumped`); a merge
-   that is not exact is refused as before.
+   that is not exact is refused as before, and so is the unmerged graph (`merge=False`: no quotient to carry from, the check stays independent).
 
 The bound may exceed `tolerance` when the values are large next to the cheapest action (rounding amplification, as in
 `_certify.py`); the loop stops when the residuals reach the tolerance or the rounding floor. A solve the certificate then refuses (a bound above
@@ -933,7 +933,7 @@ def solve_packed(
     certificate = core.certificate if core.certificate.exact else certify(graph, value, solved, wanted=accept_bound)
     info["certify_seconds"] = round(time.perf_counter() - mark, 2)
     info["quotient_bound"] = core.certificate.bound
-    if not certificate.bound <= refuse_above and core.certificate.bound <= refuse_above and lumps_exactly(graph, cls, reduced, kernel_map):
+    if not certificate.bound <= refuse_above and core.certificate.bound <= refuse_above and reduced is not graph and _lumps(graph, cls, reduced, kernel_map, info):
         # float64 cannot measure on the whole graph what it measured on the quotient (#1412): a class whose members pass a run among themselves
         # is one state with a self-loop on the quotient, divided out there (`_divided`), and a cycle of many states here, whose margin is one
         # step. The merge, checked exact in integers on the graph itself, carries the quotient's certificate to the members
@@ -950,6 +950,14 @@ def solve_packed(
     action = lift_policy(graph, reduced, kernel_map, cls, core.action)
     info["seconds"] = round(time.perf_counter() - began, 2)
     return PackedSolution(value, action, certificate.bound, classes.count, reduced, cls, core.action, info)
+
+
+def _lumps(graph: PackedGraph, cls: np.ndarray, reduced: PackedGraph, kernel_map: np.ndarray, info: dict) -> bool:
+    """`lumps_exactly`, its seconds in `info["lump_check_seconds"]` (it runs only when the whole graph's measure refused)."""
+    mark = time.perf_counter()
+    found = lumps_exactly(graph, cls, reduced, kernel_map)
+    info["lump_check_seconds"] = round(time.perf_counter() - mark, 2)
+    return found
 
 
 def lift_policy(graph: PackedGraph, reduced: PackedGraph, kernel_map: np.ndarray, cls: np.ndarray, class_action: np.ndarray) -> np.ndarray:

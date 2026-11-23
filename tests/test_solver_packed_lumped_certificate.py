@@ -21,7 +21,7 @@ import pytest
 from test_solver_packed_long_sum_certificate import build
 
 from crafting_system.solver import ConvergenceError
-from crafting_system.solver import _packed_solve
+from crafting_system.solver import _packed_exact, _packed_solve
 from crafting_system.solver._packed import PackedBuilder
 from crafting_system.solver._packed_merge import Classes, exact_classes, lumps_exactly, quotient
 from crafting_system.solver._packed_solve import certify, solve_graph, solve_packed
@@ -122,3 +122,11 @@ def test_each_part_of_the_check_refuses_its_own_fault():
     assert not lumps_exactly(graph, cls, reduced, np.zeros_like(kernel_map) + reduced.num_kernels)  # a kernel map out of the quotient
     wrong_goal = Classes(np.array([1, 1, 1]), 2, 1)
     assert not lumps_exactly(graph, wrong_goal.cls, reduced, kernel_map)  # a goal in a class that is not one
+
+
+def test_the_unmerged_graph_keeps_its_own_check(monkeypatch):
+    # merge=False: the quotient is the graph itself, nothing is carried, and the float measure refuses as before (the exact solve in rational
+    # numbers, #1380, which would merge on its own, is switched off)
+    monkeypatch.setattr(_packed_exact, "EXACT_CLASSES", 0)
+    with pytest.raises(ConvergenceError):
+        solve_packed(swap(), merge=False, refuse_above=1e-3)
