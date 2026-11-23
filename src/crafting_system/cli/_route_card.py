@@ -748,7 +748,7 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
     for side in SIDES:
         rows, rest = _shared_rows([entry.rows[side] for entry in read])
         limit = _capacity(data, base_id, side, Rarity.MAGIC if only_magic else Rarity.RARE)
-        varies += [replace(row, marks=(*row.marks, side.value)) for row in dict.fromkeys(row for each in rest for row in each)]
+        varies += [replace(row, marks=(*row.marks, side.value)) for row in dict.fromkeys(row for each in rest for row in each) if row.tone != "any"]
         if reader.tracked:
             counts = [entry.junk[side] + len(each) for entry, each in zip(read, rest)]  # what a state holds beside the shared rows
             rows += [ANY_MOD] * min(min(counts), max(0, limit - len(rows)))
