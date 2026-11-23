@@ -12,8 +12,10 @@ The caller gives the system (`_packed_linear.Sparse`): a square sparse matrix in
 the factor `scale` its first `n` rows were multiplied by (the other rows have a right-hand side of 0). Nothing here judges an answer: the caller
 measures it as any other (the backward error, the forward estimate, then the certificate of the policy's values).
 
-The factorisation asks the run's memory net first (`parallel.active_memory_net`, as the bound's solve does, #1366): the factors hold at most
-`ILU_FILL` times the entries of the matrix, and it is not begun when what the process holds and that would reach the net.
+The factorisation asks the run's memory net first (`parallel.active_memory_net`, as the bound's solve does, #1366), and is not begun when what the
+process holds and what it takes would reach the net: SuperLU sets aside room for each of the two factors at `ILU_FILL` times the entries of the
+matrix, beside the matrix's own copies and the work vectors (R17: 5.2M entries, so about 2.8 GB, where the probe's process peaked at 3.0 GB). The
+factorisation is one call that cannot be cut, so no time net stops it once begun (R17: 146 s).
 
 Uses scipy, the one file of `solver/` that does (ADR-0010 amended, #1484).
 """
@@ -29,7 +31,8 @@ from crafting_system import parallel
 
 ILU_DROP = 1e-4  # the drop tolerance of the incomplete factors (the probe's: R17's system to 6.6e-16 in 13 steps)
 ILU_FILL = 20  # the most the factors may hold, in times the entries of the matrix (SuperLU's bound; R17's held 3.5 times)
-ILU_BYTES = 12  # an entry of the factors: a float64 and its int32 index
+ILU_BYTES = 12  # an entry of the factors or of the matrix: a float64 and its int32 index
+COPIES = 3  # the matrix held by the caller's triplets, as columns for SuperLU and as rows for the products
 VECTORS = 16  # the work vectors of a solve, each of the size of the system (BiCGSTAB's, the right-hand side, the factors' own)
 
 
@@ -52,7 +55,7 @@ class Preconditioned:
         self.max_iter = BICGSTAB_ITERATIONS
         fill = ILU_FILL if fill is None else fill
         entries = len(system.value)
-        need = (fill * entries * ILU_BYTES + VECTORS * self.size * 8) / (1 << 20)
+        need = ((2 * fill + COPIES) * entries * ILU_BYTES + VECTORS * self.size * 8) / (1 << 20)
         net = parallel.active_memory_net()
         if net is not None:
             held = parallel.held_mb(under=max(net - need, 0.0), paced=False)  # never late: asked once, before the step that cannot be cut

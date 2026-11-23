@@ -751,7 +751,7 @@ def evaluate_policy(
     if found.preconditioned:  # the plain iteration stalled: the preconditioned solve was tried (#1484), with its time
         info["linear_preconditioned"] = info.get("linear_preconditioned", 0) + 1
         info["seconds_preconditioned"] = info.get("seconds_preconditioned", 0.0) + found.preconditioned.get("seconds", 0.0)
-        info["preconditioned"] = dict(found.preconditioned)  # (a record: its worst figures over the rounds, `_envelope.add_solve_info`)
+        info["preconditioned"] = dict(found.preconditioned)  # (the last of this solve; over the solves of a search, a record of the worst, `_envelope.add_solve_info`)
     if found.how == "preconditioned":
         info["linear_preconditioned_taken"] = info.get("linear_preconditioned_taken", 0) + 1
     if found.how == "exact":

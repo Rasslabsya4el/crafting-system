@@ -165,3 +165,13 @@ def test_a_run_that_never_stalls_takes_the_same_path_bit_for_bit(monkeypatch):
 
     assert asked == [] and "preconditioned" not in info and "linear_cycles" not in info and info["linear_iterations"] > 0
     assert with_it.tobytes() == without.tobytes()
+
+
+def test_scipy_is_imported_only_when_an_evaluation_stalls():
+    """Planning imports no scipy: `_packed_ilu` is imported by the linear solve only when it is needed (ADR-0010 amended)."""
+    import subprocess
+    import sys
+
+    code = "import sys, crafting_system.planner, crafting_system.cli, crafting_system.solver._packed_solve; print('scipy' in sys.modules, 'crafting_system.solver._packed_ilu' in sys.modules)"
+    found = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert found.stdout.split() == ["False", "False"]
