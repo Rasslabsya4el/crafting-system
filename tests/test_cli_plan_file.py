@@ -80,3 +80,14 @@ def test_a_save_that_fails_leaves_no_file(tmp_path: Path):
     with pytest.raises(TypeError):
         save_plan(tmp_path / "bad.plan", gen(), None, DATA)  # a generator does not pickle
     assert list(tmp_path.iterdir()) == []
+
+
+def test_a_plan_made_on_other_game_data_is_refused(planned, tmp_path: Path, monkeypatch):
+    from crafting_system.cli import _plan_file
+
+    plan, target = planned
+    path = save_plan(tmp_path / "two.plan", plan, target, DATA, "two.yaml")
+    monkeypatch.setattr(_plan_file, "_identity", lambda data: "another snapshot")
+
+    with pytest.raises(PlanFileError, match="other game data"):
+        load_plan(path, DATA)

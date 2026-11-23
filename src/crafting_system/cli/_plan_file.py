@@ -114,6 +114,8 @@ def load_plan(path: Path, data: GameData) -> SavedPlan:
                 raise PlanFileError(f"{path} is not a plan this code can read ({error!r})") from error
     finally:
         sys.setrecursionlimit(limit)
+    if not isinstance(identity, str):  # a file of the first format had no identity
+        raise PlanFileError(f"{path} was saved by an older version of --save-plan: plan again")
     if identity != _identity(data):
         raise PlanFileError(f"{path} was planned on other game data ({identity}) than this one ({_identity(data)})")
     return SavedPlan(*fields)
