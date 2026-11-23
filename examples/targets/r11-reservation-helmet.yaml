@@ -18,8 +18,8 @@
 #     dex_armour tag). The base below is Lion Pelt.
 #   * "Fractured Chaos Resistance": the guide says "Buy a Fractured Chaos Resistance Base" and names no
 #     tier, so the leaf takes any tier (`min_tier: any`, as R12 does for its fractured resistance). The
-#     start item below is the tier-1 one, +(31-35)%, the tier the buy spec prices (OR-3); the guide
-#     accepts a cheaper tier of the fractured mod too, and the file makes up no second start item for it.
+#     start item below is written as the tier-1 one, +(31-35)%, and is bought at any tier (`any_tier: true`, #522): the buy spec
+#     asks no minimum, as the guide's words and the leaf allow (OR-3, OR-4).
 #   * "Evasion/Life prefixes you are happy with", "Total Evasion On Helmet - Ideally around 1900" and "+# to Maximum Life -
 #     Ideally > 95": Evasion tier 1 to tier 3 and Life tier 1. This is the owner's reading of 2026-11-13 (ticket #895, OR-45): he read
 #     the page as a player and fixed the target, because a helmet with a low Evasion or Life tier is not one a player is happy
@@ -118,6 +118,10 @@ start_item:
       values: [33]
       # Locked in place by a Fracturing Orb.
       fractured: true
+      # Bought at any tier (#522, OR-3, OR-4): the guide says "Buy a Fractured Chaos Resistance Base" and names no tier, the
+      # requirement above takes any tier, and a fractured mod never changes, so its tier changes nothing else in the plan. The buy
+      # spec asks no minimum, and the price key says "(any tier)"; the tier-1 mod written here is the one the cards show.
+      any_tier: true
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
 # (base, item level, influence, start item), so nothing else describes it.

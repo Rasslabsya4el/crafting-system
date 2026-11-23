@@ -142,7 +142,7 @@
         "usable": 10,
         "used": 5
       },
-      "note": "stand-in (OR-7): a trade search has no daily history; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest instant-buyout listings of 10 fetched, 594 on the site, listed any time)",
+      "note": "hand-set start price (OR-44, #483): the exact item has 1 listing at 12,905 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (any ring base, item level 75 or more): the mean of the 5 cheapest instant-buyout listings of 594 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
@@ -151,11 +151,11 @@
         "exact_price": 12905.000000000002,
         "for_item": "any ring base, item level 75 or more",
         "item": "wider",
-        "kind": "trade",
+        "kind": "hand-set",
         "league": "Allflame",
         "listings": 5
       },
-      "source": "trade-api"
+      "source": "hand-set"
     },
     "Armourer's Scrap": {
       "chaos": 0.07683,
@@ -1832,7 +1832,7 @@
       },
       "source": "poe.ninja-history"
     },
-    "Lion Pelt, item level 84, fractured +(31-35)% to Chaos Resistance": {
+    "Lion Pelt, item level 84, fractured +#% to Chaos Resistance (any tier)": {
       "chaos": 20.0,
       "detail": {
         "date": "2026-11-10",
@@ -1896,7 +1896,7 @@
         "usable": 10,
         "used": 5
       },
-      "note": "stand-in (OR-7): a trade search has no daily history; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest instant-buyout listings of 10 fetched, 43 on the site, listed any time)",
+      "note": "hand-set start price (OR-44, #483): the exact item has 3 listings at 3,617 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (item level 84 or more): the mean of the 5 cheapest instant-buyout listings of 43 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
@@ -1905,11 +1905,11 @@
         "exact_price": 3616.7333333333336,
         "for_item": "item level 84 or more",
         "item": "wider",
-        "kind": "trade",
+        "kind": "hand-set",
         "league": "Allflame",
         "listings": 5
       },
-      "source": "trade-api"
+      "source": "hand-set"
     },
     "Lucent Fossil": {
       "chaos": 5.82,
@@ -2355,7 +2355,7 @@
       },
       "source": "poe.ninja-history"
     },
-    "Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance": {
+    "Paua Amulet, item level 84, fractured +#% to Lightning Resistance (any tier)": {
       "chaos": 1.0,
       "detail": {
         "date": "2026-11-10",
@@ -2415,7 +2415,7 @@
         "usable": 10,
         "used": 5
       },
-      "note": "stand-in (OR-7): a trade search has no daily history; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest instant-buyout listings of 10 fetched, 902 on the site, listed any time)",
+      "note": "hand-set start price (OR-44, #483): the exact item has 1 listing at 20 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (any amulet base, item level 75 or more, a lower minimum): the mean of the 5 cheapest instant-buyout listings of 902 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
@@ -2424,11 +2424,11 @@
         "exact_price": 20.0,
         "for_item": "any amulet base, item level 75 or more, a lower minimum",
         "item": "wider",
-        "kind": "trade",
+        "kind": "hand-set",
         "league": "Allflame",
         "listings": 5
       },
-      "source": "trade-api"
+      "source": "hand-set"
     },
     "Penetrating Arrow Quiver (ilvl 81)": {
       "chaos": 3.2,
@@ -3851,7 +3851,7 @@
         "usable": 10,
         "used": 5
       },
-      "note": "stand-in (OR-7): a trade search has no daily history; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest instant-buyout listings of 10 fetched, 155 on the site, listed any time)",
+      "note": "hand-set start price (OR-44, #483): the exact item has 9 listings at 249 Chaos on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (item level 84 or more): the mean of the 5 cheapest instant-buyout listings of 155 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
@@ -3860,11 +3860,11 @@
         "exact_price": 249.48000000000002,
         "for_item": "item level 84 or more",
         "item": "wider",
-        "kind": "trade",
+        "kind": "hand-set",
         "league": "Allflame",
         "listings": 5
       },
-      "source": "trade-api"
+      "source": "hand-set"
     },
     "Sorcerer Boots, item level 86-100": {
       "chaos": 43.82409,
@@ -4048,7 +4048,7 @@
         "usable": 10,
         "used": 5
       },
-      "note": "stand-in (OR-7): a trade search has no daily history; the reading of 2026-11-10 from routes-allflame-2026-11-10.json is kept (mean of the 5 cheapest instant-buyout listings of 10 fetched, 164 on the site, listed any time)",
+      "note": "hand-set start price (OR-44, #483): the exact item has no listing on 2026-11-10, which is not what a player pays, so the number is the trade reading of 2026-11-10 of a wider item (rarity nonunique, item level 78 or more): the mean of the 5 cheapest instant-buyout listings of 164 on the site; the stored query is that search. The owner's decision of 2026-11-12 on #495 keeps this price, marked, until the planner buys any fitting item (#354, #359)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
@@ -4056,11 +4056,11 @@
         "exact_listings": 0,
         "for_item": "rarity nonunique, item level 78 or more",
         "item": "wider",
-        "kind": "trade",
+        "kind": "hand-set",
         "league": "Allflame",
         "listings": 5
       },
-      "source": "trade-api"
+      "source": "hand-set"
     },
     "Turbulent Catalyst": {
       "chaos": 1.92,

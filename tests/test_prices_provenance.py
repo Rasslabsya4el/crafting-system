@@ -15,9 +15,10 @@ from ninja_support import ninja, ninja_fixture  # noqa: F401  (ninja is a fixtur
 from crafting_system.prices import PriceEntry, PriceFile, load_price_file, write_price_file
 from crafting_system.prices.fetch import fetch_price_file
 from crafting_system.prices.poe_ninja import parse_overview
-from crafting_system.prices.price_marks import DEPTH, EARLIER, NO_DEPTH, NOT_RECORDED, NOT_RECORDED_WORDS, OLD, OTHER_LEAGUE, STAND_IN, TRADE_UNREAD, price_marks, units_text
+from crafting_system.prices.price_marks import HAND_SET_MARK, DEPTH, EARLIER, NO_DEPTH, NOT_RECORDED, NOT_RECORDED_WORDS, OLD, OTHER_LEAGUE, STAND_IN, TRADE_UNREAD, price_marks, units_text
 from crafting_system.prices.provenance import (
     EXCHANGE,
+    HAND_SET,
     HISTORY,
     OVERRIDE,
     PREVIOUS_LEAGUE,
@@ -184,6 +185,20 @@ def test_a_stand_in_for_a_wider_item_says_what_the_exact_item_has(listings, pric
 
     assert codes(marks) == [STAND_IN]
     assert marks[0].reason == words
+
+
+def test_a_hand_set_price_of_the_tests_is_marked_and_one_set_from_a_wider_search_says_what_the_exact_item_has():
+    """OR-44 (#483): the tests' price file sets a number by hand where the exact item's market is not what a player pays (R10's boots: 9
+    listings at 249 Chaos), and marks it. Unlike a user's hand override it is never a plain fact, and the reading day it was set from
+    (102 days after the week-one file) is not judged against the file's day: the mark says what the number is."""
+    later = Provenance(HAND_SET, "Allflame", "2026-11-10", 5.0, "units", 5, WIDER, "item level 84 or more", 9, 249.48)
+    marks = price_marks(entry(17.0, later, "hand-set"), FILE, uses=1.0)
+
+    assert codes(marks) == [HAND_SET_MARK, STAND_IN]
+    assert marks[0].reason == "a hand-set price (OR-44): the exact item's market is not what a player pays"
+    assert marks[1].reason == "price of a wider item; the exact item has 9 listings at 249 Chaos"
+    assert codes(price_marks(entry(5.0, Provenance(HAND_SET, "Allflame", "2026-07-31"), "hand-set"), FILE, uses=1e9)) == [HAND_SET_MARK]
+    assert derive("hand-set", None, "Allflame", "2026-07-31").kind == HAND_SET
 
 
 def test_a_hand_price_and_a_default_are_not_approximate_inputs():

@@ -99,6 +99,8 @@ def same_name_bases(data: GameData, base_id: str) -> tuple[str, ...]:
     return tuple(ids) if base_id in ids else tuple(sorted({*ids, base_id}))
 
 
+_ROLL = re.compile(r"\(-?\d+(?:\.\d+)?--?\d+(?:\.\d+)?\)")  # a rolled range of a mod text, "(31-35)"
+
 def item_level_window(data: GameData, target: Target) -> tuple[int, int]:
     """(the target's item level, the highest item level whose mod pool is the same): the levels one bought base can have."""
     group = level_groups(data, target, target.item_level)[0]
@@ -162,6 +164,10 @@ def buy_spec_of(data: GameData, target: Target, *, strands: int = 0) -> BuySpec:
         if entry.crafted:
             raise StartBuyError(f"the start mod {entry.mod_id} is crafted: a crafted mod is not bought on the trade site")
         mod = data.mods[entry.mod_id]
+        if entry.mod_id in target.start_any_tier:  # bought at any tier of its family (#522): no minimum, and the key says so
+            _minimum(mod)  # the same one-stat check
+            mods.append((BuyMod(_plain(mod.text or ""), None, entry.fractured), f"{_ROLL.sub('#', _plain(mod.text or ''))} (any tier)"))
+            continue
         mods.append((BuyMod(_plain(mod.text or ""), _minimum(mod), entry.fractured), _plain(mod.text or "")))
     name = _key(_base_label(data, base), rarity, low, high, influences, item.corrupted, [(buy.fractured, shown) for buy, shown in mods])
     return BuySpec(

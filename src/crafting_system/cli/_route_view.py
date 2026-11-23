@@ -54,6 +54,7 @@ mean plus the start price (`StepRow.cost` holds the number for a test). Reaches 
 what `_route_card` already reads.
 """
 
+import dataclasses
 import json
 import math
 from collections import Counter
@@ -68,6 +69,7 @@ from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
+from crafting_system.prices.query_compare import searched_spec
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
@@ -758,7 +760,7 @@ class _View:
         if action.label == RESTART:
             if self.first is not None:
                 return "Restart: make the start item at the vendor again"
-            name = self.plan_name(self.plan.start_price.name)
+            name = self.start_name()
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
         offer = self.plan.offer_of(action).offer
         action = offer.action
@@ -845,13 +847,51 @@ class _View:
             cost.append(price.mark)
         if price.taken_for:
             cost.append(price.taken_for)
+            cost.append(self.wider_advice())
         fields = _fields(
             _plain("Accepts", *self.start_accepts()),
             self.trade_field(),
             _plain("Cost per use", *cost),
         )
-        title = f"Buy {self.plan_name(price.name)}" if price.name else "Start item"
+        title = f"Buy {self.start_name()}" if price.name else "Start item"
         return StepRow(1, title, fields, self.start_card(), self.anchor(1), final, price.chaos)
+
+    def start_name(self) -> str | None:
+        """The bought start item in words: its price name, or, when the price is of a wider item, that item as searched (#937)."""
+        price = self.plan.start_price
+        if price.searched is not None and self.buy is not None and self.buy.item:
+            return self.buy.item
+        return self.plan_name(price.name)
+
+    def any_base(self) -> tuple[str, str] | None:
+        """(the planned base's name, "any <kind> base") when the start price's search takes any base of the kind, else None (#937)."""
+        if self.plan.start_price.searched is None or self.buy is None or self.first is not None:
+            return None
+        spec = self.buy_spec_words()
+        return None if spec is None else (self.data.base_items[self.plan.target.base_id].name, spec)
+
+    def buy_spec_words(self) -> str | None:
+        """"Ring, any base" when the buy step's first line names no base type ("Rare, any ring base"), else None."""
+        first = self.buy.accepts[0] if self.buy is not None and self.buy.accepts else ""
+        marker = ", any "
+        if marker not in first or not first.endswith(" base"):
+            return None
+        kind = first.split(marker, 1)[1][: -len(" base")]
+        return f"{kind[:1].upper()}{kind[1:]}, any base"
+
+    def wider_advice(self) -> str:
+        """One line a player acts on when the start is priced as a wider item: what to buy, and what the exact item costs (#483, #937)."""
+        entry = self.plan.prices.prices.get(self.plan.start_price.name or "")
+        p = None if entry is None else entry.provenance
+        if p is None or p.exact_listings is None:
+            exact = "the exact item's own listings were not read"
+        elif p.exact_listings == 0 or p.exact_price is None:
+            exact = f"the exact item had {'no' if p.exact_listings == 0 else p.exact_listings} listing{'' if p.exact_listings == 1 else 's'} on {p.date}"
+        else:
+            listings = f"{p.exact_listings} listing{'' if p.exact_listings == 1 else 's'}"
+            exact = f"the exact item had {listings} on {p.date}, at {money(p.exact_price)}{'' if p.exact_listings == 1 else ' on average'}"
+        planned = self.plan_name(self.plan.start_price.name) or "the item of the target file"
+        return f"what to do: buy the cheapest item the trade link shows; the plan is worked out on {planned}, and {exact}, so a player buys the wider item"
 
     def step_row(self, step: Step) -> StepRow:
         ask()  # the report's memory net (#1381)
@@ -1017,7 +1057,22 @@ def build_section(
     view = _View(inp, data, buy, prefix, route_field)
     rows = [view.buy_row(final=not view.flow.steps)]
     rows += [view.step_row(step) for step in view.flow.steps]
-    return RouteSection(inp.label, view.goal_card(), tuple(rows), anchor)
+    goal = view.goal_card()
+    base = view.any_base()
+    if base is not None:  # the start is priced as any base of its kind: no card promises the planned base's name or implicit (#937)
+        rows = [
+            dataclasses.replace(row, after=_any_base(row.after, base), branches=tuple(dataclasses.replace(b, card=_any_base(b.card, base)) for b in row.branches))
+            for row in rows
+        ]
+        goal = dataclasses.replace(goal, target=_any_base(goal.target, base))
+    return RouteSection(inp.label, goal, tuple(rows), anchor)
+
+
+def _any_base(card: ItemCard, base: tuple[str, str]) -> ItemCard:
+    """`card` with the planned base (`base[0]`) named as any base of its kind (`base[1]`) and no implicit: the bought base may be another."""
+    if card.name != base[0]:
+        return card
+    return dataclasses.replace(card, name=base[1], implicits=())
 
 
 # --- the page ------------------------------------------------------------------------------------------------
@@ -1217,7 +1272,9 @@ def route_page(
     buy = None
     if buy_spec is not None:
         searchable = [mod for mod in data.mods.values() if mod.text]  # a mod with no text (a veiled one) cannot be searched by
-        buy = buy_step(buy_spec, plan.prices.league, searchable, _trade_stats(cache_dir))
+        searched = plan.start_price.searched  # a start priced as a wider item: the step names and links what was priced (#937, OR-7)
+        spec = buy_spec if searched is None else searched_spec(buy_spec, searched)
+        buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
     policy = build_section(route_input(plan, report.interval), data, buy, anchor="policy", route_field=not stacked)
     sections = (policy,)

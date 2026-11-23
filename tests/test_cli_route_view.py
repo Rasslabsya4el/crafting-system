@@ -355,7 +355,7 @@ def test_the_buy_step_of_a_bought_target_always_has_the_trade_link_and_without_t
     page = (tmp_path / "a" / "out" / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
 
     assert "Accepts" in page and "Rare Paua Amulet" in page and "item level 84 or more" in page
-    assert "fractured: +#% to Lightning Resistance (at least 12)" in page
+    assert "fractured: +#% to Lightning Resistance<" in page  # bought at any tier (#522): no minimum
     assert "not in the link: +#% to Lightning Resistance" in page and TRADE_LINK in page
 
 
@@ -990,7 +990,12 @@ def test_the_buy_step_prints_the_line_next_to_the_price_and_a_price_for_the_same
     wider = build_section(route_input(plan_with_a_wider_price()), DATA).rows[0]
     same = build_section(route_input(r12_plan), DATA).rows[0]
 
-    assert lines_of(wider, "Cost per use") == ["4 c", "price taken for a wider item (any item level)"]
+    assert lines_of(wider, "Cost per use") == [
+        "4 c",
+        "price taken for a wider item (any item level)",
+        "what to do: buy the cheapest item the trade link shows; the plan is worked out on Paua Amulet, item level 84-100, fractured "
+        "+#% to Lightning Resistance (any tier), and the exact item's own listings were not read, so a player buys the wider item",
+    ]  # #483, #937: one line a player acts on
     assert lines_of(same, "Cost per use") == ["4 c"]
 
 
