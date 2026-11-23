@@ -179,6 +179,33 @@ The build asks such an action once for each multiset of the kept slots at a key 
 answer, as under `SHARE_VIEWS`; `stats.kept_pairs`), and primes it there alone (`_prime`). The pairs left out still count as pairs. The model
 built both ways is the same on the hand-worked bow with the suffixes locked, exact and approximate.
 
+**The sides an action carries (#1192).** A Beastcraft side swap adds a mod drawn from one side's pool at the beast's level and removes one
+mod of the other side uniformly (none when a lock keeps it). Its policy is `ALL` (it reads the pool weight at the beast's level), with the
+pure junk made once per token (`alike_of`); the relevant multisets of both sides were still every one, and each member built one item per
+mod of the pool and split them all: on R04's 15 offers 466 of the first 600 s of the build, 238,509 pairs for 65,670 carried views.
+
+*Lemma.* Let `a` declare the sides `C` carried (`Reads.carried`) and declare its draw at the key's influences (`Action.added_draw`: a swap
+declares none where the pool at the beast's level holds a family on both sides), and call a kind of `C` a blocker when some mod of a family
+of that draw's pool has it (`carried_sides`: an essence's forced mod can share a family with a mod of the other side). If two members `m1`,
+`m2` of the key have the same ordinary slots off `C` and on `C` of a blocker kind, and the same multiset of views (`view`: side, protected
+tags, what it gives the goal) of their other ordinary slots on `C`, then `a` refuses both or neither, and their kernels pushed through the
+key are equal.
+
+*Argument.* The members hold the same flags, fractured, crafted and veiled slots and item state beyond the mods (the lemma of the views), so
+a bijection `p` of their non-blocker slots on `C` that keeps the views makes `m2` from `m1` by swapping, one at a time, an ordinary mod on `C`
+for another of its side; neither has a family of the draw's pool (their kinds are no blocker, and the item of a state holds a mod of each
+slot's kind). By the declaration (checked by the contract suite) each swap maps every outcome of `a` to the outcome with that mod swapped,
+at the same chance, and keeps the refusal. The successors of `m1` and `m2` so paired have ordinary slots of the same views: the same counts,
+tags and status (a per-leaf best of the same contributions with the key's own slots), so the same key. **Proved** so, given the declaration;
+and checked by brute force on every member of every key a seeded walk of the hand-worked bow meets, with the four swaps, and on the same
+world with the essence's forced prefix given the family of a suffix of the pool, where the prefix's view alone gave 110 of 2,161 groups two
+kernels (`tests/test_pattern_carried_sides.py`).
+
+The build asks such an action once for each carried view at a key (`SHARE_CARRIED`: the first member with it; the others take its answer, as
+under `SHARE_VIEWS`; counted in `stats.view_pairs`), and primes it there alone (`_prime`). The pairs left out still count as pairs. The model
+built both ways is the same on the hand-worked bow (exact and approximate) and on a counted build of R04's quiver with the swaps, start value
+to the last bit.
+
 **The veiled slots (#828, ADR-0026).** The veiled placeholder and the mods unveiled from the pool (the kinds `VeiledPrefix`, `VeiledSuffix` and
 `^<family>`) are held by the key exactly, as the crafted slots are (`PatternKey.veiled`), and are left out of its counts and tags; the universe
 holds none of them, so a member holds the key's veiled slots and no other (never a double veil, which every veiled action refuses as a model
@@ -395,6 +422,7 @@ SHARE_KEY_REFUSALS = True  # such a pair of an action that names no family refus
 SHARE_ADDITIONS = True  # a certain addition (`Adds.only_named`) is asked at a key's members until one takes it (#1193); False: at every member
 SHARE_ALIKE = True  # under `ALL` the fills of the pure junk that an action cannot tell apart are offered at one of them (`Pattern.alike_of`, #1192); False: at every fill
 SHARE_KEPT = True  # an action that erases the ordinary mods is asked once for each multiset of the ordinary slots a key's lock keeps (`Pattern.kept_sides`, #1352); False: at every member
+SHARE_CARRIED = True  # an action that reads the ordinary slots of a side only as carried (`Reads.carried`) is asked once for each multiset of their views and of the other sides' slots at a key (`Pattern.carried_sides`, #1192); False: at every member
 SHARE_VIEWS = True  # an action that tells ordinary slots apart by what the key reads of them alone is asked once for each multiset of those views at a key (`Pattern.views_only`, #1338); False: at every member
 SHARE_FILLS = True  # under `ANY` and `ONE` a composition whose lightest fill is no item is offered at one fill that is (#1192); False: at every fill
 LUMP_ERASING = True  # an erasing action's kernel in the build is the alike twin's (`Abstraction.alike_twin`, #1146, ADR-0065); False: the fine one
@@ -414,6 +442,13 @@ class Mode(StrEnum):
     EXTREMES = "extremes"
     RELAXED = "relaxed"
     ALL = "all"
+
+
+class _Carried(NamedTuple):
+    """What an action carries at a key (`Pattern.carried_sides`): the sides it declares, and the base kinds of those sides it reads as they are."""
+
+    sides: frozenset
+    blockers: frozenset
 
 
 class PatternKey(NamedTuple):
@@ -827,6 +862,7 @@ class Pattern:
         self._snapshot_reps: dict[PatternKey, CompressedState] = {}  # a snapshot's key -> the first snapshot of it seen: the one the members hold
         self._snapshot_orders: dict[PatternKey, tuple] = {}
         self._partners: dict[frozenset, bool] = {}
+        self._carried: dict[tuple, _Carried | None] = {}  # (action, influences) -> what it carries (`carried_sides`)
         self._alike: dict[tuple, tuple | None] = {}  # (action, the locked sides of a key) -> what the action reads of the pure junk of each side (`alike_of`)
         self._tokens: dict[tuple, int] = {}  # (influences, side, type, what is read) -> the number of what a family of the type shows the reader (`_token`)
         self._token_ids: dict[tuple, int] = {}
@@ -1090,6 +1126,55 @@ class Pattern:
             return None
         probe = CompressedState(key.flags, key.fractured, key.status, tuple(key.crafted), *self.held_of(key))
         return None if self.ab._erases(probe, action) else self.ab._kept_sides(probe, action)
+
+    def carried_sides(self, action: Action, key: PatternKey) -> "_Carried | None":
+        """What `action` carries at the members of `key` (`Reads.carried`, #1192): the sides, and the kinds of those sides it does not carry. None
+        when it declares no side, or declares no draw at the key's influences (`Action.added_draw`: none where the pool at the level it draws holds
+        a family on both sides).
+
+        A slot on a carried side whose kind some mod of a family of the draw's pool has (an essence's forced mod can share a family with a mod of
+        the other side) takes that family out of the draw: such a kind is read as it is (`blockers`), the others by their views."""
+        if not SHARE_CARRIED:
+            return None
+        sides = self.reads(action).carried
+        if not sides:
+            return None
+        influences = key.flags.influences
+        memo = (action, influences)
+        found = self._carried.get(memo, self)
+        if found is not self:
+            return found
+        found = None
+        ab = self.ab
+        probe = Item.build(ab.data, base_id=ab.base_id, item_level=ab.item_level, rarity=Rarity.RARE, influences=influences)
+        drawn = action.added_draw(ab.data, probe)
+        if drawn is not None:
+            families = {family for pooled in drawn.pool for entry in pooled.mods for family in entry.mod.families}
+            names = {side.value for side in sides}
+            blockers = set()
+            for mod in ab.data.mods.values():
+                if mod.generation_type in names and not families.isdisjoint(mod.families):
+                    blockers.add(_base(ab.kind_of(mod, influences)))
+            found = _Carried(frozenset(sides), frozenset(blockers))
+        self._carried[memo] = found
+        return found
+
+    def carried_view(self, member: CompressedState, carried: "_Carried") -> tuple:
+        """What the kernel of an action that carries `carried` reads of `member` beyond the key (`carried_sides`): the multiset of the views of
+        the ordinary slots it carries (as `view`) and the other ordinary slots themselves."""
+        seen: Counter = Counter()
+        exact = []
+        for slot in member.slots:
+            if slot.crafted or self.is_veiled(slot):
+                continue
+            if slot.side in carried.sides and _base(slot.kind) not in carried.blockers:
+                tagset = self._tag_kind.get(slot.kind)
+                if tagset is None:
+                    tagset = self._tag_kind[slot.kind] = _tagset(slot.kind)
+                seen[(slot.side, tagset, slot.contribution)] += 1
+            else:
+                exact.append(slot)
+        return frozenset(seen.items()), tuple(exact)
 
     @staticmethod
     def kept_view(member: CompressedState, sides: frozenset) -> tuple:
@@ -2139,6 +2224,10 @@ class PatternBuilder:
             ]
             if kept is not None:  # the build asks the first member of each multiset of the kept slots (#1352): the others make the same pair
                 asked = list({self.pattern.kept_view(member, kept): member for member in reversed(asked)}.values())
+            else:
+                carried = self.pattern.carried_sides(offer.action, key)
+                if carried is not None:  # ... and of each carried view (#1192): the others give the same pushed kernel
+                    asked = list({self.pattern.carried_view(member, carried): member for member in reversed(asked)}.values())
             for member in asked:
                 (twins if LUMP_ERASING and self.ab.lumps(member, offer.action) else requests).append((member, offer.action))
         self.ab.prime(requests, ask=ask)
@@ -2211,7 +2300,8 @@ class PatternBuilder:
             refused_at_key = False  # a member's refusal class, which is the key's (`keyed`), holds a refusal: every member's does
             seen: set[int] = set()
             sides = pattern.kept_sides(offer.action, key)  # the sides of the only ordinary slots the action reads at this key (#1352)
-            by_view: dict[Hashable, int] | None = {} if sides is not None or pattern.views_only(offer.action) else None  # the views of a member -> its answer (#1338, #1352)
+            carried = pattern.carried_sides(offer.action, key) if sides is None else None  # the sides it reads as carried (#1192)
+            by_view: dict[Hashable, int] | None = {} if sides is not None or carried is not None or pattern.views_only(offer.action) else None  # the views of a member -> its answer (#1338, #1352)
             last = ab.quality_last_action(offer.action)  # a catalyst: an action only of a member that meets all but the quality (#159)
             if policy[0] is Mode.RELAXED:
                 relaxed = self._relaxed_rows(key, oi, offer, members, last, tick)
@@ -2247,9 +2337,14 @@ class PatternBuilder:
                     continue
                 view = None
                 if by_view is not None:
-                    view = pattern.view(member) if sides is None else pattern.kept_view(member, sides)
+                    if sides is not None:
+                        view = pattern.kept_view(member, sides)
+                    elif carried is not None:
+                        view = pattern.carried_view(member, carried)
+                    else:
+                        view = pattern.view(member)
                     kid = by_view.get(view)
-                    if kid is not None:  # a member with these views was asked: its answer is this one's (module docstring, #1338, #1352)
+                    if kid is not None:  # a member with these views was asked: its answer is this one's (module docstring, #1338, #1352, #1192)
                         if sides is None:
                             stats.view_pairs += 1
                         else:
