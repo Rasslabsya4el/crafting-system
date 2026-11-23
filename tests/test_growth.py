@@ -531,8 +531,7 @@ def _lock_world():
     (an essence, a reroll), 1 the suffix lock (a craft), 2 the prefix lock (a craft), 3 a beast that adds a lock (it draws which one, keeps
     the mods: what puts the lock back), 4 a reroll that adds a lock (it keeps no mod: no locker), 5 "chaos" (1 Chaos), 6 "fire" (2 Chaos),
     7 "influence" (150 Chaos), 8 an annulment (the cleaner). At the bare item "influence" has the best figure on A (1 in 2: 300 per A) and
-    "chaos" the worst (1 in 1,000); under the suffix lock, with B held, "chaos" keeps B and makes A 1 in 50 (50 per finish), "fire" 1 in 40
-    (80), "influence" 1 in 100 (15,000), and the spam is refused there (an essence on a locked item)."""
+    "chaos" the worst (1 in 1,000); the figures under a lock are each test's own."""
     table = _table(
         _entry("spam", 25.0, kind="reroll", at=RARE, chance={A: Fraction(1, 1000), B: Fraction(1, 77)}),
         _entry("lock suffixes", 353.0, kind="craft", locks=frozenset({Side.SUFFIX}), draws=False),
@@ -600,7 +599,7 @@ def test_a_reroll_s_figure_under_the_lock_is_read_at_the_item_holding_the_side_s
     table.views = {RARE: _Fake.Item([SimpleNamespace(mod_id="F", fractured=True), SimpleNamespace(mod_id="J", fractured=False)])}
     table.locking = lambda: SimpleNamespace(compress=lambda item: frozenset(entry.mod_id for entry in item.mods))
     table.under = {}
-    chances = {"chaos": Fraction(1, 50), "fire": Fraction(1, 40), "influence": Fraction(1, 100), "spam": None}
+    chances = {"chaos": Fraction(1, 50), "fire": Fraction(1, 40), "influence": Fraction(1, 20), "spam": None}
     seen = []
 
     def reach(abstraction, state, action, leaves):
@@ -613,8 +612,10 @@ def test_a_reroll_s_figure_under_the_lock_is_read_at_the_item_holding_the_side_s
     ranked = table.under_lock("suffix", RARE, A, frozenset({B}))
     # the item keeps its fractured mod, drops its other one, holds B's mod and the lock's crafted mod; the chance asked is A's and B's together
     assert {state for state, _leaves in seen} == {frozenset({"F", "B1", "LOCK"})} and {leaves for _state, leaves in seen} == {(A, B)}
-    # 1 / (1/50) = 50, 2 / (1/40) = 80, 150 / (1/100) = 15,000; the refused spam and the offers that are no reroll are not ranked
-    assert [(round(ratio, 6), table.entries[position].label) for ratio, position in ranked] == [(50.0, "chaos"), (80.0, "fire"), (15000.0, "influence")]
+    # each use pays the cheapest locker again (the beast, 238: the reroll takes the lock off with the prefixes): (150 + 238) x 20 = 7,760,
+    # (2 + 238) x 40 = 9,600, (1 + 238) x 50 = 11,950. On the price alone "chaos" would lead (50, 80, 3,000): R20's Chaos Orb against
+    # Reforge Influence. The refused spam and the offers that are no reroll are not ranked
+    assert [(round(ratio, 6), table.entries[position].label) for ratio, position in ranked] == [(7760.0, "influence"), (9600.0, "fire"), (11950.0, "chaos")]
     assert table.under_lock("suffix", RARE, A, frozenset({B})) is ranked  # read once
 
 

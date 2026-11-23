@@ -47,9 +47,12 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   - for each waited mod `x` and each side, the `PER_ROLE` rerolls of least cost over chance at the item under that lock (`under_lock`): the
     shape's item with its fractured mods, a mod of each other waited mod of that side and the lock's crafted mod, read on the model of the
     metamods. The chance is that one use leaves `x` and every held waited mod passing (`reach_bound` over them): it counts what the reroll
-    keeps, so one that takes the locked side off scores nothing there, and a reroll the lock refuses (an essence) is not ranked. Read at the
-    bare item the cheap rerolls of the whole item lead instead: on R20 Harvest Reforge Fire is 13th there on Burning Damage, first under the
-    suffix lock (#1429).
+    keeps, so one that takes the locked side off scores nothing there, and a reroll the lock refuses (an essence) is not ranked. Its cost
+    is its price and the cheapest locker's: a reroll under the lock rerolls the other side, and the lock, a crafted mod of that side, goes
+    with it, so each use pays a lock again. Read at the bare item the cheap rerolls of the whole item lead instead: on R20 Harvest Reforge
+    Fire is 13th there on Burning Damage, first under the suffix lock (#1429); and without the lock's price the Chaos Orb (1 c) leads Harvest
+    Reforge Influence (150.65 c) on Concentrated Effect under it, and the set it names plans at 429,990.79 c against the guide's
+    206,331.71 c: with it (Matron, 238 c) Influence comes first, (150.65 + 238) / 4.97% against the Chaos Orb's (1 + 238) / 2.02%.
   A side under whose lock no reroll is ranked names nothing (a lock pays only with a reroll under it). The step stays undiagnosed, so the
   round after the lock group reads its usual roles (on R20 the lock role read with them made a round of 15 offers that did not build in its
   share); a lock group that does not finish within its share ends nothing, its step's usual roles come next (`Grower.stop`). A step is
@@ -419,6 +422,8 @@ class OfferTable:
             return found
         data = self.data
         lock = min(lockers, key=lambda entry: (entry.draws, entry.cost, entry.position))  # the item is made with a lock that names its mod
+        # a reroll under the lock rerolls the other side, and the lock, a crafted mod of that side, goes with it: each use pays a lock again
+        relock = min(entry.cost for entry in lockers)
         try:
             item = view.changed(data, mods=tuple(entry for entry in view.mods if entry.fractured))
             for each in sorted(other):
@@ -445,7 +450,7 @@ class OfferTable:
             except (NotApplicableError, OutOfScopeError, ValueError):  # refused under the lock (an essence), or out of the model's scope
                 continue
             if bound is not None and bound > 0:
-                found.append((float(Fraction(entry.cost + entry.need) / bound), entry.position))
+                found.append((float(Fraction(entry.cost + entry.need + relock) / bound), entry.position))
         found.sort()
         return found
 
