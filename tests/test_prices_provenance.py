@@ -195,7 +195,7 @@ def test_a_hand_set_price_of_the_tests_is_marked_and_one_set_from_a_wider_search
     marks = price_marks(entry(17.0, later, "hand-set"), FILE, uses=1.0)
 
     assert codes(marks) == [HAND_SET_MARK, STAND_IN]
-    assert marks[0].reason == "a hand-set price (OR-44): the exact item's market is not what a player pays"
+    assert marks[0].reason == "a price set by hand: the exact item's own listings (few or none) are not what a player pays"
     assert marks[1].reason == "price of a wider item; the exact item has 9 listings at 249 Chaos"
     assert codes(price_marks(entry(5.0, Provenance(HAND_SET, "Allflame", "2026-07-31"), "hand-set"), FILE, uses=1e9)) == [HAND_SET_MARK]
     assert derive("hand-set", None, "Allflame", "2026-07-31").kind == HAND_SET

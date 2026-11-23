@@ -141,9 +141,9 @@ UNRECORDED = "Prismatic Fossil: 0.2 Chaos, poe.ninja exchange, Allflame, 2026-10
 UNRECORDED_WORDS = "where this price comes from is not recorded"
 UNRECORDED_INPUT = f"The price of Prismatic Fossil is 0.2 Chaos, an approximate input: {UNRECORDED_WORDS}. Source: poe.ninja exchange, Allflame, 2026-10-31."
 WIDER = "Thicket Bow, magic, item level 78-79, Hunter influence: 13 Chaos, trade site, instant buyout, Allflame, 2026-11-07, taken for a wider item (any rarity), 5 units behind it, the plan buys about 900"
-HAND_SET = "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed: 17 Chaos, hand-set for the tests (OR-44), Allflame, 2026-11-10, taken for a wider item (item level 84 or more), 5 units behind it"
-HAND_SET_WORDS = "a hand-set price (OR-44): the exact item's market is not what a player pays; price of a wider item; the exact item has 9 listings at 249 Chaos"
-HAND_SET_INPUT = f"The price of Sorcerer Boots, item level 84, fractured 30% increased Movement Speed is 17 Chaos, an approximate input: {HAND_SET_WORDS}. Source: hand-set for the tests (OR-44), Allflame, 2026-11-10."
+HAND_SET = "Sorcerer Boots, item level 84, fractured 30% increased Movement Speed: 17 Chaos, set by hand from trade listings, Allflame, 2026-11-10, taken for a wider item (item level 84 or more), 5 units behind it"
+HAND_SET_WORDS = "a price set by hand: the exact item's own listings (few or none) are not what a player pays; price of a wider item; the exact item has 9 listings at 249 Chaos"
+HAND_SET_INPUT = f"The price of Sorcerer Boots, item level 84, fractured 30% increased Movement Speed is 17 Chaos, an approximate input: {HAND_SET_WORDS}. Source: set by hand from trade listings, Allflame, 2026-11-10."
 fixtures(
     pl.check_price_source_shown,
     counter={

@@ -78,7 +78,7 @@ SOURCE_WORDS = {
     DEFAULT: "default price",
     RECIPE: "vendor upgrade recipe",
     ESTIMATE: "estimate, no market lists it",
-    HAND_SET: "hand-set for the tests (OR-44)",
+    HAND_SET: "set by hand from trade listings",  # OR-44: a number the tests' file sets by hand; a page says it in a player's words, no rule id (#483)
 }  # in a player's words, for the page and the report
 
 # the source strings of a price entry (`PriceEntry.source`) and the kind each one means

@@ -59,7 +59,7 @@ START = {
     route: (name, source, load_price_file(PRICES).prices[name].chaos)
     for route, name, source in (
         ("R04", "Penetrating Arrow Quiver [QuiverNew5], normal, item level 81", "poe.ninja"),
-        ("R14", "Thicket Bow, magic, item level 78-79, Hunter influence", "trade-api"),
+        ("R14", "Thicket Bow, magic, item level 78-79, Hunter influence", "hand-set"),  # OR-44, #483: set by hand from a search of any rarity but unique
     )
 }  # (price key, source, price): the price is read from the file, never typed, so it moves with the snapshot
 
