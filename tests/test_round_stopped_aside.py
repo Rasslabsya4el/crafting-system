@@ -5,7 +5,7 @@ Before #1500 such a round joined no later round and kept the last round, the one
 being due (`_rounds._all_ended`): no round held every offer, and the answer could never be proved over every method. R12 (the lightning
 amulet): the Harvest likelihood round stopped at its share of 142.7 s with the 235.04 c Chaos plan in hand, so its 4 offers and the 6
 resistance swaps set aside before it were searched with the plan's Harvest reforge in no round, though the missing mods' table of a round
-holding all 9,297 offers reaches the plan's own cost (40.93 c) at once (`.claude/scratch/t1500/P1`).
+holding all 9,297 offers reaches the plan's own cost (39.93 c after the 1 c start) at once (`.claude/scratch/t1500/P1`).
 
 The world here is three groups over three offers, a run with no net (the clock is the test's): offer 0 the base (its plan costs 10), offer 1
 the group whose round stops, offer 2 a group beaten by the plan in hand. The rounds' searches are stand-ins that raise what a round raises.
@@ -124,3 +124,22 @@ def test_held_again_is_read_only_for_a_stopped_round(status):
     assert record.closed and "held_again" not in record.document()
     assert not _rounds.RoundRecord(("x",), 1, _rounds.STOPPED, "", None, None, 0.0).closed
     assert not _rounds.RoundRecord(("x",), 1, _rounds.STOPPED, "", None, None, 0.0, carried=False, held_again=True).closed
+
+
+def test_a_last_round_that_finds_a_cheaper_plan_is_the_answer_and_still_closes_the_stopped_round():
+    # the round of every offer finds a plan of 7 (offer 1 with offer 2): it holds every offer, so its proof covers the stopped group
+    seen = []
+
+    def search(chosen, call):
+        seen.append(chosen)
+        if chosen == (0,):
+            return _plan(10.0)
+        if chosen == (0, 1, 2):
+            return _plan(7.0)
+        if 1 in chosen:
+            raise _rounds.Stopped("the time limit was reached", 4.0)
+        raise _rounds.Beaten(call.upper)
+
+    widened = _widen(search)
+    assert seen[-1] == (0, 1, 2) and widened.plan.mean_remaining == 7.0
+    assert widened.records[1].held_again and _rounds.all_closed(widened.records)

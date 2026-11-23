@@ -77,7 +77,7 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   way (#1500): it proved nothing, so the answer counts it closed only once that last round, which holds its offers with every other, closes.
   Before, it joined no later round and kept the last round from ever being due, so no round held every offer: R12's Harvest likelihood
   round stopped at its share and its 9,297 offers were never searched together, though the missing mods' table of that last round reaches the
-  plan's own cost (40.93 c) at once.
+  plan's own cost (39.93 c after the 1 c start) at once.
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
   figure no plan of its offers costs less than (OR-13). When no round made a plan, the answer says that no plan of the offered methods
