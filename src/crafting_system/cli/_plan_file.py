@@ -111,7 +111,7 @@ def load_plan(path: Path, data: GameData) -> SavedPlan:
             try:
                 identity, *fields = _Reader(file, data).load()
             except Exception as error:  # truncated, or written by other code: whatever the unpickler raises
-                raise PlanFileError(f"{path} is not a plan this code can read ({type(error).__name__}: {error})") from error
+                raise PlanFileError(f"{path} is not a plan this code can read ({error!r})") from error
     finally:
         sys.setrecursionlimit(limit)
     if identity != _identity(data):
