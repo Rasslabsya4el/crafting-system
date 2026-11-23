@@ -62,7 +62,8 @@ A round's graph differs from the last round's in the frontier only, so three thi
 * the solve starts from the last round's policy and values (`_warm`): a node keeps the action of the same tag, a new node is a tip and starts on its fake action.
   The start is a guess and costs the answer nothing: `solver._packed_solve.warm_policy` proves it proper (every state reaches the goal with positive chance, which for a
   finite chain is properness) or replaces it at the states that cannot finish by the cheapest path's action, and the policy iteration ends at the same fixed point
-  from any proper start. `SearchStats.solve_info` sums the solver's counts and seconds over the rounds (`warm_kept`, `warm_repaired`, matvecs, seconds of each stage).
+  from any proper start. `SearchStats.solve_info` sums the solver's counts and seconds over the rounds (`warm_kept`, `warm_repaired`, matvecs, seconds of each stage), and keeps
+  a record a solve met (`linear_limit`) as its count and worst figures (`add_solve_info`, #1468).
 
 **Convergence.** Each round expands at least one tip or realizes at least one offer (a greedy fake action at an expanded node always realizes the
 first offer it stands for, even on a tie), and both are finite: the search ends, in at most as many rounds as the graph has (state, offer) pairs.
@@ -138,8 +139,9 @@ import bisect
 import heapq
 import itertools
 import math
+import numbers
 import time
-from collections.abc import Callable, Hashable, Iterable, Iterator, Sequence
+from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Protocol
 
@@ -1410,12 +1412,7 @@ class Search[S]:
                 self.say(f"  {stopped} ({error})")
                 break
             self.stats.solve_seconds += time.perf_counter() - mark
-            for name, amount in info.items():
-                if amount is None:  # a figure the solver did not measure in this solve (a graph solved whole in its first evaluation)
-                    continue
-                if isinstance(amount, str):
-                    name, amount = f"{name}_{amount}", 1
-                self.stats.solve_info[name] = self.stats.solve_info.get(name, 0) + amount
+            add_solve_info(self.stats.solve_info, info)
             self.tags = np.full(graph.n, NO_ACTION, dtype=np.int32)
             chosen = core.action >= 0
             self.tags[chosen] = graph.act_tag[core.action[chosen]]
@@ -1456,6 +1453,8 @@ class Search[S]:
                 f"this solve {time.perf_counter() - mark:.1f} s on {graph.n:,} nodes, {graph.num_actions:,} actions, {graph.num_edges:,} edges stored: "
                 + ", ".join(f"{name} {amount:.4g}" if isinstance(amount, float) else f"{name} {amount}" for name, amount in sorted(info.items()))
             )
+            for words in solve_info_records(self.stats.solve_info, names=[name for name, amount in info.items() if isinstance(amount, Mapping)]):
+                self.say(f"  {words}")
             if not len(fake):
                 self.stats.touched = len(self.states)
                 self.upper = min(root * (1.0 + core.certificate.bound), self.upper if self.upper is not None else math.inf)  # the greedy policy is executable and its value is `root`
@@ -1573,6 +1572,60 @@ class Search[S]:
         return SearchResult(self.states, self.index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None)
 
 
+def add_solve_info(totals: dict, info: Mapping) -> None:
+    """Adds one solve's `info` into `totals` (`SearchStats.solve_info`), by the kind of each value, never by its name (#1468): a number is summed; a
+    string names an event, counted as `name_value`; None is a figure the solver did not measure (a graph solved whole in its first evaluation) and is
+    skipped; a mapping is a record of what one solve met (`linear_limit`: an evaluation taken at the limit of its method, with its states, residual,
+    amplification and why), kept as one record over the rounds: `solves` counts the solves that held it, each number of it is the worst (largest)
+    any of them said, each other value the last one said; anything else (a list, a set) is counted, as the solves that held it.
+    A dict was summed as a number until #1468, which ended a long run with a TypeError and lost its plan."""
+    for name, amount in info.items():
+        if amount is None:
+            continue
+        if isinstance(amount, str):
+            name, amount = f"{name}_{amount}", 1
+        if isinstance(amount, Mapping):
+            record = totals.get(name)
+            record = dict(record) if isinstance(record, Mapping) else {}
+            record["solves"] = record.get("solves", 0) + 1
+            for field_name, value in amount.items():
+                if field_name == "solves":
+                    continue
+                if _summable(value) and _summable(record.get(field_name)):
+                    record[field_name] = max(record[field_name], value)
+                else:
+                    record[field_name] = value
+            totals[name] = record
+        elif _summable(amount):
+            before = totals.get(name, 0)
+            totals[name] = before + amount if _summable(before) else amount
+        else:
+            totals[name] = (totals.get(name, 0) if _summable(totals.get(name, 0)) else 0) + 1
+
+
+def _summable(value) -> bool:
+    return isinstance(value, numbers.Number) and not isinstance(value, complex)
+
+
+def solve_info_records(totals: Mapping, names: Iterable[str] | None = None) -> list[str]:
+    """The records of `totals` (`add_solve_info`) in words, one line each, for the run's report: how many solves held it and the worst of each number,
+    e.g. "linear_limit in 3 solves: worst states 412, residual 2.1e-09, amplification 4.4e+05; last why: ..." (of `names` only, when given)."""
+    lines = []
+    for name in sorted(totals if names is None else names):
+        record = totals.get(name)
+        if not isinstance(record, Mapping):
+            continue
+        figures = [(field_name, value) for field_name, value in record.items() if field_name != "solves" and _summable(value)]
+        others = [(field_name, value) for field_name, value in record.items() if field_name != "solves" and not _summable(value)]
+        words = f"{name} in {record.get('solves', 0):,} solves"
+        if figures:
+            words += ": worst " + ", ".join(f"{field_name} {value:,}" if isinstance(value, numbers.Integral) else f"{field_name} {value:.3g}" for field_name, value in figures)
+        if others:
+            words += "; last " + ", ".join(f"{field_name}: {value}" for field_name, value in others)
+        lines.append(words)
+    return lines
+
+
 def slack_of(error: float) -> float:
     """How far, relative to its offers, a bound whose values were lowered by a certified relative `error` can stand above them: `(1 + e) / (1 - e) - 1
     = 2e / (1 - e)` (the values off by `e` either way), and no limit for an error of 1 or more (the values are then 0, #830). It was `3e`, which holds
@@ -1615,5 +1668,5 @@ class Beaten(Exception):
 
 __all__ = [
     "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "MemoryNet", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
-    "resident_mb",
+    "add_solve_info", "resident_mb", "solve_info_records",
 ]  # fmt: skip

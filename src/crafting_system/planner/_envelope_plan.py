@@ -41,7 +41,7 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
 from . import _limits
-from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb
+from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb, solve_info_records
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -579,6 +579,8 @@ def _envelope_run(
         if bound.complete:
             raise
         raise NoPolicy(f"{refusal}. {build_note(bound, expanded, len(offers))}", states=refusal.states) from refusal
+    for words in solve_info_records(result.stats.solve_info):  # what the search's solves met (an evaluation taken at its limit, #1468), over all its rounds
+        say(f"the search's solves: {words}")
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
     # the mean shown: of an exact answer to the solver's 1e-6; of a plan proved within a gap, or one a net stopped, to the error the search took its
     # figures at, and the limit says so when it is above 1e-6 (`mean_error_text`, #867): OR-33 asks for a plan with its gap, not a refusal
