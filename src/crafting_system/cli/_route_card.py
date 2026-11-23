@@ -509,6 +509,7 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
         else:
             side, text, tier_note = _leaf_slot(data, target.base_id, tiers, node.mod_ids, node.min_tier, target.item_level, node.tier_ok, forced)
             marks = ()
+        tier_note = _note(tier_note, roll_note(node.min_roll))
         return side, Slot(text, "wanted", (*((side.value,) if member else ()), *marks), tier_note)
 
     def add(nodes) -> None:
@@ -532,6 +533,21 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
     )
     implicits = (*_implicits(data, target.base_id), *(_wanted_implicit(data, wish) for wish in target.implicits))
     return ItemCard(data.base_items[target.base_id].name, properties, implicits, (), prefixes, suffixes, groups=tuple(groups))
+
+
+def roll_note(min_roll) -> str:
+    """The rolls a requirement asks of its mod, one per limited stat ("roll 12 or more"); "" for none. An explicit mod says it on the target
+    card and wherever a line names it, as an implicit does: the plan re-rolls until it is reached (#1433, R06's Attributes at 12)."""
+    return _note(*(f"roll {roll} or more" for roll in min_roll or () if roll is not None))
+
+
+def below_note(min_tier_of_leaf: bool, min_roll) -> str:
+    """Why a mod of a wanted family does not meet its leaf: its tier, or its roll under the one asked ("below roll 12")."""
+    rolls = [roll for roll in min_roll or () if roll is not None]
+    if not rolls:
+        return "tier too low"
+    below = "below roll " + " / ".join(map(str, rolls))
+    return below if not min_tier_of_leaf else f"tier too low or {below}"
 
 
 def _wanted_implicit(data: GameData, wish: ImplicitRequirement) -> Slot:
@@ -584,9 +600,10 @@ class _StateReader:
         """The side, text and tier note of the goal leaf number `index`."""
         if index not in self._leaves:
             leaf: Wanted = self.ab.goal.leaves[index]
-            self._leaves[index] = _leaf_slot(
+            side, text, note = _leaf_slot(
                 self.data, self.ab.base_id, self.tiers, leaf.mod_ids, leaf.min_tier, self.ab.item_level, leaf.tier_ok, self._forced
             )
+            self._leaves[index] = (side, text, _note(note, roll_note(leaf.min_roll)))
         return self._leaves[index]
 
     def wanted(self, indexes: Sequence[int], status: Status) -> Slot:
@@ -595,7 +612,8 @@ class _StateReader:
         for index in indexes:
             _, text, tier_note = self.leaf(index)
             texts.append(text if status is Status.PASSING else _hashes(text))
-            notes.append(tier_note if status is Status.PASSING else "tier too low")
+            leaf = self.ab.goal.leaves[index]
+            notes.append(tier_note if status is Status.PASSING else below_note(len(leaf.mod_ids) > 1, leaf.min_roll))
         return Slot(" / ".join(dict.fromkeys(texts)), "wanted", (), _note(*dict.fromkeys(notes)))
 
     def fractured(self, mod_id: str, contribution: tuple[Status, ...]) -> tuple[Side, Slot]:

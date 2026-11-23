@@ -787,7 +787,8 @@ class _View:
         if kind == "leaf":
             return self.leaf_text(key[1])
         if kind == "below":
-            return f"{self.reader.wanted([key[1]], Status.BELOW).text} · tier too low"
+            below = self.reader.wanted([key[1]], Status.BELOW)
+            return f"{below.text} · {below.note}"  # "tier too low", or "below roll 12" for a leaf that asks a roll (#1433)
         if kind == "crafted":
             return f"{self._mod(key[1])} · crafted"
         return key[1]  # a fractured mod's words, a rarity
