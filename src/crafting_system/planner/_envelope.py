@@ -1591,8 +1591,9 @@ def add_solve_info(totals: dict, info: Mapping) -> None:
             for field_name, value in amount.items():
                 if field_name == "solves":
                     continue
-                if _summable(value) and _summable(record.get(field_name)):
-                    record[field_name] = max(record[field_name], value)
+                if _summable(value) and _summable(record.get(field_name)):  # a figure that is not a number (nan) is the worst: it stays
+                    before = record[field_name]
+                    record[field_name] = value if value != value else before if before != before else max(before, value)
                 else:
                     record[field_name] = value
             totals[name] = record

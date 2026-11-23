@@ -50,3 +50,7 @@ def test_each_kind_of_value_is_added_by_its_rule():
     assert totals["linear_limit"] == {"solves": 2, "states": 5, "residual": 4e-9, "why": "b"}  # the worst figures, the last words
     assert totals["cut"] == 2  # a value of no other kind is counted
     assert solve_info_records(totals) == ["linear_limit in 2 solves: worst states 5, residual 4e-09; last why: b"]
+
+    add_solve_info(totals, {"linear_limit": {"residual": math.nan}})
+    add_solve_info(totals, {"linear_limit": {"residual": 1.0}})
+    assert math.isnan(totals["linear_limit"]["residual"]) and totals["linear_limit"]["solves"] == 4  # a figure that is not a number stays, whatever follows
