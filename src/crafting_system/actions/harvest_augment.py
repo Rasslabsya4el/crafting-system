@@ -293,6 +293,9 @@ class HarvestResistanceSwap(Action):
     def __post_init__(self) -> None:
         _check_swap_pair(RESISTANCE_SWAPS_EXIST, self.source, self.target)
 
+    def swapped_stat(self) -> str:
+        return "resist"
+
     def label(self, data: GameData | None = None) -> str:
         return f"Harvest Swap Resistance {self.source.title()} to {self.target.title()}"
 
@@ -332,6 +335,9 @@ class HarvestDamageSwap(Action):
 
     def __post_init__(self) -> None:
         _check_swap_pair(DAMAGE_SWAPS_EXIST, self.source, self.target)
+
+    def swapped_stat(self) -> str:
+        return "damage"
 
     def label(self, data: GameData | None = None) -> str:
         return f"Harvest Swap Damage {self.source.title()} to {self.target.title()}"

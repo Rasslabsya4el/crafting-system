@@ -955,8 +955,10 @@ def test_through_the_entry_a_round_with_a_plan_in_hand_completes_its_bound_s_bui
     else:
         assert builds[1] == (14, 14, "growth")
         # its bound stopped with no order, so the search walks toward the goal (#1142) and realizes more offers than the least-`la` chain did:
-        # the lower figure they raise is 34 (30 before the walk), still below the closed plan's 133
-        assert second.status == "stopped" and second.lower == pytest.approx(34.0, abs=1e-6)
+        # the lower figure they raise was 34 (30 before the walk); the missing mods' table (#1496), read per state, raises it to 75.90,
+        # still below the closed plan's 133 (which the held arm proves the cheapest of these offers)
+        assert second.status == "stopped" and second.lower == pytest.approx(75.90413936389484, rel=1e-9)
+        assert 34.0 < second.lower <= 3 * (C + E) + 2 * S
         # the walk's plan is the filler's, cheaper than round 1's: the answer takes it, and its limits say it is not shown near the best (OR-33, OR-40)
         assert plan.mean_remaining == pytest.approx(3 * (C + E) + 2 * S, rel=1e-9) and _fills(plan.solution.policy[plan.start].label)
         (walked,) = [limit for limit in plan.limits if limit.kind == "plan-reached"]

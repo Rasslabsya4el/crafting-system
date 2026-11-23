@@ -261,6 +261,9 @@ class RemoveCraftedMods(Action):
     def label(self, data: GameData | None = None) -> str:
         return "Remove Crafted Mods"
 
+    def removal(self) -> str:
+        return "crafted"
+
     def strand_use(self, data: GameData | None = None) -> StrandUse:
         return StrandUse.untouched(NOT_SPENT_BY, CUT_FOLLOWS_SPEND_TABLE)  # ADR-0041: a bench craft picks its mod and spends nothing
 
