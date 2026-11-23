@@ -142,7 +142,7 @@ def _row(route: str, record: Mapping | None) -> list[str]:
         _percent(solver.get("success")),
         _num(given.get("mean")),
         _yes_no(entry.get("solver_not_dearer")),
-        _error_text(entry.get("error")),
+        _error_text(entry.get("error") or entry.get("guide_not_evaluable")),  # a site plan whose guide cannot be priced names why (#1442)
     ]
 
 

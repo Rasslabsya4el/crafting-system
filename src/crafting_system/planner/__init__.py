@@ -1,6 +1,6 @@
 """The planner: a target, prices and settings in, a `Plan` out (ADR-0018, ticket #880). May import only: data, rules, items, actions, abstraction, solver, risk, simulator, prices, targets.
 
-`plan_target(data, target, prices, settings)` is the one entry. It chooses a start (`_starts`, `_start_options`, `_bought_starts`), collects and
+`plan_target(data, target, prices, settings)` is the one entry; `guide_plan` beside it gives the plan a guide's route is priced on with its own actions, nothing searched (#1442). It chooses a start (`_starts`, `_start_options`, `_bought_starts`), collects and
 prices the actions a run may use (`_offers`), leaves out the ones a state cannot use (`_prune`), picks how the cheapest route is searched
 (`_decide`) and searches (`_envelope`, `_envelope_plan` with its bound `_pattern_bound` and `_offer_floor`; the older walks `_packed`,
 `_offer_kinds`, `_approx`), adds the socket finish (`_finish`), Hinekora's Lock (`_foresight`) and second items (`_donors`), measures the risk
@@ -22,7 +22,7 @@ from ._approx import Approximation
 from ._axes import axis_name, axis_what, reading_pair, value_text
 from ._bought_starts import bought_base_starts
 from ._decide import BUDGET_SECONDS
-from ._entry import PlanSettings, plan_target, progress, say_progress_to
+from ._entry import NotModelled, PlanSettings, guide_plan, plan_target, progress, say_progress_to
 from ._envelope import Standing
 from ._foresight import Status as LockStatus
 from ._limits import (
@@ -113,6 +113,7 @@ __all__ = [
     "STRANDS_OFF",
     "UNPRICED",
     "UNRESOLVED",
+    "guide_plan",
     "stopped_figure",
     "Approximation",
     "BuyStartItem",
@@ -120,6 +121,7 @@ __all__ = [
     "DroppedOffer",
     "Limit",
     "LockStatus",
+    "NotModelled",
     "Offer",
     "OfferSet",
     "PackedPolicy",
