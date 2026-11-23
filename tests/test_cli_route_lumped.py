@@ -462,3 +462,27 @@ def test_a_packed_chain_keeps_a_big_integer_kernel_with_its_exact_weights():
     for x, y in zip(got.steps, expected.steps):
         assert x.weights == pytest.approx(y.weights, rel=1e-14) and x.uses == pytest.approx(y.uses, rel=1e-14) and x.reached == pytest.approx(y.reached, rel=1e-14)
         assert [e.chance for e in x.edges] == pytest.approx([e.chance for e in y.edges], rel=1e-14)
+
+
+def test_a_mod_only_the_steps_own_last_roll_gave_is_a_miss_and_one_the_item_came_with_is_lost():
+    """#889, hand-worked. Step "a" rerolls: from any item it gives M (the mod held), S (not held) or the goal, a third each. M is made only by
+    "a" itself, so "a" used again on M and landing on S misses: nothing is lost. T holds the mod and comes from step "r": the third of the
+    uses on T that land on S lose it. With the start at R: v_T = 1, and v_S = v_M = 1 (each gets a third of the 3 uses of "a"), so step "a"
+    is used 3 times, one of them on T; the loss is 1/3 of that use: chance 1/9 per use of the step."""
+    reroll = (Outcome("M", 1), Outcome("S", 1), Outcome(GOAL, 1))
+    policy = {"R": Action("r", 1.0, (Outcome("T", 1),)), "T": Action("a", 1.0, reroll), "S": Action("a", 1.0, reroll), "M": Action("a", 1.0, reroll)}
+    marks = {"T": 1, "M": 1}
+    chain = _route_flow.chain_of_policy("R", policy, is_goal)
+    held = marked_reader(marks)
+
+    share = dict(zip(chain.states, _route_flow.arrived(chain).tolist()))
+    flow = flow_of(chain, loss=LossReader(held.lost, held.classes, _route_flow.arrived))
+
+    assert share == pytest.approx({"R": 1.0, "T": 1.0, "S": 0.0, "M": 0.0})  # S and M are only ever the step's own results
+    (step,) = [step for step in flow.steps if step.action is not None and step.action.label == "a"]
+    assert step.uses == pytest.approx(3.0)
+    chances = {(edge.kind, edge.lost): edge.chance for edge in step.edges}
+    assert chances == pytest.approx({("goal", ()): 1 / 3, ("again", ()): 2 / 3 - 1 / 9, ("failure", ("x",)): 1 / 9})
+    # without the share every use that drops the mark is a loss: M's misses too (the page before #889)
+    old = {(edge.kind, edge.lost): edge.chance for edge in flow_of(chain, loss=held).steps[step.number - 1].edges}
+    assert old == pytest.approx({("goal", ()): 1 / 3, ("again", ()): 2 / 3 - 2 / 9, ("failure", ("x",)): 2 / 9})

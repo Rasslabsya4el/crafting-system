@@ -164,3 +164,14 @@ def test_the_uses_of_a_sure_step_never_read_as_a_fraction_of_a_use():
     assert _View.uses_text(1.0004, 1.0, True) == "1"  # never "≈1 times"
     assert _View.uses_text(2.4, 0.8, True) == "1 each time, 3 times in a run that reaches it"
     assert _View.uses_text(2.4, 0.8, False) == "2.4"
+
+
+def test_uses_summed_over_the_items_that_come_to_a_step_say_the_uses_each_time_and_the_times():
+    """#892: V01's Augmentation is one use on each of about 107 helmets (100% leaves the step), never 107 uses on one item."""
+    from crafting_system.cli._route_view import _View
+
+    assert _View.uses_text(107.0, 1.0, False, 1.0) == "107 in all: 1 each time an item comes to this step, 107 times in a run that reaches it"
+    # an essence used 20 times each time (5% leaves the step), an item sent back to it 3 times in a run that reaches it half the time
+    assert _View.uses_text(30.0, 0.5, False, 0.05) == "30 in all: 20 each time an item comes to this step, 3 times in a run that reaches it"
+    assert _View.uses_text(20.0, 1.0, False, 0.05) == "20"  # one item, one arrival: the uses are on that item
+    assert _View.uses_text(4.0, None, False, 0.5) == "4 in all: 2 each time an item comes to this step, 2 times in a run"  # no reach solved

@@ -177,6 +177,25 @@ def test_a_target_that_names_the_veiled_kinds_is_planned_end_to_end_and_the_repo
     assert {state["action"] for state in document["states"]} >= {"Unveil", "Pick 1", "Pick 2"}
 
 
+def test_the_route_page_says_free_on_an_unveil_and_a_pick_never_the_planners_epsilon(tmp_path, monkeypatch):
+    """#1442: R24's unveil and pick steps read "0.00000417 c"; a use that consumes nothing is free, and so is its step cost."""
+    from crafting_system.cli import _route_card, make_plan
+    from crafting_system.cli._route_view import build_section, route_input
+
+    monkeypatch.setattr(_route_card, "_implicits", lambda data, base_id: ())  # the veiled excerpt holds no implicit of the amulet: the cards draw none
+
+    plan = make_plan(DATA, veil_target(tmp_path), price_file(Veiled_Chaos_Orb=5.0))
+    section = build_section(route_input(plan), DATA)
+
+    rows = {row.title: {field.label: [line.text for line in field.lines] for field in row.fields} for row in section.rows}
+    free = [title for title in rows if title == "Unveil" or title.startswith("Pick")]
+    assert free  # the plan uses them
+    for title in free:
+        assert rows[title]["Cost per use"] == ["free"] and rows[title].get("Step cost", ["free"]) == ["free"], title
+    assert not any("e-0" in text or "0.0000" in text for fields in rows.values() for lines in fields.values() for text in lines)
+    assert rows[VEILED_CHAOS]["Cost per use"] == ["1 × Veiled Chaos Orb 5 c"]
+
+
 def test_a_budget_that_the_exact_run_overshoots_falls_back_to_the_exact_run_for_a_veil_target(tmp_path):
     from crafting_system.cli import make_plan
 

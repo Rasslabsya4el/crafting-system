@@ -221,7 +221,7 @@ def test_r12_is_a_buy_and_one_step_that_loops_until_the_gem(r12_plan):
     assert lines_of(reforge, "Goal") == [f"{GEM_TEXT} · T1"]
     target, again = lines_of(reforge, "Chance per use")  # nothing is lost on a miss, so no "On failure": the miss is the step again
     assert target.startswith("the target: ") and float(target.split(": ")[1].strip("≈%")) / 100 == pytest.approx(q, rel=0.06)
-    assert again.startswith("nothing gained, this step again: ")
+    assert again.startswith("not yet, this step again: ")  # a reroll that missed is used again, never a mod "lost" (#889)
     assert lines_of(reforge, "Cost per use") == ["50 × Primal Crystallised Lifeforce 0.5 c"]
     (uses,) = lines_of(reforge, "Uses on average")
     assert float(uses.strip("≈ ")) == pytest.approx(1 / q, rel=0.01)  # a geometric run
@@ -430,7 +430,8 @@ def test_a_use_that_loses_nothing_wanted_reads_under_chance_per_use_whatever_the
 
     essence = section.rows[1]
     target, onward = [line for field in essence.fields if field.label == "Chance per use" for line in field.lines]
-    assert (target.text, onward.text, onward.href) == ("the target: ≈84%", "the item of step 3: ≈16%", "#s3")
+    # the item that goes on is named by what it lacks and the action it goes on with, never "the item of step 3" (#1442); step 3 is the row below
+    assert (target.text, onward.text, onward.href) == ("the target: ≈84%", "without +# to maximum Life · any tier, then Chaos Orb: ≈16%", None)
     assert "On failure" not in labels_of(essence)  # the 16% lose no wanted mod (PRES-6: the cost to finish from there decides nothing)
 
 
@@ -636,10 +637,11 @@ def test_a_step_with_several_branches_draws_the_card_of_each_whose_items_differ_
     section = build_section(INPUTS["branch"](), DATA)
 
     essence = section.rows[1]
-    assert [branch.caption for branch in essence.branches] == ["the target (≈84%)", "the item of step 3 (≈16%)"]
+    onward = "without +# to maximum Life · any tier, then Chaos Orb (≈16%)"
+    assert [branch.caption for branch in essence.branches] == ["the target (≈84%)", onward]
     assert all(branch.card != essence.after for branch in essence.branches)
     html = render_page(Page("x", (section,)))
-    assert html.count("the target (≈84%)") == 1 and html.count("the item of step 3 (≈16%)") == 1
+    assert html.count("the target (≈84%)") == 1 and html.count(onward.replace("+#", "+#")) == 1
     assert not build_section(INPUTS["bench"](), DATA).rows[1].branches  # one outcome: one card
 
 
@@ -728,10 +730,10 @@ def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan)
 
     (restart,) = [row for row in section.rows if row.title.startswith("Restart")]
     assert restart.title == f"Restart: buy {two_leaf_plan.start_price.name} again"
-    assert labels_of(restart) == ["Trade", "Cost per use", "Uses on average", "Step cost", "On failure"]
+    assert labels_of(restart) == ["Trade", "Cost per use", "Uses on average", "Step cost", "Next step"]  # buying again is the step, not its failure (#892)
     assert lines_of(restart, "Cost per use") == ["4 c"]
     failure = restart.fields[-1].lines[0]
-    assert failure.text.startswith("the start item bought again (100%)") and failure.href == "#s2"
+    assert failure.text == "the start item bought again" and failure.href == "#s2"
     # a bought rare: the other mods are not known
     assert restart.after.suffixes[0].text == "any mod or empty" and restart.after.properties == ("Rare", "item level 84")
     assert section.goal.fields[0].lines[0].text == "Given route: Restart on a lone gem"
@@ -762,7 +764,7 @@ def test_a_route_that_only_restarts_finishes_by_the_draw_of_the_bought_item(two_
     assert section.rows[1].title == DRAW_LABEL  # the bought rare opens with the draw of its mods, then the route restarts
     row = section.rows[2]
     assert row.title.startswith("Restart")
-    assert lines_of(row, "Uses on average")[0].startswith("≈")
+    assert lines_of(row, "Uses on average")[0].startswith("1 each time, ≈")  # one restart each time, many times in a run (#892)
     assert "Step cost" in labels_of(row) and row.cost is not None
     assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"].startswith("≈")
 
@@ -893,7 +895,8 @@ def test_a_route_view_page_row_has_its_anchor_and_every_link_inside_goes_to_a_ro
     html = page_of(INPUTS["branch"]())
 
     assert 'id="s1"' in html and 'id="s2"' in html and 'id="s3"' in html
-    assert 'href="#s3"' in html
+    ids = set(re.findall(r'id="(s\d+)"', html))
+    assert set(re.findall(r'href="#(s\d+)"', html)) <= ids
 
 
 def test_write_route_page_without_a_stat_list_in_the_cache_writes_the_page(tmp_path, r12_plan):
