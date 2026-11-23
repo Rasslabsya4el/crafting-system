@@ -68,8 +68,8 @@ THE LAWS (one row per kind of offer; `_Build`)
   A lock craft leads OFF: its law is L = 0 (a CUT).
 * **Remove Crafted Mods**: removes every crafted mod: (fp + kp, fs + ks, 0, 0), A kept (a lost leaf ignored); refused with none held.
 * **Orb of Annulment**: removes one removable mod (not fractured, not protected by a held tag metamod), each with chance 1/n (`annul.py`). Without
-  a crafted mod held no tag metamod is held and every held mod is removable; with one, a metamod may protect some junk: the least over every
-  number of protected junk per side. A wanted mod of a sure leaf removed loses its leaf. When a leaf of A is not sure, only the landings are used
+  a crafted mod held, and no tag metamod fractured in the shape, every held mod is removable; otherwise a metamod may protect some junk: the
+  least over every number of protected junk per side. A wanted mod of a sure leaf removed loses its leaf. When a leaf of A is not sure, only the landings are used
   (one slot of either side back, A kept).
 * **Any other craft that names no mod** (ReAnoint, an enchant): it adds no explicit mod and may only remove some: the least h over every room
   with at least as many free slots and at most as many crafted mods on each side, A kept.
@@ -81,9 +81,15 @@ THE LAWS (one row per kind of offer; `_Build`)
 * **Harvest resistance / damage swap** when no leaf of U' has such a stat: one mod changes its element, the count and the crafted flag kept,
   no leaf of U' can pass by it: A(s') within A at the same room, no constraint. Otherwise a CUT.
 * **Restart** (buy the start again): c + h(phi(start)).
-* **Every other offer** (Fracturing Orb, an imprint, corruptions, a Harvest likelihood reforge, the Eldritch Chaos Orb and Annulment, value
-  rerolls, any TERMINAL, a reroll that fractures or keeps crafted mods): a CUT, L = 0 (h >= 0). The likelihood reforge's own bound (#1471
-  part 1) has had no checker round, so it is left out here: the bound is weaker, never unsound.
+* **Harvest likelihood reforge** (TERMINAL to the floors): it removes every mod but the fractured ones (no in-model state holds a lock) and
+  draws the item full again, the held families' weights times 10 or 1/10. Every outcome holds no crafted mod and keeps the shape (checked:
+  `keeps_shape`, `Adds.keeps_crafted`, `Adds.fractures`; otherwise a CUT; a shape that is not rare refuses it), so it is in the model at a room
+  of its shape, and P(leaf l PASSING after) <= u_l = `likelihood_bound` (#1471 part 1 per leaf; checker of 2026-11-23: sound as used on R10,
+  hardened here by counting up to m(S, T) families per drawn mod, `Holdable.most`): level 1 of the erasing rerolls, L = G(empty) - min(chain,
+  Moebius).
+* **Every other offer** (Fracturing Orb, an imprint, corruptions, the Eldritch Chaos Orb and Annulment, value rerolls, any other TERMINAL, a
+  reroll that fractures or keeps crafted mods): a CUT, L = 0 (h >= 0). So the table can never exceed the price of the cheapest offer it holds
+  no law for (its ceiling: 41.82 c on R10, the Eldritch Chaos Orb; comment 7106498087 on #1434).
 
 A **sure leaf** is one whose passing mods are of one family tuple on one side, disjoint from every other leaf's, none with an Attack or Caster
 tag (a tag metamod could protect it from an Annulment), all in the data: the item holds at most one mod of that family, so removing it loses
@@ -103,12 +109,16 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 
 from crafting_system.abstraction import Abstraction, CompressedState, Status, declared_bounds, keeps_shape, reach_bound
-from crafting_system.abstraction._bound import _guard, _may_pass, _scenario_chance, _Side, _blocked_sets
+from crafting_system.abstraction._bound import Holdable, _blocked_sets, _guard, _may_pass, _scenario_chance, _Side, holdable
 from crafting_system.actions import NotApplicableError, OutOfScopeError, allowed_by_tags, unveil_pool_mods
 from crafting_system.actions.beast_mods import BeastSideSwap
-from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, Metamod, Side, capacity
+from crafting_system.actions.harvest_likelihood import HarvestReforgeLikelihood
+from crafting_system.actions.pool import build_pool
+from crafting_system.items.model import Metamod, Rarity, Side, capacity
 
 from . import _offer_kinds as kinds
+from crafting_system import budget
+
 from ._offer_floor import FloorsStopped, OfferFloors
 from ._offers import BuyStartItem
 
@@ -116,9 +126,12 @@ ZERO, ONE = Fraction(0), Fraction(1)
 KMAX = 3  # the crafted mods an item can hold (with the multimod)
 MAX_OPEN = 6  # the most open leaves the table is built for: 2^|U'| sets per room
 LOCKS = frozenset({Metamod.PREFIXES_CANNOT_CHANGE.value, Metamod.SUFFIXES_CANNOT_CHANGE.value})
+TAG_METAMODS = frozenset({Metamod.NO_ATTACK_MODS.value, Metamod.NO_CASTER_MODS.value})  # an Annulment does not remove the mods they protect
 SWAPS = {"HarvestResistanceSwap": "resist", "HarvestDamageSwap": "damage"}  # one mod's element changes, the count kept (see THE LAWS)
 SHRINK = (1e-9, 1e-6)  # h is scaled down by 1 - this before the check (the float sums of T carry rounding); the second when the first fails
 ITERATIONS = 3000  # the iteration's cap (R10 needed 653); the check decides either way: a stopped iteration is a weaker table, never an unsound one
+ASK_STATES = 256  # the net is asked once every this many states of a pass of T
+TABLE_SHARE = 0.5  # the table's own time share: this part of the round's seconds (`_pattern_bound`, OR-40); the build's net stands above it
 CONVERGED = 1e-10  # relative change of the start's value under which the iteration ends
 P_, S_ = Side.PREFIX, Side.SUFFIX
 
@@ -180,33 +193,52 @@ class _Reader:
         return (shape, held, fp, fs, kp, ks)
 
     def value(self, state: CompressedState) -> float:
-        x = self.phi(state)
+        try:
+            x = self.phi(state)
+        except Exception:  # noqa: BLE001  (a state phi cannot read is OFF: 0 is a bound of anything)
+            return 0.0
         if x is None or x[1] == self.full:
             return 0.0
         v = self.h.get(x, 0.0)
         return v if math.isfinite(v) else 0.0
 
 
-def missing_mods_table(floors: OfferFloors, stop: Callable[[], str | None] | None = None, say: Callable[[str], None] | None = None) -> MissingModsTable:
-    """The table of the round whose floors are `floors`, built under the net `stop` (OR-40: asked at every iteration and inside every kernel); it
-    is `off`, with its reason, whenever it cannot be built, the net is reached, or the check h <= T h fails."""
+def missing_mods_table(
+    floors: OfferFloors, stop: Callable[[], str | None] | None = None, say: Callable[[str], None] | None = None, seconds: float | None = None
+) -> MissingModsTable:
+    """The table of the round whose floors are `floors`, built under the net `stop` (the build's clock and memory) and a time share of its own,
+    `seconds` (OR-39, OR-40: `TABLE_SHARE` of the round's seconds, `_pattern_bound`); both are asked at every iteration, every `ASK_STATES`
+    states of a pass and inside the making of every kernel (`budget.asking`, also in a run counted in pieces: the table is no piece of the
+    count, so the floors' rule of asking no clock there does not apply to it). It is `off`, with its reason, whenever it cannot be built, a net
+    is reached, the check h <= T h fails, or anything in it raises: a table that is off is today's floors, never a crash of the round."""
     said = say or (lambda _text: None)
     began = time.perf_counter()
+
+    def net() -> str | None:
+        if stop is not None and (reason := stop()) is not None:
+            return reason
+        if seconds is not None and time.perf_counter() - began >= seconds:
+            return f"the table's own share of {seconds:.0f} seconds was used"
+        return None
+
+    def off(reason: str) -> MissingModsTable:
+        said(f"missing mods' table: off ({reason})")
+        return MissingModsTable(reason, seconds=time.perf_counter() - began)
+
     try:
-        build = _Build(floors, stop)
-        with floors.inside():
+        build = _Build(floors, net)
+        with budget.asking(net):
             build.prepare()
             build.solve()
             shrink = build.check()
-    except _Off as off:
-        said(f"missing mods' table: off ({off})")
-        return MissingModsTable(str(off), seconds=time.perf_counter() - began)
+    except _Off as why:
+        return off(str(why))
     except FloorsStopped as reached:
-        said(f"missing mods' table: off (the net was reached: {reached.reason})")
-        return MissingModsTable(f"the net was reached: {reached.reason}", seconds=time.perf_counter() - began)
-    except (NotApplicableError, OutOfScopeError, ArithmeticError, KeyError, ValueError) as error:
-        said(f"missing mods' table: off ({type(error).__name__}: {error})")
-        return MissingModsTable(f"{type(error).__name__}: {error}", seconds=time.perf_counter() - began)
+        return off(f"the net was reached: {reached.reason}")
+    except budget.NetReached as reached:
+        return off(f"the net was reached: {reached.reason}")
+    except Exception as error:  # noqa: BLE001  (a fault in the table turns it off; the round goes on with its floors)
+        return off(f"{type(error).__name__}: {error}")
     seconds = time.perf_counter() - began
     reader = _Reader(
         floors.ab, build.known, tuple((leaf, build.bit[leaf]) for leaf in build.U), build.full, tuple(build.side_free), build.lockmods, build.h,
@@ -220,15 +252,64 @@ def missing_mods_table(floors: OfferFloors, stop: Callable[[], str | None] | Non
     return MissingModsTable(None, start, seconds, len(build.states), reader)
 
 
-def admitted_families(data, base_id: str) -> dict[Side, tuple[frozenset[str], ...]]:
-    """The family sets of every mod the item model admits on each side of an item of `base_id` (`Item._check_slot`: its generation type, its
-    domain the base's or crafted, delve, veiled or unveiled), whatever puts it there: what m(S, T) of the draws is read from (#1489)."""
-    domains = {data.base_items[base_id].domain} | EXPLICIT_EXTRA_DOMAINS
-    found: dict[Side, set[frozenset[str]]] = {side: set() for side in Side}
-    for mod in data.mods.values():
-        if mod.domain in domains and mod.generation_type in (P_.value, S_.value) and mod.families:
-            found[Side(mod.generation_type)].add(frozenset(mod.families))
-    return {side: tuple(sets) for side, sets in found.items()}
+def likelihood_bound(ab: Abstraction, action: HarvestReforgeLikelihood, item, leaves, held: Mapping[Side, Holdable]) -> dict[int, Fraction]:
+    """u_l >= P(leaf l PASSING after one use of the likelihood reforge `action`) at every item of the shape of `item` (#1471 part 1, the
+    lemma's P1, per leaf; checker of 2026-11-23 on th21c: SOUND as used on R10, with the hardening below).
+
+    The reforge removes every mod but the fractured ones (no in-model state holds a lock, so no side is kept) and draws the item full again
+    from the pool of the bare item, the weight of every mod of a family the item held multiplied by f (10 or 1/10). For a family g with a mod
+    passing the leaf: the share of the passing mods inside g is at most `share` (its passing weight over its kept weight, times f against 1/f
+    when g's mods are not all of g alone, over every set of blocked tags), and the chance that g is drawn in some slot of its side is at most
+    1 - (1 - s1)(1 - s2)^(k - 1): s = F / (F + O), F the whole weight of g at its most (times f when held), O the weight of the other
+    families of its side less the most that the other drawn mods can take out (each removes every family it holds: on side T the k_T - 1
+    others and the k_other mods of the other side take at most (k_T - 1) m(T, T) + k_other m(other, T) families, `Holdable.most` (#1489),
+    the heaviest ones), at its least (times 1/f when f < 1); s1 for the first draw (a kept Attack/Caster metamod filters it: the filtered
+    weight), s2 for the others. A union bound over g gives u_l, at most 1."""
+    data = ab.data
+    f = action.held_weight_factor()
+    hi, lo = (f, ONE) if f > 1 else (ONE, f)
+    bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
+    cap = capacity(data, bare.base_id, bare.rarity)
+    fractured = {P_: len(bare.prefixes(data)), S_: len(bare.suffixes(data))}
+    k = {side: cap.of(side) - fractured[side] for side in (P_, S_)}
+    pool = build_pool(data, bare, tag_filter=False)
+    out = {}
+    for leaf in leaves:
+        wanted = ab.goal.leaves[leaf]
+        ok = wanted.tier_ok if wanted.tier_ok is not None else wanted.mod_ids
+        total = ZERO
+        for g in pool:
+            if not any(m.mod.id in ok for m in g.mods) or k[g.side] <= 0:
+                continue
+            uniform = all(set(m.mod.families) == {g.family} for m in g.mods)
+            share = ZERO
+            for blocked in ((), ("attack",), ("caster",), ("attack", "caster")):
+                keep = [m for m in g.mods if not (set(m.mod.implicit_tags or ()) & set(blocked))]
+                wl = sum((m.weight for m in keep if m.mod.id in ok), ZERO)
+                wg = sum((m.weight for m in keep), ZERO)
+                if wl == 0:
+                    continue
+                share = max(share, wl / wg if uniform else (wl * hi) / (wl * hi + (wg - wl) * min(lo, ONE)))
+            F = sum((m.weight for m in g.mods), ZERO) * (hi if uniform else max(hi, ONE))
+            other = S_ if g.side is P_ else P_
+            others = [m for h in pool if h.side == g.side for m in h.mods if g.family not in m.mod.families]
+            names = frozenset(name for m in others for name in m.mod.families)
+            removable = (k[g.side] - 1) * held[g.side].most(names) + k[other] * held[other].most(names)
+
+            def rest(mods):
+                weights: dict = {}
+                for m in mods:
+                    for name in m.mod.families:
+                        weights[name] = weights.get(name, ZERO) + m.weight
+                top = sum(sorted(weights.values(), reverse=True)[:removable], ZERO)
+                return max(sum((m.weight for m in mods), ZERO) - top, ZERO) * lo
+
+            O2 = rest(others)
+            O1 = rest([m for m in others if not (set(m.mod.implicit_tags or ()) & {"attack", "caster"})]) if ab.models_metamods else O2
+            s1, s2 = F / (F + O1), F / (F + O2)
+            total += share * (1 - (1 - s1) * (1 - s2) ** (k[g.side] - 1))
+        out[leaf] = min(total, ONE)
+    return out
 
 
 class _Build:
@@ -262,7 +343,11 @@ class _Build:
             bare = view.item.changed(data, mods=tuple(entry for entry in view.item.mods if entry.fractured))
             self.side_free.append({P_: cap.prefix - len(bare.prefixes(data)), S_: cap.suffix - len(bare.suffixes(data))})
         self.lockmods = frozenset(mid for mid, mod in data.mods.items() if set(mod.families) & LOCKS)
-        self.admitted = admitted_families(data, floors.item.base_id)
+        self.tagged_fracture = [
+            any(entry.fractured and set(data.mods[entry.mod_id].families) & TAG_METAMODS for entry in view.item.mods if entry.mod_id in data.mods)
+            for view in self.views
+        ]  # fmt: skip
+        self.admitted = holdable(data, floors.item.base_id)  # m(S, T) of the draws (#1489, `abstraction._bound.holdable`)
         self.info = {}
         for leaf in self.U:
             wanted = goal.leaves[leaf]
@@ -286,6 +371,7 @@ class _Build:
         self.h = {x: 0.0 for x in self.states}
         self.raised = 0
         self.iterations = 0
+        self._likely: dict = {}
 
     def ask(self) -> None:
         if self.stop is not None and (reason := self.stop()) is not None:
@@ -325,7 +411,7 @@ class _Build:
 
     def prepare(self) -> None:
         data = self.data
-        self.erasing, self.draws, self.crafts, self.cuts = [], [], [], []
+        self.erasing, self.draws, self.crafts, self.cuts, self.bounded = [], [], [], [], []
         self.restart = None
         for s, entries in enumerate(self.floors.shape_entries):
             view = self.views[s]
@@ -355,12 +441,38 @@ class _Build:
                     self.crafts.append(dict(e=entry, s=s, cost=cost))
                 elif entry.kind == kinds.IMPLICIT:
                     continue  # no constraint
+                elif entry.kind == kinds.TERMINAL and isinstance(action, HarvestReforgeLikelihood):
+                    self._likelihood(entry, s, cost)
                 else:
                     self.cuts.append((s, cost))
             self.ask()
         self._prepare_crafts()
         self._prepare_draws()
+        self.ask()
         self._declared_level1()
+
+    def _likelihood(self, entry, s: int, cost: float) -> None:
+        """A Harvest likelihood reforge (THE LAWS): bounded like an erasing reroll at level 1, u from `likelihood_bound`; a CUT when its use may
+        keep a crafted mod, fracture one or change the shape; nothing on a shape that is not rare (the reforge refuses it)."""
+        view = self.views[s]
+        if view.item.rarity is not Rarity.RARE:
+            return  # refused at every state of the shape
+        action = entry.priced.offer.action
+        adds = action.adds(self.data, view.item)
+        try:
+            same = keeps_shape(self.ab, view.bare, action)
+        except NotApplicableError:
+            return
+        except OutOfScopeError:
+            same = False
+        if adds.fractures or adds.keeps_crafted or not same:
+            self.cuts.append((s, cost))
+            return
+        key = (s, action.held_weight_factor())
+        if key not in self._likely:
+            self.ask()
+            self._likely[key] = likelihood_bound(self.ab, action, view.item, self.U, self.admitted)
+        self.bounded.append(dict(s=s, cost=cost, u=self._likely[key]))
 
     def _swap_hits(self, word: str) -> bool:
         return any(word in stat.id for leaf in self.U for m in self.info[leaf]["ok"] if m in self.data.mods for stat in self.data.mods[m].stats)
@@ -416,18 +528,19 @@ class _Build:
     # ---- one drawn mod -------------------------------------------------------------------------------------------------------
 
     def _forced(self, A):
-        """The families and the slots the leaves of A hold for sure: a leaf of one side holds a slot there; one of one family tuple too, and its
-        families are out of the pool (only when its mods are disjoint from the other leaves of A)."""
+        """The families and the slots the leaves of A hold for sure: a leaf of one side and one family tuple, whose mods are disjoint from the
+        other leaves of A, holds a slot there and its families are out of the pool. A leaf of several families (Cold OR Fire resistance) reserves
+        nothing: its mod stays among the held mods of the room, which `_sup` counts as taking up to m(S, T) families out (#1496 checker round 1:
+        reserving its slot without removing its family left that family in the pool and the mod out of the held count, an unsound sup)."""
         families, slots = set(), {P_: 0, S_: 0}
         leaves = [leaf for leaf in self.U if A & self.bit[leaf]]
         for leaf in leaves:
             info = self.info[leaf]
             if any(info["ok"] & self.info[other]["ok"] for other in leaves if other != leaf):
                 continue
-            if len(info["sides"]) == 1 and next(iter(info["sides"])) in (P_.value, S_.value):
+            if len(info["sides"]) == 1 and len(info["fams"]) == 1 and next(iter(info["sides"])) in (P_.value, S_.value):
                 slots[Side(next(iter(info["sides"])))] += 1
-                if len(info["fams"]) == 1:
-                    families |= set(next(iter(info["fams"])))
+                families |= set(next(iter(info["fams"])))
         return families, slots
 
     def _sup(self, pool, free, tag, passing, A, fp, fs, single=False) -> Fraction:
@@ -453,7 +566,7 @@ class _Build:
                     kept[family.side].append((weight, sum((m.weight for m in mods if passing.get(m.mod.id)), ZERO)))
                     names[family.side].add(family.family)
             sides = {side: _Side(kept[side]) for side in Side}
-            spread = {(src, dst): max((len(fs_ & names[dst]) for fs_ in self.admitted[src]), default=0) for src in (P_, S_) for dst in (P_, S_)}
+            spread = {(src, dst): self.admitted[src].most(frozenset(names[dst])) for src in (P_, S_) for dst in (P_, S_)}
             caps = [min(sum(spread[src, side] * held[src] for src in (P_, S_)), sides[side].count) for side in opens]
             for ks in itertools.product(*(range(cap + 1) for cap in caps)):
                 live = [(sides[side], k) for side, k in zip(opens, ks) if k < sides[side].count]
@@ -604,19 +717,25 @@ class _Build:
         if d["level"] == 1:
             if not d["same"]:
                 return d["cost"]
-            u = d["u"]
-            supp = 0
-            for leaf in self.U:
-                if u[leaf] > 0:
-                    supp |= self.bit[leaf]
-            key = (d["s"], supp)
-            if key not in cache:
-                cache[key] = self._G(*key)
-            g, delta, mu = cache[key]
-            chain = sum(float(u[leaf]) * delta[leaf] for leaf in self.U)
-            moebius = sum(v * float(min(u[leaf] for leaf in self.U if B & self.bit[leaf])) for B, v in mu.items())
-            return d["cost"] + max(0.0, g[0] - min(chain, moebius))
+            return self._q_bounded(d["s"], d["cost"], d["u"], cache)
         return d["cost"] + sum(p * self.H(*x) for x, p in d["law"].items())
+
+    def _q_bounded(self, s, cost, u, cache) -> float:
+        """c + G(empty) - min(chain, Moebius) for a use whose every outcome is in the model at a room of shape s, holds no crafted mod and passes
+        leaf l with chance at most u_l (level 1 of the erasing rerolls; the likelihood reforges)."""
+        supp = 0
+        for leaf in self.U:
+            if u[leaf] > 0:
+                supp |= self.bit[leaf]
+        key = (s, supp)
+        if key not in cache:
+            cache[key] = self._G(*key)
+        g, delta, mu = cache[key]
+        if not all(math.isfinite(v) for v in g):
+            return cost  # L = 0 (no inf - inf)
+        chain = sum(float(u[leaf]) * delta[leaf] for leaf in self.U)
+        moebius = sum(v * float(min(u[leaf] for leaf in self.U if B & self.bit[leaf])) for B, v in mu.items())
+        return cost + max(0.0, g[0] - min(chain, moebius))
 
     def _best_erasing(self, s) -> float:
         """The least Q over the erasing rerolls of shape s (state-free), the least one raised until exact."""
@@ -708,8 +827,8 @@ class _Build:
         if not opts:
             return math.inf  # no such item
         base = self.Hmin(t, A, opts)
-        if not Q:
-            return base
+        if not Q or not math.isfinite(base):
+            return base  # no leaf can pass, or no landing in the model holds a finite h (inf - inf is not taken)
         drop = {leaf: base - self.Hmin(t, A | self.bit[leaf], opts) for leaf in Q}
         d_all = base - min(self.Hmin(t, A | G, opts) for G in range(self.full + 1) if not G & A)
         p2 = min(float(P2), float(P1))
@@ -789,7 +908,7 @@ class _Build:
                 lost.append(self.Hmin(s, A & ~self.bit[leaf], self._lost_rooms(leaf, f, K, side, s)))
             if junk[side]:
                 value[side] = self.Hmin(s, A, self._junk_rooms(W, f, K, side, junk[side], s))
-        protect = kp + ks > 0  # a tag metamod is a crafted mod: one may be held
+        protect = kp + ks > 0 or self.tagged_fracture[s]  # a tag metamod held crafted, or fractured in the shape, may protect junk
         best = math.inf
         for jp in range(junk[P_] + 1) if protect else (junk[P_],):
             for js in range(junk[S_] + 1) if protect else (junk[S_],):
@@ -863,13 +982,17 @@ class _Build:
         out = {}
         cut = [min((c for s2, c in self.cuts if s2 == s), default=math.inf) for s in range(self.S)]
         erasing = [self._best_erasing(s) for s in range(self.S)]
+        cache: dict = {}
+        bounded = [min((self._q_bounded(s, d["cost"], d["u"], cache) for d in self.bounded if d["s"] == s), default=math.inf) for s in range(self.S)]
         again = math.inf if self.restart is None else self.restart + self.H(*self.xstart)
-        for x in self.states:
+        for n, x in enumerate(self.states):
+            if n % ASK_STATES == 0:
+                self.ask()
             s, A = x[0], x[1]
             if A == self.full:
                 out[x] = 0.0
                 continue
-            v = min(cut[s], erasing[s], again)
+            v = min(cut[s], erasing[s], bounded[s], again)
             for d in self.draws:
                 if d["s"] == s:
                     v = min(v, self._q_draw(d, x))

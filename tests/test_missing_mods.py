@@ -6,20 +6,36 @@ reroll at 5, chance `VEILED_CHAOS_LIFE` of Life, exact): V* = 5 / p, about 15.22
 Veiled Exalted Orb is a veil, which removes and adds a placeholder and can pass no leaf). On the magic amulet of `test_pattern_imprint`
 (three wanted mods, Alteration, Augmentation, Regal, Annulment) the table is checked state by state against the exact graph: it is at most V*
 everywhere, and at the start within 1e-6 of it, where the offers' floor rho is 0.18. Each "off" case, and the check's fallback, gives 0.
+
+On a rare amulet of the small pool (`TOY`: the pool, a crafted prefix and the Attack metamod made craftable on amulets, the veiled placeholders)
+each law is met against the exact graph of its offers, state by state (`test_each_law_is_at_most_the_exact_cost_at_every_state`): the bench
+craft, Remove Crafted Mods, the Orb of Annulment with a tag metamod that protects junk, the veil, the Beastcraft side swap, the Harvest
+likelihood reforge, and a leaf of two families (Cold OR Fire resistance), whose mod the draws' chances count among the held mods (#1496 checker
+round 1: a slot reserved for it without its family left out of the pool gave a chance of 0.1163 where the item has 0.1316).
 """
 
+import dataclasses
 from dataclasses import replace
+from fractions import Fraction
 
 import pytest
 
 import test_free_action_floors as veiled
 import test_pattern_imprint as imprinted
+from abstraction_pool import COLD_RESIST, DAMAGE_2, FIRE_RESIST, LEVEL, MANA_1, POOL_IDS, RESIST_3, roll
+from items_support import AMULET, DATA
 from pattern_support import exact_values
+from veiled_support import veiled_mods
 
-from crafting_system.abstraction import Abstraction
-from crafting_system.actions import AlterationOrb
+from crafting_system.abstraction import Abstraction, Goal, Status, Wanted
+from crafting_system.abstraction._pattern import PatternOffer
+from crafting_system.actions import AlterationOrb, AnnulmentOrb, ChaosOrb, ExaltedOrb
+from crafting_system.actions.beast_mods import BeastSideSwap
+from crafting_system.actions.bench import BenchCraft, RemoveCraftedMods
+from crafting_system.actions.harvest_likelihood import HarvestReforgeLikelihood
+from crafting_system.actions.veiled import VeiledExaltedOrb
 from crafting_system.cli import Offer
-from crafting_system.items import Rarity
+from crafting_system.items import Item, Rarity, Side
 from crafting_system.planner import _missing_mods
 from crafting_system.planner._envelope import Beaten
 from crafting_system.planner._envelope_plan import envelope_result
@@ -158,3 +174,122 @@ def test_a_search_of_other_offers_does_not_read_the_table(amulet, floors_on, sho
     bound = pattern_lower_bound(ab, first, offers, item=imprinted.START)
     assert bound.table.serves(offers) and not bound.table.serves(list(offers[:-1]))
     assert not bound.table.serves([replace(offer) for offer in offers])
+
+
+CRAFTED_DAMAGE = "JunMaster2AllDamage2_"  # a crafted prefix of one family, no Attack or Caster tag: a sure leaf whose mod is crafted
+NO_ATTACKS = "IntMasterItemGenerationCannotRollAttackAffixes"  # a tag metamod: the Annulment cannot remove an Attack mod while it is held
+
+
+def _toy():
+    bench = tuple(
+        dataclasses.replace(option, item_classes=(*option.item_classes, "Amulet")) if option.actions.add_explicit_mod == CRAFTED_DAMAGE else option
+        for option in DATA.bench_options
+    )
+    template = next(option for option in bench if option.actions.add_explicit_mod == CRAFTED_DAMAGE)
+    bench = (*bench, dataclasses.replace(template, actions=dataclasses.replace(template.actions, add_explicit_mod=NO_ATTACKS)))
+    mods = {mod_id: mod for mod_id, mod in DATA.mods.items() if mod_id in POOL_IDS | {CRAFTED_DAMAGE, NO_ATTACKS}}
+    return dataclasses.replace(DATA, mods={**mods, **veiled_mods()}, bench_options=bench)
+
+
+TOY = _toy()
+TOY_ACTIONS = {
+    "chaos": (ChaosOrb(), 1.0), "exalt": (ExaltedOrb(), 1.5), "annul": (AnnulmentOrb(), 2.0), "craft": (BenchCraft(CRAFTED_DAMAGE), 0.7),
+    "no attacks": (BenchCraft(NO_ATTACKS), 0.4), "remove crafted": (RemoveCraftedMods(), 0.3), "swap": (BeastSideSwap(Side.SUFFIX), 0.9),
+    "veil": (VeiledExaltedOrb(), 3.0), "likelihood": (HarvestReforgeLikelihood(more=True), 2.5),
+}  # fmt: skip
+TOY_LEAVES = {
+    "cold or fire": Wanted(frozenset({COLD_RESIST, FIRE_RESIST})), "lightning": Wanted(frozenset({RESIST_3})),
+    "crafted damage": Wanted(frozenset({CRAFTED_DAMAGE})), "attack damage": Wanted(frozenset({DAMAGE_2})),
+}  # fmt: skip
+TOY_RESTART = 4.0
+
+
+def toy(actions, leaves):
+    """(abstraction, start state, priced offers, pattern offers) of a rare amulet of `TOY` holding one mana leech suffix."""
+    acts = {name: TOY_ACTIONS[name] for name in actions}
+    start = Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE, mods=(roll(MANA_1),))
+    ab = Abstraction(TOY, Goal(tuple(TOY_LEAVES[name] for name in leaves)), AMULET, LEVEL, tuple(action for action, _ in acts.values()))
+    offers = [PricedOffer(Offer(name, action, {name: 1}), cost, ()) for name, (action, cost) in acts.items()]
+    offers.append(PricedOffer(Offer(RESTART, BuyStartItem(start), {}), TOY_RESTART, ()))
+    patterns = [PatternOffer(name, action, cost) for name, (action, cost) in acts.items()] + [PatternOffer(RESTART, None, TOY_RESTART)]
+    return ab, ab.compress(start), offers, patterns, start
+
+
+LAWS = {
+    "bench craft, Remove Crafted Mods, Annulment": (("chaos", "exalt", "annul", "craft", "remove crafted"), ("crafted damage", "lightning")),
+    "metamod protects junk, a two-family leaf": (("chaos", "exalt", "annul", "craft", "no attacks", "remove crafted"), ("cold or fire", "crafted damage")),
+    "side swap, veil": (("chaos", "exalt", "swap", "veil", "craft", "remove crafted"), ("cold or fire", "lightning", "crafted damage")),
+    "likelihood reforge": (("chaos", "exalt", "likelihood", "annul", "no attacks"), ("cold or fire", "lightning")),
+    "an attack leaf (not sure), swap": (("exalt", "annul", "craft", "no attacks", "remove crafted", "swap"), ("lightning", "attack damage")),
+}  # fmt: skip
+
+
+@pytest.mark.parametrize("law", list(LAWS))
+def test_each_law_is_at_most_the_exact_cost_at_every_state(law):
+    ab, first, offers, patterns, start = toy(*LAWS[law])
+    table = missing_mods_table(OfferFloors(ab, first, offers, start))
+    exact = exact_values(ab, first, patterns)
+    assert table.off is None
+    assert table.start > 0
+    assert all(table.lower(state) <= value * (1 + TOLERANCE) for state, value in exact.items())
+    assert sum(1 for state in exact if table.lower(state) > 0) > len(exact) // 2  # most states are read, not OFF
+
+
+def test_the_bench_craft_table_is_the_exact_cost_at_the_start():
+    """Chaos, Exalted, Annulment, the crafted prefix and Remove Crafted Mods to Lightning resistance and the crafted prefix: the table's figure at
+    the start is the exact graph's mean to 1e-8."""
+    ab, first, offers, patterns, start = toy(*LAWS["bench craft, Remove Crafted Mods, Annulment"])
+    table = missing_mods_table(OfferFloors(ab, first, offers, start))
+    assert table.start == pytest.approx(exact_values(ab, first, patterns)[first], rel=1e-8)
+
+
+def test_the_likelihood_reforge_has_its_law_and_is_no_cut():
+    ab, first, offers, _patterns, start = toy(*LAWS["likelihood reforge"])
+    build = _missing_mods._Build(OfferFloors(ab, first, offers, start), None)
+    build.prepare()
+    assert [d["cost"] for d in build.bounded] == [TOY_ACTIONS["likelihood"][1]]
+    assert TOY_ACTIONS["likelihood"][1] not in [cost for _s, cost in build.cuts]
+    assert all(0 < u <= 1 for u in build.bounded[0]["u"].values())
+
+
+def test_a_two_family_leaf_held_leaves_the_drawn_chance_at_least_the_items():
+    """The counter-example of #1496's checker round 1: with Cold OR Fire resistance held, the Exalted Orb's chance of Lightning resistance 3 at
+    the table's state is at least its chance at each item of that state (0.1316 on the item; the reserved slot gave 0.1163)."""
+    ab, first, offers, _patterns, start = toy(("chaos", "exalt"), ("cold or fire", "lightning"))
+    build = _missing_mods._Build(OfferFloors(ab, first, offers, start), None)
+    build.prepare()
+    (draw,) = [d for d in build.draws if d["e"].priced.label == "exalt"]
+    for held in (COLD_RESIST, FIRE_RESIST):
+        item = Item.build(TOY, base_id=AMULET, item_level=LEVEL, rarity=Rarity.RARE, mods=(roll(MANA_1), roll(held)))
+        state = ab.compress(item)
+        x = build.reader.phi(state)
+        exact = sum((p for after, p in ab.kernel(state, ExaltedOrb()).items() if after.status[1] is Status.PASSING), Fraction(0))
+        Q, _p1, _p2 = draw["sups"][(x[1], x[2], x[3])]
+        assert Q[1] >= exact > 0
+
+
+def test_a_fault_inside_the_table_turns_it_off(monkeypatch):
+    ab, first, offers = no_imprints()
+
+    def broken(self):
+        raise RuntimeError("a fault")
+
+    monkeypatch.setattr(_missing_mods._Build, "solve", broken)
+    table = missing_mods_table(OfferFloors(ab, first, offers, imprinted.START))
+    assert table.off is not None and "RuntimeError" in table.off and table.lower(first) == 0.0
+
+
+def test_a_state_phi_cannot_read_is_zero(amulet, monkeypatch):
+    ab, first, _offers, _floors, table, _exact = amulet
+
+    def broken(self, state):
+        raise KeyError("a fault")
+
+    monkeypatch.setattr(_missing_mods._Reader, "phi", broken)
+    assert table.lower(first) == 0.0
+
+
+def test_the_table_stops_at_its_own_share_of_the_time():
+    ab, first, offers = no_imprints()
+    table = missing_mods_table(OfferFloors(ab, first, offers, imprinted.START), seconds=0.0)
+    assert table.off is not None and "share" in table.off

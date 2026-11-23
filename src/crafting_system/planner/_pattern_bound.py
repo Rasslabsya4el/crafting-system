@@ -47,7 +47,7 @@ from crafting_system.abstraction._pattern import CHOICE, IMPRINTS, ChoiceNode, G
 from crafting_system.solver import ConvergenceError, PackedBuilder, policy_reach, solve_packed
 
 from ._offer_floor import CLASSES, INSIDE, OTHER, OUTSIDE, UNOPENED, FloorsStopped, OfferFloors, shape_of
-from ._missing_mods import MissingModsTable, missing_mods_table
+from ._missing_mods import TABLE_SHARE, MissingModsTable, missing_mods_table
 from ._offer_kinds import SLACK
 from ._offers import BuyStartItem, PricedOffer
 
@@ -234,7 +234,8 @@ def pattern_lower_bound(
                 f"({phases['floors']:.1f} s)"
             )
             mark = time.perf_counter()
-            table = missing_mods_table(floors, clock, say)
+            given = getattr(getattr(clock, "net", None), "seconds", None)  # the round's seconds (`BuildStop.net`); None in a run counted in pieces
+            table = missing_mods_table(floors, clock, say, None if given is None else TABLE_SHARE * given)
             phases["table"] = time.perf_counter() - mark
             if table.off is None and closes is not None and closes(table.start):
                 floors_stopped, order = TABLE_CLOSED, []
