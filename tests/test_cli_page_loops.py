@@ -74,3 +74,23 @@ def test_the_branches_of_a_sure_craft_that_all_get_the_crafted_mod_are_told_apar
     onward = {line.text.split(", then ")[-1].split(":")[0]: line.text for line in lines(bench, SURE_NEXT) if not line.text.startswith("the target")}
     assert set(onward) == {"Chaos Orb", "Essence of Hysteria"}
     assert "without +# to maximum Life" in onward["Chaos Orb"] and "with +# to maximum Life" in onward["Essence of Hysteria"]
+
+
+def test_a_wanted_mod_a_fracturing_orb_hits_is_named_though_the_state_holds_it_as_its_family_type():
+    """R13's Fracturing Orb (60% of the plan) read as "an orb wasted on a junk mod": the state holds a fractured mod as its family type ("~3")
+    when the orb may hit any mod, and the page called every such mod "a mod of a family no requirement cares about" (#1442). The mod is
+    named by what it gives the goal; only a mod that gives it nothing is that."""
+    from test_abstraction_fracture import FRACTURE, fracturing, start_of
+
+    from crafting_system.cli._route_card import FAMILY_TYPE_TEXT, _StateReader
+
+    ab = fracturing()
+    reader = _StateReader(ab)
+    named = {}
+    for after in ab.kernel(ab.compress(start_of("gem", None)), FRACTURE):
+        (entry,) = after.fractured
+        assert entry.mod_id.startswith("~")  # every hit is held as its family type here
+        named[Status.PASSING in entry.contribution] = reader.fractured(entry.mod_id, entry.contribution)[1]
+
+    assert named[False].text == FAMILY_TYPE_TEXT
+    assert named[True].text != FAMILY_TYPE_TEXT and named[True].tone == "wanted" and "fractured" in named[True].marks

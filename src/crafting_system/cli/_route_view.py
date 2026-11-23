@@ -417,8 +417,17 @@ class _View:
     def _passing_in_all(self, states) -> set[int]:
         return {i for i in range(len(self.plan.leaf_labels)) if all(state.status[i] is Status.PASSING for state in states)}
 
-    def _fractured(self, state: CompressedState) -> set[str]:
-        return {entry.mod_id for entry in state.fractured}
+    def _fractured(self, state: CompressedState) -> set:
+        """The fractured entries of a state: a mod held as its family type ("~3") is told by what it gives the goal, so a fractured Life T1
+        and a fractured junk mod of one family type are two entries (#1442)."""
+        return set(state.fractured)
+
+    def _fractured_text(self, entry) -> str:
+        """A fractured mod in words: the wanted mod it is when it gives the goal a leaf, even when the state holds it as a family type (#1442)."""
+        if entry.mod_id in self.data.mods:
+            return f"{self._mod(entry.mod_id)} · fractured"
+        slot = self.reader.fractured(entry.mod_id, entry.contribution)[1]
+        return f"{slot.text} · {slot.note} · fractured" if slot.note else f"{slot.text} · fractured"
 
     def _crafted(self, state: CompressedState) -> set[str]:
         return {slot.kind for slot in state.slots if slot.crafted}
@@ -442,8 +451,8 @@ class _View:
         mods, explained = [], set()  # a new fractured or crafted mod, and the leaves it meets (named once, as the mod)
         for state in landing:
             for entry in state.fractured:
-                if entry.mod_id not in before_fractured:
-                    mods.append(f"{self._mod(entry.mod_id)} · fractured")
+                if entry not in before_fractured:
+                    mods.append(self._fractured_text(entry))
                     explained |= {i for i, status in enumerate(entry.contribution) if status is Status.PASSING}
             for slot in state.slots:
                 if slot.crafted and slot.kind not in before_crafted:
@@ -479,13 +488,13 @@ class _View:
         before = self._passing(step.states)
         before_fractured = set().union(*(self._fractured(state) for state in step.states))
         before_crafted = set().union(*(self._crafted(state) for state in step.states))
-        new_fractured = sorted(set.intersection(*(self._fractured(state) for state in edge.states)) - before_fractured)
+        new_fractured = sorted(set.intersection(*(self._fractured(state) for state in edge.states)) - before_fractured, key=lambda entry: (entry.mod_id, entry.contribution))
         new_crafted = sorted(set.intersection(*(self._crafted(state) for state in edge.states)) - before_crafted)
         explained = {
             i
             for state in edge.states
             for contribution in (
-                *(entry.contribution for entry in state.fractured if entry.mod_id in new_fractured),
+                *(entry.contribution for entry in state.fractured if entry in new_fractured),
                 *(slot.contribution for slot in state.slots if slot.crafted and slot.kind in new_crafted),
             )
             for i, status in enumerate(contribution)
@@ -496,7 +505,7 @@ class _View:
             for i in range(len(self.plan.leaf_labels))
             if i not in before and i not in explained and all(state.status[i] is Status.PASSING for state in edge.states)
         ]
-        found += [f"{self._mod(mod_id)} · fractured" for mod_id in new_fractured]
+        found += [self._fractured_text(entry) for entry in new_fractured]
         found += [f"{self._mod(mod_id)} · crafted" for mod_id in new_crafted]
         return list(dict.fromkeys(found))
 
