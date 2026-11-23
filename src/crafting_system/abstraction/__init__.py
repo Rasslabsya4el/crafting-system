@@ -47,7 +47,7 @@ is imported or tested for here.
   chance that one use of an erasing reroll makes every leaf of `leaves` PASSING (the exact chance with
   `exact=True`; None for an action it cannot bound); the argument is in `_bound.py` (#118).
 * `add_bound(abstraction, state, action, leaves)`: an upper bound, from the pool alone, on the chance that one use of an action that
-  adds one drawn mod (an Exalted Orb) makes a leaf of `leaves` PASSING, from any state of the shape of the bare item `state` (#1072).
+  adds one drawn mod (an Exalted Orb) makes a leaf of `leaves` PASSING, from any state of the shape of the bare item `state` (#1072). With `ranking=True` (the growth's order alone, #1506) the held mods are read per shape and the figure is not a bound.
 * `declared_bounds(abstraction, state, actions, leaves)`: for many actions of one class at once, an upper bound on the chance that one use
   on the bare item `state` makes every leaf PASSING, from what the class declares without building an outcome (`Action.reach_batch`; None
   where it declares none or that the action may leave the shape; #1073).

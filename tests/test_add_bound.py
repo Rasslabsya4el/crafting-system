@@ -388,5 +388,7 @@ def test_the_bound_on_r20_s_area_prefix_at_the_magic_shape_covers_every_member_a
         assert len(chances) > 50
         assert all(chance <= bound for chance in chances.values()), max(chances.items(), key=lambda pair: pair[1])
         assert ranked < bound  # the order's figure leaves the Horror suffix out of the magic shape (R20: 0.015362 against 0.019014)
-    # ... and so it is not a bound: below the chance at the scoured member (0.013968 against 0.013775), which is why no floor reads it
-    assert ranked < chances[HORROR_SUFFIX]
+        assert add_bound(abstraction, abstraction.compress(bare), augment, (0,)) == bound  # a ranking call leaves the bound's count as it was
+        if abstraction is plain:
+            # ... and so it is not a bound: below the chance at the scoured member (0.013968 against 0.013775), which is why no floor reads it
+            assert ranked < chances[HORROR_SUFFIX]
