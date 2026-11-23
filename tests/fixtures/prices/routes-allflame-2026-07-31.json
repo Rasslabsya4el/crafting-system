@@ -1823,7 +1823,7 @@
         "date": "2026-11-10",
         "k": 5,
         "league": "Allflame",
-        "listings": 40,
+        "listings": 43,
         "query": {
           "query": {
             "filters": {
@@ -1878,11 +1878,12 @@
         "usable": 10,
         "used": 5
       },
-      "note": "hand-set start price (OR-44, #1472): the target plans the start at item level 85 or more, where a player buys it, and no search of that item alone was read, so the number is the trade reading of 2026-11-10 of the search for item level 84 or more: 20 Chaos, the mean of its 5 cheapest instant-buyout listings of 43 on the site. Its item-level-84 part was read the same day as an item of its own (3 listings at 3,617 Chaos, the mean of the cheapest of them), so its 5 cheapest were most likely of item level 85 or more, and 40 listings were left; the search of 2026-11-01 (tests/fixtures/trade/recorded/start_items/fetch_r11.json) lists one helmet of item level 84 at 10 Chaos, then nine of item level 85 at 15 to 100 Chaos (the mean of the cheapest five of 85 is 25 Chaos); the reading kept is the later one. That search asked a fractured Chaos Resistance of 31 or more (tier 1); the stored query asks none (#522: the start is bought at any tier), so the price of any tier may be lower. The stored query is the search of the item planned (the page's trade link); until #1472 the start was planned at item level 84 and priced the same, marked as a wider item's price (#483)",
+      "note": "hand-set start price (OR-44, #1472): the target plans the start at item level 85 or more, where a player buys it, and no search of that item alone was read, so the number is the trade reading of 2026-11-10 of the search for item level 84 or more: 20 Chaos, the mean of its 5 cheapest instant-buyout listings of 43 on the site (the count stored is that search's). Its item-level-84 part was read the same day as an item of its own (3 listings at 3,617 Chaos, the mean of the cheapest of them), so its 5 cheapest were most likely of item level 85 or more; the search of 2026-11-01 (tests/fixtures/trade/recorded/start_items/fetch_r11.json) lists one helmet of item level 84 at 10 Chaos, then nine of item level 85 at 15 to 100 Chaos (the mean of the cheapest five of 85 is 25 Chaos); the reading kept is the later one. The helmets of 85 or more are a part of the search read, which raises their own mean to 20 Chaos or more; that search asked a fractured Chaos Resistance of 31 or more (tier 1) and the stored query asks none (#522: the start is bought at any tier), which may lower it. The stored query is the search of the item planned, never sent (the page's trade link, and its hash is of that query); until #1472 the start was planned at item level 84 and priced the same, marked as a wider item's price (#483)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
         "depth_unit": "units",
+        "for_item": "item level 84 or more",
         "item": "exact",
         "kind": "hand-set",
         "league": "Allflame",
@@ -3767,7 +3768,7 @@
         "date": "2026-11-10",
         "k": 5,
         "league": "Allflame",
-        "listings": 146,
+        "listings": 155,
         "query": {
           "query": {
             "filters": {
@@ -3826,11 +3827,12 @@
         "usable": 10,
         "used": 5
       },
-      "note": "hand-set start price (OR-44, #1472): the target plans the start at item level 85, where a player buys it, and no search of that item alone was read, so the number is the trade reading of 2026-11-10 of the search for item level 84 or more: 17 Chaos, the mean of its 5 cheapest instant-buyout listings of 155 on the site. Its item-level-84 part was read the same day as an item of its own (9 listings at 249 Chaos, the mean of the cheapest of them), so its 5 cheapest were most likely of item level 85 or more, and 146 listings were left; the search of 2026-11-01 (tests/fixtures/trade/recorded/start_items/fetch_r10.json) lists its cheapest ten all at item level 85 exactly, 15 to 25 Chaos (the mean of its cheapest five is 17 Chaos too), and none of 86 or more. The stored query is the search of the item planned (the page's trade link); until #1472 the start was planned at item level 84 and priced the same, marked as a wider item's price (#483)",
+      "note": "hand-set start price (OR-44, #1472): the target plans the start at item level 85, where a player buys it, and no search of that item alone was read, so the number is the trade reading of 2026-11-10 of the search for item level 84 or more: 17 Chaos, the mean of its 5 cheapest instant-buyout listings of 155 on the site (the count stored is that search's). Its item-level-84 part was read the same day as an item of its own (9 listings at 249 Chaos, the mean of the cheapest of them), so its 5 cheapest were most likely of item level 85 or more; the search of 2026-11-01 (tests/fixtures/trade/recorded/start_items/fetch_r10.json) lists its cheapest ten all at item level 85 exactly, 15 to 25 Chaos (the mean of its cheapest five is 17 Chaos too), and none of 86 or more. The boots of item level 85 are a part of the search read, so the mean of their own cheapest five is 17 Chaos or more. The stored query is the search of the item planned, never sent (the page's trade link, and its hash is of that query); until #1472 the start was planned at item level 84 and priced the same, marked as a wider item's price (#483)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
         "depth_unit": "units",
+        "for_item": "item level 84 or more",
         "item": "exact",
         "kind": "hand-set",
         "league": "Allflame",
