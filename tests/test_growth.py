@@ -101,6 +101,59 @@ def test_a_wanted_mod_s_side_is_read_from_its_prefixes_and_suffixes_alone():
     assert table.side_of(A) == "prefix"
 
 
+def _sides_world(pool=("A1", "B1"), named=(), held=()):
+    """`_lock_world` with B written as a stat that another base's prefix ("P9") carries too, read at a rare item: the item's own pool on
+    both sides is `pool`, the mods the offers name `named`, the mods the item holds `held` (#1502)."""
+    table = _lock_world()
+    table.data.mods.update(
+        P9=SimpleNamespace(generation_type="prefix", implicit_tags=(), families=()),  # another base's prefix that passes B: the wand cannot roll it
+        B2=SimpleNamespace(generation_type="prefix", implicit_tags=(), families=()),  # a prefix of this base that passes B too
+        BC=SimpleNamespace(generation_type="suffix", implicit_tags=(), families=()),  # a crafted suffix that passes B: in no pool, named by a craft
+    )
+    table.goal.leaves[B].mod_ids = frozenset({"B1", "B2", "BC", "P9"})
+    table.views = {RARE: SimpleNamespace(mods=tuple(SimpleNamespace(mod_id=mod_id) for mod_id in held))}
+    table.pool_ids = lambda view, sides: set(pool) if sides == {"prefix", "suffix"} else set()
+    table.named_ids = set(named)
+    table.under = {
+        ("suffix", RARE, A, frozenset({B})): [(50.0, 5)],
+        ("suffix", RARE, B, frozenset()): [],
+        ("prefix", RARE, A, frozenset()): [],
+        ("prefix", RARE, B, frozenset({A})): [(77.0, 7)],
+    }
+    return table
+
+
+def test_a_stat_requirement_that_another_base_s_prefix_also_passes_has_the_side_the_item_s_own_pool_gives_it():
+    # X1's Physical Damage over Time Multiplier: a suffix on the wand, a prefix ("P9") of other bases. On main the step read "A and an
+    # unknown side", so no lock was named; read among the wand's own mods it waits on both sides and both locks come with their rerolls
+    table = _sides_world()
+    assert (table.side_of(A), table.side_of(B)) == ("prefix", "suffix")
+    assert _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset())) == {"lock suffixes", "lock prefixes", "beast lock", "chaos", "influence"}
+    # with no item read (a table of no shape), every prefix and suffix that passes it is read, as before: two sides, no side
+    table = _sides_world()
+    table.views = {}
+    assert table.side_of(B) is None and table.lock_roles({A, B}, frozenset({RARE}), frozenset()) == set()
+
+
+def test_a_requirement_the_item_can_roll_on_both_sides_has_no_side_and_names_no_lock():
+    # the base's own pool holds a prefix and a suffix that pass B: the item may make it on either side, so no one lock keeps it
+    table = _sides_world(pool=("A1", "B1", "B2"))
+    assert table.side_of(B) is None
+    assert table.lock_roles({A, B}, frozenset({RARE}), frozenset()) == set()
+
+
+def test_a_crafted_only_requirement_has_the_side_of_the_mod_an_offer_names_and_a_mod_the_item_holds_counts_too():
+    # B passed only by a bench craft (a suffix the craft names) or by other bases' prefixes: the side is the craft's
+    table = _sides_world(pool=("A1",), named=("BC",))
+    assert table.side_of(B) == "suffix"
+    # a mod the item holds (a fractured suffix) is one the item can hold, though its family is out of the pool
+    assert _sides_world(pool=("A1",), held=("BC",)).side_of(B) == "suffix"
+    # no mod of this item passes B at all: every prefix and suffix that passes it is read, as before
+    assert _sides_world(pool=("A1",)).side_of(B) is None
+    # a mod the offers name on the other side that does not pass B leaves A's one side as it was
+    assert _sides_world(pool=("A1", "B1"), named=("P9",)).side_of(A) == "prefix"
+
+
 def test_an_imprint_is_named_only_where_it_can_be_made():
     # an imprint taken of magic items only (its outcomes read at the magic shape alone) protects nothing on a step that acts on a rare item
     table = _table(_entry("imprint", 3.0, kind="terminal", makes_imprint=True, draws=False, leads={MAGIC: frozenset({MAGIC})}))
