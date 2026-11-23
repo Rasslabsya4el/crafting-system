@@ -6,7 +6,8 @@
   adds a mod on one side drawn in proportion to weight, capped by the level of the beast and not the level of
   the item, and then removes one mod of the other side, uniformly among those that are not fractured.
 
-Both answer with `Finite`: a short list of exact items with exact probabilities. The beasts they consume come
+The Matron answers with `Finite`: a short list of exact items with exact probabilities. A side swap answers with a `Mixture` of pool
+draws, one per removed mod, so the added mod's values are rolled by its law like any drawn mod's (#1433). The beasts they consume come
 from `beasts.recipe_resources`. Several rules rest on Craft of Exile alone and carry the approximate mark (ADR-0028).
 """
 
@@ -24,7 +25,9 @@ from .catalog import kind
 from .contract import Action, AddedDraw, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
+from .mixture import Mixture
 from .metamods import crafted_limit, locked_sides
+from .outcomes import Outcomes
 from .pool import build_pool, partners
 
 __all__ = [
@@ -236,14 +239,16 @@ class BeastSideSwap(Action):
         pool = tuple(family for family in whole if family.side is self.add_side)
         return AddedDraw(pool, {self.add_side: bare.free_slots(data, self.add_side), self.remove_side: 0})
 
-    def outcomes(self, data: GameData, item: Item) -> Finite:
-        """The outcomes of the recipe on `item`: the added mod and the removed mod, one result per pair.
+    def outcomes(self, data: GameData, item: Item) -> Mixture:
+        """The outcomes of the recipe on `item`: one pool draw for each mod the removal may take, each with chance 1/n.
 
-        The added mod is drawn from the pool of `add_side` at the beast level (the item level is ignored,
-        a family on the item and the Attack and Caster metamods respected) in proportion to weight; then one
-        mod of the other side, among those the item held before the add that are not fractured, is removed
-        uniformly (crafted mods and metamods included). If the other side is locked by a metamod nothing is
-        removed. The added mod is a new mod at its lowest values.
+        The removal takes one mod of the other side, among those the item held before the add that are not fractured, uniformly
+        (crafted mods and metamods included); if the other side is locked by a metamod nothing is removed. The added mod is drawn
+        from the pool of `add_side` at the beast level (the item level is ignored, a family on the item and the Attack and Caster
+        metamods of the item before the removal respected) in proportion to weight, and its values are rolled like those of any
+        drawn mod: each part is an `Outcomes` of one add onto the item less its removed mod, over that pool (as an Exalted Orb's
+        `add_one_mod` is, with the pool cut to the side and taken at the beast level). So a kernel spreads the added mod over its
+        roll law where a goal limits its roll (#1433), as it does for an Exalted Orb.
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, has no open slot on `add_side`,
         has an unlocked other side without a removable mod, or for which no mod is legal to add.
@@ -261,24 +266,17 @@ class BeastSideSwap(Action):
                 raise NotApplicableError(
                     f"the item has no {self.remove_side.value} that is not fractured to remove, and the {self.remove_side.value}es are not locked"
                 )
-        drawn = [
-            entry
-            for family in build_pool(data, item.changed(data, item_level=self.beast_level))
-            if family.side is self.add_side
-            for entry in family.mods
-        ]
-        total = sum((entry.weight for entry in drawn), Fraction(0))
-        if not drawn:
+        pool = tuple(family for family in build_pool(data, item.changed(data, item_level=self.beast_level)) if family.side is self.add_side)
+        if not any(family.mods for family in pool):
             raise NotApplicableError(
                 f"the beast cannot add a {self.add_side.value}: no mod of its pool is legal on the item at beast level {self.beast_level}"
             )
-        after_removal = [item if gone is None else item.remove_mod(data, gone.mod_id) for gone in removable]
-        results = []
-        for entry in drawn:
-            added = ExplicitMod(entry.mod.id, _low(entry.mod))
-            for retained in after_removal:
-                results.append((entry.weight / total / len(after_removal), retained.add_mod(data, added)))
-        return Finite(data, item, tuple(results))
+        share = Fraction(1, len(removable))
+        parts = []
+        for gone in removable:
+            retained = item if gone is None else item.remove_mod(data, gone.mod_id)
+            parts.append((share, Outcomes(data, retained, pool, {len(retained.mods) + 1: Fraction(1)}, None, None)))
+        return Mixture(data, tuple(parts), False)
 
 
 @kind("beast-side-swap", order=85)

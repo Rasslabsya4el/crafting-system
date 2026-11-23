@@ -211,6 +211,11 @@ class Kinds:
         self._members: dict[tuple[Side, str], list[tuple[str, tuple[Mod, ...]]]] = {}
         self._pooled = None
 
+    @property
+    def draw_levels(self) -> frozenset[int]:
+        """The item levels an enabled action draws at (`Reads.draw_levels`): a family type carries the weights there."""
+        return frozenset(self._levels)
+
     def reads(self, action: Action) -> Reads:
         """`action.reads(self.data)`, asked once per action (every pair asks it, `Abstraction._erases`: 2.4 million times on R05, #1178)."""
         found = self._reads.get(action)

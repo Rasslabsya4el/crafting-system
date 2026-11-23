@@ -77,10 +77,27 @@ def item_of(
     return Item.build(SMALL, base_id=AMULET, item_level=item_level, rarity=rarity, mods=mods, **fields)
 
 
+def results_of(outcomes) -> list:
+    """`(chance, finished item)` pairs of `outcomes`: a `Finite`'s results, or for a mixture of pool draws (a side swap, #1433) each part's
+    retained item with each drawn outcome added at its lowest values (a draw of the tests adds one mod, seen by id)."""
+    if hasattr(outcomes, "results"):
+        return list(outcomes.results)
+    pairs = []
+    for share, part in outcomes.components:
+        for outcome, chance in part.distribution(lambda mod: mod.id).items():
+            finished = part.retained
+            for mod_id, count in outcome:
+                for _ in range(count):
+                    mod = part.data.mods[mod_id]
+                    finished = finished.add_mod(part.data, ExplicitMod(mod_id, tuple(min(s.min, s.max) for s in mod.stats)))
+            pairs.append((share * chance, finished))
+    return pairs
+
+
 def outcome_table(outcomes) -> dict[frozenset[str], object]:
     """The listed results as `{set of mod ids of the finished item: its chance}` (two results never hold the same mods here)."""
     table: dict[frozenset[str], object] = {}
-    for chance, result in outcomes.results:
+    for chance, result in results_of(outcomes):
         key = frozenset(entry.mod_id for entry in result.mods)
         assert key not in table, "two results hold the same mods"
         table[key] = chance

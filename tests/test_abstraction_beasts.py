@@ -21,7 +21,7 @@ import pytest
 from abstraction_b2_support import check_layer_1, closure, disagrees, real_graph
 from beasts_support import ASPECT_IDS, TALISMAN, beast_data
 
-from crafting_system.abstraction import Abstraction, Goal, Wanted
+from crafting_system.abstraction import Abstraction, Goal, Status, Wanted
 from crafting_system.actions import (
     AnnulmentOrb,
     AspectBeast,
@@ -33,6 +33,7 @@ from crafting_system.actions import (
     TalismanFracture,
     WildBristleMatron,
 )
+from crafting_system.abstraction._kinds import TYPE_PREFIX
 from crafting_system.items import ExplicitMod, Item, Rarity, Side, tier_table
 
 DATA = beast_data(data=bm.SMALL)
@@ -291,3 +292,70 @@ def test_the_pilot_count_of_a_beast_model_is_the_graph_the_kernels_make(actions)
         assert type(refusal).__name__ == "EstimateRefused" and any(isinstance(a, TalismanFracture) for a in actions)
         return
     assert (pilot.states, pilot.transitions) == (len(seen), transitions) and pilot.states > 5
+
+
+# --- the side swap as pool draws (#1433): the same kernels as the finished items it listed before -------------------------------------------
+
+
+@dataclasses.dataclass(frozen=True)
+class _ListedSwap(BeastSideSwap):
+    """The side swap as it answered before #1433: a `Finite` list of finished items, the added mod at its lowest values."""
+
+    def outcomes(self, data, item):
+        from crafting_system.actions.finite import Finite
+        from crafting_system.actions.pool import build_pool
+
+        drawn = [part for _, part in super().outcomes(data, item).components]  # the refusals are the new answer's
+        pool = [entry for family in build_pool(data, item.changed(data, item_level=self.beast_level)) if family.side is self.add_side for entry in family.mods]
+        total = sum((entry.weight for entry in pool), Fraction(0))
+        results = []
+        for entry in pool:
+            added = ExplicitMod(entry.mod.id, tuple(min(s.min, s.max) for s in entry.mod.stats))
+            for part in drawn:
+                results.append((entry.weight / total / len(drawn), part.retained.add_mod(data, added)))
+        return Finite(data, item, tuple(results))
+
+
+def test_the_side_swap_drawn_from_its_pool_has_the_kernels_of_its_listed_items_on_a_goal_without_roll_limits():
+    # #1433: the swap answers with pool draws so that a roll limit on the added mod has a law; where no goal limits a roll the kernel is the one
+    # of the finished items it listed before, exactly (Fractions, every state), on every item the swaps, the orbs and the Talisman fractures reach
+    # (the fractured mods held as family types too: the side drawn at the beast level is a plain pool for them, `_check_type_blind`)
+    swaps = SIDE_SWAPS
+    listed = tuple(_ListedSwap(swap.add_side, swap.beast_level) for swap in swaps)
+    actions = (*swaps, *FRACTURES, *MOVERS)
+    ability = ability_for((*actions, *listed), metamods=True)
+    items = closure(DATA, starts().values(), actions, limit=500)
+    compared = typed = 0
+    for item in items:
+        state = ability.compress(item)
+        for new, old in zip(swaps, listed):
+            try:
+                expected = ability.kernel(state, old)
+            except (NotApplicableError, OutOfScopeError) as refusal:
+                with pytest.raises(type(refusal)):
+                    ability.kernel(state, new)
+                continue
+            assert ability.kernel(state, new) == expected, (new.label(DATA), [(e.mod_id, e.fractured, e.crafted) for e in item.mods])
+            compared += 1
+            typed += any(entry.mod_id.startswith(TYPE_PREFIX) for entry in state.fractured)
+    assert compared > 300 and typed > 0, (compared, typed)
+
+
+def test_a_roll_limit_on_the_mod_a_side_swap_adds_is_rolled_by_its_law():
+    # #1433 (R06: "(10-12)% increased Attributes" at a least roll of 12, added by the Lynx): the Lynx at beast level 74 on Life, Energy Shield
+    # and Fire draws a suffix from Leech 1000, Cold 1000, Chaos 250 and Lightning % 500 (10-12) = 2750, so Lightning % comes with 2/11; its
+    # roll is uniform over 10, 11 and 12, so a least roll of 12 is met with 1/3: 2/11 * 1/3 = 2/33, half of it for each removed prefix.
+    # Before #1433 the swap listed finished items with the added mod at its lowest values, which has no roll law: refused.
+    goal = Goal((Wanted(frozenset({bm.LPCT}), min_roll=(12,)),))
+    lynx = BeastSideSwap(Side.SUFFIX, beast_level=74)
+    listed = _ListedSwap(Side.SUFFIX, beast_level=74)
+    ability = ability_for((lynx, listed), goal)
+    state = ability.compress(talisman(bm.LIFE1, bm.ES1, bm.FIRE))
+    kernel = ability.kernel(state, lynx)
+    met = [chance for successor, chance in kernel.items() if ability.is_goal(successor)]
+    assert met == [Fraction(1, 33), Fraction(1, 33)]
+    below = [chance for successor, chance in kernel.items() if successor.status[0] is Status.BELOW]
+    assert below == [Fraction(2, 33), Fraction(2, 33)]  # 10 or 11: the mod is held below its least roll
+    assert sum(kernel.values()) == 1
+    with pytest.raises(OutOfScopeError, match="roll limit on a forced, crafted or fixed-result new mod"):
+        ability.kernel(state, listed)

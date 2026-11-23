@@ -1725,7 +1725,7 @@ class Abstraction:
             if refusal_class is not None:
                 self._refused_by[refusal_class] = unraised(refusal)
             raise
-        self._check_type_blind(view, outcomes)
+        self._check_type_blind(view, outcomes, item)
         self._check_fracture_without_partners(view, outcomes)
         self._check_same_item_space(outcomes)
         return _Prepared(outcomes, origins, item=item, imprints=view.imprints)
@@ -1960,14 +1960,17 @@ class Abstraction:
                 ),
             )
 
-    def _check_type_blind(self, state: CompressedState, outcomes: ActionOutcomes) -> None:
+    def _check_type_blind(self, state: CompressedState, outcomes: ActionOutcomes, given: Item | None = None) -> None:
         """Refuse a draw that could tell apart the families behind a fractured mod held as a family type.
 
         A fractured mod of such a state stands for any family of its type (`_fractured_id`), which is exact
         only while the action draws from the plain pool: a guaranteed tag (a Harvest reforge), another weight
         (a fossil) or a forced mod of one of those families (an essence) can tell them apart, and the kernel
         of the one representative would then be wrong for the others. A fixed result (Annulment, Scouring, a
-        bench craft, the Fracturing Orb) never draws, and a type of one family has nobody to be mistaken for.
+        bench craft, the Fracturing Orb) never draws, and a type of one family has nobody to be mistaken for. The plain pool is that of
+        the part's retained item, or one side of the pool of the retained item or of the item `given` to the action at a level an enabled
+        action draws at (`Reads.draw_levels`; a Beastcraft side swap draws one side at the beast level from the item before its removal,
+        #1433): a family type carries the side and the weights at those levels, so such a pool cannot tell the families of a type apart.
         Raises `OutOfScopeError`.
         """
         held = [entry for entry in state.fractured if entry.mod_id.startswith(TYPE_PREFIX)]
@@ -1982,7 +1985,7 @@ class Abstraction:
             if isinstance(part, (Fixed, Rerolled)):
                 continue  # neither draws: a fractured mod keeps its value whatever its family is
             forced = set() if part.forced is None else held_families(self.data.mods[part.forced])
-            plain = part.tag is None and part.pool == build_pool(self.data, part.retained)
+            plain = part.tag is None and (part.pool == build_pool(self.data, part.retained) or self._side_at_draw_level(part, given))
             if forced & members or not plain:
                 raise OutOfScopeError(
                     "the item holds a fractured mod known only by its family, and this action draws from a pool that can tell the families of that kind apart, so the result would depend on which family was fractured",
@@ -1992,6 +1995,23 @@ class Abstraction:
                         "of one of them), so the result would depend on which family was fractured"
                     ),
                 )
+
+    def _side_at_draw_level(self, part: Outcomes, given: Item | None) -> bool:
+        """Whether the pool of `part` is one side of the pool of its retained item or of `given` at a level an enabled action draws at
+        (`_check_type_blind`)."""
+        levels = self._kinds.draw_levels
+        if not levels or not part.pool:
+            return False
+        sides = {family.side for family in part.pool}
+        if len(sides) != 1:
+            return False
+        (side,) = sides
+        items = (part.retained,) if given is None or given == part.retained else (part.retained, given)
+        return any(
+            part.pool == tuple(family for family in build_pool(self.data, item.changed(self.data, item_level=level)) if family.side is side)
+            for item in items
+            for level in levels
+        )
 
     def _mixture_kernel(self, prepared: _Prepared) -> dict[CompressedState, Fraction]:
         """The kernel of a result that is a mixture of parts: each part gives its states, weighted by its probability.
