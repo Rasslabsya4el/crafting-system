@@ -32,7 +32,7 @@ from crafting_system.prices.trade_market import MIN_USABLE, classify
 from crafting_system.prices.trade_pricing import _row, entry_for
 from crafting_system.prices.trade_query import query_hash
 from repoe_support import fixture_game_data
-from trade_support import NOW, R12_SPEC, FakeTrade, api_row, make_client, price_file
+from trade_support import NOW, R12_SPEC, FakeTrade, api_row, key_in_older_file, make_client, price_file
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 ROUTE_PRICES = FIXTURES / "prices" / "routes-allflame-2026-10-31.json"
@@ -82,7 +82,7 @@ def with_listings(trade, count, rows=None):
 def test_the_recorded_start_items_give_the_stored_prices_and_are_quoted(tag):
     stored = load_price_file(ROUTE_PRICES)
     spec = load_buy_spec(DERIVED_SPECS / f"{STARTS[tag]}.yaml")
-    name = spec.name
+    name = key_in_older_file(spec.name)  # the 2026-10-31 file keeps the readings under the keys they were read for (#522)
     search = json.loads((RECORDED / f"search_{tag}.json").read_text(encoding="utf-8"))
     body = json.loads((RECORDED / f"search_body_{tag}.json").read_text(encoding="utf-8"))
     fetched = json.loads((RECORDED / f"fetch_{tag}.json").read_text(encoding="utf-8"))["result"]
@@ -370,7 +370,7 @@ def test_an_entry_without_a_date_or_of_another_league_is_not_offered():
 def test_the_recorded_route_prices_are_offered_while_fresh_and_not_after_a_week():
     stored = load_price_file(ROUTE_PRICES)  # every start item was priced on 2026-10-31
 
-    names = [load_buy_spec(DERIVED_SPECS / f"{stem}.yaml").name for stem in STARTS.values()]
+    names = [key_in_older_file(load_buy_spec(DERIVED_SPECS / f"{stem}.yaml").name) for stem in STARTS.values()]
     fresh = [offer(stored, name, date(2026, 11, 7)) for name in names]
     late = [offer(stored, name, date(2026, 11, 8)) for name in names]
 

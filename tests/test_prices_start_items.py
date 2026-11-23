@@ -17,13 +17,14 @@ import pytest
 from crafting_system.prices import load_buy_spec, load_price_file
 from crafting_system.prices.trade_pricing import CURRENCY_NAMES, DEFAULT_K, TRADE_SOURCE
 from crafting_system.prices.trade_query import query_hash
+from trade_support import key_in_older_file
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
 PRICES = FIXTURES / "prices" / "routes-allflame-2026-10-31.json"
 RECORDED = FIXTURES / "trade" / "recorded" / "start_items"
 DERIVED = Path(__file__).resolve().parent / "reconcile" / "derived_specs"  # the buy spec the planner computes from each target (#474)
-STARTS = {  # tag of the recording -> the price key of the start item it priced, which is the name of the computed spec
-    tag: load_buy_spec(DERIVED / f"{stem}.yaml").name
+STARTS = {  # tag of the recording -> the price key of the start item it priced: the name of the computed spec, as this older file keys it (#522)
+    tag: key_in_older_file(load_buy_spec(DERIVED / f"{stem}.yaml").name)
     for tag, stem in {"r10": "r10-fractured-boots", "r11": "r11-reservation-helmet", "r05": "r05-strength-ring", "r12": "r12-lightning-amulet"}.items()
 }
 

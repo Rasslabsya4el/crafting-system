@@ -23,6 +23,20 @@ RECORDED = TRADE_FIXTURES / "recorded"
 R12_SPEC = TRADE_FIXTURES / "r12_buy_spec.yaml"  # a library test input tied to the recorded responses, not the planner's description of R12
 R12_TARGET = TRADE_FIXTURES / "r12_target.yaml"  # a target on the fixture data whose bought start item is priced by `cli trade`
 R12_KEY = "Paua Amulet, item level 84-100, fractured +(12-17)% to Lightning Resistance"  # its price key, hand-written
+# The snapshots older than the week-one files (2026-10-31, 2026-11-10, the veiled and the vendor files) keep R11's and R12's start
+# readings under the keys they were read for: a search of the tier the target then wrote (R11 tier 1, a roll of 31 or more). Since
+# #522 the targets buy that mod at any tier and their key says so; the old readings are not relabelled as of any tier.
+KEYS_BEFORE_ANY_TIER = {
+    "Lion Pelt, item level 84, fractured +#% to Chaos Resistance (any tier)": "Lion Pelt, item level 84, fractured +(31-35)% to Chaos Resistance",
+    "Paua Amulet, item level 84, fractured +#% to Lightning Resistance (any tier)": "Paua Amulet, item level 84, fractured +(12-17)% to Lightning Resistance",
+}
+
+
+def key_in_older_file(key: str) -> str:
+    """The key a start item's reading has in a snapshot older than the week-one files (`KEYS_BEFORE_ANY_TIER`)."""
+    return KEYS_BEFORE_ANY_TIER.get(key, key)
+
+
 SECRET = "SECRET-COOKIE-123"
 NOW = datetime(2026, 10, 30, 21, 30, 0, tzinfo=UTC)
 

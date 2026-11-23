@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 from targets_support import AMULET, BELT, DATA, EXAMPLES, belt, roll
+from trade_support import key_in_older_file
 
 from crafting_system.items import CatalystType, ExplicitMod, Quality, Rarity, mod_tier
 from crafting_system.prices import load_price_file
@@ -242,7 +243,7 @@ def test_the_buy_spec_computed_from_a_route_target_is_its_fractured_start_mod_an
 
     assert spec.rarity == "rare" and spec.corrupted is False
     assert [(mod.stat, mod.minimum, mod.fractured) for mod in spec.mods] == [(stat, minimum, True)]
-    assert spec.name == start_price_key(real, target) and spec.name in load_price_file(PRICES).prices
+    assert spec.name == start_price_key(real, target) and key_in_older_file(spec.name) in load_price_file(PRICES).prices
 
 
 @pytest.mark.parametrize("route", ROUTES)

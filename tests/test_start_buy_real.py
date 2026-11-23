@@ -18,6 +18,7 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 import yaml
 from abstraction_support import real_game_data
+from trade_support import key_in_older_file
 
 from crafting_system.cli import RESTART, make_plan
 from crafting_system.planner._plan import PlanError, resolve_start_price
@@ -185,7 +186,8 @@ def price_row(stem: str):
 @pytest.mark.parametrize("stem", [price_row(stem) for stem in stems() if bought(stem)])
 def test_every_bought_start_item_has_a_price_under_its_key_in_each_committed_file_that_has_it(stem):
     key = expected_keys()[stem]
-    committed = [path.name for path in sorted(PRICES.glob("*.json")) if key in json.loads(path.read_text(encoding="utf-8"))["prices"]]
+    older = key_in_older_file(key)  # R11 and R12: the files before the week-one ones keep the key their tier-1 reading had (#522)
+    committed = [path.name for path in sorted(PRICES.glob("*.json")) if {key, older} & set(json.loads(path.read_text(encoding="utf-8"))["prices"])]
 
     # the vendor file is V01's own (`price_file:`) and holds a copy of every other route's entries; the veiled file is R07's own
     # (`price_file:`) and holds a copy of the 2026-11-10 file (#146); the references file is R17's and R24's own since #901: the
