@@ -101,6 +101,9 @@ def test_a_cluster_jewel_is_searched_as_a_cluster_jewel_not_as_a_jewel(data):
     assert clusters
     assert {trade_category(base) for base in clusters} == {"jewel.cluster"}
     assert {base.item_class for base in clusters} == {"Jewel"}  # the class alone would say jewel.base
+    for base in clusters:  # and a bought start on one gets that category in its buy spec
+        text = f"base: {base.id}\nitem_level: 84\nstart: bought\nrequirements:\n  - family: {_first_explicit_family(data, base)}\n"
+        assert buy_spec_of(data, parse_target(with_start(text), data, source="cluster.yaml")).category == "jewel.cluster"
 
 
 @pytest.mark.parametrize(

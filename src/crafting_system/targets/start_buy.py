@@ -64,7 +64,7 @@ __all__ = [
 
 # raw item class -> the trade site's `category` option: a fact about the trade site. It holds every item class of the bases a player crafts on
 # (`prices.spends.EQUIPMENT_DOMAINS`, gear, jewels and flasks, the `HiddenItem` class left out) whose bases can take an explicit mod, save the one
-# class in `NO_TRADE_CATEGORY` (#1491; `tests/test_targets_start_buy.py` walks the game data). The options are Craft of Exile's own trade link
+# class in `NO_TRADE_CATEGORY` (#1491; `tests/test_item_class_tables.py` walks the game data). The options are Craft of Exile's own trade link
 # (its emulator maps each of its bases to the trade site's category; the copy read is `.claude/scratch/coe/site/packages/package.js`, 2026-11-18):
 # a Thrusting One Hand Sword is searched as a one-handed melee weapon there, as here, and the base's name in the query picks the base.
 TRADE_CATEGORY = {
