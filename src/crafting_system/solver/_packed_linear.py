@@ -22,7 +22,12 @@ true residual is above ten times it is started again from its iterate with a fre
 1e-16 so), at most `BICGSTAB_RESTARTS` times. An answer is taken when its forward estimate is
 within `tol`. Otherwise the exact solve by the cycles of the chain (`_packed_chain.ChainSolver`: the components inverted without a subtraction, by
 `gth_inverse`, and the rows many states share cut and put back) is made, whatever the number of states, refined while its backward error falls, and
-taken when that error is within `accept`. Only when the exact solve cannot be made (its cost does not fit the memory of a run, or the caller has none)
+taken when that error is within `accept`. When it cannot be made and the run stalled (or met its rail) short of `tol`, the system is solved again
+in its sparse form with extra unknowns (`Terms.sparse`: a policy's system with one unknown per kernel it uses), by the same BiCGSTAB preconditioned
+by an incomplete LU factorisation of it (`_packed_ilu`, #1484: R17's first plan, flat at 0.0957 here and 25,133 cut rows past the memory for the
+cycles, reaches 6.6e-16 so), refined at most `ILU_REFINEMENTS` times; its answer is an iterate's, taken only when its forward estimate is within
+`tol`, never as an exact one (its forward error is about 1e-8 on long sums, where the exact solve is good to the rounding). It never replaces the
+exact solve where that fits. Only when neither gives an answer (the exact solve's cost does not fit the memory of a run, or the caller has none)
 does the iteration go on from its best iterate, and the best answer found is returned with its measures for the caller to judge. No count of states and
 no count of iterations decides an answer (OR-12): `BICGSTAB_ITERATIONS` is a stop-and-say-so rail.
 
@@ -30,13 +35,13 @@ no count of iterations decides an answer (OR-12): `BICGSTAB_ITERATIONS` is a sto
 to the states still in), never `1 - p`, so a ring gone round 1e16 times is inverted to the rounding of its sums. It is blocked: the Schur complements
 of halves are products of matrices that are not negative, made by BLAS.
 
-Nothing here knows the game. Uses numpy, so it is a `_packed*.py` file (ADR-0010 amended).
+Nothing here knows the game. Uses numpy, so it is a `_packed*.py` file (ADR-0010 amended); the preconditioned solve uses scipy, in `_packed_ilu`.
 """
 
 import math
 import sys
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 import numpy as np
 
@@ -49,13 +54,28 @@ SETTLED = 8 * EPS  # a backward error this small is the rounding of the product 
 STALL = 6  # a BiCGSTAB run has stagnated when its best residual has not halved for this many times the longest flat it came out of (at least this many steps): 36 steps with no history
 BICGSTAB_ITERATIONS = 4_000  # a rail on one run (stop and say so), not what decides an answer
 BICGSTAB_RESTARTS = 3  # further runs from the iterate: when its recurrence drifted from the true residual, or after a stagnation when the exact solve cannot be made
+ILU_REFINEMENTS = 2  # steps of refinement of the preconditioned answer against the planner's own residual (each one more preconditioned solve)
 AMPLIFICATION_TOL = 1e-3  # the relative residual the iteration aims at when it measures the amplification: a factor known to 0.1% is plenty
 
 
+@dataclass(frozen=True, slots=True, eq=False)
+class Sparse:
+    """A system `x = b + T x` of `n` states in a sparse form with extra unknowns, for the preconditioned solve (`_packed_ilu`, #1484): the square
+    matrix of `size` unknowns in triplets (`row`, `col`, `value`; repeated places are summed), whose unknowns `0 .. n - 1` are `x`; its row `s < n` is the
+    row `s` of `I - T` multiplied by `scale[s]` (right-hand side `scale[s] b[s]`), and its other rows have a right-hand side of 0."""
+
+    size: int
+    row: np.ndarray
+    col: np.ndarray
+    value: np.ndarray
+    scale: np.ndarray
+
+
 class Terms:
-    """The terms of `x = b + T x` a caller gives `solve`: `T v` (`apply`), `T` as a dense matrix (`dense`, asked only at most `DENSE_LIMIT` states)
-    and the exact solver by the cycles of the chain (`exact`: an object with `solve(b)`, or None when the caller has none; it may raise
-    `_packed_chain.CyclesTooTangled` or `MemoryError` when its cost does not fit). A subclass overrides what it has."""
+    """The terms of `x = b + T x` a caller gives `solve`: `T v` (`apply`), `T` as a dense matrix (`dense`, asked only at most `DENSE_LIMIT` states),
+    the exact solver by the cycles of the chain (`exact`: an object with `solve(b)`, or None when the caller has none; it may raise
+    `_packed_chain.CyclesTooTangled` or `MemoryError` when its cost does not fit) and the system in a sparse form for the preconditioned solve
+    (`sparse`: a `Sparse`, or None). A subclass overrides what it has."""
 
     n: int
 
@@ -68,15 +88,20 @@ class Terms:
     def exact(self):
         return None
 
+    def sparse(self) -> Sparse | None:
+        return None
+
 
 @dataclass(frozen=True, slots=True)
 class Solved:
     """What `solve` found. `x` is None when nothing could be computed at all.
 
-    `how`: "dense", "iterate" or "exact". `backward`: the componentwise backward error of `x`; `forward`: the estimate of its relative error
+    `how`: "dense", "iterate", "preconditioned" or "exact". `backward`: the componentwise backward error of `x`; `forward`: the estimate of its relative error
     (`forward_estimate`); `residual`: the normwise true residual `|b - (x - T x)| / |b|`; `iterations`: BiCGSTAB's; `stagnated`: the iteration
     stopped at a stagnation, not at its tolerance. `iterate`: `(backward, residual, forward)` of an approximate answer the exact solve replaced or
     tried to; `why`: why the exact solve was not made or not taken, `cost` what it needed (`rows`, `cells`, `allowed` of `CyclesTooTangled`).
+    `preconditioned`: what the preconditioned solve did, when it was tried (`seconds` of the factorisation, `entries` of the factors, `iterations`,
+    `backward` and `forward` of its answer, or `why` it was not made); empty when it was not tried.
     """
 
     x: np.ndarray | None
@@ -91,6 +116,7 @@ class Solved:
     cost: dict = field(default_factory=dict)
     cut_rows: int = 0
     singular: bool = False  # the exact solve found a part of the chain that never leaves it (a closed class): the system has no answer
+    preconditioned: dict = field(default_factory=dict)
 
     @property
     def good(self) -> bool:
@@ -303,8 +329,10 @@ def dense(off: np.ndarray, b: np.ndarray, exit: np.ndarray | None = None, transp
     return found
 
 
-def refine(apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x: np.ndarray, solve_with: Callable[[np.ndarray], np.ndarray]) -> tuple[np.ndarray, float]:
-    """`x` refined (`x + solve_with(b - (x - T x))`) while its backward error falls, at most `REFINEMENTS` times, and that error.
+def refine(
+    apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x: np.ndarray, solve_with: Callable[[np.ndarray], np.ndarray], times: int = REFINEMENTS
+) -> tuple[np.ndarray, float]:
+    """`x` refined (`x + solve_with(b - (x - T x))`) while its backward error falls, at most `times` (`REFINEMENTS`) times, and that error.
 
     The residual is formed as `b - (x - T x)`, whose rounding is the scale of the terms times the epsilon; the next solve amplifies it by the condition of
     the system. So a refinement takes an answer to that rounding times the condition, and no further: it repairs a solve that lost more (an LU of a stiff
@@ -313,7 +341,7 @@ def refine(apply: Callable[[np.ndarray], np.ndarray], b: np.ndarray, x: np.ndarr
     falls from 2e-15 to 1e-16). Such a solve is refined only when its backward error is above what it is taken at (`solve`, `dense`).
     """
     best = backward_error(apply, b, x)
-    for _ in range(REFINEMENTS):
+    for _ in range(times):
         if best <= SETTLED:
             break
         with np.errstate(all="ignore"):
@@ -478,6 +506,38 @@ def solve(
     `x0` starts the iteration; `iterate_tol` is the relative residual it aims at. `info` (optional) counts `matvecs`. The answer returned is the best
     found, with its measures; `Solved.good` says whether it is taken without a word, the caller says the rest.
     """
+    tried: dict = {}
+    found = _solve(terms, b, x0, tol, accept, dense_limit, iterate_tol, info, tried)
+    return replace(found, preconditioned=tried) if tried else found
+
+
+def _preconditioned(terms: Terms, b: np.ndarray, tol: float, iterate_tol: float, tried: dict) -> Solved | None:
+    """The answer of the preconditioned solve on `terms.sparse()` (module text), refined while its backward error falls, with its measures; None
+    when the caller has no sparse form, or the factors could not be made (`tried["why"]` says why)."""
+    system = terms.sparse()
+    if system is None:
+        return None
+    from ._packed_ilu import NoRoom, Preconditioned  # (scipy is imported only when a run stalls)
+
+    try:
+        solver = Preconditioned(system)
+    except (NoRoom, MemoryError, RuntimeError) as stopped:
+        tried["why"] = f"the incomplete factors were not made: {stopped}"
+        return None
+    tried["seconds"], tried["entries"] = solver.seconds, solver.entries
+    with np.errstate(all="ignore"):
+        x = solver.solve(b, iterate_tol)
+        if not np.all(np.isfinite(x)):
+            tried["why"] = "the preconditioned solve gave no finite answer"
+            return None
+        x, _ = refine(terms.apply, b, x, lambda r: solver.solve(r, iterate_tol), ILU_REFINEMENTS)
+        answer = _answer(terms, b, x, "preconditioned", lambda s: solver.solve(s, AMPLIFICATION_TOL), tol, lambda s: solver.solve(s, iterate_tol))
+    tried["iterations"], tried["backward"], tried["forward"] = solver.iterations, answer.backward, answer.forward
+    return answer
+
+
+def _solve(terms, b, x0, tol, accept, dense_limit, iterate_tol, info, tried) -> Solved:
+    """The body of `solve`; `tried` takes what the preconditioned solve did."""
     n = len(b)
     tol = ACCEPT_ERROR if tol is None else tol
     accept = ACCEPT_BACKWARD if accept is None else accept
@@ -538,6 +598,15 @@ def solve(
     except (CyclesTooTangled, MemoryError, np.linalg.LinAlgError) as stopped:
         why = str(stopped) or "the memory of the run, or a block of the chain that is singular in floats, stopped it"
         cost = {"rows": stopped.rows, "cells": stopped.cells, "allowed": stopped.allowed} if isinstance(stopped, CyclesTooTangled) else {}
+    if exact is None and best_iterate is not None and candidate is not None and (candidate.stagnated or candidate.iterations >= BICGSTAB_ITERATIONS):
+        # the iteration stalled and the cycles cannot be solved exactly: the same BiCGSTAB, preconditioned (#1484); its answer is an iterate's,
+        # taken by its forward estimate only, never as an exact one
+        better = _preconditioned(terms, b, tol, iterate_tol, tried)
+        if better is not None:
+            if better.forward <= tol:
+                return replace(better, iterations=candidate.iterations, iterate=(candidate.backward, candidate.residual, candidate.forward), why=why, cost=cost)
+            if better.forward < candidate.forward or (better.forward == candidate.forward and better.backward < candidate.backward):
+                candidate = replace(better, iterations=candidate.iterations)  # (the plain iteration does not go on from it)
     iterate = None if candidate is None else (candidate.backward, candidate.residual, candidate.forward)
     iterations = 0 if candidate is None else candidate.iterations
     if exact is not None and not np.all(np.isfinite(exact.x)):  # the subtraction-free inverse of a class with no way out is infinite
