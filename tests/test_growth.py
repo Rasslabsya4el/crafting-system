@@ -655,3 +655,18 @@ def test_a_lock_group_that_does_not_finish_in_its_share_ends_nothing_and_a_side_
     assert "add A" in _names(table, positions) and why.startswith("the plan's dearest step not yet read, spam") and not grower.ended
     grower.ran(positions, plan, False)
     assert grower.stop() is None and grower.ended  # a usual round that stops ends the growth, as before
+
+
+def test_a_step_that_can_lose_a_mod_has_no_lock_group_its_usual_roles_name_its_protectors():
+    table = _lock_world()
+    table.under = {key: [(50.0, 5)] for key in (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))}
+    held, goal = _State("held", (Status.ABSENT, Status.PASSING), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
+    lost = _State("lost", (Status.ABSENT, Status.ABSENT), RARE)
+    # the spam acts at an item that holds B, and can lose it: it waits for A and can lose B (W on one side), and at the start it waits for both
+    view = {lost: Action("spam", 25.0, (Outcome(held, 1), Outcome(lost, 9))), held: Action("spam", 25.0, (Outcome(goal, 1), Outcome(lost, 1), Outcome(held, 8)))}
+    plan = _Plan(mean_remaining=500.0, start=lost, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
+    grower = Grower(table, ())
+    grower.ran((0,), plan, True)
+    positions, why = grower.next()
+    assert why.startswith("the plan's dearest step not yet read, spam") and "can lose" in why and not grower.lock_round
+    assert "lock suffixes" in _names(table, positions)  # the protector of B, named by the usual roles

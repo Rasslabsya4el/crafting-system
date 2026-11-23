@@ -38,9 +38,11 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     at the others, where the guide keeps the attack tag out (#1423). A drawing reroll is not read so (only additions are).
   With no plan in hand the same roles are read at the start: `W` the wanted mods whose providers in the round all reroll, `K` every other
   wanted mod when one mod's only provider rerolls.
-* **The lock group** (`Grower.lock_group`, #1420, hypothesis H16 of #1434). A step whose `W` holds a prefix and a suffix (`side_of`) is first
-  read for its locks, before its usual roles: the lock of one side lets a reroll make the other while the side already made stays. That
-  holds before any mod is held, so it is read with nothing at risk (`K` empty: a spam from a bare rare only waits). Its round holds the
+* **The lock group** (`Grower.lock_group`, #1420, hypothesis H16 of #1434). A step whose `W` holds a prefix and a suffix (`side_of`) and
+  that can lose nothing (`K` empty: a spam from a bare rare only waits) is first read for its locks, before its usual roles: the lock of
+  one side lets a reroll make the other while the side already made stays, and with nothing at risk no protector names a lock. A step
+  that can lose a mod has its protectors in its usual roles, so it has no lock group (on R13 one on the Orb of Annulment step, before
+  them, spent the time the usual roles' round needed: 4,346.05 c against main's 2,066.12 c at 600 s). Its round holds the
   offers the next round holds already, the cheapest cleaner, and the lock role (`OfferTable.lock_roles`), alone:
   - for each side, every offer that may add its lock and keeps the mods it is given (`lockers`: no reroll at any shape): the bench lock, and
     what puts it back once a reroll of the other side has taken it off with that side (a beast that draws a metamod keeps the mods);
@@ -709,7 +711,7 @@ class Grower:
                 continue
             waits, risks, shapes, fractured = read_step(acts, len(table.goal.leaves))
             current = frozenset(support | self.asked)
-            found = self.lock_group(label, share, waits, shapes, current)
+            found = self.lock_group(label, share, waits, shapes, current) if not risks else None
             if found is not None:  # the step stays undiagnosed: the round after it reads its usual roles
                 self.lock_round = True
                 return found
