@@ -209,7 +209,9 @@ def missing_mods_table(
     """The table of the round whose floors are `floors`, built under the net `stop` (the build's clock and memory) and a time share of its own,
     `seconds` (OR-39, OR-40: `TABLE_SHARE` of the round's seconds, `_pattern_bound`); both are asked at every iteration, every `ASK_STATES`
     states of a pass and inside the making of every kernel (`budget.asking`, also in a run counted in pieces: the table is no piece of the
-    count, so the floors' rule of asking no clock there does not apply to it). It is `off`, with its reason, whenever it cannot be built, a net
+    count, so the floors' rule of asking no clock there does not apply to it). A run counted in states has no round seconds (`seconds` None): its
+    table's work is then capped by count alone, the same on every machine: at most `ITERATIONS` passes of T and the check's, each over the
+    states (at most 2^`MAX_OPEN` sets per room) and the round's offers, and one exact kernel per erasing offer; memory stays asked. It is `off`, with its reason, whenever it cannot be built, a net
     is reached, the check h <= T h fails, or anything in it raises: a table that is off is today's floors, never a crash of the round."""
     said = say or (lambda _text: None)
     began = time.perf_counter()
@@ -634,6 +636,7 @@ class _Build:
                 there = dict(self.side_free[dest])
                 law = "move-add"
                 for A in range(self.full):
+                    self.ask()
                     for fp, fs, kp, ks in self.rk[s]:
                         if kp or ks:
                             continue
@@ -641,6 +644,7 @@ class _Build:
                         sups[(A, fp, fs)] = self._sups(pool, there, tag, pas, A, *moved)
             else:
                 for A in range(self.full):
+                    self.ask()
                     for fp, fs, kp, ks in self.rk[s]:
                         if kp or ks or fp + fs < 1:
                             continue
