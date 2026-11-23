@@ -137,7 +137,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: harvest_reforge.influence_reforge_exists
-    statement: A Harvest craft exists that reforges an Influenced rare item with random modifiers including an influence modifier. It rerolls as a tagged reforge does (harvest_reforge.rerolls_like_chaos_with_guaranteed_tag) and the guarantee is the one of harvest_reforge.influence_mod_is_influence_spawn. Randomise Influence is a different craft and is not modelled (out of v1, owner, grill B2, issue 93).
+    statement: A Harvest craft exists that reforges an Influenced rare item with random modifiers including an influence modifier. It rerolls as a tagged reforge does (harvest_reforge.rerolls_like_chaos_with_guaranteed_tag) and the guarantee is the one of harvest_reforge.influence_mod_is_influence_spawn. Randomise Influence is a different craft and is not modelled (out of v1, owner, grill B2, issue 93); the wiki's refusal of a reforge under `Suffixes Cannot Be Changed` when a suffix is influenced is about that craft (Metamod page, row 'Randomise the Influence types on an Influenced Normal, Magic or Rare Item, as well as reforging the item with new random modifiers', which says 'usage is prevented if any suffix is influenced'), and the Craft of Exile emulator applies this influence reforge under the lock with an influenced suffix on the item, with our distribution (issue #1457).
     source_kind: wiki
     url: https://www.poewiki.net/wiki/List_of_harvest_crafting_options#Core_game
     quote: "Reforge an Influenced Rare item with random modifiers, including a Influence modifier"

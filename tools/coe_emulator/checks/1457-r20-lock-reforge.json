@@ -1,0 +1,69 @@
+[
+ {
+  "id": "r20-step7-fire",
+  "route": "R20",
+  "note": "#1457 doubt 1: R20 step 7, Harvest Reforge Fire on the Shaper/Elder Eternal Burgonet with the essence suffix, Trap and Mine, and the crafted prefix Suffixes Cannot Be Changed. Is the lock still there after the reforge, and does a third suffix appear?",
+  "base": "Metadata/Items/Armours/Helmets/HelmetStr11",
+  "item_level": 86,
+  "rarity": "rare",
+  "influences": [
+   "shaper",
+   "elder"
+  ],
+  "mods": [
+   "SocketedGemsDealMoreElementalDamageEssence1",
+   "MineDamageTrapUber3",
+   "DexMasterItemGenerationCannotChangeSuffixes"
+  ],
+  "actions": [
+   "Harvest Reforge Fire",
+   "Harvest Reforge Influence"
+  ],
+  "repeats": 2000
+ },
+ {
+  "id": "r20-step8-influence",
+  "route": "R20",
+  "note": "#1457 doubt 2: R20 step 8, Harvest Reforge Influence with the influenced Elder suffix Burning Damage under Suffixes Cannot Be Changed: refused or not, and is the lock kept?",
+  "base": "Metadata/Items/Armours/Helmets/HelmetStr11",
+  "item_level": 86,
+  "rarity": "rare",
+  "influences": [
+   "shaper",
+   "elder"
+  ],
+  "mods": [
+   "SocketedGemsDealMoreElementalDamageEssence1",
+   "IncreasedBurningDamageSupportedUber3",
+   "DexMasterItemGenerationCannotChangeSuffixes"
+  ],
+  "actions": [
+   "Harvest Reforge Influence",
+   "Harvest Reforge Fire",
+   "Orb of Scouring",
+   "Orb of Annulment"
+  ],
+  "repeats": 2000
+ },
+ {
+  "id": "r04-scour-under-lock",
+  "route": "R04",
+  "note": "#1457: R04's Scour loop under Suffixes Cannot Be Changed: the essence prefix Pierce, the suffixes Strength (essence) and Additional Arrow, and the crafted lock (a prefix). Scouring, Annulment and Chaos Orb: what stays, is the lock removed?",
+  "base": "Metadata/Items/Quivers/QuiverNew5",
+  "item_level": 81,
+  "rarity": "rare",
+  "influences": [],
+  "mods": [
+   "AdditionalPierceEssence7",
+   "StrengthEssence7_",
+   "AdditionalArrowQuiver1_",
+   "DexMasterItemGenerationCannotChangeSuffixes"
+  ],
+  "actions": [
+   "Orb of Scouring",
+   "Orb of Annulment",
+   "Chaos Orb"
+  ],
+  "repeats": 2000
+ }
+]
