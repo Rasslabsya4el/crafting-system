@@ -49,6 +49,8 @@ from ._implicit_finish import ImplicitFinish, ImplicitFinishRefused, implicit_fi
 from ._quality_finish import QualityFinish, QualityFinishRefused, plan_quality_finish, quality_finish_limits
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
 from . import _limits
+from ._made_start import made_start
+from ._start_types import MadeStart
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
 from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
@@ -116,6 +118,7 @@ class StartPrice:
     given: bool = False
     mark: str | None = None  # a thin market's price is marked (OR-8): "old price, read on <date>, ..." or "few offers: ..."; None for an unmarked price
     searched: Mapping[str, Any] | None = field(default=None, compare=False)  # the stored search body when `taken_for` is set: the page names and links it (#937)
+    made: MadeStart | None = field(default=None, compare=False)  # the item is made by its recipe, not bought as one (#1523): the goods priced
 
     def __post_init__(self) -> None:
         if self.given and self.chaos != 0:
@@ -408,6 +411,10 @@ def resolve_start_price(
     if override is not None:
         return StartPrice(name, _override(override), "given on the command line")
     planned = planned_price(prices, name, price_source)  # OR-8: a thin market is priced, with its mark
+    made = made_start(data, target, prices, price_source)  # a dual-influenced item the market has no line for is made by an Awakener's Orb (#1523)
+    if made is not None and (planned is None or made.chaos < planned.chaos):
+        words = " + ".join(f"{count} {good}" for good, count, _, _ in made.goods)
+        return StartPrice(name, made.chaos, f"made with an {made.orb}: {words}", made=made)
     if planned is None:
         raise PlanError(
             f"no price for the start item {name!r}. A bought start item must have a price. Price it on the trade site with the "
@@ -858,9 +865,9 @@ def _make_plan(
     if price_of_start.bought:
         bought = price_of_start.name or "start item"
         restart = Offer(RESTART, BuyStartItem(listing or target.start_item), {bought: 1}, shares=False)
-        part = (bought, 1, price_of_start.chaos, price_of_start.source)
+        parts = price_of_start.made.goods if price_of_start.made is not None else ((bought, 1, price_of_start.chaos, price_of_start.source),)
         marks = ((bought, price_of_start.mark),) if price_of_start.mark else ()
-        priced = (*priced, PricedOffer(restart, price_of_start.chaos, (part,), marks))
+        priced = (*priced, PricedOffer(restart, price_of_start.chaos, parts, marks))
     # a route judged against the plan: no price cut, since the route may name the offer it would leave out; a round of the rounds is cut, and its
     # cut keeps the route's offers (`route_actions`)
     judged = incumbent is not None or judges_route or (route_actions is not None and round_call is None)

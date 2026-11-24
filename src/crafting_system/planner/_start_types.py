@@ -38,6 +38,26 @@ Goods = tuple[tuple[str, int, float, str], ...]  # (price name, count, Chaos for
 
 
 @dataclass(frozen=True)
+class MadeStart:
+    """A bought start item the player makes by a recipe of priced goods, since the market has no line for it (#1523, `_made_start`).
+
+    `goods` are what is bought, in the order they are used (`Goods`); the start price is their sum. `receiver` is the price name of the item the
+    orb is used on (it becomes the start item), `donor` the one it destroys; `claims` the ids of the rules the recipe rests on.
+    """
+
+    recipe: str
+    orb: str
+    goods: Goods
+    receiver: str
+    donor: str
+    claims: tuple[str, ...] = ()
+
+    @property
+    def chaos(self) -> float:
+        return sum(part[2] for part in self.goods)
+
+
+@dataclass(frozen=True)
 class NinjaRow:
     """The poe.ninja row of a bought base (ADR-0061): its name, its price and the observations it rests on (None when not recorded)."""
 

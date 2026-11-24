@@ -582,6 +582,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"Start item: {plan.start_price.source}")
     else:
         lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
+        if plan.start_price.made is not None:  # no market line: made by its recipe from the goods priced here (#1523)
+            lines.extend(f"  {count} {good}: {money(chaos)} Chaos [{source}]" for good, count, chaos, source in plan.start_price.made.goods)
         if plan.start_price.mark:  # OR-8: a thin market's price never stands unmarked
             lines.append(f"  {plan.start_price.mark}")
     if plan.start_price.taken_for:
@@ -782,6 +784,7 @@ def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None
             "price_source": plan.start_price.source,
             **({"price_mark": plan.start_price.mark} if plan.start_price.mark else {}),
             "given": plan.start_price.given,
+            **({"made_by": _made_document(plan.start_price.made)} if plan.start_price.made is not None else {}),
         },
         "limits": [limit_document(limit) for limit in ordered(plan.limits)],
         "offered_actions": [priced.label for priced in plan.offers],
@@ -820,6 +823,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "price_source": plan.start_price.source,
             **({"price_mark": plan.start_price.mark} if plan.start_price.mark else {}),
             "given": plan.start_price.given,
+            **({"made_by": _made_document(plan.start_price.made)} if plan.start_price.made is not None else {}),
         },
         **({"start_options": start_document(plan.starts, report.first_step)} if plan.starts is not None else {}),
         "limits": [limit_document(limit) for limit in ordered(spent_kinds_named(plan.limits, (use.name for use in report.prices_used)))],  # as the page and the text name them (#983)
@@ -887,3 +891,11 @@ def policy_document(report: Report, verification: Verification | None = None, *,
             "reason": verification.reason,
         }
     return document
+
+
+def _made_document(made) -> dict:
+    """The JSON of a start item made by its recipe (#1523): the orb, the item it is used on, the one it destroys, and each good with its price."""
+    return {
+        "recipe": made.orb, "receiver": made.receiver, "donor": made.donor,
+        "goods": [{"name": name, "count": count, "chaos": chaos, "price_source": source} for name, count, chaos, source in made.goods],
+    }

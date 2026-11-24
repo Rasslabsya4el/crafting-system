@@ -194,7 +194,7 @@ The public names of the modules the audit says are built and not wired (of a mod
 | the market rule | `age_in_days` | `prices/trade_market.py` | prices/trade_pricing.py: trade_price_age_days | **no** | INPUTS-2 |
 | the market rule | `classify` | `prices/trade_market.py` | prices/trade_exchange.py: read_offers, prices/trade_pricing.py: is_deep, prices/trade_pricing.py: market_of_listings | yes | INPUTS-2 |
 | the market rule | `offer` | `prices/trade_market.py` | prices/price_source.py: source_price | **no** | INPUTS-2 |
-| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_trade.py: _priced_as, planner/_bought_starts.py: _option, and 6 more | yes | INPUTS-2 |
+| the market rule | `planned_price` | `prices/trade_market.py` | cli/_benchmark.py: _missing_start_price, cli/_trade.py: _priced_as, planner/_bought_starts.py: _option, and 7 more | yes | INPUTS-2 |
 | the price-source rule | `SourcedPrice` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_gap_percent` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
 | the price-source rule | `check_price_source` | `prices/price_source.py` | nothing | **no** | INPUTS-2, PLANNING-6 |
@@ -222,10 +222,10 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 |---|---|---|
 | `base_id` | cli/_benchmark_outcomes.py, cli/_route_card.py, cli/_route_view.py, cli/_start_step.py, planner/_bought_starts.py, and 3 more |  |
 | `item_level` | cli/_benchmark_outcomes.py, cli/_route_card.py, cli/_route_view.py, planner/_finish.py, planner/_growth.py, and 1 more |  |
-| `influences` | cli/_route_card.py, cli/_route_view.py, planner/_bought_starts.py |  |
+| `influences` | cli/_route_card.py, cli/_route_view.py, planner/_bought_starts.py, planner/_made_start.py |  |
 | `requirements` | abstraction/_goal.py, cli/_benchmark.py, cli/_route_card.py, planner/_bought_starts.py, planner/_plan.py, and 1 more |  |
-| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_entry.py, planner/_finish.py, and 5 more |  |
-| `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_plan.py, planner/_starts.py |  |
+| `start_item` | cli/_benchmark_outcomes.py, cli/_route_card.py, planner/_bought_starts.py, planner/_entry.py, planner/_finish.py, and 6 more |  |
+| `start` | cli/_benchmark.py, cli/_main.py, cli/_trade.py, planner/_made_start.py, planner/_plan.py, and 1 more |  |
 | `price_file` | cli/_benchmark.py, cli/_main.py |  |
 | `implicits` | abstraction/_goal.py, cli/_route_card.py, planner/_entry.py, planner/_implicit_finish.py, planner/_plan.py |  |
 | `quality` | abstraction/_goal.py, cli/_route_card.py, planner/_entry.py, planner/_plan.py, planner/_quality_finish.py |  |

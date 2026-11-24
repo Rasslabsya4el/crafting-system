@@ -38,7 +38,7 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
-from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, default_offers, guide_plan, plan_target
+from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, default_offers, guide_plan, made_start, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
@@ -678,8 +678,8 @@ def _missing_start_price(data: GameData, target: Target, prices: PriceFile, root
     if target.start is not StartKind.BOUGHT:  # a given start item (OR-6) has no price to miss
         return None
     name = start_price_key(data, target)
-    if planned_price(prices, name) is not None:
-        return None
+    if planned_price(prices, name) is not None or made_start(data, target, prices, config.price_source) is not None:
+        return None  # priced, or made by its recipe from priced goods (a dual-influenced helmet by an Awakener's Orb, #1523)
     price_file = target.price_file if target.price_file is not None else default_price_file_path(config)
     return {
         "name": name,

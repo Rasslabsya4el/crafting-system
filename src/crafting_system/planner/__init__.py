@@ -92,12 +92,14 @@ from ._plan import (
     strand_setting,
 )
 from ._presenter import present_with
+from ._made_start import AWAKENERS_ORB, made_start
 from ._start_options import ORB_OF_AUGMENTATION, StartContext, StartList, StartSource, base_kind, good_name, vendor_recipe_starts
 from ._start_types import (
     NO_TARGET_MOD,
     SOURCE_PLAIN,
     SOURCE_VENDOR_RECIPE,
     ConsideredStart,
+    MadeStart,
     ReadingChoice,
     RefusedStart,
     StartCandidate,
@@ -148,6 +150,9 @@ __all__ = [
     "ReadingChoice",
     "RefusedStart",
     "Standing",
+    "AWAKENERS_ORB",
+    "MadeStart",
+    "made_start",
     "StartCandidate",
     "StartChoice",
     "StartContext",
