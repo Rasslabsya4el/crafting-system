@@ -1,0 +1,64 @@
+# Mechanic family: augmentation (Orb of Augmentation and its Greater and Perfect tiers on a magic item).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: augmentation.adds_one_mod_to_magic
+    statement: An Orb of Augmentation (any tier) adds 1 random modifier to a Magic item that has an open affix (fewer than 2 modifiers); the new modifier goes to the open side.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Augments a [ItemRarity / Magic] item with a new random modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: augmentation.greater_min_level
+    statement: A Greater Orb of Augmentation adds only a tier of level 44 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Greater Orb of Augmentation | 2 | 44 | Orb of Augmentation |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 44
+    history:
+      - held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: Greater Orbs of Transmutation and Greater Orbs of Augmentation now have a minimum Modifier Level of 44 (previously 55)
+        value: 55
+
+  - id: augmentation.perfect_min_level
+    statement: A Perfect Orb of Augmentation adds only a tier of level 70 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Perfect Orb of Augmentation | 3 | 70 | Greater Orb of Augmentation |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 70
+
+  - id: augmentation.cost
+    statement: One use of Orb of Augmentation consumes one Orb of Augmentation; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToMagic: Orb of Augmentation'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Orb of Augmentation: 1
+
+  - id: augmentation.greater_cost
+    statement: One use of Greater Orb of Augmentation consumes one Greater Orb of Augmentation; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToMagic2: Greater Orb of Augmentation'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Orb of Augmentation: 1
+
+  - id: augmentation.perfect_cost
+    statement: One use of Perfect Orb of Augmentation consumes one Perfect Orb of Augmentation; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToMagic3: Perfect Orb of Augmentation'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Perfect Orb of Augmentation: 1

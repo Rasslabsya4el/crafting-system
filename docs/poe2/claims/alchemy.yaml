@@ -1,0 +1,41 @@
+# Mechanic family: alchemy (Orb of Alchemy on a normal or magic item).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: alchemy.makes_rare_with_four_mods
+    statement: An Orb of Alchemy makes a Normal or Magic item Rare with exactly 4 random modifiers; the current modifiers are not kept.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [ItemRarity / Normal] or [ItemRarity / Magic] item to a [ItemRarity / Rare] item with 4 random modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 4
+
+  - id: alchemy.current_mods_not_retained
+    statement: An Orb of Alchemy on a Magic item removes its modifiers before it draws the 4 new ones.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a normal or magic item to apply it. Current modifiers are not retained.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: alchemy.sides_random_within_limits
+    statement: The 4 modifiers of an Orb of Alchemy are drawn one by one from the whole pool, so the prefix/suffix split is random within 3 prefixes and 3 suffixes.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: return this.rerollAffixes(4,e),!0}
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: The split of an Alchemy's four modifiers between prefixes and suffixes is assumed to follow the ordinary modifier draw.
+    page_source: Craft of Exile's code only
+
+  - id: alchemy.cost
+    statement: One use of Orb of Alchemy consumes one Orb of Alchemy; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeToRare: Orb of Alchemy'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Orb of Alchemy: 1

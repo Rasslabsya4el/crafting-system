@@ -1,0 +1,82 @@
+# Mechanic family: catalyst (catalysts: typed quality on rings, amulets and jewels).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: catalyst.ring_amulet_typed_quality
+    statement: A catalyst (13 kinds) adds quality to a ring or amulet that enhances the modifiers of its tag, and replaces any other quality type (the quality starts again from 0). Craft of Exile also accepts Grasping Mail.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds [Quality / quality] that enhances Life modifiers on a ring or amulet Replaces other quality types
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: catalyst.refined_jewel_typed_quality
+    statement: A Refined catalyst (13 kinds, the same tags) does the same on a jewel. The 0.5.0 notes say 12; the game data lists 13.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds [Quality / quality] that enhances Life modifiers on a jewel Replaces other quality types
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 13
+
+  - id: catalyst.genesis_tree_only
+    statement: Since 0.5.0 catalysts no longer drop from monsters; they come only from the Genesis Tree.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Catalysts can no longer drop from Monsters, these are now solely obtained from the Genesis Tree.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: catalyst.jewel_catalysts_added
+    statement: The Refined (jewel) catalysts were added in 0.5.0.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Added a new set of 12 Catalysts that can add new quality modifiers to Jewels.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: catalyst.cap_and_amount
+    statement: Catalyst quality is capped at 20% (more on Breach rings, +20 or +25 maximum quality) and is added per use by the item-level formula of quality_currency.amount_by_item_level.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: maximumDefaultQuality:20
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: How much quality one catalyst adds is assumed to follow the emulator's item-level formula.
+    page_source: Craft of Exile's code only
+
+  - id: catalyst.cost
+    statement: One use of a catalyst consumes one of that catalyst; the value maps each price name to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyJewelleryQualityLife: Flesh Catalyst'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Flesh Catalyst: 1
+      Neural Catalyst: 1
+      Carapace Catalyst: 1
+      Uul-Netol's Catalyst: 1
+      Xoph's Catalyst: 1
+      Tul's Catalyst: 1
+      Esh's Catalyst: 1
+      Chayula's Catalyst: 1
+      Reaver Catalyst: 1
+      Sibilant Catalyst: 1
+      Skittering Catalyst: 1
+      Adaptive Catalyst: 1
+      Necrotic Catalyst: 1
+      Refined Flesh Catalyst: 1
+      Refined Neural Catalyst: 1
+      Refined Carapace Catalyst: 1
+      Refined Uul-Netol's Catalyst: 1
+      Refined Xoph's Catalyst: 1
+      Refined Tul's Catalyst: 1
+      Refined Esh's Catalyst: 1
+      Refined Chayula's Catalyst: 1
+      Refined Reaver Catalyst: 1
+      Refined Sibilant Catalyst: 1
+      Refined Skittering Catalyst: 1
+      Refined Adaptive Catalyst: 1
+      Refined Necrotic Catalyst: 1

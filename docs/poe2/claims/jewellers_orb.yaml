@@ -1,0 +1,67 @@
+# Mechanic family: jewellers_orb (Jeweller's Orbs: support sockets of a skill gem).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: jewellers_orb.lesser_three
+    statement: A Lesser Jeweller's Orb sets a skill gem with fewer than 3 support sockets to 3.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a Skill Gem to apply it. Can only apply to Skill Gems with fewer than 3 Support Gem Sockets.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 3
+
+  - id: jewellers_orb.greater_four
+    statement: A Greater Jeweller's Orb sets a skill gem with fewer than 4 support sockets to 4.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a Skill Gem to apply it. Can only apply to Skill Gems with fewer than 4 Support Gem Sockets.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 4
+
+  - id: jewellers_orb.perfect_five
+    statement: A Perfect Jeweller's Orb sets a skill gem with fewer than 5 support sockets to 5.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a Skill Gem to apply it. Can only apply to Skill Gems with fewer than 5 Support Gem Sockets.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 5
+
+  - id: jewellers_orb.items_with_skills
+    statement: Since 0.5.0 the Jeweller's Orbs also work on items that grant skills.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Lesser, Greater and Perfect Jeweller's Orbs can now be used on items with skills on them
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: jewellers_orb.lesser_cost
+    statement: One use of Lesser Jeweller's Orb consumes one Lesser Jeweller's Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddSkillGemSocket3: Lesser Jeweller''s Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Lesser Jeweller's Orb: 1
+
+  - id: jewellers_orb.greater_cost
+    statement: One use of Greater Jeweller's Orb consumes one Greater Jeweller's Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddSkillGemSocket4: Greater Jeweller''s Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Jeweller's Orb: 1
+
+  - id: jewellers_orb.perfect_cost
+    statement: One use of Perfect Jeweller's Orb consumes one Perfect Jeweller's Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddSkillGemSocket5: Perfect Jeweller''s Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Perfect Jeweller's Orb: 1

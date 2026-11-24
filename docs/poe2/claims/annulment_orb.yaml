@@ -1,0 +1,40 @@
+# Mechanic family: annulment_orb (Orb of Annulment: removes one modifier).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: annulment_orb.removes_one_mod
+    statement: An Orb of Annulment removes 1 random explicit modifier from a Magic or Rare item with at least 1 removable modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Removes a random modifier from an item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: annulment_orb.accepts_magic_or_rare
+    statement: An Orb of Annulment is used on a Magic or Rare item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click on a magic or rare item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: annulment_orb.uniform_over_removable
+    statement: The removed modifier is picked uniformly among the removable explicit modifiers; fractured modifiers are not candidates. The omens of Sinistral/Dextral Annulment and Light narrow the candidates.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: let e=EmulatorManager.randomNumber(0,l.length,!0);if(this._item.removeModifier(l[e],!1),l.splice(e,1),0==l.length)break
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: The modifier an Annulment removes is assumed to be picked with equal chance among the modifiers that can be removed.
+    page_source: Craft of Exile's code only
+
+  - id: annulment_orb.cost
+    statement: One use of Orb of Annulment consumes one Orb of Annulment; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRemoveMod: Orb of Annulment'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Orb of Annulment: 1

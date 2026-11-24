@@ -1,0 +1,49 @@
+# Mechanic family: fracturing_orb (Fracturing Orb: locks one random modifier of a rare item).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: fracturing_orb.fractures_one_mod
+    statement: A Fracturing Orb fractures 1 random modifier of a Rare item with at least 4 modifiers, locking it in place.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '[Fracture / Fracture] a random modifier on a rare item with at least 4 modifiers, locking it in place.'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 4
+
+  - id: fracturing_orb.not_on_fractured
+    statement: A Fracturing Orb is used on a Rare item that has no fractured modifier yet.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a rare item to apply it. Cannot be used on Fractured items.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: fracturing_orb.uniform_unrevealed_excluded
+    statement: The fractured modifier is picked uniformly among the explicit modifiers; unrevealed Desecrated modifiers are not candidates (Craft of Exile also refuses strongboxes).
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: fracture(e=1){let t=[];if(this._item.getModifiers().forEach((e,a)=>{e.veiled&&!gameConstants.canFracturedVeiled||gameConstants.explicitTypes.includes(e.type)&&t.push(a)})
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: The modifier a Fracturing Orb locks is assumed to be picked with equal chance, leaving out unrevealed modifiers.
+    page_source: Craft of Exile's code only
+
+  - id: fracturing_orb.atlas_specialisation
+    statement: Since 0.5.0 Fracturing Orbs are found only after specialising in them on the Atlas passive tree.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Some items and content now require you to specialise in them through Atlas Passive Skills including Exceptional Items, Fracturing Orbs, Basic and Overseer precursor tablets.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: fracturing_orb.cost
+    statement: One use of Fracturing Orb consumes one Fracturing Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyFractureRare: Fracturing Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Fracturing Orb: 1

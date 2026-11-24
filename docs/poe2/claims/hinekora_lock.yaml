@@ -1,0 +1,28 @@
+# Mechanic family: hinekora_lock (Hinekora's Lock: foresee the next currency result).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: hinekora_lock.foresee_next
+    statement: Hinekora's Lock lets an item foresee the result of the next currency item used on it; modifying the item in any way removes the foresight. How the preview is shown and whether a locked item can be traded are not documented.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Allows an item to foresee the result of the next Currency item used on it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: hinekora_lock.added_0_3_0
+    statement: Hinekora's Lock was added in 0.3.0; modifying the item in any way ends the foresight.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3826682
+    quote: Modifying the item in any way removes the ability to foresee.
+    patch_verified: "0.3.0"
+    date_checked: 2026-11-24
+
+  - id: hinekora_lock.cost
+    statement: One use of Hinekora's Lock consumes one Hinekora's Lock; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyHinekorasLock: Hinekora''s Lock'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Hinekora's Lock: 1

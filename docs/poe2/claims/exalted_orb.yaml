@@ -1,0 +1,66 @@
+# Mechanic family: exalted_orb (Exalted Orb and its Greater and Perfect tiers on a rare item).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: exalted_orb.adds_one_mod_to_rare
+    statement: An Exalted Orb (any tier) adds 1 random modifier to a Rare item that has at least one open affix.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Augments a [ItemRarity / Rare] item with a new random modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: exalted_orb.accepts_rare_only
+    statement: An Exalted Orb is used on a Rare item only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a rare item to apply it. Rare items can have up to six random modifiers.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: exalted_orb.greater_min_level
+    statement: A Greater Exalted Orb adds only a tier of level 35 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Greater Exalted Orb | 2 | 35 | Exalted Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 35
+
+  - id: exalted_orb.perfect_min_level
+    statement: A Perfect Exalted Orb adds only a tier of level 50 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Perfect Exalted Orb | 3 | 50 | Greater Exalted Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 50
+
+  - id: exalted_orb.cost
+    statement: One use of Exalted Orb consumes one Exalted Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToRare: Exalted Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Exalted Orb: 1
+
+  - id: exalted_orb.greater_cost
+    statement: One use of Greater Exalted Orb consumes one Greater Exalted Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToRare2: Greater Exalted Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Exalted Orb: 1
+
+  - id: exalted_orb.perfect_cost
+    statement: One use of Perfect Exalted Orb consumes one Perfect Exalted Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddModToRare3: Perfect Exalted Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Perfect Exalted Orb: 1

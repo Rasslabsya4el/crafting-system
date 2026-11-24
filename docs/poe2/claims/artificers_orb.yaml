@@ -1,0 +1,59 @@
+# Mechanic family: artificers_orb (Artificer's Orb: adds an Augment socket).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: artificers_orb.adds_socket
+    statement: An Artificer's Orb adds an Augment socket to a Martial Weapon, wand, staff or Armour.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds an [Augment] Socket to a [MartialWeapon / Martial Weapon], wand, staff or Armour
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: artificers_orb.socket_maximum
+    statement: 'An Artificer''s Orb needs an item below its socket maximum: 2 for body armours, two-hand weapons, bows, crossbows, quarterstaves, staves, talismans and Grasping Mail; 1 for helmets, gloves, boots, shields, bucklers, foci, one-hand weapons, spears, wands and sceptres; 0 for jewellery, quivers and flasks. The Vaal Orb socket outcome can exceed it by 1.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: canAddSockets(e){return!!e||(this.#Ie.sockets<this.#Ie.data.sockets||ConstraintsParser.getMessage("MAXIMUM_SOCKETS_REACHED"))}
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      two:
+        - Body Armour
+        - two-hand weapons
+        - Bow
+        - Crossbow
+        - Quarterstaff
+        - Staff
+        - Talisman
+        - Grasping Mail
+      one:
+        - Helmet
+        - Gloves
+        - Boots
+        - Shield
+        - Buckler
+        - Focus
+        - one-hand weapons
+        - Spear
+        - Wand
+        - Sceptre
+      zero:
+        - Amulet
+        - Ring
+        - Belt
+        - Quiver
+        - Flask
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: The number of sockets an Artificer's Orb can reach on each kind of item is assumed from the emulator's data.
+    page_source: Craft of Exile's code only
+
+  - id: artificers_orb.cost
+    statement: One use of Artificer's Orb consumes one Artificer's Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyAddEquipmentSocket: Artificer''s Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Artificer's Orb: 1

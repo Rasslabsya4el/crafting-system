@@ -1,0 +1,48 @@
+# Mechanic family: orb_of_chance (Orb of Chance: a normal item becomes unique or is destroyed).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: orb_of_chance.unique_or_destroyed
+    statement: An Orb of Chance turns a Normal item into a Unique or destroys it.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Unpredictably either upgrades a [ItemRarity / Normal] item to [ItemRarity / Unique] rarity or destroys it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: orb_of_chance.accepts_normal
+    statement: An Orb of Chance is used on a Normal item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a normal item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: orb_of_chance.tablets
+    statement: Since 0.5.0 an Orb of Chance can also be used on Tablets.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: You can now use Orbs of Chance on Tablets.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: orb_of_chance.odds_by_class
+    statement: The success odds are not published; they depend on the uniques of the base, and since 0.3.0 are higher on amulets, rings, belts and charms.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3826682
+    quote: Orbs of Chance are now more likely to succeed on Amulets, Rings, Belts and Charms.
+    patch_verified: "0.3.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: GGG gives only the direction; no number is published.
+    page_statement: The chance that an Orb of Chance makes a unique is not known.
+    page_source: patch notes give only the direction
+
+  - id: orb_of_chance.cost
+    statement: One use of Orb of Chance consumes one Orb of Chance; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeRandomly: Orb of Chance'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Orb of Chance: 1

@@ -1,0 +1,611 @@
+# Mechanic family: omen (every Omen in the PoE2 0.5.5.10 data: crafting omens, retired ones and the non-crafting ones).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: omen.activation
+    statement: An omen is right-clicked to become active in the inventory and is consumed when its trigger fires; several omens can be active at once.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item in your inventory to set it to be active. This item is consumed when triggered.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.stack_10
+    statement: Omens stack to 10 since 0.3.0.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3826682
+    quote: Omens can now stack, with a maximum stack size of 10.
+    patch_verified: "0.3.0"
+    date_checked: 2026-11-24
+    value: 10
+
+  - id: omen.incompatible_pairs
+    statement: 'These omens cannot be active together (`value`, each list one group): Sinistral/Dextral of the same currency (Alchemy, Coronation, Exaltation, Annulment, Crystallisation, Necromancy, Erasure) and the three lich omens. Craft of Exile also groups three Chaotic waystone omens, which since 0.5.0 may be used together (omen.chaotic_up_to_three).'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: omenIncompatibilities:[["OmenOnAlchemyMaximumPrefixes","OmenOnAlchemyMaximumSuffixes"],["OmenOnRegalPrefix","OmenOnRegalSuffix"],["OmenOnExaltAddPrefixes","OmenOnExaltAddSuffixes"]
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      - - Omen of Sinistral Alchemy
+        - Omen of Dextral Alchemy
+      - - Omen of Sinistral Coronation
+        - Omen of Dextral Coronation
+      - - Omen of Sinistral Exaltation
+        - Omen of Dextral Exaltation
+      - - Omen of Sinistral Annulment
+        - Omen of Dextral Annulment
+      - - Omen of Sinistral Crystallisation
+        - Omen of Dextral Crystallisation
+      - - Omen of Sinistral Necromancy
+        - Omen of Dextral Necromancy
+      - - Omen of Sinistral Erasure
+        - Omen of Dextral Erasure
+      - - Omen of the Sovereign
+        - Omen of the Liege
+        - Omen of the Blackblooded
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: Two omens of opposite sides for the same currency are assumed not to work together.
+    page_source: Craft of Exile's code only
+
+  - id: omen.greater_exaltation
+    statement: 'Omen of Greater Exaltation: the next Exalted Orb (any tier, with its minimum level) adds 2 random modifiers instead of 1. What happens with only 1 open affix is not known (Craft of Exile simply rolls 2).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Exalted Orb will add two random modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 2
+
+  - id: omen.sinistral_exaltation
+    statement: 'Omen of Sinistral Exaltation: the next Exalted Orb adds only a prefix (it needs an open prefix); the pool is limited to prefixes with their weights unchanged.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Exalted Orb will add only prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.dextral_exaltation
+    statement: 'Omen of Dextral Exaltation: the next Exalted Orb adds only a suffix (it needs an open suffix); the pool is limited to suffixes with their weights unchanged.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Exalted Orb will add only suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.homogenising_exaltation
+    statement: 'Omen of Homogenising Exaltation: the next Exalted Orb adds a modifier of the same type as one already on the item. It no longer drops (0.4.0) and is on the Currency Exchange in Standard only (0.5.0).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Exalted Orb will add a Modifier of the same type as an existing Modifier on the Item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.homogenising_tag_rule
+    statement: 'Craft of Exile reads the Homogenising omens'' "same type" as: the pool is limited to modifiers sharing at least one modifier tag with an existing explicit modifier (some tags excluded).'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: addHomogenizationTagsToEffects(e,t){let a=[];return t.forEach((t,i)=>{t.tags.forEach(function(t){let i=DataManager.getEntryFromId(coedata.tags,t);null==i.label||a.includes(i.key)||gameConstants.excludeTagsForHomogenize.includes(i.key)||(a.push(i.key),e.addAllowed(i.id))})}),e}
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A Homogenising omen is assumed to add a modifier that shares a tag with one already on the item.
+    page_source: Craft of Exile's code only
+
+  - id: omen.homogenising_disabled
+    statement: The two Homogenising omens stopped dropping in 0.4.0; items already owned still work.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3883495
+    quote: Omen of Homogenising Exaltation and the Omen of Homogenising Coronation have been disabled from dropping.
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+
+  - id: omen.catalysing_exaltation
+    statement: 'Omen of Catalysing Exaltation: the next Exalted Orb on a ring, amulet or jewel with catalyst quality consumes all of it (quality becomes 0) to raise the chance of the modifiers of the catalyst''s type.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Exalted Orb will consume all [Catalyst] [Quality] to increase the chance of the corresponding type of Modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.catalysing_exaltation_weight
+    statement: Under Omen of Catalysing Exaltation the weight of modifiers with the catalyst's tag is multiplied by 1 + 0.2*Q for quality Q up to 20 (x5 at 20), and by 1 + 0.2*20 + 0.12*(Q-20) above 20.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: let e=1,a=gameConstants.maximumDefaultQuality-this._item._quality;a<0?(a=Math.abs(a),e+=.12*a,e+=.2*gameConstants.maximumDefaultQuality):e+=.2*this._item._quality
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      per_quality_point_to_20: 0.2
+      per_quality_point_above_20: 0.12
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: How strongly Catalysing Exaltation favours the catalyst's modifiers is the emulator's estimate.
+    page_source: Craft of Exile's code only
+
+  - id: omen.homogenising_coronation
+    statement: 'Omen of Homogenising Coronation: the next Regal Orb on a Magic item adds a modifier of the same type as one already on it (tag rule as omen.homogenising_tag_rule). Disabled from dropping in 0.4.0; Standard-only on the exchange since 0.5.0.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Regal Orb will add a Modifier of the same type as an existing Modifier on the Item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.sinistral_coronation
+    statement: 'Omen of Sinistral Coronation (retired in 0.3.0, no longer obtainable): the next Regal Orb adds only a prefix.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Regal Orb will add only prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.dextral_coronation
+    statement: 'Omen of Dextral Coronation (retired in 0.3.0, no longer obtainable): the next Regal Orb adds only a suffix.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Regal Orb will add only suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.whittling
+    statement: 'Omen of Whittling: the next Chaos Orb removes the modifier of the lowest level (the level requirement of its tier) instead of a random one; fractured modifiers are skipped.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will remove the lowest level modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.whittling_ties_and_erasure
+    statement: Under Omen of Whittling ties of lowest level are broken uniformly at random, and with an Erasure omen also active the pick is limited to that side.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: if(!(i.fractured||a&&i.type!=a))return i.minlvl<e?(e=i.minlvl,void(t=[s])):void(i.minlvl==e&&t.push(s))
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: Whittling is assumed to pick at random among equally low modifiers, and to respect an Erasure omen's side.
+    page_source: Craft of Exile's code only
+
+  - id: omen.sinistral_erasure
+    statement: 'Omen of Sinistral Erasure: the next Chaos Orb removes only a prefix (it needs a removable prefix).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will remove only prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.dextral_erasure
+    statement: 'Omen of Dextral Erasure: the next Chaos Orb removes only a suffix (it needs a removable suffix).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will remove only suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.erasure_add_side_free
+    statement: 'Under an Erasure omen the modifier the Chaos Orb adds is not side-restricted: it may land on the other side.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: else this.annul([],a?[a]:[]);let i=this.rollAffixes(1,e)
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: With an Erasure omen the new modifier of a Chaos Orb is assumed free to land on either side.
+    page_source: Craft of Exile's code only
+
+  - id: omen.greater_annulment
+    statement: 'Omen of Greater Annulment (retired in 0.3.0, no longer obtainable): the next Orb of Annulment removes 2 modifiers.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Orb of Annulment will remove two modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 2
+
+  - id: omen.sinistral_annulment
+    statement: 'Omen of Sinistral Annulment: the next Orb of Annulment removes only a prefix, uniform over the non-fractured prefixes.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Orb of Annulment will remove only prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.dextral_annulment
+    statement: 'Omen of Dextral Annulment: the next Orb of Annulment removes only a suffix, uniform over the non-fractured suffixes.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Orb of Annulment will remove only suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.light
+    statement: 'Omen of Light: the next Orb of Annulment removes only a Desecrated modifier (revealed or unrevealed, per Craft of Exile).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Orb of Annulment will remove only [Abyssalify / Desecrated] modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.sinistral_alchemy
+    statement: 'Omen of Sinistral Alchemy (retired in 0.3.0, no longer obtainable): the next Orb of Alchemy gives 3 prefixes and 1 suffix.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Orb of Alchemy will result in the maximum number of prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      prefixes: 3
+      suffixes: 1
+
+  - id: omen.dextral_alchemy
+    statement: 'Omen of Dextral Alchemy (retired in 0.3.0, no longer obtainable): the next Orb of Alchemy gives 1 prefix and 3 suffixes.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Orb of Alchemy will result in the maximum number of suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      prefixes: 1
+      suffixes: 3
+
+  - id: omen.retired_0_3_0
+    statement: 'Five omens can no longer be obtained since 0.3.0: Greater Annulment, Sinistral and Dextral Alchemy, Sinistral and Dextral Coronation.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3826682
+    quote: 'The following Omens can no longer be obtained: Omen of Greater Annulment, Omen of Dextral Alchemy,'
+    patch_verified: "0.3.0"
+    date_checked: 2026-11-24
+
+  - id: omen.blessed
+    statement: 'Omen of the Blessed: the next Divine Orb rerolls only the implicit modifiers'' values.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Divine Orb will only reroll Implicit Modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.sanctification
+    statement: 'Omen of Sanctification: the next Divine Orb on a Rare item Sanctifies it: each modifier value is multiplied by its own random factor from 0.78 to 1.22 (in 0.01 steps, rounded up) of its current value, and the item then cannot be modified. An older figure was 0.8 to 1.2.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Divine Orb used on a [ItemRarity / Rare] item will [Sanctified / Sanctify] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      min_factor: 0.78
+      max_factor: 1.22
+
+  - id: omen.sanctify_multiplies_current
+    statement: Since 0.5.0 Sanctify multiplies each modifier's current value instead of rerolling it.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Sanctifying an item now multiplies each modifier value based on the current value, instead of randomising values.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: omen.corruption
+    statement: 'Omen of Corruption: the next Vaal Orb cannot give the "no change" outcome. It can no longer be obtained since 0.5.0 and is Standard-only on the exchange.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Vaal Orb will always result in change
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.corruption_unobtainable
+    statement: Omen of Corruption can no longer be obtained since 0.5.0.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Omen of Corruption can no longer be obtained.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: omen.chance
+    statement: 'Omen of Chance: the next Orb of Chance does not destroy the Normal item. It does not guarantee a unique; what a failed roll leaves is not stated.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Orb of Chance will not destroy the Item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.ancients
+    statement: 'Omen of the Ancients: the next Orb of Chance turns the Normal item into a random unique of the same item class (not the exact base).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Orb of Chance will upgrade the Item to a random [ItemRarity / Unique] of the same Item Class
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.sinistral_crystallisation
+    statement: 'Omen of Sinistral Crystallisation: the next Perfect or Corrupted Essence on a Rare removes only a prefix (Craft of Exile also applies it to Alloys).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Perfect or Corrupted Essence will remove only Prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.dextral_crystallisation
+    statement: 'Omen of Dextral Crystallisation: the next Perfect or Corrupted Essence on a Rare removes only a suffix.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Perfect or Corrupted Essence will remove only Suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.abyssal_echoes
+    statement: 'Omen of Abyssal Echoes: the next reveal of Desecrated modifiers may reroll its options once (a reveal shows 3 options, per Craft of Exile).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory the next time you reveal [Abyssalify / Desecrated] modifiers you can reroll the options once
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.sovereign
+    statement: 'Omen of the Sovereign: the next Desecration of a weapon or jewellery guarantees a random Ulaman modifier.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Weapon or Jewellery [Abyssalify / Desecration] attempt will guarantee a random Ulaman modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.liege
+    statement: 'Omen of the Liege: the next Desecration of a weapon or jewellery guarantees a random Amanamu modifier.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Weapon or Jewellery [Abyssalify / Desecration] attempt will guarantee a random Amanamu modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.blackblooded
+    statement: 'Omen of the Blackblooded: the next Desecration of a weapon or jewellery guarantees a random Kurgal modifier.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Weapon or Jewellery [Abyssalify / Desecration] attempt will guarantee a random Kurgal modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.putrefaction
+    statement: 'Omen of Putrefaction: the next Desecration of a Rare replaces all its modifiers with up to 6 unrevealed modifiers and corrupts the item.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next [Abyssalify / Desecration] attempt will replace all modifiers on the item creating an item with up to 6 Unrevealed modifiers and [Corrupted / Corrupting] the item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 6
+
+  - id: omen.putrefaction_sides_and_level
+    statement: Under Omen of Putrefaction Craft of Exile fills the item to its maximum affix count with sides drawn at random within 3/3; the ancient bone's minimum level is ignored (a player report says the same).
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: this._item.removeAllAffixes(),this._item.rarity=ItemRarity.RARE;let e=ItemsManager.getMaximumAffixesForBase(this._item)-this._item._modifierCount
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: Putrefaction is assumed to fill the item with unrevealed modifiers on random sides.
+    page_source: Craft of Exile's code only
+
+  - id: omen.sinistral_necromancy
+    statement: 'Omen of Sinistral Necromancy: the next Desecration adds only a prefix.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next [Abyssalify / Desecration] attempt will add only prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.dextral_necromancy
+    statement: 'Omen of Dextral Necromancy: the next Desecration adds only a suffix.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next [Abyssalify / Desecration] attempt will add only suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.necromancy_full_side_removes
+    statement: Under a Necromancy omen, when that side has no open slot a random modifier of that side is removed first.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: a.includes("OmenOnAbyssAddPrefixes")&&0==this._item._openModifiersPerType[gameConstants.prefixType]&&this.annul([],[gameConstants.prefixType])
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A Necromancy omen on a full side is assumed to remove a modifier of that side first.
+    page_source: Craft of Exile's code only
+
+  - id: omen.abyss_level_65
+    statement: Abyss omens do not drop in areas below level 65 (since 0.5.0).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Abyss Omens no longer drop in areas below level 65.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: 65
+
+  - id: omen.chaotic_rarity
+    statement: 'Omen of Chaotic Rarity: the next Chaos Orb replaces all modifiers of a Waystone with modifiers that do not grant Item Rarity (inverted in 0.5.0).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will replace all Modifiers on a [Waystone] with Modifiers that do not grant Item Rarity
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    history:
+      - held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: Instead of guaranteeing the new modifiers are of their type, they instead prevent the modifiers from being of their type.
+        statement: Omen of Chaotic Rarity guaranteed that the new waystone modifiers granted Item Rarity.
+
+  - id: omen.chaotic_quantity
+    statement: 'Omen of Chaotic Quantity: the next Chaos Orb replaces all modifiers of a Waystone with modifiers that do not grant Pack Size (inverted in 0.5.0).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will replace all Modifiers on a [Waystone] with Modifiers that do not grant Pack Size
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    history:
+      - held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: Instead of guaranteeing the new modifiers are of their type, they instead prevent the modifiers from being of their type.
+        statement: Omen of Chaotic Quantity guaranteed that the new waystone modifiers granted Pack Size.
+
+  - id: omen.chaotic_monsters
+    statement: 'Omen of Chaotic Monsters: the next Chaos Orb replaces all modifiers of a Waystone with modifiers that do not grant Monster Rarity (inverted in 0.5.0).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will replace all Modifiers on a [Waystone] with Modifiers that do not grant Monster Rarity
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    history:
+      - held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: Instead of guaranteeing the new modifiers are of their type, they instead prevent the modifiers from being of their type.
+        statement: Omen of Chaotic Monsters guaranteed that the new waystone modifiers granted Monster Rarity.
+
+  - id: omen.chaotic_effectiveness
+    statement: 'Omen of Chaotic Effectiveness (new in 0.5.0): the next Chaos Orb replaces all modifiers of a Waystone with modifiers that do not grant Monster Effectiveness.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Chaos Orb will replace all Modifiers on a [Waystone] with Modifiers that do not grant Monster Effectiveness
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.chaotic_up_to_three
+    statement: Up to 3 Chaotic waystone omens may be used at once (since 0.5.0).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Up to 3 of the above Omens may be used simultaneously.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: 3
+
+  - id: omen.recombination_removed
+    statement: Omen of Recombination was removed in 0.5.0 with the Recombinator; existing ones are deleted on login.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: The Recombinator has been disabled. The Omen of Recombination has been removed.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: omen.refreshment
+    statement: 'Omen of Refreshment (not a crafting omen): recovers all flask and charm charges at Low Life.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory will fully recover your flask and charm charges when you reach [LowLife / Low Life]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.resurgence
+    statement: 'Omen of Resurgence (not a crafting omen): recovers Life, Mana and Energy Shield at Low Life.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory fully recover your Life, Mana and [EnergyShield / Energy Shield] when you reach [LowLife / Low Life]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.amelioration
+    statement: 'Omen of Amelioration (not a crafting omen): prevents 75% of experience loss on death.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory will prevent 75% of Experience loss when you die
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.answered_prayers
+    statement: 'Omen of Answered Prayers (not a crafting omen): the next Shrine grants an additional effect.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory the next [Shrine] you click on will grant an additional Effect
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.secret_compartments
+    statement: 'Omen of Secret Compartments (not a crafting omen): the next Strongbox can be reopened.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory the next [Strongbox] you click on will be reopenable
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.hunt
+    statement: 'Omen of the Hunt (not a crafting omen): the next Possessed monster releases all Azmeri Spirits.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory the next [SpiritPossessed / Possessed] monster you kill will [ReleaseAzmeriSpirits / Release] and manifest all [AzmeriSpirit / Azmeri Spirits]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.reinforcements
+    statement: 'Omen of Reinforcements (not a crafting omen): the next Rogue Exile summons an ally.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory the next [RogueExile / Rogue Exile] you encounter will summon an ally
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.gambling
+    statement: 'Omen of Gambling (not a crafting omen): the next Gamble purchase has a 50% chance of costing no Gold and not consuming the omen.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Gamble purchase will have a 50% chance of costing no Gold and not consuming this [Omen]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.bartering
+    statement: 'Omen of Bartering (not a crafting omen): the next sold item''s Gold value is incorrectly assessed.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next sold item's Gold value will be incorrectly assessed by the Vendor
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.expedition_sagas
+    statement: The five Expedition Sagas (Aldur's, Medved's, Vorana's, Uhtred's, Olroth's) are omens of the Logbook, outside crafting and outside the trade site's Ritual group.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: While this item is active in your inventory your next Logbook guarantees a Medved encounter in the revealed Biome
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: omen.cost
+    statement: An omen is consumed when its trigger fires, so one triggered use costs one omen; the value maps each crafting omen's price name to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item in your inventory to set it to be active. This item is consumed when triggered.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Omen of Greater Exaltation: 1
+      Omen of Sinistral Exaltation: 1
+      Omen of Dextral Exaltation: 1
+      Omen of Homogenising Exaltation: 1
+      Omen of Catalysing Exaltation: 1
+      Omen of Homogenising Coronation: 1
+      Omen of Whittling: 1
+      Omen of Sinistral Erasure: 1
+      Omen of Dextral Erasure: 1
+      Omen of Sinistral Annulment: 1
+      Omen of Dextral Annulment: 1
+      Omen of Light: 1
+      Omen of the Blessed: 1
+      Omen of Sanctification: 1
+      Omen of Corruption: 1
+      Omen of Chance: 1
+      Omen of the Ancients: 1
+      Omen of Sinistral Crystallisation: 1
+      Omen of Dextral Crystallisation: 1
+      Omen of Abyssal Echoes: 1
+      Omen of the Sovereign: 1
+      Omen of the Liege: 1
+      Omen of the Blackblooded: 1
+      Omen of Putrefaction: 1
+      Omen of Sinistral Necromancy: 1
+      Omen of Dextral Necromancy: 1
+      Omen of Chaotic Rarity: 1
+      Omen of Chaotic Quantity: 1
+      Omen of Chaotic Monsters: 1
+      Omen of Chaotic Effectiveness: 1

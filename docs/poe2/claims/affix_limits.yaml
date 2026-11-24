@@ -1,0 +1,70 @@
+# Mechanic family: affix_limits (how many explicit modifiers a magic or rare item holds, and which items cannot be modified).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: affix_limits.magic_two_mods
+    statement: A Magic item has at most 2 explicit modifiers, 1 prefix and 1 suffix.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a magic item to apply it. Magic items can have up to two random modifiers.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      total: 2
+      prefixes: 1
+      suffixes: 1
+
+  - id: affix_limits.rare_six_mods
+    statement: A Rare item has at most 6 explicit modifiers, 3 prefixes and 3 suffixes. Jewels and some other bases have their own limits, which this family does not cover.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a rare item to apply it. Rare items can have up to six random modifiers.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      total: 6
+      prefixes: 3
+      suffixes: 3
+
+  - id: affix_limits.corrupted_not_modified
+    statement: A Corrupted item cannot be modified by the ordinary orbs; only the Vaal-group (temple) currencies act on corrupted items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click an item to corrupt it. Corrupted items cannot be modified again.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: affix_limits.sanctified_not_modified
+    statement: A Sanctified item cannot be modified by the ordinary crafting methods.
+    source_kind: wiki
+    url: https://poe2db.tw/us/Sanctified_Items
+    quote: Most methods of item crafting and modification cannot be used on Sanctified items.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: affix_limits.mirrored_not_modified
+    statement: A Mirrored copy (made by a Mirror of Kalandra) cannot be modified.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click an equipable non-unique item to apply it. Mirrored copies cannot be modified.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: affix_limits.fractured_never_removed
+    statement: A fractured modifier is never removed by an Orb of Annulment, a Chaos Orb (with or without Omen of Whittling) or an Orb of Sacrifice; the removal picks among the other explicit modifiers.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: a.fractured||(t.length>0?t.includes(a.type)&&l.push(s):gameConstants.explicitTypes.includes(a.type)&&l.push(s))
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A fractured modifier is assumed never to be removed by an Annulment, a Chaos Orb or an Orb of Sacrifice.
+    page_source: Craft of Exile's code only
+
+  - id: affix_limits.one_desecrated_mod
+    statement: An item holds at most 1 Desecrated modifier, and since 0.5.0 a Desecrated modifier does not count as a crafted modifier.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Desecrated modifiers no longer count as crafted modifiers, but items are limited to 1 Desecrated modifier.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24

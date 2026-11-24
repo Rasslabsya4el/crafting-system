@@ -1,0 +1,20 @@
+# Mechanic family: divine_orb (Divine Orb: rerolls the numeric values of modifiers).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: divine_orb.rerolls_values
+    statement: A Divine Orb rerolls the numeric value of each modifier of the item within its tier's range. Craft of Exile refuses it on a Normal item; on a unique it updates old ranges to new ones (patch notes). Omen of the Blessed and Omen of Sanctification change what it does.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Randomises the numeric values of modifiers on an item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: divine_orb.cost
+    statement: One use of Divine Orb consumes one Divine Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyModValues: Divine Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Divine Orb: 1

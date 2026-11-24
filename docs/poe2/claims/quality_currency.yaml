@@ -1,0 +1,113 @@
+# Mechanic family: quality_currency (the quality currencies: scrap, whetstone, etcher, bauble, prism).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: quality_currency.armourers_scrap
+    statement: An Armourer's Scrap raises the quality of an armour below its maximum quality.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of an armour
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: quality_currency.blacksmiths_whetstone
+    statement: A Blacksmith's Whetstone raises the quality of a martial weapon (not a caster weapon).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a [MartialWeapon / martial weapon]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: quality_currency.arcanists_etcher
+    statement: An Arcanist's Etcher raises the quality of a wand, staff or sceptre.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a wand, staff or sceptre
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: quality_currency.glassblowers_bauble
+    statement: A Glassblower's Bauble raises the quality of a flask.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a [Flask / flask]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: quality_currency.gemcutters_prism
+    statement: A Gemcutter's Prism raises the quality of a skill gem; the amount per use was not found.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a Skill Gem
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: quality_currency.cap_20
+    statement: Quality currency cannot raise an item above 20% quality.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3826682
+    quote: Quality currency still cannot apply more than 20% Quality to an item.
+    patch_verified: "0.3.0"
+    date_checked: 2026-11-24
+    value: 20
+
+  - id: quality_currency.amount_by_item_level
+    statement: 'Quality added per use (scraps, whetstones, etchers, baubles and catalysts alike) is floor(clamp(30*e^(-ilvl/30) - 0.3, 1, 20)), and a result of 1 becomes 2 with 20% chance: 20 at item level 1, 10 at 30, 6 at 45, 3 at 60, 2 at 75, 1 from 79. Guides give a PoE1-like 5/2/1 by rarity instead; unresolved.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: static qualityAmountByItemLevel(e){let t=30*Math.exp(-e/30)-.3,a=Math.floor(Math.max(1,Math.min(t,20)));return"poe2"==gameConstants.game&&1==a&&(a=Math.random()<.2?2:1),a}
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Craft of Exile's item-level formula disagrees with guides that give 5/2/1 by rarity; no game source.
+    page_statement: How much quality one use of a quality currency adds is not settled; the emulator ties it to item level.
+    page_source: Craft of Exile's code, against community guides
+
+  - id: quality_currency.armourers_scrap_cost
+    statement: One use of Armourer's Scrap consumes one Armourer's Scrap; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyArmourQuality: Armourer''s Scrap'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Armourer's Scrap: 1
+
+  - id: quality_currency.blacksmiths_whetstone_cost
+    statement: One use of Blacksmith's Whetstone consumes one Blacksmith's Whetstone; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyWeaponQuality: Blacksmith''s Whetstone'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Blacksmith's Whetstone: 1
+
+  - id: quality_currency.arcanists_etcher_cost
+    statement: One use of Arcanist's Etcher consumes one Arcanist's Etcher; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyMagicQuality: Arcanist''s Etcher'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Arcanist's Etcher: 1
+
+  - id: quality_currency.glassblowers_bauble_cost
+    statement: One use of Glassblower's Bauble consumes one Glassblower's Bauble; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyFlaskQuality: Glassblower''s Bauble'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Glassblower's Bauble: 1
+
+  - id: quality_currency.gemcutters_prism_cost
+    statement: One use of Gemcutter's Prism consumes one Gemcutter's Prism; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyGemQuality: Gemcutter''s Prism'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Gemcutter's Prism: 1

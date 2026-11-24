@@ -1,0 +1,90 @@
+# Mechanic family: chaos_orb (Chaos Orb and its Greater and Perfect tiers on a rare item: a one-modifier swap).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: chaos_orb.removes_one_adds_one
+    statement: A Chaos Orb (any tier) removes 1 random modifier of a Rare item and adds 1 new random modifier. It is a one-modifier swap, not a full reroll as in PoE1.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Removes a random modifier and augments a [ItemRarity / Rare] item with a new random modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: chaos_orb.accepts_rare_only
+    statement: A Chaos Orb is used on a Rare item with at least 1 removable modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a rare item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: chaos_orb.removal_uniform
+    statement: The removed modifier is picked uniformly among the non-fractured explicit modifiers (the omens of Whittling and Erasure change the pick).
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: else this.annul([],a?[a]:[]);let i=this.rollAffixes(1,e)
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: The modifier a Chaos Orb removes is assumed to be picked with equal chance among the modifiers that can be removed.
+    page_source: Craft of Exile's code only
+
+  - id: chaos_orb.added_mod_either_side
+    statement: The added modifier may land on either side that has room after the removal; it is not forced onto the side the removed modifier came from.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: else this.annul([],a?[a]:[]);let i=this.rollAffixes(1,e)
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: The modifier a Chaos Orb adds is assumed to land on either side with room, not only on the side of the removed modifier.
+    page_source: Craft of Exile's code only
+
+  - id: chaos_orb.greater_min_level
+    statement: A Greater Chaos Orb adds only a tier of level 35 or more (modifier_level.top_tier_exception applies); the minimum concerns the added modifier only.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Greater Chaos Orb | 2 | 35 | Chaos Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 35
+
+  - id: chaos_orb.perfect_min_level
+    statement: A Perfect Chaos Orb adds only a tier of level 50 or more (modifier_level.top_tier_exception applies); the minimum concerns the added modifier only.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Perfect Chaos Orb | 3 | 50 | Greater Chaos Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 50
+
+  - id: chaos_orb.cost
+    statement: One use of Chaos Orb consumes one Chaos Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollRare: Chaos Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Chaos Orb: 1
+
+  - id: chaos_orb.greater_cost
+    statement: One use of Greater Chaos Orb consumes one Greater Chaos Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollRare2: Greater Chaos Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Chaos Orb: 1
+
+  - id: chaos_orb.perfect_cost
+    statement: One use of Perfect Chaos Orb consumes one Perfect Chaos Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyRerollRare3: Perfect Chaos Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Perfect Chaos Orb: 1

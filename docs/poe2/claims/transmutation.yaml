@@ -1,0 +1,73 @@
+# Mechanic family: transmutation (Orb of Transmutation and its Greater and Perfect tiers on a normal item).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: transmutation.normal_to_magic_one_mod
+    statement: An Orb of Transmutation (any tier) makes a Normal item Magic with 1 random modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [ItemRarity / Normal] item to a [ItemRarity / Magic] item with 1 modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 1
+
+  - id: transmutation.accepts_normal_only
+    statement: An Orb of Transmutation is used on a Normal item only.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a normal item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: transmutation.greater_min_level
+    statement: A Greater Orb of Transmutation adds only a tier of level 44 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Greater Orb of Transmutation | 2 | 44 | Orb of Transmutation |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 44
+    history:
+      - held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: Greater Orbs of Transmutation and Greater Orbs of Augmentation now have a minimum Modifier Level of 44 (previously 55)
+        value: 55
+
+  - id: transmutation.perfect_min_level
+    statement: A Perfect Orb of Transmutation adds only a tier of level 70 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Perfect Orb of Transmutation | 3 | 70 | Greater Orb of Transmutation |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 70
+
+  - id: transmutation.cost
+    statement: One use of Orb of Transmutation consumes one Orb of Transmutation; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeToMagic: Orb of Transmutation'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Orb of Transmutation: 1
+
+  - id: transmutation.greater_cost
+    statement: One use of Greater Orb of Transmutation consumes one Greater Orb of Transmutation; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeToMagic2: Greater Orb of Transmutation'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Orb of Transmutation: 1
+
+  - id: transmutation.perfect_cost
+    statement: One use of Perfect Orb of Transmutation consumes one Perfect Orb of Transmutation; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeToMagic3: Perfect Orb of Transmutation'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Perfect Orb of Transmutation: 1

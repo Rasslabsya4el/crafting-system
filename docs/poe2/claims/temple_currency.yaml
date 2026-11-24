@@ -1,0 +1,252 @@
+# Mechanic family: temple_currency (the Vaal-group (Fate of the Vaal / Temple of Atziri) currencies, which act on corrupted items, and the Theses).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: temple_currency.architects_orb
+    statement: An Architect's Orb on a corrupted equipment item or jewel either adds a second Corruption enchantment or destroys the item.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [Corrupted] [Equipment] or [Jewel] item unpredictably or destroys it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.architects_orb_odds
+    statement: An Architect's Orb destroys the item with 50% chance; otherwise it adds a Corruption enchantment (it only adds enchantments). Maxroll says the same.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: architect(e){return 1==EmulatorManager.randomNumber(0,2,!0)?(this._item.destroy(),!0):(this.corrupted_add_modifier(e),this._item.corrupt(),!0)}
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      destroy: 0.5
+      add_enchantment: 0.5
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: An Architect's Orb is assumed to destroy the item half the time and add a second enchantment otherwise.
+    page_source: Craft of Exile's code and a guide
+
+  - id: temple_currency.crystallised_corruption
+    statement: Crystallised Corruption on a corrupted skill gem gives a second corruption outcome that differs from the first, or destroys the gem.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [Corrupted] Skill Gem unpredictably or destroys it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.crystallised_corruption_odds
+    statement: Crystallised Corruption destroys the gem with 50% chance, and otherwise gives a corruption outcome that cannot repeat the first.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: It gives a second corruption outcome that can't repeat the first. It also has a 50/50 chance to destroy the gem.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value:
+      destroy: 0.5
+    approximate: true
+    approximate_reason: Only the Maxroll guide gives the 50% figure.
+    page_statement: Crystallised Corruption is assumed to destroy the gem half the time.
+    page_source: a community guide only
+
+  - id: temple_currency.core_destabiliser
+    statement: A Core Destabiliser modifies a Soul Core unpredictably, with a chance to destroy it (it turns into another Soul Core, per a guide). The odds are unknown.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [SoulCore / Soul Core] unpredictably, with a chance to destroy it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.ancient_infuser
+    statement: An Ancient Infuser modifies a Tablet unpredictably and corrupts it, with the same 4 outcomes as a Vaal Orb on a tablet (vaal_orb.tablet_outcomes).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [Tablet / Tablet] unpredictably and [Corrupted / Corrupts] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.vaal_cultivation_orb
+    statement: A Vaal Cultivation Orb replaces up to 2 modifiers on a corrupted Vaal unique (from a hidden special list), and replaces any other unique with a corrupted unique of the same item class. Its outcomes changed in 0.5.0.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Replaces up to 2 modifiers on a [Corrupted] [UniqueCulture / Vaal Unique] Replaces other [ItemRarity / Uniques] with a Corrupted Unique of the same Item Class
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.yaomacs_orb_of_sacrifice
+    statement: Yaomac's Orb of Sacrifice upgrades the Corruption enchantment of a corrupted Rare weapon or quiver and removes a random modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [Corrupted / Corruption] Enchantment on a [ItemRarity / Rare] Weapon or Quiver and removes a random Modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.kopecs_orb_of_sacrifice
+    statement: Kopec's Orb of Sacrifice upgrades the Corruption enchantment of a corrupted Rare armour and removes a random modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [Corrupted / Corruption] Enchantment on a [ItemRarity / Rare] Armour and removes a random Modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.kamasas_orb_of_sacrifice
+    statement: Kamasa's Orb of Sacrifice upgrades the Corruption enchantment of a corrupted Rare amulet, ring or belt and removes a random modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [Corrupted / Corruption] Enchantment on a [ItemRarity / Rare] Amulet, Ring or Belt and removes a random Modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.yuguls_orb_of_sacrifice
+    statement: Yugul's Orb of Sacrifice upgrades the Corruption enchantment of a corrupted Rare jewel and removes a random modifier.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [Corrupted / Corruption] Enchantment on a [ItemRarity / Rare] Jewel and removes a random Modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.sacrifice_needs_upgradable_enchant
+    statement: An Orb of Sacrifice needs an enchantment that has an upgrade; the removed modifier is 1 random non-fractured explicit modifier.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: vaal_sacrifice(){let e=[];if(this._item.getModifiers().forEach((t,a)=>{let i=DataManager.getEntryFromDict(coedata.mods,t.key);coedata.mods.corruption_upgrades[i.id]&&e.push({index:a,upgrade:coedata.mods.corruption_upgrades[i.id]})})
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: An Orb of Sacrifice is assumed to remove one modifier at random, never a fractured one.
+    page_source: Craft of Exile's code only
+
+  - id: temple_currency.vaal_armourers_infuser
+    statement: A Vaal Armourer's Infuser raises the quality of an armour at or above its maximum quality, up to 10% past the maximum, with a chance to corrupt it.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of an [Armour], exceeding maximum quality by up to 10% with a chance of [Corrupted / Corrupting] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.vaal_blacksmiths_infuser
+    statement: A Vaal Blacksmith's Infuser does the same for a martial weapon.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a [MartialWeapon / Martial Weapon], exceeding maximum quality by up to 10% with a chance of [Corrupted / Corrupting] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.vaal_arcanists_infuser
+    statement: A Vaal Arcanist's Infuser does the same for a wand, staff or sceptre.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a wand, staff or sceptre, exceeding maximum quality by up to 10% with a chance of [Corrupted / Corrupting] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.vaal_catalysing_infuser
+    statement: A Vaal Catalysing Infuser does the same for a ring or amulet.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Improves the [Quality / quality] of a ring or amulet, exceeding maximum quality by up to 10% with a chance of [Corrupted / Corrupting] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.infuser_needs_20_quality
+    statement: Since 0.5.0 an infuser is used only on an item at or above 20% quality (its maximum quality).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: All Infusers can only be used on items at or above 20% Quality.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: 20
+
+  - id: temple_currency.infuser_corruption_chance
+    statement: An infuser's corruption chance is 5% per point of quality above the maximum before the use; the cap is maximum quality +10. A 0.4 guide says instead +1 to 2% up to 30%, or corrupt.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: vaal_infuser(){let e=this._item._quality-(parseInt(this._item._maximumQuality)+parseInt(this._item._maximumQualityModifier));e<0&&(e=0);let t=5*e;return this.raiseQuality(null,10),100*Math.random()<=t&&this._item.corrupt(),!0}
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      corrupt_percent_per_point_over_max: 5
+      max_over_maximum: 10
+    approximate: true
+    approximate_reason: Craft of Exile's formula disagrees with a 0.4 guide; no game source gives the amount or the chance.
+    page_statement: How much quality an infuser adds and how often it corrupts the item is not settled.
+    page_source: Craft of Exile's code, against a community guide
+
+  - id: temple_currency.orb_of_extraction
+    statement: An Orb of Extraction destroys an equipment item and returns the Augments socketed in it that are not Socket-Bound. It is the Vaal socket-recovery item, not a modifier remover.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Destroys an [Equipment] item, returning any non [SocketBound|Socket-Bound] [Augment|Augments] socketed in it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.vaal_siphoner
+    statement: A Vaal Siphoner adds a kill threshold to a corrupted Rare amulet, ring or belt; at the threshold it siphons a random modifier and improves the values of the others. Whether the siphoned modifier is removed or drops a tier, and how far the others rise (to 110% of their maximum, per guides), is disputed.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds a kill threshold to a [Corrupted] [ItemRarity / Rare] [Jewellery] item, when threshold is met [VaalSiphoner / Siphons] a random modifier and improves the numeric values of other modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.stack_5000
+    statement: Since 0.5.0 Fate of the Vaal currencies stack to 5,000 (the export gives the inventory stack of 10).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Fate of the Vaal Currency Items now have a maximum stack size of 5,000
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: 5000
+
+  - id: temple_currency.guatelitzis_thesis
+    statement: 'Guatelitzi''s Thesis (an Ancient Augment, limited to 1, level 60) gives in a helmet: Armour equal to 35% of Life lost from hits in the past 8 seconds; in body armour: 10% of physical damage prevented recouped as Life; in boots: lose 5% of maximum Life per second while sprinting, 25% increased movement speed while sprinting.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Fate_of_the_Vaal
+    quote: Gain Armour equal to 35% of Life Lost from Hits in the past 8 seconds
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.citaqualotls_thesis
+    statement: 'Citaqualotl''s Thesis gives in body armour: recoup 50% of damage taken by Offerings as Life; in gloves: one persistent minion revives when an Offering expires; in boots: sacrifice 10% of maximum Life to gain that much Guard on Dodge Roll.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Fate_of_the_Vaal
+    quote: You Recoup 50% of Damage taken by your Offerings as Life
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.jiquanis_thesis
+    statement: 'Jiquani''s Thesis gives in a helmet: +1 maximum Mana per 3 Item Armour on the helmet (a guide says per 2 Item Energy Shield); in gloves: Energy Shield recharge starts after spending 2000 Mana, at most once every 2 seconds; in boots: movement speed changes also apply to Energy Shield recharge rate.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Fate_of_the_Vaal
+    quote: +1 to maximum Mana per 3 Item Armour on Equipped Helmet
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.quipolatls_thesis
+    statement: 'Quipolatl''s Thesis gives in a helmet: a random Glory skill gains 50% of its maximum Glory when Marks activate; in gloves: Energy Shield recharge starts when minions are reformed; in body armour: +75% of Armour also applies to chaos damage while on full Energy Shield.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Fate_of_the_Vaal
+    quote: A random Skill that requires Glory generates 50% of its maximum Glory when your Marks Activate
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: temple_currency.cost
+    statement: One use of a temple currency consumes one of that item; the value maps each price name to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyIncursionDoubleCorrupt: Architect''s Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Architect's Orb: 1
+      Crystallised Corruption: 1
+      Core Destabiliser: 1
+      Ancient Infuser: 1
+      Vaal Cultivation Orb: 1
+      Yaomac's Orb of Sacrifice: 1
+      Kopec's Orb of Sacrifice: 1
+      Kamasa's Orb of Sacrifice: 1
+      Yugul's Orb of Sacrifice: 1
+      Vaal Armourer's Infuser: 1
+      Vaal Blacksmith's Infuser: 1
+      Vaal Arcanist's Infuser: 1
+      Vaal Catalysing Infuser: 1
+      Orb of Extraction: 1
+      Vaal Siphoner: 1

@@ -1,0 +1,147 @@
+# Mechanic family: vaal_orb (Vaal Orb: corrupts an item with one random outcome).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: vaal_orb.corrupts
+    statement: A Vaal Orb modifies an item unpredictably and corrupts it; it needs a corruptable base that is not corrupted yet.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies an item unpredictably and [Corrupted / Corrupts] it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: vaal_orb.equipment_outcomes
+    statement: 'On Normal, Magic or Rare armour, weapons and jewellery a Vaal Orb gives one of 4 outcomes, each 25% (`value`): no change; 1 to 3 explicit modifiers removed and re-added; a Corruption enchantment added; +1 socket ignoring the limit (wands and staves get quality up to 23% instead, and caster weapons, amulets, belts and rings get no socket, per Maxroll). Maxroll lists the same outcomes without odds.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: static CORRUPTED_EQUIPMENT_OUTCOMES=["no_change","reroll_up_to_three","add_corrupted_modifier","add_socket"]
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      no_change: 0.25
+      reroll_1_to_3: 0.25
+      add_enchantment: 0.25
+      add_socket: 0.25
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A Vaal Orb on equipment is assumed to give each of its four outcomes with equal chance.
+    page_source: Craft of Exile's code only
+
+  - id: vaal_orb.unique_equipment_outcomes
+    statement: 'On unique equipment the outcomes are: no change; each value multiplied by 0.78 to 1.22 of its current roll; a Corruption enchantment; the socket or quality outcome as on other equipment. A guide gives 25% each; Craft of Exile does not separate uniques.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: Affixes divined (up to 0.78-1.22 current roll)
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: A guide lists the outcomes; the odds come from another guide; Craft of Exile does not model uniques apart.
+    page_statement: The outcomes of a Vaal Orb on a unique item and their equal chances come from guides, not the game.
+    page_source: community guides only
+
+  - id: vaal_orb.jewel_outcomes
+    statement: 'On a Magic or Rare jewel Craft of Exile draws uniformly from: no change, no change, a corrupted modifier added, values multiplied by 0.78 to 1.23. Maxroll lists instead: no change, 1 to 3 modifiers rerolled, an enchantment, an affix added or removed ignoring limits. The sources disagree and no odds are published.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: static CORRUPTED_JEWEL_OUTCOMES=["no_change","add_corrupted_modifier","wild_divine","no_change"]
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Craft of Exile and Maxroll list different outcomes; no game source gives the list or the odds.
+    page_statement: 'The outcomes of a Vaal Orb on a jewel are not settled: the emulator and a guide list different ones.'
+    page_source: Craft of Exile's code and a guide, which disagree
+
+  - id: vaal_orb.unique_jewel_outcomes
+    statement: 'On a unique jewel: no change 50%; a Corruption enchantment 25%; explicit values multiplied by 0.78 to 1.22, 25%.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: Apply a modifier magnitude multiplier of 0.78x to 1.22x to explicit modifiers.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value:
+      no_change: 0.5
+      add_enchantment: 0.25
+      multiply_values: 0.25
+    approximate: true
+    approximate_reason: Only the Maxroll guide gives this list and its odds.
+    page_statement: A Vaal Orb on a unique jewel is assumed to do nothing half the time and otherwise add an enchantment or scale its values.
+    page_source: a community guide only
+
+  - id: vaal_orb.waystone_outcomes
+    statement: 'On a Waystone, 25% each: no change; tier +1 or -1 (between 1 and 16); every suffix becomes a prefix; up to 4 random affixes added, to at most 8 (4 prefixes and 4 suffixes).'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: static CORRUPTED_WAYSTONE_OUTCOMES=["no_change","wild_tier_change","replace_suffixes","reroll_up_to_8"]
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      no_change: 0.25
+      tier_change: 0.25
+      suffixes_to_prefixes: 0.25
+      add_up_to_4_affixes: 0.25
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A Vaal Orb on a waystone is assumed to give each of its four outcomes with equal chance.
+    page_source: Craft of Exile's code only
+
+  - id: vaal_orb.tablet_outcomes
+    statement: 'On a Tablet (Vaal Orb or Ancient Infuser), 25% each: a random modifier added past the limit; +10 uses; turned into a random tablet type with the same modifier count; destroyed.'
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: static CORRUPTED_TABLET_OUTCOMES=["add_modifier","add_uses","random_tablet","destroy"]
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      add_modifier: 0.25
+      add_10_uses: 0.25
+      random_tablet: 0.25
+      destroy: 0.25
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A Vaal Orb or Ancient Infuser on a tablet is assumed to give each of its four outcomes with equal chance.
+    page_source: Craft of Exile's code only
+
+  - id: vaal_orb.skill_gem_outcomes
+    statement: 'On a skill gem: no change; +1 or -1 level; +1 or -1 socket; quality -7% to +3%. Odds are not published.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: +1 Level/-1 Level (updates with gem level)
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only the Maxroll guide lists the gem outcomes; no odds are published.
+    page_statement: The outcomes of a Vaal Orb on a skill gem come from a guide, and their chances are not known.
+    page_source: a community guide only
+
+  - id: vaal_orb.flask_charm_quality
+    statement: On a flask or charm the quality changes by -10 to +10, capped at 23%.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: corrupted_wild_quality(){let e=this._item._quality;return e+=EmulatorManager.randomNumber(-10,11,!0)
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    value:
+      min_change: -10
+      max_change: 10
+      cap: 23
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A Vaal Orb on a flask or charm is assumed to move its quality by up to ten points either way.
+    page_source: Craft of Exile's code only
+
+  - id: vaal_orb.multiplies_current_value
+    statement: Since 0.5.0 the corruption outcome that pushes values beyond their range multiplies each modifier's current value instead of rerolling it.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: now multiplies each modifier based on the current value, instead of randomising the value.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: vaal_orb.cost
+    statement: One use of Vaal Orb consumes one Vaal Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyCorrupt: Vaal Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Vaal Orb: 1

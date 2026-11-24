@@ -1,0 +1,42 @@
+# Mechanic family: shards (currency shards: 10 shards make one orb).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: shards.transmutation
+    statement: 10 Transmutation Shards become one Orb of Transmutation.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: A stack of 10 shards becomes an [OrbOfTransmutation / Orb of Transmutation]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Transmutation Shard: 0.1
+
+  - id: shards.chance
+    statement: 10 Chance Shards become one Orb of Chance.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: A stack of 10 shards becomes an [OrbOfChance / Orb of Chance].
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Chance Shard: 0.1
+
+  - id: shards.regal
+    statement: 10 Regal Shards become one Regal Orb.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: A stack of 10 shards becomes a [RegalOrb / Regal Orb].
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Regal Shard: 0.1
+
+  - id: shards.artificers
+    statement: 10 Artificer's Shards become one Artificer's Orb.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: A stack of 10 shards becomes an [ArtificersOrb / Artificer's Orb].
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Artificer's Shard: 0.1

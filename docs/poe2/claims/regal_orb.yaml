@@ -1,0 +1,58 @@
+# Mechanic family: regal_orb (Regal Orb and its Greater and Perfect tiers on a magic item).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: regal_orb.magic_to_rare_adds_one
+    statement: A Regal Orb (any tier) makes a Magic item Rare, keeps its modifiers and adds 1 random modifier. The base must be able to be Rare.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a magic item to apply it. Current modifiers are retained and a new one is added.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: regal_orb.greater_min_level
+    statement: A Greater Regal Orb adds only a tier of level 35 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Greater Regal Orb | 2 | 35 | Regal Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 35
+
+  - id: regal_orb.perfect_min_level
+    statement: A Perfect Regal Orb adds only a tier of level 50 or more (modifier_level.top_tier_exception applies).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Perfect Regal Orb | 3 | 50 | Greater Regal Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: 50
+
+  - id: regal_orb.cost
+    statement: One use of Regal Orb consumes one Regal Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeMagicToRare: Regal Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Regal Orb: 1
+
+  - id: regal_orb.greater_cost
+    statement: One use of Greater Regal Orb consumes one Greater Regal Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeMagicToRare2: Greater Regal Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Regal Orb: 1
+
+  - id: regal_orb.perfect_cost
+    statement: One use of Perfect Regal Orb consumes one Perfect Regal Orb; the value maps its price name (the item's name in the game data) to the number of items.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeMagicToRare3: Perfect Regal Orb'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Perfect Regal Orb: 1

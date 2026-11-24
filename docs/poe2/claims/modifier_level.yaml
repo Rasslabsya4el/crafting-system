@@ -1,0 +1,70 @@
+# Mechanic family: modifier_level (the Minimum Modifier Level of the Greater and Perfect orbs, its top-tier exception, and the item level cap).
+# PoE2 research of 2026-11-24, docs/poe2/research/currency-and-omens.md (PoE2 0.5.5.10 game data, 0.5.0 patch notes, Craft of Exile beta 0.5.5.5).
+rules:
+  - id: modifier_level.greater_perfect_minimums
+    statement: A Greater or Perfect orb adds only a modifier tier whose level requirement is at least the orb's Minimum Modifier Level (`value`, by orb name); the normal orbs have none. Greater Transmutation and Greater Augmentation were 55 until 0.5.0.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv
+    quote: '| Greater Exalted Orb | 2 | 35 | Exalted Orb |'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Greater Orb of Transmutation: 44
+      Perfect Orb of Transmutation: 70
+      Greater Orb of Augmentation: 44
+      Perfect Orb of Augmentation: 70
+      Greater Regal Orb: 35
+      Perfect Regal Orb: 50
+      Greater Exalted Orb: 35
+      Perfect Exalted Orb: 50
+      Greater Chaos Orb: 35
+      Perfect Chaos Orb: 50
+    history:
+      - held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: Greater Orbs of Transmutation and Greater Orbs of Augmentation now have a minimum Modifier Level of 44 (previously 55)
+        statement: Greater Transmutation and Greater Augmentation had a Minimum Modifier Level of 55; the other minimums were as now.
+        value:
+          Greater Orb of Transmutation: 55
+          Greater Orb of Augmentation: 55
+
+  - id: modifier_level.applies_to_added_mod
+    statement: The Minimum Modifier Level of a Greater or Perfect orb applies to the modifier the orb adds (for a Chaos Orb, the added one, not the removal).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3826682
+    quote: These Greater and Perfect Orbs each have their own minimum modifier levels for the modifier they add to an item.
+    patch_verified: "0.3.0"
+    date_checked: 2026-11-24
+
+  - id: modifier_level.top_tier_exception
+    statement: For each modifier family, the highest tier the item level allows stays eligible even when its level is below the orb's Minimum Modifier Level (a Perfect Exalted Orb, minimum 50, can add a family whose top tier is level 48). Craft of Exile drops a tier only when its level is below the minimum and it is not the highest tier with level at most the item level; the wiki and a player thread say the same, no game text does.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: if(!x&&(t.minlvl>c||t.maxlvl<c||t.minlvl<I&&a<P||a+1<=D))return void o.push(t.id)
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Craft of Exile code, a wiki search snippet and a player forum thread; no game text or patch note.
+    page_statement: A Greater or Perfect orb is assumed to still add the best tier of a modifier the item level allows, even when that tier is below the orb's minimum level.
+    page_source: Craft of Exile's code, the wiki and a player report
+
+  - id: modifier_level.item_level_caps
+    statement: Every added modifier tier must have a level requirement at most the item level; Greater and Perfect orbs do not raise that cap.
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: if(!x&&(t.minlvl>c||t.maxlvl<c||t.minlvl<I&&a<P||a+1<=D))return void o.push(t.id)
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+
+  - id: modifier_level.weight_pick_filtered_not_reweighted
+    statement: An added modifier is picked by spawn weight among all eligible tiers; an omen that restricts the side or the type filters this pool and does not reweight it (Omen of Catalysing Exaltation is the exception, omen.catalysing_exaltation_weight).
+    source_kind: coe
+    url: https://beta.craftofexile.com/packages/files/package_poe2.js?v=1795533925
+    quote: rollRandomAffix(e,t,a=!0){let i=EmulatorManager.randomNumber(0,t+1,!0),s=null,r=0;return Object.entries(e).every(([e,t])=>r<=i&&r+t>=i?(s=e,!1):(r+=t,!0))
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Only Craft of Exile's emulator code models this; no game text or patch note states it.
+    page_statement: A side or type omen is assumed only to narrow the choice of modifiers, keeping their usual relative chances.
+    page_source: Craft of Exile's code only
