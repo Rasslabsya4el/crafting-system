@@ -99,7 +99,9 @@ def _open(plan) -> int:
     """The actions open to the craft: every action offered over the groups of methods, or the plan's offers for one search; 0 when unknown (a
     plan saved before the planner kept the count: no group need hold every action, so none of their counts is the total)."""
     info = plan.search
-    if info is not None and info.widening:
+    if info is None:  # the Lock's rewrite dropped the search record (`_plan.py`): its plan's offers are one round's, not the total
+        return 0
+    if info.widening:
         return getattr(info, "offered", 0)
     return len(plan.offers)
 
@@ -123,8 +125,14 @@ def _tried_together(plan, total: int) -> int:
         return 0
     best = min(costs)
     first = next(n for n, record in enumerate(records) if record.upper is not None and record.upper <= best * (1 + _SAME) + _SAME)
+    made = records[first]
+    # the rounds after the plan's own hold its actions only when its round closed and so joined the base of the later ones (`_rounds.widen`), or
+    # when they are grown from the plan in hand (`RoundRecord.growth`); a round that stopped with the plan did not join it (checker, #1576)
+    kept = made.status in (CLOSED, WITHIN) or getattr(made, "held_again", False)
     finished = [
-        record.offers for record in records[first:] if record.status in (CLOSED, WITHIN, BEATEN) or getattr(record, "held_again", False)
+        record.offers
+        for n, record in enumerate(records[first:])
+        if (record.status in (CLOSED, WITHIN, BEATEN) or getattr(record, "held_again", False)) and (n == 0 or kept or record.growth is not None)
     ]
     most = max(finished, default=0)
     return min(most, total) if total else most
@@ -168,8 +176,8 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
         )
     else:
         said = (
-            f"Best plan found, not proved to be the cheapest: the search ran out of time or memory before it finished checking the {total:,} crafts "
-            "this planner can use on this item together, so a cheaper plan may exist."
+            "Best plan found, not proved to be the cheapest: the search ran out of time or memory before it finished checking the "
+            f"{f'{total:,} ' if total else ''}crafts this planner can use on this item together, so a cheaper plan may exist."
         )
     return ProofWords(BEST_FOUND, said + against, total, tried, guide)
 

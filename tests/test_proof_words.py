@@ -84,3 +84,23 @@ def test_the_command_prints_the_proof_line_and_the_no_plan_line(tmp_path, capsys
     printed = capsys.readouterr().out
     (line,) = [line for line in printed.splitlines() if line.startswith("Proof: ")]
     assert line.startswith("Proof: Proved: no cheaper plan exists")
+
+
+def test_a_round_after_a_stopped_plan_s_round_did_not_hold_its_actions():
+    # checker, #1576: a round that stopped with the plan did not join the base of the later rounds (`_rounds.widen`), so a later round that
+    # finished searched other actions, not this plan's; only after a closed round of the plan does a later round count
+    from types import SimpleNamespace
+
+    from crafting_system.planner._proof_words import _tried_together
+    from crafting_system.planner._rounds import RoundRecord
+
+    def tried(second: str) -> int:
+        records = (
+            RoundRecord(("a",), 2, _rounds.CLOSED, "", 100.0, 100.0, 0.0),
+            RoundRecord(("a", "b"), 5, second, "", 80.0 if second == _rounds.CLOSED else 1.0, 80.0, 0.0),
+            RoundRecord(("a", "c"), 4, _rounds.BEATEN, "", 80.0, None, 0.0),
+        )
+        return _tried_together(SimpleNamespace(search=SimpleNamespace(widening=records)), 7)
+
+    assert tried(_rounds.STOPPED) == 0
+    assert tried(_rounds.CLOSED) == 5

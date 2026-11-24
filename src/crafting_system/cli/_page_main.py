@@ -17,7 +17,7 @@ from crafting_system.targets import StartKind, buy_spec_of
 
 from ._plan_file import PlanFileError, load_plan
 from ._report import build_report
-from ._route import evaluate_route, load_route
+from ._route import RouteError, evaluate_route, load_route
 from ._route_view import write_route_page
 
 COMMAND = "python -m crafting_system.cli page"
@@ -44,7 +44,7 @@ def page_main(argv: Sequence[str], *, env: Mapping[str, str] | None = None, data
         route = load_route(Path(args.route), saved.plan, game) if args.route else None
         given = evaluate_route(saved.plan, route, game) if route is not None else None
         page = write_route_page(out, report, game, route=route, given=given, buy_spec=spec, cache_dir=config.cache_dir)
-    except (DataError, PlanFileError, OSError) as error:
+    except (DataError, PlanFileError, RouteError, OSError) as error:  # RouteError: a --route file that cannot be read against the plan
         print(f"Error: {error}", file=sys.stderr)
         return 1
     print(f"Route view written to {page}")
