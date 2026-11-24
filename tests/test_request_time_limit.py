@@ -35,7 +35,7 @@ def test_a_request_past_the_machines_limit_is_refused_in_words():
         request_budget(MACHINE, 7201)
 
 
-@pytest.mark.parametrize("seconds", [0, -5, float("inf"), float("nan"), True, "600"])
+@pytest.mark.parametrize("seconds", [0, -5, float("inf"), float("nan"), True, "600", 10**400])
 def test_a_time_limit_that_is_no_number_of_seconds_above_zero_is_refused(seconds):
     with pytest.raises(PlanError, match="a number of seconds above zero"):
         request_budget(MACHINE, seconds)

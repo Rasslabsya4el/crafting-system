@@ -74,8 +74,13 @@ def request_budget(budget: Budget | None, seconds: float | None) -> Budget | Non
     machine's maximum, or asked of a run counted in states (its work is counted in states, never in seconds: `Budget.in_states`)."""
     if seconds is None:
         return budget
-    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)) or not (math.isfinite(seconds) and seconds > 0):
-        raise PlanError(f"a request's time limit is a number of seconds above zero; got {seconds!r}")
+    try:  # a JSON integer too large for a float is no number of seconds either (it would overflow, not be refused)
+        number = float(seconds) if isinstance(seconds, (int, float)) and not isinstance(seconds, bool) else math.nan
+    except OverflowError:
+        number = math.nan
+    if not (math.isfinite(number) and number > 0):
+        raise PlanError(f"a request's time limit is a number of seconds above zero; got {str(seconds)[:40]!r}")
+    seconds = number
     if budget is None:
         return Budget(aim_seconds=None, seconds=float(seconds), memory_mb=None, gap=0.0)
     if budget.counted:
