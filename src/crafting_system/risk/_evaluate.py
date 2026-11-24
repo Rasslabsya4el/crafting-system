@@ -521,9 +521,10 @@ def _regen_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins: 
     if free:
         weigh = [1.0 if i in free else REGEN_EPSILON for i in range(len(chain.states))]
         plain = [REGEN_EPSILON] * len(chain.states)
-        with_free, _ = _solve_costs(chain, weigh)
-        without, _ = _solve_costs(chain, plain)
-        owed = FREE_BINS * step * (with_free[0] - without[0]) / (1.0 - REGEN_EPSILON) * (1.0 + FREE_SLACK)
+        with_free, with_error = _solve_costs(chain, weigh)
+        without, without_error = _solve_costs(chain, plain)
+        visits = interval(with_free[0], with_error)[1] - interval(without[0], without_error)[0]  # each mean taken at the end of its certified error (#1467)
+        owed = FREE_BINS * step * visits / (1.0 - REGEN_EPSILON) * (1.0 + FREE_SLACK)
     low = interval(low_mean[0], low_error)[0] - owed
     return max(low, 0.0), interval(high_mean[0], high_error)[1]
 
