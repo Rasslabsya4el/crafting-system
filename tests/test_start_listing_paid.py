@@ -6,12 +6,15 @@ the draw is that orb when the start's stored search asks for a Normal base: an O
 Magic one (the same 1 or 2 mods as an Alteration), each at its price. Toy boots worked by hand (`listing_support`).
 """
 
+import html
+
 import pytest
 from listing_support import LISTING, magic_toy, prices, rare_toy, target
 
 from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import PlanError, build_report, evaluate_route, make_plan, parse_route
 from crafting_system.cli._report import listing_lines, state_parts
+from crafting_system.cli._route_view import route_page
 from crafting_system.planner._offers import RESTART
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.targets import start_price_key
@@ -105,6 +108,8 @@ def test_a_magic_start_priced_at_any_rarity_scours_and_transmutes_first():
     assert "any rarity" in line and "Orb of Scouring" in line and "a Normal one needs only the Orb of Transmutation, a Magic one neither" in line
     assert state_parts(bought, data, bought.start) == ["the bought item (any rarity), before the Orb of Scouring"]
     assert "scouring.keeps_influence" in opening(bought).offer.action.claims(data)  # the Hunter bow stays a Hunter bow
+    page = html.unescape(route_page(build_report(bought, data), data))  # the route page's step card says which orbs a player skips (crafter, #1537)
+    assert "a Normal one needs only the Orb of Transmutation, a Magic one neither" in page
 
 
 def test_a_magic_start_priced_as_a_rare_item_scours_first():

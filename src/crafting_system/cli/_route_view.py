@@ -65,7 +65,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crafting_system.actions import DRAW_LABEL
+from crafting_system.actions import DRAW_LABEL, scoured_from
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.abstraction._kinds import kind_tags
@@ -1086,6 +1086,14 @@ class _View:
         """The Note lines of a row: the essence's, a random craft that is sure here, a bench craft's paid again on each return, and, when the
         visits could not be solved, that this row's chances are a plain mean."""
         found = []
+        opening = None if restart else next((p.offer.action for p in self.plan.offers if p.label == action.label and p.offer.action.opens_listing), None)
+        if opening is not None and (bought := scoured_from(opening)):  # the price buys an item of another rarity or of any: which orbs a player skips (#1537)
+            orb = opening.label(self.data).split(" on the bought item (")[0].removeprefix("Orb of Scouring and ")
+            rarity = self.plan.target.start_item.rarity.value.capitalize()
+            found.append(
+                f"the price is of {'an item of any rarity' if bought == 'any rarity' else f'a {bought} item'}: the Orb of Scouring and the {orb} are the most it takes; a Normal one needs only the {orb}"
+                + (f", a {rarity} one neither" if bought == "any rarity" else "")
+            )
         if not restart and (draw := self.sure_draw_note(action, step, goal)):
             found.append(draw)
         if not restart and (essence := self.essence_note(action, step)):
