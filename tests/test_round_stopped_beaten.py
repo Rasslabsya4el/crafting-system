@@ -63,7 +63,7 @@ def test_a_stopped_round_whose_figure_reaches_the_plan_found_after_it_counts_bea
     first, stand_in, fillers, last = plan.search.widening
     assert first.upper == pytest.approx(16 * E / 3 + 2 * S, rel=1e-9) and fillers.status == "closed" and last.status == "stopped"
     assert stand_in.status == _rounds.BEATEN and stand_in.beaten_later and stand_in.lower == 140.0 and stand_in.within is None
-    assert stand_in.reason.startswith(STOP) and "beaten by the plan found after it" in stand_in.reason
+    assert stand_in.reason.startswith(STOP) and "beaten by the plan the run ended with" in stand_in.reason
     assert stand_in.document()["beaten_later"] is True and stand_in.document()["status"] == "beaten"
     # it stays set aside: beaten proves nothing of a plan that joins its group with the fillers, so the proof over every method is not claimed
     assert not stand_in.carried and not stand_in.closed and not plan.search.exact and plan.search.stopped
@@ -102,3 +102,18 @@ def test_the_rule_is_the_search_s_own_and_reads_only_set_aside_stopped_rounds_of
     untouched = [_record(carried=True), _record(growth="the seed"), _record(lower=None), _record(status=_rounds.CLOSED), _record(status=_rounds.BEATEN)]
     assert _rounds.beaten_later(untouched, 5.0) == untouched
     assert _rounds.beaten_later([_record()], None)[0].status == _rounds.STOPPED
+
+
+def test_the_gap_counts_only_once_the_aim_has_passed_as_in_the_search():
+    # OR-39: under the aim the search keeps proving, past it the gap applies (`_plan.search_gap`); the rule at the end of the rounds reads the same
+    import dataclasses
+    import time
+
+    from crafting_system.budget import Budget, Clock
+    from crafting_system.planner._plan import end_gap
+
+    budget = dataclasses.replace(Budget.unlimited(), gap=0.01, aim_seconds=60.0)
+    clock = Clock(budget, began=time.perf_counter())  # 0 s of a 60 s aim spent
+    assert end_gap(None) == 0.0 and end_gap(clock) == 0.0
+    clock.began -= 100.0  # 100 s spent
+    assert end_gap(clock) == 0.01

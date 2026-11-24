@@ -81,7 +81,7 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
 * **A stopped round read against the final plan** (#1559). A round set aside after its share stopped it was cut against the plan in hand when
   it ran, and a plan found after it can cost less than its lower figure: R09's Augmentation round stopped at 198.73 c against 209.71 c in hand,
   and the run ended at 113.87 c. Once the rounds end, such a round whose stated lower figure reaches the final plan's certified upper figure, by
-  the search's own rule (`_envelope.reaches`: to the certified 1e-6, or within the run's gap, OR-39), counts as beaten (`RoundRecord.beaten_later`),
+  the search's own rule (`_envelope.reaches`: to the certified 1e-6, or within the run's gap once its aim has passed, OR-39, `_plan.end_gap`), counts as beaten (`RoundRecord.beaten_later`),
   as it would have, had that plan been in hand when it ran. Why that figure holds whatever plan was in hand then: the round's search
   bounds every plan of its offers (the base of its time and its group) from below, and the plan in hand entered it in two places only. (1) The
   exact price cut (`_price_cut`) left out each offer that costs at least the start's price `p` plus `U`, the certified upper figure in hand.
@@ -356,6 +356,7 @@ def widen(
     floor: Callable[[tuple, RoundCall], float | None] | None = None,
     release: Callable[[object], None] | None = None,
     grow=None,
+    end_gap: Callable[[], float] | None = None,
 ) -> Widened:
     """Run the rounds of `groups` over `offers` (see the module text). `run(round_offers, call)` makes a round's plan (raising what `_make_plan`
     raises, or `Beaten`); `upper_of(plan)` is its certified upper figure, `mean_of(plan)` its mean, `ended(plan)` its status and reason;
@@ -364,7 +365,9 @@ def widen(
     run's proof gap (`Budget.gap`, OR-39), the fall of a plan `Share` still counts as falling. `floor(round_offers, call)`, when given, is the
     figure no plan of those offers costs less than from their floors alone (`Floor`), or None: once the first plan is in hand, the rounds left go
     by it (`by_floor`). `release(plan)`, when given, is called on each finished round's plan before the next round: it lets go of what the
-    plan holds and no later round, nor the answer, needs (#1076: `_plan`'s drops the memos of the plan's abstraction)."""
+    plan holds and no later round, nor the answer, needs (#1076: `_plan`'s drops the memos of the plan's abstraction). `end_gap()`, when given,
+    is the gap the search's own rule allows once the rounds end (`_plan.end_gap`: the run's gap only past its aim, OR-39), with which a stopped
+    round set aside is read against the final plan (`beaten_later`, #1559); without it, to the certified 1e-6 only."""
     if meter is not None:
         left, measure = meter.left, meter.now
     else:
@@ -576,7 +579,8 @@ def widen(
                                          reason=records[aside].reason + "; the last round held them again, with every method")  # fmt: skip
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
-    return Widened(best, tuple(beaten_later(records, best_upper, gap)), error or proof)
+    # (it only relabels the records once every round has ended: no round, no share and no plan reads it, so the plan is the same with it or without)
+    return Widened(best, tuple(beaten_later(records, best_upper, 0.0 if end_gap is None else end_gap())), error or proof)
 
 
 def beaten_later(records: Sequence[RoundRecord], upper: float | None, gap: float = 0.0) -> list[RoundRecord]:
@@ -595,7 +599,7 @@ def beaten_later(records: Sequence[RoundRecord], upper: float | None, gap: float
                 said = f"no plan with them costs less than {_figure(record.lower)}, and the plan the run ended with costs at most {_figure(upper)}"
                 record = replace(record, status=BEATEN, within=within, beaten_later=True, reason=(
                     f"{record.reason}; {said}" + ("" if exact else f" (to within the gap of {gap:.2%} this run allows)")
-                    + ": beaten by the plan found after it, over the methods it was searched with"))  # fmt: skip
+                    + ": beaten by the plan the run ended with, over the methods it was searched with"))  # fmt: skip
         out.append(record)
     return out
 
