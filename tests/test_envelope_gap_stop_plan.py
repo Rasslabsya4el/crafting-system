@@ -35,7 +35,7 @@ from test_cli_envelope_plan import fine_build  # noqa: F401 (the fixture: a net 
 from crafting_system.budget import PROOF_GAP, Budget
 from crafting_system.cli import _main, build_report, make_plan, policy_document, render_text
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.config import Config
 from crafting_system.planner import PlanSettings, Standing, _packed, plan_target
 from crafting_system.planner._envelope_plan import EnvelopeInfo, certificate_gap, certificate_gap_text, envelope_limits, envelope_result
@@ -243,7 +243,7 @@ def test_the_plan_of_a_stop_at_a_gap_claims_no_cheapest_plan_in_any_limit_and_sa
     monkeypatch.setattr(_route_card, "_implicits", lambda *_args: ())  # the coarse fixture's data has no text for the amulet's implicit mod
     page = render_page(Page("x", (build_section(route_input(plan), COARSE),)))  # the route page says the same limit, with the gap proved (#925)
     proved = certificate_gap_text(certificate_gap(plan.search))
-    assert escape(limit_text(cut, SHOWN_LABELS)) in page and f"proved to cost at most {proved} more than the cheapest possible" in page
+    assert escape(planner_limit_line(plan, cut).text) in page and f"proved to cost at most {proved} more than the cheapest possible" in page
     assert "The plan is the cheapest" not in page
 
 

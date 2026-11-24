@@ -60,6 +60,8 @@ def _more(line) -> str:
     if not line.more:
         return ""
     title = line.more_title or f"the other {len(line.more):,}"
+    if getattr(line, "more_apart", False):  # entries that are sentences of their own (the batches of the search, #1161): one to a line
+        return f"<details><summary>{escape(title)}</summary>{''.join(f'<div>{escape(entry)}</div>' for entry in line.more)}</details>"
     return f"<details><summary>{escape(title)}</summary>{escape(', '.join(line.more))}</details>"
 
 

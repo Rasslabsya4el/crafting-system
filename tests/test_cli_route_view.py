@@ -237,8 +237,8 @@ def test_the_goal_card_gives_route_mean_p90_and_prices(r12_plan):
 
     fields = {field.label: field.lines[0].text for field in build_section(route_input(r12_plan), DATA).goal.fields}
 
-    assert list(fields) == ["Route", "Mean", "9 runs in 10", "Approximate inputs", "Prices"]  # no success line: it is 100%; the Harvest reforge reads an approximate claim (#197)
-    assert fields["Route"] == "Cheapest policy of the planner"
+    assert list(fields) == ["Route", "Proof", "Mean", "9 runs in 10", "Approximate inputs", "Prices"]  # no success line: it is 100%; the Harvest reforge reads an approximate claim (#197)
+    assert fields["Route"] == "The planner's plan"  # how far it is proved the cheapest is the "Proof" field's (#1161, `tests/test_route_proof.py`)
     assert fields["Mean"] == f"{money(risk.mean.value + 4.0)} ({risk.mean.value / 300 + 4 / 300:.2g} Divine)"
     assert fields["9 runs in 10"].endswith(" or less") and money(risk.p90.value + 4.0) in fields["9 runs in 10"]
     assert fields["Prices"] == "league Test, fetched 2026-10-30"
@@ -252,7 +252,7 @@ def test_a_plan_the_search_walked_to_says_beside_its_mean_that_it_is_not_shown_n
 
     walked = Limit(REACHED, "The plan began as one found by heading for the target, not by its cost", "why", "Not proved: near the best.")
     fields = {field.label: field for field in build_section(route_input(replaced(r12_plan, limits=(*r12_plan.limits, walked))), DATA).goal.fields}
-    assert list(fields)[:3] == ["Route", "Mean", "Not shown near the best"]
+    assert list(fields)[:4] == ["Route", "Proof", "Mean", "Not shown near the best"]
     warning = fields["Not shown near the best"]
     assert warning.tone == "warn" and "fallback, not a recommendation" in warning.lines[0].text
     assert "Not shown near the best" not in {field.label for field in build_section(route_input(r12_plan), DATA).goal.fields}

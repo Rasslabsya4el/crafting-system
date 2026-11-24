@@ -40,16 +40,19 @@ a{color:var(--text-link)}
 <body>
 <main>
 <h1>Test page</h1>
-<nav><a href="#policy">Cheapest policy of the planner</a><a href="#given">Given route: Restart on a lone gem</a></nav>
+<nav><a href="#policy">The planner&#x27;s plan</a><a href="#given">Given route: Restart on a lone gem</a></nav>
 <section id="policy">
-<h2>Cheapest policy of the planner</h2>
+<h2>The planner&#x27;s plan</h2>
 <div class="rw">
 <div class="cd tg">
 <h3>Route goal</h3>
 <div class="f">
 <div class="k">Route</div>
 <div class="v ml">
-<div>Cheapest policy of the planner</div></div>
+<div>The planner&#x27;s plan</div></div>
+<div class="k">Proof</div>
+<div class="v ml">
+<div>Proved the cheapest of the methods searched; the methods left out are listed below the prices.</div></div>
 <div class="k">Mean</div>
 <div class="v ml">
 <div>≈ 16.7 c (0.056 Divine)</div></div>
@@ -89,10 +92,16 @@ a{color:var(--text-link)}
 <div class="v ml">
 <div>These actions have no price: [a list that is not recorded here: every new method changes it]. The plan is the cheapest among the actions that have a price. A price for these could make it cheaper.</div>
 <div>Not offered: [a list that is not recorded here: every new method changes it] (no price for [a list that is not recorded here: every new method changes it]). The plan is the cheapest among the actions that have a price. A price for these could make it cheaper.</div></div>
-<div class="k">Methods searched in rounds</div>
+<div class="k">How the methods were searched</div>
 <div class="v ml">
-<div>The methods were searched in rounds (the search widened its methods round by round: round 1 (grown from the plan in hand, the seed: the cheapest methods for each wanted mod, by cost over chance: Chaos Orb, Harvest Reforge Defence, Harvest Reforge Lightning; 3 actions offered, 5 states): finished, its best plan costs 13.28 Chaos, round 2 (chaos-orb, harvest-reforge; 5 actions offered, 5 states): finished, its best plan costs 13.28 Chaos, round 3 (harvest-resistance-swap that add families by mod, junk to the model; 4 actions offered, 351 states): finished, its best plan costs 12.69 Chaos, round 4 (restore that add imprints, junk to the model; 5 actions offered, 351 states): finished, its best plan costs 12.69 Chaos, round 5 (bench-craft that add junk, metamods, pool weights to the model; 5 actions offered, 351 states): finished, its best plan costs 12.69 Chaos, round 6 (chaos-orb, harvest-reforge, restore that add imprints, junk to the model; 9 actions offered, 351 states): finished, its best plan costs 12.69 Chaos). The plan is the cheapest among every method offered, searched in rounds. The rounds grown from the plan in hand each held that plan&#x27;s methods and those its steps named; every round after them held the methods of the rounds before it, so the last one held every method.</div>
-<div>The given route&#x27;s methods were searched from the first round: Chaos Orb (the given route&#x27;s actions were offered from the first round on, and every round held them). The first round finished: no plan made only of its methods, the route&#x27;s among them, costs less than the plan shown, so the route costs no less than it.</div></div>
+<div>The planner searched the methods in 6 batches and finished every one. No plan of the methods searched costs less than the plan shown.<details><summary>each batch</summary>
+<div>Batch 1 (a first set of methods, for each wanted mod the one of least cost for its chance: Chaos Orb, Harvest Reforge Defence, Harvest Reforge Lightning; 3 actions): finished; its best plan costs ≈ 13.3 c of crafting.</div>
+<div>Batch 2 (Chaos Orb, Harvest reforges with the methods of the plan found so far; 5 actions): finished; its best plan costs ≈ 13.3 c of crafting.</div>
+<div>Batch 3 (Harvest resistance swaps with the methods of the plan found so far; 4 actions): finished; its best plan costs ≈ 12.7 c of crafting.</div>
+<div>Batch 4 (Restore with the methods of the plan found so far; 5 actions): finished; its best plan costs ≈ 12.7 c of crafting.</div>
+<div>Batch 5 (Bench crafts with the methods of the plan found so far; 5 actions): finished; its best plan costs ≈ 12.7 c of crafting.</div>
+<div>Batch 6 (Chaos Orb, Harvest reforges, Restore with the methods of the plan found so far; 9 actions): finished; its best plan costs ≈ 12.7 c of crafting.</div></details></div>
+<div>The given route&#x27;s methods were searched from the first batch of methods (the given route&#x27;s actions were offered from the first batch of methods on, and every later batch held them). The first batch of methods finished: no plan made only of its methods, the route&#x27;s among them, costs less than the plan shown, so the route costs no less than it.</div></div>
 <div class="k">How the answer was found</div>
 <div class="v ml">
 <div>The search expanded only what could matter (it looked at the actions of 199 of the 351 states it found and built 385 of the 687 actions offered at them: an action it did not build costs more, even at its best case, than the one it kept). The plan is the cheapest among the methods offered. The cut is exact: nothing was left out for being unlikely or by a tolerance, and the mean cost is that of the best plan.</div></div>
