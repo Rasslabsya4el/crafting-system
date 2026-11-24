@@ -108,9 +108,10 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
 * **The full item** (#1567, hypothesis H49 of #1434). The finished shape is the rarity whose item holds the most mods (`OfferTable.finished`);
   a side of it is full when the target asks as many mods of that side as it has room for. On a full side a miss takes a slot the target
   needs, so a player plans how a miss is undone, and two rules read that from the table:
-  - **the reroll back** (`rerolls_back`): on a target that fills both sides, an addition the seed ranks first on a wanted mod at a shape
-    (an Orb of Augmentation on a magic item) brings the cheapest reroll that keeps that shape on the same mod (the Orb of Alteration:
-    alt-aug), with the moves to its shape, when no offer of the seed rerolls the item back there already. Ranked by its own figure the
+  - **the reroll back** (`rerolls_back`): on a target that fills both sides, an addition among the seed's `PER_ROLE` best on a wanted mod
+    at a shape (an Orb of Augmentation on a magic item) brings the cheapest reroll that keeps that shape and can make the same mod (the
+    Orb of Alteration: alt-aug; at the rare shape, a reroll of the rare item such as the Chaos Orb), with the moves to its shape, when no
+    offer of the seed rerolls the item back there already. Ranked by its own figure the
     Orb of Transmutation, a reroll that does not keep the magic shape, beat the Alteration on R17's Talisman, and the Alteration never
     entered (#1567 fault 2). On a target with room left a miss can stay on the item, and the seed is the ranking alone (the listing of
     the 13 reference crafts: only R17 and R04 fill both sides);

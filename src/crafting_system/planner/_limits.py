@@ -95,6 +95,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (PROVED, "Actions proved not needed"),
     (UNTRIED, "Actions not tried before a time or memory limit"),
     (ROUNDS, "Methods searched in rounds"),
+    (IMPRINTS, "Imprints made only of an item worth coming back to"),
     (START, "The start item"),
     (FINISH, "The sockets"),
     (QUALITY_FINISH, "The quality"),
@@ -418,7 +419,8 @@ def model_gap_limits(gaps: Iterable) -> tuple[Limit, ...]:
 
 
 def pruning_limits(prunings) -> tuple[Limit, ...]:
-    """The limits of the offers left out of the states that cannot use them (K13): exact, so each says that nothing is lost."""
+    """The limits of the offers left out of the states that cannot use them (K13). The corrupting and the quality ones are exact, so each says
+    that nothing is lost; the imprints worth saving (#1567) are the planner's rule, not exact, and the limit says the plan is the best found."""
     found: list[Limit] = []
     corrupting = prunings.labels("corrupting")
     if corrupting:
@@ -448,7 +450,7 @@ def pruning_limits(prunings) -> tuple[Limit, ...]:
             Limit(
                 IMPRINTS,
                 "Imprinted only when the item is worth coming back to",
-                "an imprint is made only of an item that holds a wanted mod and no unwanted or crafted one (#1567)",
+                "an imprint is made only of an item that holds a wanted mod and no unwanted, crafted or veiled one (#1567)",
                 "An imprint made at another state could make the plan cheaper: the plan is the best found, not proved the least dear.",
                 labels=imprints,
             )
