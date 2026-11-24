@@ -4,7 +4,7 @@ Since #1538 the recipe draws one mod of the item's whole pool, less the families
 So the pure junk on the item matters to it only by the pool weight it takes out, and its member policy is `EXTREMES` (`abstraction._pattern`,
 module docstring: one draw by pool weight), where it was `ALL` (every family told apart): on R14's fourth group 520,707 kernels against 9,123.
 
-On the fixture bow of `test_abstraction_pattern` (attack prefixes of four weights, suffixes of three) with the Hunter influence, every member
+On the fixture bow of `test_abstraction_pattern` (attack prefixes of four weights, suffixes of three) with the Hunter influence and Hunter mods, every member
 of every key a seeded walk meets is compared by brute force (`Mode.ALL`): the recipe refuses where the Exalted Orb refuses and otherwise gives
 the same kernel through the key, and the members its policy offers are at least as good as every member for random successor values.
 """
@@ -13,6 +13,7 @@ import dataclasses
 import random
 
 import pytest
+from abstraction_removals_support import ARMOUR_PEN, BOW_DATA, HYBRID
 from pattern_support import all_members, check_dominates, pushed
 from test_abstraction_pattern import BOW, GOAL, LEVEL, STARTS, build, pattern_data
 
@@ -29,7 +30,8 @@ ACTIONS = (RECIPE, ExaltedOrb(), AnnulmentOrb(), ChaosOrb())
 
 @pytest.fixture(scope="module")
 def world():
-    data = pattern_data()
+    base = pattern_data()  # with the Hunter mods of the fixture bow, so the Hunter pool is not the plain one
+    data = dataclasses.replace(base, mods={**base.mods, **{mod_id: BOW_DATA.mods[mod_id] for mod_id in (*HYBRID[:3], ARMOUR_PEN[0])}})
     ab = Abstraction(data, GOAL, BOW, LEVEL, ACTIONS, metamods=True)
     starts = [ab.compress(build(data, BOW, ids, influences=HUNTER)) for ids in STARTS]
     rng = random.Random(1571)
@@ -62,6 +64,8 @@ def test_the_recipe_is_extremes_at_every_key(world):
 def test_the_recipe_has_the_exalted_orbs_outcomes_on_a_hunter_rare(world):
     """Field by field (`Outcomes` compares by identity): the same item kept, the same pool, the same chances of each count of mods."""
     data, *_ = world
+    plain = sum(len(family.mods) for family in ExaltedOrb().outcomes(data, build(data, BOW, STARTS[0])).pool)
+    assert sum(len(family.mods) for family in ExaltedOrb().outcomes(data, build(data, BOW, STARTS[0], influences=HUNTER)).pool) > plain
     for ids in STARTS:
         item = build(data, BOW, ids, influences=HUNTER)
         recipe, orb = RECIPE.outcomes(data, item), ExaltedOrb().outcomes(data, item)

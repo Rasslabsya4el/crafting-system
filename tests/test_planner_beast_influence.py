@@ -169,7 +169,7 @@ def test_a_class_with_no_influence_key_lists_no_recipe_and_says_it_is_a_model_ga
     assert [gap.kind for gap in gaps] == ["beast-influence-recipe"]
 
 
-def test_the_recipe_is_an_addition_on_a_shape_with_its_influence_and_terminal_without(tmp_path):
+def test_the_recipe_is_an_addition_on_a_shape_with_its_influence_and_refused_without(tmp_path):
     start = _target(tmp_path).start_item
     (shaper,) = [action for action in catalog(DATA, start, planner_only=True, names=RECIPES) if action.influence is Influence.SHAPER]
     priced = PricedOffer(Offer(shaper.label(), shaper, {}), B, ())
