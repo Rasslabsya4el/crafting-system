@@ -38,7 +38,10 @@ def test_every_group_finished_is_proved(tmp_path, data, rounds):
     plan = plan_target(data, _target(tmp_path, data), _prices(), _settings(None))
     words = proof_words(plan)
     assert words.case == PROOF_PROVED and words.open == words.tried_together == 5
-    assert words.sentence == "Proved: no cheaper way exists. The search held all 5 actions open to this craft together and finished."
+    assert words.sentence == (
+        "Proved: no cheaper plan exists among all 5 crafts this planner can use on this item, searched together to the end."
+        " Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
+    )
 
 
 def test_a_group_stopped_is_best_found_not_proved_with_what_was_tried_and_the_guide(tmp_path, data, rounds):
@@ -48,9 +51,9 @@ def test_a_group_stopped_is_best_found_not_proved_with_what_was_tried_and_the_gu
     assert words.case == PROOF_BEST_FOUND and (words.open, words.tried_together) == (5, 1)
     cost = plan.start_price.chaos + plan.risk.mean.value
     assert words.sentence == (
-        "Best plan found, not proved the cheapest: 1 of the 5 actions open to this craft were searched to the end together with this plan before "
-        f"the search ran out of time or memory, so a cheaper plan that uses the others may exist. It costs {cost:,.2f} Chaos in all, against "
-        "500.00 Chaos for the guide's route."
+        "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 1 of the 5 crafts this planner "
+        "can use on this item to the end together with this plan, so a cheaper plan that uses the other crafts may exist. "
+        f"It costs {cost:,.2f} Chaos in all, against 500.00 Chaos for the guide's route."
     )
     assert "Proved" not in words.sentence and not SEARCH_WORDS.search(words.sentence)
     assert words.document() == {"case": PROOF_BEST_FOUND, "sentence": words.sentence, "actions_open": 5, "actions_tried_together": 1, "guide_cost": 500.0}
@@ -70,7 +73,7 @@ def test_the_text_the_json_and_the_page_say_the_one_sentence(tmp_path):
     assert code == 0
     document = read_json(out)
     sentence = document["proof"]["sentence"]
-    assert document["proof"]["case"] == PROOF_PROVED and sentence.startswith("Proved: no cheaper way exists")
+    assert document["proof"]["case"] == PROOF_PROVED and sentence.startswith("Proved: no cheaper plan exists")
     page = (out.parent / "r12-lightning-amulet.route.html").read_text(encoding="utf-8")
     assert sentence in page.replace("&#x27;", "'").replace("&#39;", "'")
 
@@ -80,4 +83,4 @@ def test_the_command_prints_the_proof_line_and_the_no_plan_line(tmp_path, capsys
     assert code == 0
     printed = capsys.readouterr().out
     (line,) = [line for line in printed.splitlines() if line.startswith("Proof: ")]
-    assert line.startswith("Proof: Proved: no cheaper way exists")
+    assert line.startswith("Proof: Proved: no cheaper plan exists")

@@ -62,6 +62,8 @@ def _chaos(value: float) -> str:
 def _guide_words(cost: float, guide: float | None) -> str:
     if guide is None or not math.isfinite(guide) or not math.isfinite(cost):
         return ""
+    if _chaos(cost) == _chaos(guide):
+        return f" It costs {_chaos(cost)} in all, the same as the guide's route."
     return f" It costs {_chaos(cost)} in all, against {_chaos(guide)} for the guide's route."
 
 
@@ -103,8 +105,11 @@ def _open(plan) -> int:
 
 
 def _all(total: int) -> str:
-    """ "all 10,873 actions open to this craft", or "every action open to this craft" when the count is unknown."""
-    return f"all {total:,} actions open to this craft" if total else "every action open to this craft"
+    """ "all 10,873 crafts this planner can use on this item", or "every craft ..." when the count is unknown."""
+    return f"all {total:,} crafts this planner can use on this item" if total else "every craft this planner can use on this item"
+
+
+_LEFT_OUT = " Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
 
 
 def _tried_together(plan, total: int) -> int:
@@ -132,38 +137,39 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
     against = _guide_words(cost, guide)
     gap = _proved_gap(plan)
     if gap is not None and gap <= PROOF_GAP + 1e-12:
-        within = "" if gap == 0.0 else f", to within {PROOF_GAP * 100:g}%"
+        within = "" if gap == 0.0 else f", to within {PROOF_GAP * 100:g}% of the crafting cost,"
         return ProofWords(
             PROVED,
-            f"Proved: no cheaper way exists{within}. The search held {_all(total)} together and finished." + against,
+            f"Proved: no cheaper plan exists{within} among {_all(total)}, searched together to the end." + _LEFT_OUT + against,
             total,
             total,
             guide,
         )
     if gap is not None:  # every action held and finished, but only within a gap wider than 1%
         said = (
-            f"Best plan found, not proved the cheapest: the search held {_all(total)} together and finished, but it "
+            f"Best plan found, not proved to be the cheapest: the search checked {_all(total)} together to the end, but it "
             f"proved this plan only to within {gap * 100:.2f}% of the cheapest, not 1%."
         )
         return ProofWords(BEST_FOUND, said + against, total, total, guide)
     if plan.approximation is not None:
-        said = "Best plan found, not proved the cheapest: the search worked on a simplified model of the craft, so a cheaper plan may exist."
+        said = "Best plan found, not proved to be the cheapest: the search worked on a simplified model of the craft, so a cheaper plan may exist."
         return ProofWords(BEST_FOUND, said + against, total, 0, guide)
     tried = _tried_together(plan, total)
     if tried:
         said = (
-            f"Best plan found, not proved the cheapest: {tried:,} {f'of the {total:,} ' if total else ''}actions open to this craft were searched to the end together "
-            "with this plan before the search ran out of time or memory, so a cheaper plan that uses the others may exist."
+            "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only "
+            f"{tried:,} {f'of the {total:,} ' if total else ''}crafts this planner can use on this item to the end together with this plan, so a "
+            "cheaper plan that uses the other crafts may exist."
         )
     elif info_rounds(plan):
         said = (
-            "Best plan found, not proved the cheapest: no group of methods that held this plan was searched to the end before the search ran out "
-            f"of time or memory, so a cheaper plan may exist among the {f'{total:,} ' if total else ''}actions open to this craft."
+            "Best plan found, not proved to be the cheapest: the search ran out of time or memory before it finished checking any group of crafts "
+            f"that held this plan, so a cheaper plan may exist among the {f'{total:,} ' if total else ''}crafts this planner can use on this item."
         )
     else:
         said = (
-            f"Best plan found, not proved the cheapest: the search held the {total:,} actions open to this craft together but ran out of time or "
-            "memory before it finished, so a cheaper plan may exist."
+            f"Best plan found, not proved to be the cheapest: the search ran out of time or memory before it finished checking the {total:,} crafts "
+            "this planner can use on this item together, so a cheaper plan may exist."
         )
     return ProofWords(BEST_FOUND, said + against, total, tried, guide)
 

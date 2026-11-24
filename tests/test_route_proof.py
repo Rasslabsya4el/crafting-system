@@ -85,8 +85,8 @@ def test_a_plan_whose_search_was_stopped_is_the_best_found_never_the_cheapest(r1
     # the one proof sentence (OR-59, #1576): best found, and how many actions were searched to the end with the plan (the closed and the beaten
     # batch), of the actions offered over every batch (`EnvelopeInfo.offered`)
     assert proof.lines[0].text == (
-        "Best plan found, not proved the cheapest: 3 of the 12 actions open to this craft were searched to the end together "
-        "with this plan before the search ran out of time or memory, so a cheaper plan that uses the others may exist."
+        "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 3 of the 12 crafts this "
+        "planner can use on this item to the end together with this plan, so a cheaper plan that uses the other crafts may exist."
     )
     words = every_word(fields, leaves)
     assert "Cheapest" not in words and "within the stated gap" not in words and "1%" not in proof.lines[0].text
@@ -118,8 +118,10 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
     proof = fields["Proof"].lines[0].text
     assert fields["Proof"].tone == ""
     assert proof in (
-        f"Proved: no cheaper way exists, to within 1%. The search held all {proof_words(plan).open:,} actions open to this craft together and finished.",
-        "Proved: no cheaper way exists, to within 1%. The search held every action open to this craft together and finished.",
+        f"Proved: no cheaper plan exists, to within 1% of the crafting cost, among all {proof_words(plan).open:,} crafts this planner can use on this "
+        "item, searched together to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
+        "Proved: no cheaper plan exists, to within 1% of the crafting cost, among every craft this planner can use on this item, searched together "
+        "to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
     )
     floor = next(line for label, line in leaves if label == "How the methods were searched").text  # the figure is said with the batches
     assert money(lower + start) in floor and money(lower) in floor and money(start) in floor
@@ -139,7 +141,9 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
 def test_an_exact_plan_is_the_cheapest_of_the_methods_searched(r12):
     plan = searched(r12, (), exact=True, within=None, stopped=None)
     _, fields, _ = goal(plan)
-    assert fields["Proof"].lines[0].text == f"Proved: no cheaper way exists. The search held all {len(plan.offers):,} actions open to this craft together and finished."
+    assert fields["Proof"].lines[0].text == (
+        f"Proved: no cheaper plan exists among all {len(plan.offers):,} crafts this planner can use on this item, searched together to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
+    )
 
 
 def test_actions_ruled_out_by_price_are_said_against_the_plan_shown(r12):
@@ -164,7 +168,7 @@ def test_a_stopped_plan_with_no_search_record_is_read_off_its_limits(r12):
     plan = dataclasses.replace(plan, packed=None)
     assert plan.search is None
     _, fields, leaves = goal(plan)
-    assert fields["Proof"].lines[0].text.startswith("Best plan found, not proved the cheapest") and fields["Proof"].tone == "warn"
+    assert fields["Proof"].lines[0].text.startswith("Best plan found, not proved to be the cheapest") and fields["Proof"].tone == "warn"
     rounds = next(line for label, line in leaves if label == "How the methods were searched")
     assert "not proved the cheapest" in rounds.text and not SEARCH_WORDS.search(rounds.text)
 
@@ -206,9 +210,9 @@ def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_fig
 @pytest.mark.parametrize(
     "search, said",
     [
-        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Best plan found, not proved the cheapest"),
-        (dict(exact=False, within=0.01), "Proved: no cheaper way exists, to within 1%."),
-        (dict(exact=True, within=None), "Proved: no cheaper way exists."),
+        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Best plan found, not proved to be the cheapest"),
+        (dict(exact=False, within=0.01), "Proved: no cheaper plan exists, to within 1% of the crafting cost,"),
+        (dict(exact=True, within=None), "Proved: no cheaper plan exists among"),
     ],
     ids=["stopped-by-a-net", "within-the-gap", "exact"],
 )
