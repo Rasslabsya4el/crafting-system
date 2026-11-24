@@ -1013,6 +1013,8 @@ class _View:
         edges = [edge for edge in step.edges if edge.kind != "again"]
         if not edges or any(edge.to is None for edge in edges):
             return None
+        if any(not entry.fractured for entry in start.mods):  # a wipe takes off the start's own mods: what it leaves is not the start again
+            return None
         landing = [state for edge in edges for state in edge.states]
         kept = sorted(entry.mod_id for entry in start.mods if entry.fractured)
         if self.reader.tracked and all(

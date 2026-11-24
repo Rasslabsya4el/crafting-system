@@ -14,10 +14,12 @@ from fractions import Fraction
 from listing_support import magic_toy, prices
 from test_growth import _entry, _names, _table
 
+from crafting_system.planner._growth import Grower
+
 from crafting_system.abstraction._goal import Goal
 from crafting_system.actions import unopened_listing
 from crafting_system.items import Rarity
-from crafting_system.planner import _growth, _plan, plan_target
+from crafting_system.planner import RESTART, _plan, plan_target
 from crafting_system.planner._plan import offers_for, price_offers
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import start_price_key
@@ -87,6 +89,36 @@ def test_a_rare_start_takes_the_chaos_orb_and_the_alchemy_never_an_essence_that_
     assert _names(table, table.reset_path()) == {"scour", "alchemy"}
     assert _names(table, table.plain_reroll()) == {"chaos"}
     assert _names(table, table.closure({0})) == {"exalt", "scour", "alchemy", "chaos"}
+
+
+def test_a_reroll_that_guarantees_a_tag_is_no_plain_reroll():
+    from types import SimpleNamespace
+
+    table = _table(_reroll("harvest reforge", 0.5, at=RARE), _reroll("chaos", CHAOS, at=RARE))
+    table.start_rarity, table.rebuy = RARE, 40.0
+    reforge = table.entries[0]
+    declared = SimpleNamespace(named=frozenset(), crafted=False, draws=True, fractures=False, tag="life", veils=False)
+    action = SimpleNamespace(adds=lambda *_: declared, reads=lambda *_: SimpleNamespace(needs_veiled=False, needs_crafted=False, families=()), imprint_move=lambda: None)
+    table.data = SimpleNamespace(mods={})
+    table._read_declarations(reforge, SimpleNamespace(offer=SimpleNamespace(action=action)), None)
+    assert reforge.forces and _names(table, table.plain_reroll()) == {"chaos"}
+
+
+def test_the_seed_holds_the_reset_and_the_plain_reroll_though_no_wanted_mod_ranks_them():
+    table = _table(
+        _entry("augment", AUGMENT, chance={A: Fraction(1, 2), B: Fraction(1, 2)}, leads={MAGIC: frozenset({MAGIC})}),
+        _entry("craft A", 2.5, kind="craft", chance={A: 1}),
+        _entry("craft B", 2.5, kind="craft", chance={B: 1}),
+        _wipe(),
+        _move("transmute", TRANSMUTE, MAGIC),
+        _entry("alteration", ALTERATION, kind="reroll", leads={MAGIC: frozenset({MAGIC})}),  # no chance on A or B worth ranking
+    )
+    table.rebuy = START
+    assert _names(table, table.seed()) == {"augment", "craft A", "craft B"}
+    positions, _words = Grower(table, ()).seed()
+    assert _names(table, positions) == {"augment", "craft A", "craft B", "scour", "transmute", "alteration"}
+    table.rebuy, table._reset = None, None  # a start not bought: the seed is the ranking alone
+    assert _names(table, Grower(table, ()).seed()[0]) == {"augment", "craft A", "craft B"}
 
 
 def test_a_fractured_start_is_reset_by_the_wipe_alone_and_rerolled_by_the_alteration_not_by_the_wipe():
@@ -190,18 +222,32 @@ requirements:
 FRACTURED_A = "  mods:\n    - mod: ToyA\n      values: [1]\n      fractured: true\n"
 
 
-def _page_text(mods=""):
+def _three(mods="", start="bought"):
+    from crafting_system.targets import parse_target
+
+    data = magic_toy()
+    text = THREE.format(mods=mods).replace("start: bought", f"start: {start}")
+    aim = dataclasses.replace(parse_target(text, data, source="toy-reset.yaml"), actions=(*METHODS[:3], "transmutation-orb", "scouring-orb"))
+    entries = prices(start_price_key(data, aim) if start == "bought" else None)
+    entries.prices["Orb of Scouring"] = PriceEntry(1.0, "fixture")
+    return data, aim, entries
+
+
+def _toy_plans():
+    data, aim, entries = _three()
+    plan = plan_target(data, aim, entries)
+    del entries.prices["Orb of Scouring"]
+    return data, plan, plan_target(data, aim, entries)
+
+
+def _page_text(mods="", start="bought"):
     import html
     import re
 
     from crafting_system.cli import build_report
     from crafting_system.cli._route_view import route_page
-    from crafting_system.targets import parse_target
 
-    data = magic_toy()
-    aim = dataclasses.replace(parse_target(THREE.format(mods=mods), data, source="toy-reset.yaml"), actions=(*METHODS[:3], "transmutation-orb", "scouring-orb"))
-    entries = prices(start_price_key(data, aim))
-    entries.prices["Orb of Scouring"] = PriceEntry(1.0, "fixture")
+    data, aim, entries = _three(mods, start)
     plan = plan_target(data, aim, entries)
     return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", route_page(build_report(plan, data), data))))
 
@@ -217,3 +263,16 @@ def test_the_page_titles_the_scouring_of_a_fractured_start_as_starting_over_alon
     text = _page_text(FRACTURED_A)
     assert "Start over on the same item: Orb of Scouring Reached from" in text
     assert "Start over on the same item: Orb of Scouring, then" not in text
+
+
+def test_a_start_whose_own_mods_a_wipe_takes_off_is_never_titled_as_starting_over():
+    text = _page_text("  mods:\n    - mod: ToyA\n      values: [1]\n", start="given")
+    assert "Start over on the same item" not in text
+
+
+def test_with_the_reset_priced_the_toy_never_buys_the_listing_again_and_costs_less():
+    data, plan, no_scouring = _toy_plans()
+    assert not any(decision.label == RESTART for decision in plan.policy.values())
+    assert any(decision.label == RESTART for decision in no_scouring.policy.values())
+    # each restart costs 1.2 c (Scouring + Transmutation) in place of the 10 c listing: the plan is cheaper, by less than 8.8 c a restart
+    assert 0 < no_scouring.mean_remaining - plan.mean_remaining

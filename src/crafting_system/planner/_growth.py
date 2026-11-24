@@ -126,7 +126,7 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   - **the reset path** (`reset_path`), when it costs less than buying the start item again: the cheapest offer that wipes the item (a
     reroll that draws no mod and adds none, `Entry.wipes`: an Orb of Scouring, which leaves the fractured mods alone, so a fractured start
     stays at its rarity), and the cheapest moves from where it lands back to the start's rarity among the offers that force no mod
-    (`Entry.forces`: an essence puts its own mod on every outcome) and whose outcomes all have that one rarity (an Orb of Transmutation, an
+    (`Entry.forces`: an essence puts its own mod on every outcome, a Harvest reforge one of its tag) and whose outcomes all have that one rarity (an Orb of Transmutation, an
     Orb of Alchemy);
   - **the plain reroll** (`plain_reroll`): the cheapest offer that rerolls an item of the start's rarity (it draws, its kind there is a
     reroll), leaves it at that rarity and forces no mod (the Orb of Alteration for a magic start, the Chaos Orb for a rare one).
@@ -191,7 +191,7 @@ class Entry:
     more_crafted: bool = False  # it may add the metamod of more crafted mods
     fans: str = ""  # why one use fans out over two random choices or copies the item (module text, the later group; #1440), or ""
     need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
-    forces: bool = False  # it puts a mod it names on every use, as a reroll does not (an essence's forced mod): no plain reroll or move (#1600)
+    forces: bool = False  # every use puts on a mod it names (an essence's) or one of a tag (a Harvest reforge): no plain reroll or move (#1600)
     wipes: bool = False  # a reroll that draws no mod and adds none: it leaves the item bare but for what it keeps (an Orb of Scouring, #1600)
 
     def acts_at(self, shapes) -> bool:
@@ -335,7 +335,7 @@ class OfferTable:
         entry.locks = frozenset(_LOCKS[family] for family in families if family in _LOCKS)
         entry.keeps_out = frozenset(_TAGS[family] for family in families if family in _TAGS)
         entry.more_crafted = Metamod.MULTIPLE_CRAFTED_MODS.value in families
-        entry.forces = bool(adds.named) and not adds.crafted
+        entry.forces = (bool(adds.named) and not adds.crafted) or adds.tag is not None  # a named mod, or a tag the draw guarantees (a Harvest reforge)
         entry.wipes = adds.named == frozenset() and not adds.draws and not adds.fractures and move is None and REROLL in entry.kinds.values()
 
     def _fans_at(self, action, view: Item) -> str:
@@ -646,7 +646,10 @@ class OfferTable:
     def reset_path(self) -> set[int]:
         """The cheapest wipe of the item (`Entry.wipes`) with the cheapest plain moves from where it lands back to the start's rarity, when the
         whole costs less than buying the start again (`rebuy`); empty otherwise (module text, the reset closure). Where it lands is read from
-        its outcomes at the start's shape, or at the shapes it acts at when the start's refuses it (a Normal start)."""
+        its outcomes at the start's shape, or at the shapes it acts at when the start's refuses it (a Normal start). Two notes, both on the
+        side of leaving the reset out: where it lands at several rarities the ways back from each are summed, not weighed by their chances;
+        and `rebuy` is the start's price alone, so where the price is a Normal base's (#1522) the orb that makes it the start's rarity, which
+        each rebuy pays too, is not added to it."""
         start, best = self.start_rarity, (math.inf, ())
         for entry in self.entries:
             if not entry.wipes or entry.position in self.held_back or entry.forces:
