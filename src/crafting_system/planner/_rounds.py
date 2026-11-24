@@ -78,6 +78,26 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   Before, it joined no later round and kept the last round from ever being due, so no round held every offer: R12's Harvest likelihood
   round stopped at its share and its 9,297 offers were never searched together, though the missing mods' table of that last round reaches the
   plan's own cost (39.93 c after the 1 c start) at once.
+* **A stopped round read against the final plan** (#1559). A round set aside after its share stopped it was cut against the plan in hand when
+  it ran, and a plan found after it can cost less than its lower figure: R09's Augmentation round stopped at 198.73 c against 209.71 c in hand,
+  and the run ended at 113.87 c. Once the rounds end, such a round whose stated lower figure reaches the final plan's certified upper figure, by
+  the search's own rule (`_envelope.reaches`: to the certified 1e-6, or within the run's gap, OR-39), counts as beaten (`RoundRecord.beaten_later`),
+  as it would have, had that plan been in hand when it ran. Why that figure holds whatever plan was in hand then: the round's search
+  bounds every plan of its offers (the base of its time and its group) from below, and the plan in hand entered it in two places only. (1) The
+  exact price cut (`_price_cut`) left out each offer that costs at least the start's price `p` plus `U`, the certified upper figure in hand.
+  Should the cheapest plan of the round's whole offers cost `V < U`, every offer left out costs more than a restart (`p + V`) at every state
+  but the start, and more than `V` at the start, so no cheapest plan uses one and the cut search's figure `L` is a lower figure of `V` too;
+  should `V >= U`, `U` is one. So `V >= min(L, U)`, which is the figure the round states (`_stated`: its lower figure, never above the plan
+  it was cut against). (2) The figure the search stops at (`beaten_at`, and the missing mods' table, `_envelope_plan.closes_at`) ends a round
+  as beaten; it lowers no figure and prunes nothing, and a stopped round did not end there. A build its share cut gives a weaker figure, the
+  table's or the partial model's, still a lower figure of every plan of the offers (`_pattern_bound`); a stop of either net leaves the figure
+  the search had reached, which only rises as it goes on. So the stated figure is a lower figure of every plan of that round's offers on any
+  plan in hand, and the rule counts nothing a later round's proof does not. What it does not do: a beaten round proved nothing of the plans
+  that join its group with a group searched after it, nor with offers that joined the base after it (the module text above, the plans of G
+  and H together), so it stays set aside and not closed (`RoundRecord.closed`) exactly as a round beaten when it ran; only the last round that
+  holds every offer, when it closes, or a run of the group again on the final base, proves those plans. A round carried into the rounds after
+  it is never read so: one that stopped with no plan in hand, or with a walked one, is carried without its group joining the base, and read
+  as beaten it would count as closed though no later round held its offers.
 * **The answer** is the cheapest plan of every round. It is proved the cheapest over every offer only when every round closed (the last round
   then held every offer); otherwise it says over which methods it is proved, and each round set aside or not tried with its reason and the
   figure no plan of its offers costs less than (OR-13). When no round made a plan, the answer says that no plan of the offered methods
@@ -97,7 +117,7 @@ from dataclasses import dataclass, replace
 from crafting_system.budget import BudgetExceeded
 
 from . import _limits
-from ._envelope import YIELDED, Beaten
+from ._envelope import YIELDED, Beaten, reaches
 from ._limits import Limit, WITHIN_GAP
 
 FIRST_ROUND = frozenset({"junk"})  # the features an offer of the first round may add: counting the junk per side is what every reroll needs
@@ -163,6 +183,9 @@ class RoundRecord:
     # a round its share stopped with a plan in hand it did not lower, set aside, whose group the last round held again with every offer and
     # that round closed (#1500): the last round's proof covers its offers, though its own search did not finish
     held_again: bool = False
+    # a round its share stopped, set aside, whose stated lower figure reaches the certified upper figure of the plan the run ended with (#1559):
+    # its status is then beaten, as a round beaten when it ran, and it is no more closed than one (it stays set aside, `closed`)
+    beaten_later: bool = False
 
     @property
     def closed(self) -> bool:
@@ -176,7 +199,7 @@ class RoundRecord:
             "kinds": list(self.kinds), "offers": self.offers, "status": self.status, "reason": self.reason, "lower_without_start": self.lower,
             "plan_cost_without_start": self.upper, "seconds": round(self.seconds, 3), "within": self.within, "features": list(self.features),
             "carried": self.carried, **({} if self.states is None else {"states": self.states}), **({} if self.growth is None else {"growth": self.growth}),
-            **({"held_again": True} if self.held_again else {}),
+            **({"held_again": True} if self.held_again else {}), **({"beaten_later": True} if self.beaten_later else {}),
         }  # fmt: skip
 
 
@@ -553,7 +576,28 @@ def widen(
                                          reason=records[aside].reason + "; the last round held them again, with every method")  # fmt: skip
         plan = None
         gc.collect()  # the round's model goes before the next one is built (memory)
-    return Widened(best, tuple(records), error or proof)
+    return Widened(best, tuple(beaten_later(records, best_upper, gap)), error or proof)
+
+
+def beaten_later(records: Sequence[RoundRecord], upper: float | None, gap: float = 0.0) -> list[RoundRecord]:
+    """`records` with each round of the widening that its share stopped and that was set aside (not carried) read against the plan the run
+    ended with (#1559, module text): when its stated lower figure reaches `upper`, that plan's certified upper figure, by the search's own rule
+    (`_envelope.reaches`: to the certified 1e-6, else within `gap`, the run's gap, OR-39), it is beaten, its `within` the gap when only the gap
+    let it reach. It stays set aside: beaten says nothing of the plans that join its group with the offers searched after it."""
+    if upper is None or not math.isfinite(upper):
+        return list(records)
+    out = []
+    for record in records:
+        if record.status == STOPPED and not record.carried and record.growth is None and record.lower is not None:
+            exact = reaches(upper, record.lower)
+            if exact or (gap > 0.0 and reaches(upper, record.lower, gap)):
+                within = None if exact else gap
+                said = f"no plan with them costs less than {_figure(record.lower)}, and the plan the run ended with costs at most {_figure(upper)}"
+                record = replace(record, status=BEATEN, within=within, beaten_later=True, reason=(
+                    f"{record.reason}; {said}" + ("" if exact else f" (to within the gap of {gap:.2%} this run allows)")
+                    + ": beaten by the plan found after it, over the methods it was searched with"))  # fmt: skip
+        out.append(record)
+    return out
 
 
 class FloorsPass:
@@ -719,6 +763,8 @@ def _round_line(n: int, record: RoundRecord) -> str:
         return f"{head}: finished, its best plan costs {_figure(record.upper)}"
     if record.status == WITHIN:
         return f"{head}: finished within the gap, its plan costs {_figure(record.upper)}"
+    if record.status == BEATEN and record.beaten_later:
+        return f"{head}: stopped, then beaten ({record.reason})"
     if record.status == BEATEN:
         return f"{head}: ended at once: {record.reason}; no plan with them costs less than {_figure(record.lower)}"
     if record.status == NONE:
@@ -785,7 +831,7 @@ def rounds_limits(records: Sequence[RoundRecord], exact: bool, within: float | N
         Limit(
             _limits.UNTRIED,
             "Not finished",
-            f"these rounds did not finish before their share of {net}, ended at once but were not held by the rounds after them, or were not reached: {{names}}",
+            f"these rounds did not finish before their share of {net}, were beaten (at once, or by the plan found after them) but were not held by the rounds after them, or were not reached: {{names}}",
             "The plan shown is the best the finished rounds found; these methods may still give a cheaper one, at no less than the figure stated for each.",
             labels=tuple(sorted({kind for _, record in open_rounds for kind in record.kinds} - _held_by_finished_growth(records))),
             names=tuple(round_line(n, record) for n, record in open_rounds),
@@ -849,6 +895,6 @@ def judged_route_limit(labels: Sequence[str], first: RoundRecord) -> Limit:
 
 
 __all__ = [
-    "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "StatesMeter", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed",
+    "BEATEN", "CLOSED", "FIRST_ROUND", "GAVE_WAY", "Group", "NONE", "NoPlan", "REFUSED", "RoundCall", "RoundRecord", "STOPPED", "Share", "StatesMeter", "Stopped", "UNTRIED", "WITHIN", "Widened", "all_closed", "beaten_later",
     "judged_route_limit", "no_plan_words", "round_groups", "round_line", "rounds_limits", "widen",
 ]  # fmt: skip

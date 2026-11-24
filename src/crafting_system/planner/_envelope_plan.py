@@ -41,7 +41,7 @@ from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
 
 from . import _limits
-from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, resident_mb, solve_info_records
+from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, reaches, resident_mb, solve_info_records
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
 from ._offers import RESTART, BuyStartItem, PricedOffer
@@ -622,7 +622,7 @@ def closes_at(beaten_at: float | None, gap: float, gap_after: float | None, bega
 
     def closes(lower: float) -> bool:
         within = gap if gap > 0.0 and gap_after is not None and time.perf_counter() - began >= gap_after else 0.0
-        return math.isfinite(lower) and beaten_at <= (1.0 + within) * (1.0 + ACCEPT_BOUND) * lower
+        return reaches(beaten_at, lower, within)
 
     return closes
 
