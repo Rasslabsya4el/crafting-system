@@ -215,7 +215,7 @@ ROLL_APPROXIMATE = (
 
 
 def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: bool = False) -> tuple[Limit, ...]:
-    """What the answer says of the implicit finish until the page draws it as a step (#1234): the last step, its mean and the total of the craft
+    """What the answer says of the implicit finish, which the page and the text also draw as the last step (#1234): the last step, its mean and the total of the craft
     (`total`: the mods and every finish, after the start item); the Blessed Orbs left out for lack of a price. `at_most`: the total is an upper end."""
     if finish.orb is None:
         why = f"the start item's implicit {finish.words} already, which no step of the mods changes, so nothing is added to the cost of the mods"
@@ -225,8 +225,8 @@ def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: boo
         why = (
             f"a last step, once the mods are made: {finish.orb.label} until the implicit {finish.words} (a chance of "
             f"{float(finish.chance):.2%} each), {float(finish.uses):,.2f} on average at {finish.orb.cost:,.2f} Chaos each, {finish.value:,.2f} "
-            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos on average after the start item; every other figure of this answer "
-            "is of the mods alone"
+            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos on average after the start item, the figure of the result, which holds "
+            "this step"
         )
         labels = (finish.orb.label,)
     found = Limit(

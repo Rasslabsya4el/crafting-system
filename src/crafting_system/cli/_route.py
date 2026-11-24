@@ -92,6 +92,9 @@ REFUSED_KEYS = (
 )  # fmt: skip
 
 
+BLESSED_ORB = "Blessed Orb"  # the label of the orb of the implicit finish (`actions.blessed`)
+
+
 class RouteError(ValueError):
     """A route file that cannot be read, is not valid, or names something the plan does not have."""
 
@@ -325,7 +328,7 @@ class _Reader:
         )
         # a rule that names the catalyst or the orb of one of the plan's finish steps is read as that finish (#1234): the finish follows every
         # goal of the route's mods, as it follows the plan's, so the rule is no step of the mods and is left out of them (`Route.finished`)
-        finishing = {step.label for step in self.plan.finish_steps}
+        finishing = self.finish_labels()
         finished = tuple(dict.fromkeys(rule.do for rule in rules if rule.do in finishing))
         rules = tuple(rule for rule in rules if rule.do not in finishing)
         opening = next((priced.label for priced in self.plan.offers if priced.offer.action.opens_listing), None)
@@ -344,6 +347,17 @@ class _Reader:
 
     # -- `do` ---------------------------------------------------------------------------------------
 
+    def finish_labels(self) -> set[str]:
+        """The catalysts and orbs a route's rule may name for the plan's finishes (#1234): each finish step's own, and the catalyst of the
+        type asked or the Blessed Orb of a finish the start item already meets (no step then, nothing to do)."""
+        found = {step.label for step in self.plan.finish_steps}
+        quality = getattr(self.plan, "quality_finish", None)
+        if quality is not None:
+            found.add(f"{quality.wanted.type.value.capitalize()} Catalyst")
+        if getattr(self.plan, "implicit_finish", None) is not None:
+            found.add(BLESSED_ORB)
+        return found
+
     def read_action(self, rule: LineMap, path: str) -> str:
         label = self.text(rule, "do", path)
         line = rule.key_lines["do"]
@@ -357,7 +371,7 @@ class _Reader:
                 )
             return label
         known = [priced.label for priced in self.plan.offers]
-        if label in known or label in {step.label for step in self.plan.finish_steps}:  # a finish step's is read as the finish (#1234)
+        if label in known or label in self.finish_labels():  # a finish's catalyst or orb is read as the finish (#1234)
             return label
         for limit in self.plan.limits:
             if limit.kind == UNPRICED and label in limit.labels:

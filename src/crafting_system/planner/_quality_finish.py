@@ -137,14 +137,21 @@ GAIN_APPROXIMATE = (
 )
 
 
+NO_QUALITY = "no quality"  # the key of an item that holds no quality in `quality_law`'s chain
+
+
 def quality_law(data: GameData, action, item, wanted: QualityRequirement) -> tuple:
     """The chain of the uses of `action` that take `item` to the quality `wanted` (`_finish_steps.FinishStep.law`): each quality the uses
     pass through, the start item's first, with the chance of each quality one use leads to (None once the quality asked is reached)."""
     found: dict = {}
     queue = [item]
+
+    def key_of(made):  # None means "done" in the law: an item with no quality is keyed apart from it
+        return NO_QUALITY if made.quality is None else made.quality
+
     while queue:
         current = queue.pop(0)
-        key = current.quality
+        key = key_of(current)
         if key in found or wanted.is_met_by(current):
             continue
         try:
@@ -153,7 +160,7 @@ def quality_law(data: GameData, action, item, wanted: QualityRequirement) -> tup
             raise QualityFinishRefused(f"{action.label(data)} cannot finish the quality: {error}") from None
         onward: dict = {}
         for chance, made in results:
-            onto = None if wanted.is_met_by(made) else made.quality
+            onto = None if wanted.is_met_by(made) else key_of(made)
             onward[onto] = onward.get(onto, Fraction(0)) + Fraction(chance)
             if onto is not None and onto not in found:
                 queue.append(made)
@@ -196,7 +203,7 @@ def plan_quality_finish(
 
 
 def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_most: bool = False) -> tuple[Limit, ...]:
-    """What the answer says of the quality finish until the page draws it as a step (#1234): the last step, its mean beside the mods' and the
+    """What the answer says of the quality finish, which the page and the text also draw as the last step (#1234): the last step, its mean beside the mods' and the
     total; the catalysts of another type left out; the catalysts left out for lack of a price. `mods_at_most`: the mods' mean is an upper end."""
     wanted = finish.wanted
     what = f"{wanted.min_percent}% {wanted.type.value.capitalize()} quality"
@@ -210,7 +217,7 @@ def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_mo
         why = (
             f"a last step, once the mods are made: {finish.catalyst.label} until the item has {what}{held}, {float(finish.uses):,.2f} on "
             f"average at {finish.catalyst.cost:,.2f} Chaos each, {finish.value:,.2f} Chaos on average; so the whole craft {costs} "
-            f"{total:,.2f} Chaos on average after the start item; every other figure of this answer is of the mods alone"
+            f"{total:,.2f} Chaos on average after the start item, the figure of the result, which holds this step"
         )
         labels = (finish.catalyst.label,)
     found = [

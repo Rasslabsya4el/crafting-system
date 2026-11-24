@@ -1425,6 +1425,7 @@ class _View:
         return GoalCard(fields, card_of_target(self.data, asked, self.start_item, self.forced), leaves_out)
 
 
+FINISH_UNTIL = " until the "  # what joins a finish step's catalyst or orb to its goal in the row's title (`finish_title`)
 FINISH_NOTE = "once every mod is made: no step of the mods changes this, so it comes last and changes no step before it"
 
 
@@ -1491,7 +1492,7 @@ def build_section(
     """
     _require_limits(inp.plan)
     view = _View(inp, data, buy, prefix, route_field)
-    rows = [view.buy_row(final=not view.flow.steps)]
+    rows = [view.buy_row(final=not view.flow.steps and not view.finishing)]
     rows += [view.step_row(step) for step in view.flow.steps]
     rows += view.finish_rows()
     goal = view.goal_card()
@@ -1654,7 +1655,8 @@ def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...])
         for row in rows:
             if row.cost is None or not math.isfinite(row.cost):
                 return None  # a gap ("No action") or a row that never finishes: the route has no cost to split
-            kind = START_SPEND if row.number == 1 or row.title.startswith("Restart") else row.title
+            # a finish step's row is the kind of its catalyst or orb, as a guide's own row of it is titled (#1234)
+            kind = START_SPEND if row.number == 1 or row.title.startswith("Restart") else row.title.split(FINISH_UNTIL)[0]
             found[kind] = found.get(kind, 0.0) + row.cost
             if kind != START_SPEND and row.uses is not None and math.isfinite(row.uses):
                 uses[kind] = uses.get(kind, 0.0) + row.uses
