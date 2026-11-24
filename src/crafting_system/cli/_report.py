@@ -223,6 +223,9 @@ def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]
     "has ..." or "too weak: ..." part of the same line already names is not counted again (ticket #613).
     """
     if state.flags.unopened:  # the bought listing before its draw (ADR-0064): the rarity it will have, not the normal item the model holds
+        opening = next((entry.offer.action for entry in plan.offers if entry.offer.action.opens_listing), None)
+        if opening is not None and opening.resources(data):  # the draw is an orb paid on the Normal base bought (#1522)
+            return ["the bought normal base, no mods yet"]
         return [f"the bought {plan.target.start_item.rarity.value} item, its mods not drawn yet"]
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
@@ -517,6 +520,13 @@ def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
     rarity = plan.target.start_item.rarity.value.capitalize()
     orb = "an Orb of Alteration" if plan.target.start_item.rarity is Rarity.MAGIC else "an Orb of Alchemy"
     counts = [f"{number} {'mod' if number == 1 else 'mods'} ({percent(float(share))})" for number, share in sorted(totals.items())]
+    held = ', '.join(counts[:-1]) + ' or ' + counts[-1] if len(counts) > 1 else counts[0]
+    if action.resources(data):  # an opening that consumes an orb: the price is a Normal base's: the orb that makes it the rarity is the first step, used and paid (#1522)
+        made = action.label(data).removesuffix(" on the bought Normal base")
+        return [
+            f"First step: the price above is a Normal base's, so the plan makes it {rarity} with {made} (its price is in the list). "
+            f"The item then holds {held}, from the mods its base can carry, those of its influence included, at their game weights; the plan picks its next move on each outcome."
+        ]
     return [
         f"First draw, before S1: the bought {rarity} item is the one the market sells, so it comes with mods the target does not name. It holds "
         f"{', '.join(counts[:-1]) + ' or ' + counts[-1] if len(counts) > 1 else counts[0]}, drawn the way {orb} draws them: from the mods its base can carry, "

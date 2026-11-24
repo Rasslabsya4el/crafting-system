@@ -48,3 +48,14 @@ The sentences above that "a restart pays it again" and that "the restart returns
 - **OR-43.** Where the guide names no rarity, the start is the cheapest rarity the market sells, and the steps that make it the needed rarity are shown and paid. A bought fractured item is a Rare with random other mods, marked approximate.
 
 Neither is built: the cases on record are [#687](https://github.com/Rasslabsya4el/crafting-system/issues/687), [#656](https://github.com/Rasslabsya4el/crafting-system/issues/656) and [#515](https://github.com/Rasslabsya4el/crafting-system/issues/515), and [#914](https://github.com/Rasslabsya4el/crafting-system/issues/914) lists the rules that still need a ticket. The listing draw of this ADR stands.
+
+## Amendment: a listing priced as a Normal base pays the orb that makes it the rarity ([#1522](https://github.com/Rasslabsya4el/crafting-system/issues/1522), OR-16, OR-43)
+
+R08 and R09 drew a Rare listing for free at the price of a trade search of a **Normal** base (the price row's stored search asks
+`rarity: normal`): the Orb of Alchemy that makes the base rare was neither shown nor paid. Now, when the start's stored search asks for a
+Normal base, the draw is that orb, used and paid (`OpenListing(paid=True)`, `planner._offers.listing_draw`): an Orb of Alchemy for a Rare
+start, an Orb of Transmutation for a Magic one (the same 1 or 2 mods as an Alteration), named by the orb on the page and priced from the
+price file; a restart pays it again. An orb with no price leaves the free draw. A search of the start's own rarity or of any rarity
+(`nonunique`, R14), a hand price with no stored search (R07, R20) and a run's own `--start-price` keep the free draw (#1537). The rows of R08
+and R09 still add an Alchemy (0.02409) to the base's price, a data fix of its own (#1535). Planning such a start from the Normal base itself,
+so that an essence or another first step may replace the Alchemy, is #1537's.

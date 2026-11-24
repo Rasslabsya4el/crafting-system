@@ -37,7 +37,7 @@ item_level: 86
 influence: []
 
 # The start: the rare boots the market sells (ADR-0064). The target names none of their mods, and the guide fossils a rare pair of boots, so the
-# item is a bought Normal base made rare with an Orb of Alchemy, priced as that base plus the Alchemy (OR-16). It holds what an Orb of Alchemy
+# item is a bought Normal base made rare with an Orb of Alchemy, the plan's first step, priced from the price list (OR-16, #1522). It holds what an Orb of Alchemy
 # leaves on the base: 4, 5 or 6 mods at their game weights. The plan opens with that draw and decides on each outcome of it; mods that no
 # requirement asks for are junk, counted and not told apart (OR-10), and the first fossil erases whatever the rare holds.
 start_item:
