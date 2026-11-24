@@ -1599,9 +1599,10 @@ def write_route_page(
     given: RouteResult | None = None,
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
+    guide: float | None = None,
 ) -> Path:
     """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
-    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir)
+    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8", newline="\n")
     return path
@@ -1615,12 +1616,14 @@ def route_page(
     given: RouteResult | None = None,
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
+    guide: float | None = None,
 ) -> str:
     """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
     `write_route_page` writes and the website serves (#961).
 
     The page makes no request: the trade link is built from `buy_spec` and the stat list in
-    `<cache_dir>/trade/stats.json` when that exists.
+    `<cache_dir>/trade/stats.json` when that exists. `guide` is the guide's route's cost with the start item when no given route is drawn (the
+    benchmark's figure of it): the proof sentence says the plan's cost against it; a given route's own cost takes its place.
     """
     ask(fresh=True)  # the report's memory net, read at the page's start (#1381)
     plan = report.plan
@@ -1631,7 +1634,7 @@ def route_page(
         spec = buy_spec if searched is None else searched_spec(buy_spec, searched)
         buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
-    guide = given_cost(plan, given)
+    guide = given_cost(plan, given) if given is not None else guide
     policy = build_section(route_input(plan, report.interval, guide), data, buy, anchor="policy", route_field=not stacked)
     sections = (policy,)
     if route is not None and given is not None:
@@ -1644,9 +1647,9 @@ def route_page(
 
 
 def given_cost(plan: Plan, given: RouteResult | None) -> float | None:
-    """The given route's mean cost with the start item, as the proof sentence compares the plan's with it; None with no route."""
-    if given is None or given.risk is None:
-        return None
+    """The given route's mean cost with the start item, as the proof sentence compares the plan's with it; None with no route or no finite cost."""
+    if given is None or given.risk is None or not math.isfinite(given.risk.mean.value):
+        return None  # a route with a gap never finishes: it has no cost to compare with
     return plan.start_price.chaos + given.risk.mean.value
 
 

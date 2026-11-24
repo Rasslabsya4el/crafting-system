@@ -563,8 +563,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines = []
     if target_name:
         lines.append(f"Target: {target_name}")
-    lines.append(f"Proof: {proof_words(plan, guide).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-59, #1576)
     lines.extend(marking_lines(plan.approximation, shift, divine))
+    lines.append(f"Proof: {proof_words(plan, guide).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-59, #1576)
     if report.interval is not None:
         lines.extend(report.interval.text_lines(divine))
     lines.extend(approximate_lines(report.approximate_inputs))

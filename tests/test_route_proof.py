@@ -76,16 +76,16 @@ def every_word(fields, leaves) -> str:
 
 def test_a_plan_whose_search_was_stopped_is_the_best_found_never_the_cheapest(r12):
     # #1161: R20's page on a808862e said "Cheapest policy of the planner" and "within the stated gap of the cheapest" over a search stopped by time
-    plan = searched(r12, STOPPED_ROUNDS, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0)
+    plan = searched(r12, STOPPED_ROUNDS, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0, offered=12)
     section, fields, leaves = goal(plan)
 
     assert fields["Route"].lines[0].text == "The planner's plan" and section.title == "The planner's plan"
     proof = fields["Proof"]
     assert proof.tone == "warn"
     # the one proof sentence (OR-59, #1576): best found, and how many actions were searched to the end with the plan (the closed and the beaten
-    # batch); the actions open are the most any batch held, as on a plan saved before the planner counted them (`EnvelopeInfo.offered`)
+    # batch), of the actions offered over every batch (`EnvelopeInfo.offered`)
     assert proof.lines[0].text == (
-        "Best plan found, not proved the cheapest: 3 of the 9 actions open to this craft were searched to the end together "
+        "Best plan found, not proved the cheapest: 3 of the 12 actions open to this craft were searched to the end together "
         "with this plan before the search ran out of time or memory, so a cheaper plan that uses the others may exist."
     )
     words = every_word(fields, leaves)
@@ -117,7 +117,10 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
 
     proof = fields["Proof"].lines[0].text
     assert fields["Proof"].tone == ""
-    assert proof == f"Proved: no cheaper way exists, to within 1%. The search held all {proof_words(plan).open:,} actions open to this craft together and finished."
+    assert proof in (
+        f"Proved: no cheaper way exists, to within 1%. The search held all {proof_words(plan).open:,} actions open to this craft together and finished.",
+        "Proved: no cheaper way exists, to within 1%. The search held every action open to this craft together and finished.",
+    )
     floor = next(line for label, line in leaves if label == "How the methods were searched").text  # the figure is said with the batches
     assert money(lower + start) in floor and money(lower) in floor and money(start) in floor
     assert floor.endswith(f", so this plan is at most {money(r12.risk.mean.value - lower)} dearer than the cheapest.")

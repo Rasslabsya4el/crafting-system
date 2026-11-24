@@ -94,12 +94,17 @@ def _proved_gap(plan) -> float | None:
 
 
 def _open(plan) -> int:
-    """The actions open to the craft: every action offered over the groups of methods, or the plan's offers for one search. A plan saved
-    before the count was kept reads the most actions any group held (the last group holds every action)."""
+    """The actions open to the craft: every action offered over the groups of methods, or the plan's offers for one search; 0 when unknown (a
+    plan saved before the planner kept the count: no group need hold every action, so none of their counts is the total)."""
     info = plan.search
     if info is not None and info.widening:
-        return getattr(info, "offered", 0) or max(record.offers for record in info.widening)
+        return getattr(info, "offered", 0)
     return len(plan.offers)
+
+
+def _all(total: int) -> str:
+    """ "all 10,873 actions open to this craft", or "every action open to this craft" when the count is unknown."""
+    return f"all {total:,} actions open to this craft" if total else "every action open to this craft"
 
 
 def _tried_together(plan, total: int) -> int:
@@ -116,7 +121,8 @@ def _tried_together(plan, total: int) -> int:
     finished = [
         record.offers for record in records[first:] if record.status in (CLOSED, WITHIN, BEATEN) or getattr(record, "held_again", False)
     ]
-    return min(max(finished, default=0), total)
+    most = max(finished, default=0)
+    return min(most, total) if total else most
 
 
 def proof_words(plan, guide: float | None = None) -> ProofWords:
@@ -129,14 +135,14 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
         within = "" if gap == 0.0 else f", to within {PROOF_GAP * 100:g}%"
         return ProofWords(
             PROVED,
-            f"Proved: no cheaper way exists{within}. The search held all {total:,} actions open to this craft together and finished." + against,
+            f"Proved: no cheaper way exists{within}. The search held {_all(total)} together and finished." + against,
             total,
             total,
             guide,
         )
     if gap is not None:  # every action held and finished, but only within a gap wider than 1%
         said = (
-            f"Best plan found, not proved the cheapest: the search held all {total:,} actions open to this craft together and finished, but it "
+            f"Best plan found, not proved the cheapest: the search held {_all(total)} together and finished, but it "
             f"proved this plan only to within {gap * 100:.2f}% of the cheapest, not 1%."
         )
         return ProofWords(BEST_FOUND, said + against, total, total, guide)
@@ -146,13 +152,13 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
     tried = _tried_together(plan, total)
     if tried:
         said = (
-            f"Best plan found, not proved the cheapest: {tried:,} of the {total:,} actions open to this craft were searched to the end together "
+            f"Best plan found, not proved the cheapest: {tried:,} {f'of the {total:,} ' if total else ''}actions open to this craft were searched to the end together "
             "with this plan before the search ran out of time or memory, so a cheaper plan that uses the others may exist."
         )
     elif info_rounds(plan):
         said = (
             "Best plan found, not proved the cheapest: no group of methods that held this plan was searched to the end before the search ran out "
-            f"of time or memory, so a cheaper plan may exist among the {total:,} actions open to this craft."
+            f"of time or memory, so a cheaper plan may exist among the {f'{total:,} ' if total else ''}actions open to this craft."
         )
     else:
         said = (
