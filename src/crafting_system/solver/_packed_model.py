@@ -22,10 +22,13 @@ def solve_packed_model[S](
     dense_limit: int = DENSE_LIMIT,
     merge: bool = True,
     progress: Callable[[str], None] | None = None,
+    refuse_above: float | None = None,
 ) -> Solution[S]:
-    """Minimise the mean cost to a goal from every state reachable from `starts`, on packed arrays."""
+    """Minimise the mean cost to a goal from every state reachable from `starts`, on packed arrays.
+
+    `refuse_above` is `solve_packed`'s: a caller that takes the values with their `error_bound` moves the refusal (#867, #1467)."""
     packed = pack_model(model, starts)
-    solved = solve_packed(packed.graph, tolerance=tolerance, dense_limit=dense_limit, merge=merge, progress=progress)
+    solved = solve_packed(packed.graph, tolerance=tolerance, dense_limit=dense_limit, merge=merge, progress=progress, refuse_above=refuse_above)
     states = packed.states
     values = solved.value.tolist()
     actions = solved.action.tolist()

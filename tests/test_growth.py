@@ -697,7 +697,8 @@ def test_the_lock_group_is_not_named_while_the_usual_roles_name_anything_and_com
     grower.ran(positions, plan, False)  # beaten: the plan in hand stays
     positions, why = grower.next()  # the usual roles name nothing more for any step: the lock group, the last resort
     assert told[-1] is None
-    assert _names(table, positions) == {"spam", "lock suffixes", "lock prefixes", "beast lock", "chaos", "annul"}
+    # with the adder of A ranked at the rare, where the spam acts (#1420): the usual round that held it was beaten, so it is not held
+    assert _names(table, positions) == {"spam", "lock suffixes", "lock prefixes", "beast lock", "chaos", "annul", "add A"}
     assert why.startswith("the lock group of the plan's dearest step not yet read, spam") and grower.lock_round
     grower.ran(positions, plan, False)
     assert grower.next() is None  # one lock group per step in the run
@@ -718,6 +719,8 @@ def test_a_usual_round_that_stops_ends_the_usual_growth_and_the_lock_groups_come
 
 def test_a_lock_group_that_improves_the_plan_lets_the_usual_roles_read_the_new_plan_and_a_side_with_no_reroll_under_its_lock_names_no_lock():
     table = _lock_world()
+    # an adder of A on the magic item (5 per A): the usual roles of the new plan's step name it, as the lock group named "add A" of the rare
+    table.entries.append(dataclasses.replace(_entry("aug A", 0.5, chance={A: Fraction(1, 10)}), position=len(table.entries)))
     grower, plan = _lock_grower(table, under_suffix_only=True)
     # no reroll is ranked under the prefix lock: the prefix lock is not named; the beast puts the suffix lock back, so it stays
     assert _names(table, table.lock_roles({A, B}, frozenset({RARE}), frozenset())) == {"lock suffixes", "beast lock", "chaos"}
@@ -780,3 +783,76 @@ def test_the_round_that_names_the_bench_lock_as_a_protector_holds_the_beast_that
     positions, why = grower.next()
     assert why.startswith("the plan's dearest step not yet read, spam") and "can lose" in why
     assert {"lock suffixes", "beast lock"} <= _names(table, positions) and "lock prefixes" not in _names(table, positions)
+
+
+# --- the adder that acts under the lock, named in the lock group (#1420, H37 of #1434) --------------------------------------------------
+
+
+def _adder_world():
+    """`_lock_world` with four adders of A that keep the mods: "aug A" (0.5 Chaos, 1 in 10 at a magic item: 5 per A) and "regal A" (1 Chaos,
+    1 in 10 at a magic item: 10 per A) act on a magic item; "exalt A" (10 Chaos, 1 in 10 at a rare item: 100 per A), "elder exalt A" (30
+    Chaos, 1 in 10: 300 per A) and "dear exalt A" (100 Chaos, 1 in 10: 1,000 per A) act on the rare. A plan whose one step, the spam, acts
+    at the rare, waits for A and B and can lose nothing. Under the suffix lock "chaos" is ranked for A, nothing under the prefix lock."""
+    table = _lock_world()
+    for entry in (
+        _entry("aug A", 0.5, at=MAGIC, chance={A: Fraction(1, 10)}),
+        _entry("regal A", 1.0, at=MAGIC, chance={A: Fraction(1, 10)}),
+        _entry("exalt A", 10.0, at=RARE, chance={A: Fraction(1, 10)}),
+        _entry("elder exalt A", 30.0, at=RARE, chance={A: Fraction(1, 10)}),
+        _entry("dear exalt A", 100.0, at=RARE, chance={A: Fraction(1, 10)}),
+    ):
+        table.entries.append(dataclasses.replace(entry, position=len(table.entries)))
+    keys = (("suffix", RARE, A, frozenset({B})), ("suffix", RARE, B, frozenset()), ("prefix", RARE, A, frozenset()), ("prefix", RARE, B, frozenset({A})))
+    table.under = {key: ([(50.0, 5)] if key[0] == "suffix" else []) for key in keys}
+    start, goal = _State("start", (Status.ABSENT, Status.ABSENT), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
+    view = {start: Action("spam", 25.0, (Outcome(goal, 1), Outcome(start, 999)))}
+    plan = _Plan(mean_remaining=25000.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None), search=SimpleNamespace(lower=25000.0, bound_stopped=None))
+    return table, plan
+
+
+def test_the_lock_group_names_the_adders_ranked_where_the_step_acts_and_the_usual_round_names_those_ranked_at_any_shape():
+    table, plan = _adder_world()
+    assert _names(table, table.step_adders({A, B}, frozenset({RARE}), frozenset())) == {"exalt A", "elder exalt A"}  # 100 and 300 per A at the rare
+    # among the offers the group and the plan do not hold: the next one takes a held one's place; B has no adder at the rare (the spam rerolls)
+    exalt = next(entry.position for entry in table.entries if entry.label == "exalt A")
+    assert _names(table, table.step_adders({A, B}, frozenset({RARE}), frozenset({exalt}))) == {"elder exalt A", "dear exalt A"}
+    grower = Grower(table, ())
+    grower.ran((0,), plan, True)
+    positions, why = grower.next()  # the usual round: the adders at any shape, 5 and 10 per A on the magic item; no adder of the rare
+    assert why.startswith("the plan's dearest step not yet read, spam") and not grower.lock_round
+    assert {"aug A", "regal A"} <= _names(table, positions) and not _names(table, positions) & {"exalt A", "elder exalt A", "dear exalt A"}
+    grower.ran(positions, plan, False)
+    positions, why = grower.next()  # the lock group: the suffix lock, its relocker and its reroll, the cleaner, and the two adders of the rare
+    assert why.startswith("the lock group of the plan's dearest step not yet read, spam") and grower.lock_round
+    assert _names(table, positions) == {"spam", "lock suffixes", "beast lock", "chaos", "annul", "exalt A", "elder exalt A"}
+    assert "exalt A" in why  # the words name it with the locks
+    # nothing else of the usual roles comes with them: no adder of the magic item, no narrower, no crafted role
+    assert not _names(table, positions) & {"aug A", "regal A", "dear exalt A"}
+
+
+def test_where_the_adder_under_the_lock_is_cheaper_the_lock_group_gives_the_cheaper_plan_before_the_widening():
+    # the hand search: the spam alone, 25,000; a set that holds the suffix lock, "chaos" under it and "exalt A" makes B under the lock and
+    # adds A after: 1,000; the magic item's adders do not act on the rare, so the usual round is beaten
+    table, plan = _adder_world()
+    offers = tuple(SimpleNamespace(label=entry.label) for entry in table.entries)
+    start, goal = plan.start, _State("goal", (Status.PASSING, Status.PASSING), RARE)
+
+    def run(chosen, call):
+        labels = {offer.label for offer in chosen}
+        if {"lock suffixes", "chaos", "exalt A"} <= labels:
+            view = {start: Action("exalt A", 10.0, (Outcome(goal, 1),))}
+            found = _Plan(mean_remaining=1000.0, start=start, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None), search=SimpleNamespace(lower=1000.0, bound_stopped=None))
+        else:
+            found = plan
+        if call.upper is not None and found.mean_remaining >= call.upper:
+            raise _rounds.Beaten(call.upper)
+        return found
+
+    grower = Grower(table, ())
+    grower.seed = lambda: ((0,), "the seed")
+    groups = tuple(_rounds.Group((n,), (entry.label,), frozenset({entry.label})) for n, entry in enumerate(table.entries))
+    widened = _widen(groups, offers, run, grower)
+    assert widened.plan.mean_remaining == 1000.0
+    made = next(record for record in widened.records if record.growth is not None and record.growth.startswith("the lock group"))
+    assert "exalt A" in made.growth and made.upper == 1000.0  # the lock group's own round made the cheaper plan
+    assert all(record.growth is not None for record in widened.records[: widened.records.index(made) + 1])  # before any widening round

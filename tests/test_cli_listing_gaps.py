@@ -25,7 +25,7 @@ from crafting_system.cli import build_report, make_plan, policy_document, render
 from crafting_system.planner._limits import SHOWN_LABELS, WITHIN_GAP, limit_text
 from crafting_system.planner._offers import listing_gap_limits
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.items import Item, Rarity
 from crafting_system.targets import load_target
 
@@ -197,8 +197,8 @@ def test_a_listing_gap_is_a_limit_of_the_plan_in_the_text_the_json_and_the_page(
     assert limit_text(limit) in text
     (entry,) = [each for each in document["limits"] if each["kind"] == LISTING]
     assert entry["labels"] == list(limit.labels) and entry["guarantee"] == limit.guarantee and entry["why"] == limit.reason()
-    assert escape(limit_text(limit, SHOWN_LABELS)) in page
-    assert "Methods the model cannot list for this item" in page
+    assert escape(planner_limit_line(plan, limit).text) in page  # in a player's words (#893, `cli._limit_words`)
+    assert "Methods the planner cannot work out on this item" in page  # the page's title of the group (#893)
 
 
 def test_a_plan_whose_listing_meets_no_gap_has_no_such_limit():

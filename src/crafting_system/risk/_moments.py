@@ -45,8 +45,13 @@ def solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], floa
     }
     goals = [chain.states[i] for i, flag in enumerate(chain.goal) if flag]
     edges = sum(len(actions[0].outcomes) for actions in table.values())
-    solver = solve_packed_model if chain.packed_moments or edges > PACKED_FROM_EDGES else solve
-    solution = solver(TabularModel(goals, table), [chain.states[0]])
+    model = TabularModel(goals, table)
+    if chain.packed_moments or edges > PACKED_FROM_EDGES:
+        # every caller takes the values with their certified error (`interval`), so no bound is refused (#1467): a chain of 10^11 steps, whose
+        # float64 measure stops near 1e-5, is the plan the planner itself certified to its run's allowance, and refusing it here lost that plan
+        solution = solve_packed_model(model, [chain.states[0]], refuse_above=math.inf)
+    else:
+        solution = solve(model, [chain.states[0]])
     values = [solution.values.get(state, 0.0) for state in chain.states]
     return values, solution.error_bound
 

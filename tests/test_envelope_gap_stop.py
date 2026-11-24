@@ -212,8 +212,8 @@ def test_control_an_upper_figure_that_is_not_the_cost_of_the_plan_breaks_the_sto
     world = two_finishes(costs={1: 150.0, 2: 99.5})
     real = Search._upper
 
-    def guessed(self):
-        graph, value, _ = real(self)
+    def guessed(self, deadline=None):
+        graph, value, _ = real(self, deadline)
         return graph, value, 99.2
 
     monkeypatch.setattr(Search, "_upper", guessed)

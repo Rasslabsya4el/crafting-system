@@ -32,7 +32,7 @@ from crafting_system.items import Influence
 from crafting_system.items.words import mod_text
 
 from ._report_net import ask
-from ._route_card import _hashes, page_tiers
+from ._route_card import _FIGURE, _hashes, page_tiers
 
 
 @dataclass(frozen=True)
@@ -85,6 +85,17 @@ def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozense
             accepted.setdefault(key, set())
             if ab.passes(mod, index):
                 accepted[key].add(tiers[mod_id])
+    # the lower tiers of a leaf named by its top mod alone (OR-1; R20's Trap and Mine Damage, Uber3 of Uber1 to Uber3, #1442): the mods of the
+    # base's table with the same type, side, domain, families and stats as a leaf's mod are its ladder too, so a draw of them is said by its
+    # tier and not folded into "none"; a mod of the family with other stats (a gem level of another skill) stays out
+    shapes = {key: {_shape(data.mods[mod_id]) for mod_id in ladder} for key, ladder in found.items()}
+    for mod_id, tier in tiers.items():
+        mod = data.mods.get(mod_id)
+        if mod is None or mod.domain == "crafted" or mod.required_level > ab.item_level:
+            continue
+        key = (mod.type, mod.generation_type, mod.domain)
+        if key in found and mod_id not in found[key] and _shape(mod) in shapes[key]:
+            found[key][mod_id] = tier
     families = []
     for key, ladder in found.items():
         if not accepted[key]:
@@ -92,8 +103,15 @@ def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozense
         best = min(ladder, key=lambda mod_id: (ladder[mod_id], mod_id))
         tiered = not tiers.tierless  # a base jewel has no tiers (#963)
         text = mod_text(data.mods[best])
+        if tiered and len({_FIGURE.sub("#", _hashes(mod_text(data.mods[mod_id]))) for mod_id in ladder}) == 1 and len({_hashes(mod_text(data.mods[mod_id])) for mod_id in ladder}) > 1:
+            text = _FIGURE.sub("#", _hashes(text))  # tiers that differ in a fixed figure too ("Level 20" of T1, "Level 18" of T2, R20): the line names none
         families.append(_Family(_hashes(text) if tiered else text, ladder, frozenset(accepted[key]), tiered))
     return families
+
+
+def _shape(mod) -> tuple:
+    """What makes two mods tiers of one ladder beyond their type: their families and the ids of their stats."""
+    return tuple(mod.families), tuple(stat.id for stat in mod.stats)
 
 
 def _signature(outcomes) -> Hashable | None:

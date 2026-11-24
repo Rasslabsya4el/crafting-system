@@ -192,3 +192,26 @@ def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_fig
     assert r12.risk.mean.value > 2.0
     said = price_cut_why(cut, r12)
     assert said is not None and "a plan found during the search" in said and f"({money(r12.start_price.chaos + 2.0)} in all)" in said
+
+
+@pytest.mark.parametrize(
+    "search, said",
+    [
+        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Not proved the cheapest"),
+        (dict(exact=False, within=0.01), "Proved within 1% of the cheapest"),
+        (dict(exact=True, within=None), "Proved the cheapest of the methods searched"),
+    ],
+    ids=["stopped-by-a-net", "within-the-gap", "exact"],
+)
+def test_a_single_search_with_no_search_record_is_read_off_its_own_limit(r12, search, said):
+    # #1514 (checker on PR #1515): a single search (no rounds) whose record Hinekora's Lock dropped was read as approximate when its
+    # limits claimed "within the stated gap"; its own limit (`envelope_limits`) says whether a net stopped it or it stopped at the run's gap
+    from crafting_system.planner._envelope_plan import envelope_limits
+
+    info = dataclasses.replace(r12.search, widening=(), **search)
+    own = tuple(limit for limit in r12.limits if limit.kind not in (_limits.ROUNDS, _limits.UNTRIED, _limits.SOLVE))
+    plan = dataclasses.replace(r12, packed=None, limits=(*own, *envelope_limits(info)))
+    assert plan.search is None
+    _, fields, _ = goal(plan)
+    assert fields["Proof"].lines[0].text.startswith(said)
+    assert "the gap stated below the prices" not in fields["Proof"].lines[0].text

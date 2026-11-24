@@ -443,7 +443,7 @@ def test_a_search_stopped_before_a_plan_exists_says_the_lower_bound_it_reached(w
 def test_a_stopped_plan_the_solver_cannot_certify_is_a_refusal_with_the_lower_bound(world, monkeypatch):
     ab, start, offers, _, _, _ = world
 
-    def uncertified(self):
+    def uncertified(self, deadline=None):
         raise ConvergenceError("the policy iteration on 533,666 states certifies only a relative bound of 2.07e-06", 2.07e-06)
 
     monkeypatch.setattr(_envelope.Search, "_upper", uncertified)  # every solve of the upper graph: the first plan's (not fatal) and the stopped plan's

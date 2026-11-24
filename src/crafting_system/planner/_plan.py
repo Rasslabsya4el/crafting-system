@@ -1803,8 +1803,15 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
         _regen.TRACE = None
     if _packed.PROGRESS is not None:
         _packed.PROGRESS(f"risk: p50 {risk.p50!r}, p90 {risk.p90!r}")
+    error = _limits.relative_error(risk.mean)
+    if error > ACCEPT_BOUND:  # the risk's mean is certified only to `error` (#1467: its moment solves take a long chain with its error): no text calls it exact
+        return risk, rough_mean_limits(_packed_risk_limits(risk, resolve, moves), error)
+    return risk, _packed_risk_limits(risk, resolve, moves)
+
+
+def _packed_risk_limits(risk: RiskReport, resolve: bool, moves: int) -> tuple[Limit, ...]:
     if not resolve:
-        return risk, (
+        return (
             Limit(
                 _limits.RISK,
                 _limits.not_computed(*_limits.QUANTILES),
@@ -1813,7 +1820,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
                 _limits.RISK_EXACT,
             ),
         )
-    return risk, risk_limits(risk)
+    return risk_limits(risk)
 
 
 def add_risk(plan: Plan) -> Plan:

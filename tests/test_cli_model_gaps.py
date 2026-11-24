@@ -38,7 +38,7 @@ from crafting_system.planner import _approx, _offer_kinds, _donors, _plan
 from crafting_system.planner._limits import SHOWN_LABELS, WITHIN_GAP, limit_text, model_gap_limits
 from crafting_system.planner._offers import offer_of
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target
 
@@ -577,8 +577,8 @@ def test_a_plan_with_a_model_gap_shows_it_in_the_text_the_json_and_the_page(refu
     assert limit_text(limit) in text  # the text names every label and says what the answer still guarantees
     (entry,) = [each for each in document["limits"] if each["kind"] == "model-gap"]
     assert entry["labels"] == list(limit.labels) and entry["guarantee"] == limit.guarantee and entry["why"] == limit.reason()
-    assert escape(limit_text(limit, SHOWN_LABELS)) in page
-    assert "Actions the model has no rule for in some states" in page
+    assert escape(planner_limit_line(plan, limit).text) in page  # in a player's words (#893, `cli._limit_words`)
+    assert "Actions the planner cannot work out on some items of the route" in page  # the page's title of the group (#893)
 
 
 def test_the_guarantee_of_a_model_gap_is_the_gapped_one_on_an_approximate_answer():
