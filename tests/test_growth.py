@@ -746,3 +746,37 @@ def test_a_step_that_can_lose_a_mod_has_no_lock_group_its_usual_roles_name_its_p
     positions, why = grower.next()
     assert why.startswith("the plan's dearest step not yet read, spam") and "can lose" in why and not grower.lock_round
     assert "lock suffixes" in _names(table, positions)  # the protector of B, named by the usual roles
+
+
+# --- the lockers beside a bench lock (#1513, H35 of #1434) -------------------------------------------------------------------------------
+
+
+def test_where_the_bench_lock_of_a_side_is_every_offer_that_may_put_that_lock_on_and_keeps_the_mods_is_too():
+    table = _lock_world()
+    suffix_lock, prefix_lock, beast, locking_reroll = 1, 2, 3, 4
+    # the beast draws which metamod it adds, so the protector rule never names it; beside either bench lock it comes, as the lock groups hold it
+    assert _names(table, table.closure({suffix_lock})) == {"lock suffixes", "beast lock"}
+    assert _names(table, table.closure({prefix_lock})) == {"lock prefixes", "beast lock"}
+    # the rule goes one way: a beast brings no bench lock, and a reroll that adds a lock keeps no mod (no locker) and brings nothing
+    assert _names(table, table.closure({beast})) == {"beast lock"}
+    assert _names(table, table.closure({locking_reroll})) == {"locking reroll"}
+    # an offer held back for the later group stays held back (`lockers` reads the offers no role may name yet)
+    table.held_back = frozenset({beast})
+    assert _names(table, table.closure({suffix_lock})) == {"lock suffixes"}
+
+
+def test_the_round_that_names_the_bench_lock_as_a_protector_holds_the_beast_that_puts_the_same_lock_on():
+    # R24's shape: the spam waits for A (a prefix) and can lose B (a suffix); the protector of B is the suffix lock, the cheapest offer that
+    # adds it and draws nothing (353); the beast (238) puts the same lock on and comes into that round with it
+    table = _lock_world()
+    held, goal = _State("held", (Status.ABSENT, Status.PASSING), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
+    lost = _State("lost", (Status.ABSENT, Status.ABSENT), RARE)
+    view = {held: Action("spam", 25.0, (Outcome(goal, 1), Outcome(lost, 1), Outcome(held, 8))), lost: Action("restart", 50.0, (Outcome(held, 1),))}
+    plan = _Plan(mean_remaining=500.0, start=held, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
+    grower = Grower(table, ())
+    grower.ran((0,), plan, True)
+    named = table.roles({A}, {B}, frozenset({RARE}), True, frozenset({0}), frozenset({0}))
+    assert "lock suffixes" in _names(table, named) and "beast lock" not in _names(table, named)  # the role itself names the bench lock alone
+    positions, why = grower.next()
+    assert why.startswith("the plan's dearest step not yet read, spam") and "can lose" in why
+    assert {"lock suffixes", "beast lock"} <= _names(table, positions) and "lock prefixes" not in _names(table, positions)

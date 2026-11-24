@@ -69,7 +69,14 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   step are beaten (about 120 s), nothing more is named, and its lock group comes: 206,331.71 c within the hour.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
-  a restore brings the imprints and an imprint the restores.
+  a restore brings the imprints and an imprint the restores; and an offer that adds the lock of a side and draws nothing (the bench lock)
+  brings every offer that may add that lock and keeps the mods (`lockers`, #1513, hypothesis H35 of #1434). The protector rule names the
+  lock among the offers that draw no mod, so the Wild Bristle Matron, which draws which metamod it adds, was never named beside the bench
+  lock; yet where the item's state leaves it one metamod to add it puts on the same lock, and it may be the cheaper one: on R24's boots,
+  whose suffixes are full, the suffix lock is the one metamod with room (238 c against the bench's 353 c), and a plan that relocks at each
+  reroll of the prefixes pays it at each use. With the bench lock alone in the group, the plan paid the bench (2,541.56 c within the hour
+  against 2,184.44 c with the Matron beside it, proved within 1%). The search reads which metamod it adds at each state, so the group widens
+  and nothing is cut (OR-12).
 * **The next round** holds the support of the plan in hand (the offers its policy uses), the run's named offers, the named roles and their
   dependencies; never the union of the earlier rounds. A set held by an earlier round names nothing new: the step is marked diagnosed and the
   next dearest is read. When no step names anything new the growth ends, and the rounds of `_rounds.widen` follow with the plan's support as
@@ -520,7 +527,7 @@ class OfferTable:
         return set(best.get(to, (0.0, ()))[1])
 
     def closure(self, positions: set[int]) -> set[int]:
-        """`positions` with what each needs to act (module text, dependencies)."""
+        """`positions` with what each needs to act, and the lockers of each side a bench lock among them locks (module text, dependencies)."""
         found = set(positions)
         while True:
             more = set()
@@ -529,6 +536,8 @@ class OfferTable:
                 more.update(entry.position for entry in self.entries if entry.needs_veiled or (entry.veils and any(each.needs_veiled for each in chosen)))
             if any(entry.restores or entry.makes_imprint for entry in chosen):
                 more.update(entry.position for entry in self.entries if entry.restores or entry.makes_imprint)
+            for side in sorted({getattr(side, "value", side) for entry in chosen if not entry.draws for side in entry.locks}):
+                more.update(self.lockers(side))  # where the bench lock of a side is, every offer that may put that lock on is (#1513)
             if more <= found:
                 return found
             found |= more
