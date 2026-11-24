@@ -86,7 +86,8 @@ def test_a_plan_whose_search_was_stopped_is_the_best_found_never_the_cheapest(r1
     # batch), of the actions offered over every batch (`EnvelopeInfo.offered`)
     assert proof.lines[0].text == (
         "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 3 of the 12 crafts this "
-        "planner can use on this item to the end together with this plan, so a cheaper plan that uses the other crafts may exist."
+        "planner can use on this item fully checked in combination with this plan (the groups are under \"How the methods were searched\"), so "
+        "a cheaper plan that uses the other crafts may exist."
     )
     words = every_word(fields, leaves)
     assert "Cheapest" not in words and "within the stated gap" not in words and "1%" not in proof.lines[0].text
@@ -119,7 +120,7 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
     assert fields["Proof"].tone == ""
     assert proof in (
         f"Proved: no cheaper plan exists, to within 1% of the crafting cost, among all {proof_words(plan).open:,} crafts this planner can use on this "
-        "item, searched together to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
+        "item, every one checked to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
         "Proved: no cheaper plan exists, to within 1% of the crafting cost, among every craft this planner can use on this item, searched together "
         "to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
     )
@@ -142,7 +143,7 @@ def test_an_exact_plan_is_the_cheapest_of_the_methods_searched(r12):
     plan = searched(r12, (), exact=True, within=None, stopped=None)
     _, fields, _ = goal(plan)
     assert fields["Proof"].lines[0].text == (
-        f"Proved: no cheaper plan exists among all {len(plan.offers):,} crafts this planner can use on this item, searched together to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
+        f"Proved: no cheaper plan exists among all {len(plan.offers):,} crafts this planner can use on this item, every one checked to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
     )
 
 

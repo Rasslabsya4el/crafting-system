@@ -148,7 +148,7 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
         within = "" if gap == 0.0 else f", to within {PROOF_GAP * 100:g}% of the crafting cost,"
         return ProofWords(
             PROVED,
-            f"Proved: no cheaper plan exists{within} among {_all(total)}, searched together to the end." + _LEFT_OUT + against,
+            f"Proved: no cheaper plan exists{within} among {_all(total)}, every one checked to the end." + _LEFT_OUT + against,
             total,
             total,
             guide,
@@ -166,8 +166,8 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
     if tried:
         said = (
             "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only "
-            f"{tried:,} {f'of the {total:,} ' if total else ''}crafts this planner can use on this item to the end together with this plan, so a "
-            "cheaper plan that uses the other crafts may exist."
+            f"{tried:,} {f'of the {total:,} ' if total else ''}crafts this planner can use on this item fully checked in combination with this plan (the "
+            "groups are under \"How the methods were searched\"), so a cheaper plan that uses the other crafts may exist."
         )
     elif info_rounds(plan):
         said = (

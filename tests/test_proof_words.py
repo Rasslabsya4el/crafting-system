@@ -39,7 +39,7 @@ def test_every_group_finished_is_proved(tmp_path, data, rounds):
     words = proof_words(plan)
     assert words.case == PROOF_PROVED and words.open == words.tried_together == 5
     assert words.sentence == (
-        "Proved: no cheaper plan exists among all 5 crafts this planner can use on this item, searched together to the end."
+        "Proved: no cheaper plan exists among all 5 crafts this planner can use on this item, every one checked to the end."
         " Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
     )
 
@@ -52,7 +52,8 @@ def test_a_group_stopped_is_best_found_not_proved_with_what_was_tried_and_the_gu
     cost = plan.start_price.chaos + plan.risk.mean.value
     assert words.sentence == (
         "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 1 of the 5 crafts this planner "
-        "can use on this item to the end together with this plan, so a cheaper plan that uses the other crafts may exist. "
+        "can use on this item fully checked in combination with this plan (the groups are under \"How the methods were searched\"), so a "
+        "cheaper plan that uses the other crafts may exist. "
         f"It costs {cost:,.2f} Chaos in all, against 500.00 Chaos for the guide's route."
     )
     assert "Proved" not in words.sentence and not SEARCH_WORDS.search(words.sentence)
