@@ -1,0 +1,311 @@
+# Mechanic family: socketable_rules (facts found in the essences, augments, corruption and Abyss research that belong to
+# families written by other agents: omen, artificers_orb, sockets, temple_currency, desecration, crafted_mod_limit,
+# reforging_bench, salvage_bench, recombinator, fracturing_orb, hinekora_lock, verisium; the bracket at the start of each
+# statement names the family it belongs to, so the claims can be moved there).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source or an older patch;
+# the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: socketable_rules.crystallisation_omens
+    statement: '[omen] Omen of Dextral Crystallisation makes the next Perfect or Corrupted essence remove only suffix modifiers; Omen of
+      Sinistral Crystallisation only prefix modifiers. What happens when the item has no modifier of that side is not stated.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen_of_Dextral_Crystallisation
+    quote: your next Perfect or Corrupted Essence will remove only Suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Omen of Dextral Crystallisation: suffix, Omen of Sinistral Crystallisation: prefix}
+
+  - id: socketable_rules.abyssal_echoes_reroll
+    statement: '[omen] Omen of Abyssal Echoes: the next reveal of desecrated modifiers can reroll the offered options once.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Abyss
+    quote: the next time you reveal Desecrated modifiers you can reroll the options once
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.lord_omens
+    statement: '[omen] Omen of the Sovereign, Omen of the Liege and Omen of the Blackblooded make the next desecration of a weapon or jewellery
+      guarantee a random Ulaman, Amanamu or Kurgal modifier, in that order; they do nothing for armour, jewels or waystones.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Abyss
+    quote: your next Weapon or Jewellery Desecration attempt will guarantee a random Ulaman modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Omen of the Sovereign: Ulaman, Omen of the Liege: Amanamu, Omen of the Blackblooded: Kurgal}
+
+  - id: socketable_rules.necromancy_omens
+    statement: '[omen] Omen of Sinistral Necromancy makes the next desecration add only a prefix; Omen of Dextral Necromancy only a suffix.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Abyss
+    quote: will add only prefix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Omen of Sinistral Necromancy: prefix, Omen of Dextral Necromancy: suffix}
+
+  - id: socketable_rules.omen_of_putrefaction
+    statement: '[omen] Omen of Putrefaction makes the next desecration replace all modifiers, giving an item with up to 6 unrevealed modifiers,
+      and corrupts it; how this squares with the 0.5 limit of one desecrated modifier is untested.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Abyss
+    quote: will replace all modifiers on the item creating an item with up to 6 Unrevealed modifiers and Corrupting the item
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.omen_of_light
+    statement: '[omen] Omen of Light: the next Orb of Annulment removes only desecrated modifiers.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen_of_Light
+    quote: your next Orb of Annulment will remove only Desecrated modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.abyss_omens_drop_level
+    statement: '[omen] Since 0.5.0 the Abyss omens no longer drop in areas below level 65.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Abyss Omens no longer drop in areas below level 65.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.omen_of_corruption
+    statement: '[omen] Omen of Corruption makes the next Vaal Orb always result in change; since 0.5.0 it can no longer be obtained and
+      it trades only in Standard, so a route in the current league cannot use it.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Omen of Corruption can no longer be obtained.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.omen_of_catalysing_exaltation
+    statement: '[omen] Omen of Catalysing Exaltation: the next Exalted Orb consumes all catalyst quality to raise the chance of the corresponding
+      modifier type.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: your next Exalted Orb will consume all Catalyst Quality to increase the chance of the corresponding type of Modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.orb_of_extraction
+    statement: '[temple_currency, sockets] The Orb of Extraction destroys an equipment item and returns its augments that are not socket-bound;
+      it exists as a currency and as a bench craft (Extraction Workbench of the Vaal temple).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Orb_of_Extraction
+    quote: Destroys an Equipment item, returning any non Socket-Bound Augments socketed in it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.artificers_orb_targets
+    statement: '[artificers_orb] The Artificer''s Orb adds an augment socket to a Martial Weapon, wand, staff or Armour (wands and staves
+      are newer than an older reference line ''a Martial Weapon or Armour''); jewellery and belts take none. Ten Artificer''s Shards make
+      one orb.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds an [Augment] Socket to a [MartialWeapon / Martial Weapon], wand, staff or Armour
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      targets: [Martial Weapon, Wand, Staff, Armour]
+      shards_per_orb: 10
+
+  - id: socketable_rules.socket_caps
+    statement: '[sockets] Augment socket limits per slot: Body Armour 2, two-handed weapon 2, one-handed weapon 1, Helmet 1, Gloves 1, Boots
+      1; some uniques have more (Darkness Enthroned, a belt, has 2 hidden augment sockets). The cap of wands and staves, newly allowed by
+      the Artificer''s Orb, is not stated.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/runes-and-soul-cores
+    quote: Updated in Patch 0.4.0
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: {Body Armour: 2, Two Hand Weapon: 2, One Hand Weapon: 1, Helmet: 1, Gloves: 1, Boots: 1}
+    approximate: true
+    approximate_reason: Maxroll's 0.4 numbers, not re-checked for 0.5.
+    page_statement: Body armours and two-handed weapons hold two augment sockets, other gear one.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: socketable_rules.exceptional_items
+    statement: '[sockets, quality] Exceptional items have quality over the maximum or an additional augment socket; high-tier rares can
+      drop as exceptional normal items instead. Since 0.5.0 they need an Atlas specialisation.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: Exceptional Items have Quality over maximum or an additional Augment Socket. High Tier Rare Items found have a chance to instead
+      drop as an Exceptional Normal Item.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.architects_orb
+    statement: '[temple_currency] The Architect''s Orb modifies a corrupted equipment or jewel item unpredictably or destroys it; in 0.4
+      it had a 50/50 chance to add a second enchantment, the item being destroyed otherwise.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [Corrupted] [Equipment] or [Jewel] item unpredictably or destroys it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The 50/50 split is Maxroll's for 0.4; the item text gives no odds.
+    page_statement: An Architect's Orb on a corrupted item is taken to add a second enchantment half the time and destroy the item otherwise.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: socketable_rules.crystallised_corruption
+    statement: '[temple_currency] Crystallised Corruption modifies a corrupted skill gem unpredictably or destroys it (50/50 in 0.4).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [Corrupted] Skill Gem unpredictably or destroys it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The 50/50 split is Maxroll's for 0.4.
+    page_statement: Crystallised Corruption is taken to destroy a corrupted gem half the time.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: socketable_rules.vaal_cultivation_orb
+    statement: '[temple_currency] The Vaal Cultivation Orb replaces up to 2 modifiers on a corrupted Vaal unique, and replaces another unique
+      with a corrupted unique of the same item class; its outcome tables changed in 0.5.0 (poe2db: 48 cultivated uniques, 198 cultivated
+      mods).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Vaal_Cultivation_Orb
+    quote: Replaces up to 2 modifiers on a Corrupted Vaal Unique
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.vaal_infusers
+    statement: '[temple_currency, quality] The four Vaal infusers (Vaal Arcanist''s Infuser: wand, staff, sceptre; Vaal Armourer''s: armour;
+      Vaal Blacksmith''s: martial weapon; Vaal Catalysing: ring or amulet) raise quality beyond the maximum by up to 10% with a chance of
+      corrupting the item, and only on items at or above maximum quality. The corruption chance is not stated.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Vaal_Catalysing_Infuser
+    quote: Can only be used on items at or above maximum quality.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Vaal Arcanist's Infuser, Vaal Armourer's Infuser, Vaal Blacksmith's Infuser, Vaal Catalysing Infuser]
+
+  - id: socketable_rules.ancient_infuser
+    statement: '[temple_currency] The Ancient Infuser modifies a tablet unpredictably and corrupts it (0.4: a random modifier, up to 10
+      more uses, a new tablet type, or destruction).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [Tablet/Tablet] unpredictably
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The outcome list is Maxroll's for 0.4.
+    page_statement: An Ancient Infuser can add a modifier or uses to a tablet, change its type, or destroy it.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: socketable_rules.vaal_temple_core
+    statement: '[temple_currency] The Vaal temple (Temple of Atziri) of the Fate of the Vaal league is part of the core game in 0.5 and
+      is where the Vaal crafting currency comes from; the crafting functions of its rooms in 0.5 were not described by any source opened.'
+    source_kind: wiki
+    url: https://www.u4n.com/news/poe-2-05-vaal-temple-to-core.html
+    quote: existing Vaal Infusers are now Vaal Armourer's Infusers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: A currency-selling site and a search snippet only.
+    page_statement: The Vaal temple is part of the core game in this patch.
+    page_source: a currency-selling site's news post
+
+  - id: socketable_rules.desecration_mechanic
+    statement: '[desecration] Desecrating adds an unrevealed desecrated modifier; on a full item a random modifier is removed first. An
+      item with desecrated modifiers cannot be desecrated again.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Abyss
+    quote: Desecrating an item adds an Unrevealed Desecrated modifier. If modifiers are full then a random modifier is also removed.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.desecrated_not_crafted
+    statement: '[desecration, crafted_mod_limit] Since 0.5.0 desecrated modifiers no longer count as crafted modifiers, and an item holds
+      at most one desecrated modifier; a desecrated and a crafted modifier can coexist.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Desecrated modifiers no longer count as crafted modifiers, but items are limited to 1 Desecrated modifier.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.one_crafted_modifier
+    statement: '[crafted_mod_limit] Since 0.5.0 all crafted modifiers are guaranteed, and an item has at most one crafted modifier (Astrid''s
+      Creativity allows one more).'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: All crafted modifiers are now guaranteed, but items can only have 1 crafted modifier at a time.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.reforging_bench_at_sekhemas
+    statement: '[reforging_bench] Since 0.5.0 a Reforging Bench stands at the entrance of the Trial of the Sekhemas.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Added a Reforging Bench to the entrance of the Trial of the Sekhemas.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.salvage_returns_catalysts
+    statement: '[salvage_bench] Since 0.5.0 an item with alternate (catalyst) quality can be salvaged to return part of the catalysts used.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Alternate Quality items (from Breach Catalysts) may now be salvaged to return a portion of the Catalysts used.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.salvage_gives_artificers_shards
+    statement: '[salvage_bench] Salvaging an item with sockets gives an Artificer''s Shard; its socketed augments are destroyed. Salvaging
+      quality gear gives quality currency (armour and off-hands Armourer''s Scrap, martial weapons Blacksmith''s Whetstone, wands, staves
+      and sceptres Arcanist''s Etcher).'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/runes-and-soul-cores
+    quote: Every Socketed item Salvaged and destroyed at this bench awards an Artificer's Shard
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Guides for 0.4 and search snippets.
+    page_statement: Salvaging socketed gear gives an Artificer's Shard and destroys the augments in it.
+    page_source: a Maxroll guide and search-result excerpts
+
+  - id: socketable_rules.recombinator_disabled
+    statement: '[recombinator] The Recombinator is disabled in 0.5 and the Omen of Recombination removed; it is not a crafting method now.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: The Recombinator has been disabled. The Omen of Recombination has been removed.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.fracturing_orb
+    statement: '[fracturing_orb] The Fracturing Orb fractures a random modifier of a rare item with at least 4 modifiers, locking it; it
+      cannot be used on a fractured item. Since 0.5.0 obtaining it needs an Atlas specialisation.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '[Fracture / Fracture] a random modifier on a rare item with at least 4 modifiers, locking it in place.'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.hinekoras_lock
+    statement: '[hinekora_lock] Hinekora''s Lock lets an item foresee the result of the next currency used on it; modifying the item in
+      any way removes the foresight.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Hinekoras_Lock
+    quote: Allows an item to foresee the result of the next Currency item used on it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.verisium_runeforging
+    statement: '[verisium] Verisium Runeforging (0.5) at the Verisium Anvil turns a base into a ''Runeforged'' base with lower defences
+      and Runic Ward for Verisium (some for Exceptional Verisium), and a unique into Runeforged and Runemastered versions for Verisium plus
+      a Crest (Medved''s Crest of the Circle, Vorana''s Crest of the Scythe, Uhtred''s Crest of the Chalice, Olroth''s Crest of the Sun).
+      Starlit ores forge named uniques. What happens to the item''s modifiers is not stated.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: After unlocking Verisum Runeforging in Act 1 this system allows you to add Runic Ward to your armours by spending verisium.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: socketable_rules.fluxes
+    statement: '[verisium] Blazing, Chilling and Crackling Flux turn all cold and lightning (resp. fire and lightning, fire and cold) resistance
+      modifiers of a magic or rare item into fire (resp. cold, lightning) resistance ones; Void Flux turns all fire, cold and lightning
+      resistance modifiers into chaos resistance; Perfect Flux upgrades the skills on an item to level 20.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Blazing_Flux
+    quote: Transforms all Cold and Lightning Resistance modifiers on an item to equivalent Fire Resistance modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Blazing Flux: Fire, Chilling Flux: Cold, Crackling Flux: Lightning, Void Flux: Chaos}

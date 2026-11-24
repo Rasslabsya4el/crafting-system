@@ -1,0 +1,220 @@
+# Mechanic family: corruption_outcomes (what a corruption can do, and the corrupted enchantment pool by item tag).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: corruption_outcomes.enchantment_pool_by_tag
+    statement: 'The corrupted enchantments (corruption implicits) are the 114 modifiers of generation type ''corrupted'' with item spawn
+      tags; `value` maps each tag (base tag or class tag; ''jewel'' for the jewel ones) to {mod id: text}. Examples: body armour (10-20)%
+      of Damage taken Recouped as Life, amulet +1 to Level of all Skills, bow ''Bow Attacks fire an additional Arrow''. poe2db''s 125 ''Corrupted
+      Mods'' add monster and relic ones.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.min.json
+    quote: (10-20)% of Damage taken Recouped as Life | body_armour | 1 | CorruptionDamageTakenGainedAsLife1
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      shield: {CorruptionGainManaOnBlock1: (10-15) Mana gained when you Block, CorruptionLocalBlockChance1: (10-15)% increased Block chance,
+        CorruptionGainLifeOnBlock1: (20-25) Life gained when you Block, CorruptionThornsDamageIncrease1: (40-50)% increased Thorns damage,
+        CorruptionMaximumBlockChance1: +3% to maximum Block chance}
+      bow: {CorruptionLocalChanceToMaim1: (10-15)% chance to Maim on Hit, CorruptionWeaponElementalDamage1: (20-30)% increased Elemental
+          Damage with Attacks, CorruptionLocalChanceToBlind1: (5-10)% chance to Blind Enemies on hit, CorruptionLocalAddedLightningDamage1: Adds
+          (1-2) to (29-43) Lightning Damage, CorruptionLocalAddedChaosDamage1: Adds (7-11) to (12-18) Chaos damage, CorruptionLocalAddedColdDamage1: Adds
+          (8-12) to (13-19) Cold Damage, CorruptionLocalAddedFireDamage1: Adds (9-14) to (15-22) Fire Damage, CorruptionAdditionalArrows1: Bow
+          Attacks fire an additional Arrow}
+      crossbow: {CorruptionLocalChanceToMaim1: (10-15)% chance to Maim on Hit, CorruptionLocalChanceToBlind1: (5-10)% chance to Blind Enemies
+          on hit, CorruptionAdditionalAmmo1: Loads an additional bolt}
+      sword: {CorruptionLocalChanceToPoison1: (10-15)% chance to Poison on Hit with this weapon, CorruptionLocalChanceToBleed1: (10-15)%
+          chance to cause Bleeding on Hit, CorruptionLocalWeaponRangeIncrease1: (10-20)% increased Melee Strike Range with this weapon,
+        CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants 1 Rage on Hit}
+      spear: {CorruptionLocalChanceToPoison1: (10-15)% chance to Poison on Hit with this weapon, CorruptionLocalWeaponRangeIncrease1: (10-20)%
+          increased Melee Strike Range with this weapon, CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants
+          1 Rage on Hit}
+      dagger: {CorruptionLocalChanceToPoison1: (10-15)% chance to Poison on Hit with this weapon, CorruptionLocalWeaponRangeIncrease1: (10-20)%
+          increased Melee Strike Range with this weapon, CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants
+          1 Rage on Hit}
+      warstaff: {CorruptionLocalChanceToPoison1: (10-15)% chance to Poison on Hit with this weapon, CorruptionLocalWeaponRangeIncrease1: (10-20)%
+          increased Melee Strike Range with this weapon, CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants
+          1 Rage on Hit}
+      mace: {CorruptionLocalChanceToBleed1: (10-15)% chance to cause Bleeding on Hit, CorruptionLocalWeaponRangeIncrease1: (10-20)% increased
+          Melee Strike Range with this weapon, CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants
+          1 Rage on Hit}
+      axe: {CorruptionLocalChanceToBleed1: (10-15)% chance to cause Bleeding on Hit, CorruptionLocalWeaponRangeIncrease1: (10-20)% increased
+          Melee Strike Range with this weapon, CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants
+          1 Rage on Hit}
+      flail: {CorruptionLocalChanceToBleed1: (10-15)% chance to cause Bleeding on Hit, CorruptionLocalWeaponRangeIncrease1: (10-20)% increased
+          Melee Strike Range with this weapon, CorruptionLocalStunDamageIncrease1: Causes (20-30)% increased Stun Buildup, CorruptionLocalRageOnHit1: Grants
+          1 Rage on Hit}
+      wand: {CorruptionIncreasedCastSpeed1: (10-15)% increased Cast Speed, CorruptionReducedLocalAttributeRequirements1: (20-10)% reduced
+          Attribute Requirements, CorruptionSpellCriticalStrikeChance1: (20-30)% increased Critical Hit Chance for Spells, CorruptionIgniteChanceIncrease1: (20-30)%
+          increased Flammability Magnitude, CorruptionFreezeDamageIncrease1: (20-30)% increased Freeze Buildup, CorruptionSpellDamageOnWeapon1: (20-30)%
+          increased Spell Damage, CorruptionShockChanceIncrease1: (20-30)% increased chance to Shock, CorruptionGlobalChaosSpellGemsLevel1: +1
+          to Level of all Chaos Spell Skills, CorruptionGlobalColdSpellGemsLevel1: +1 to Level of all Cold Spell Skills, CorruptionGlobalFireSpellGemsLevel1: +1
+          to Level of all Fire Spell Skills, CorruptionGlobalLightningSpellGemsLevel1: +1 to Level of all Lightning Spell Skills, CorruptionGlobalPhysicalSpellGemsLevel1: +1
+          to Level of all Physical Spell Skills, CorruptionManaGainedFromEnemyDeath1: Gain (10-15) Mana per enemy killed, CorruptionLifeGainedFromEnemyDeath1: Gain
+          (20-25) Life per enemy killed}
+      staff: {CorruptionIncreasedCastSpeed1: (10-15)% increased Cast Speed, CorruptionReducedLocalAttributeRequirements1: (20-10)% reduced
+          Attribute Requirements, CorruptionSpellCriticalStrikeChance1: (20-30)% increased Critical Hit Chance for Spells, CorruptionIgniteChanceIncrease1: (20-30)%
+          increased Flammability Magnitude, CorruptionFreezeDamageIncrease1: (20-30)% increased Freeze Buildup, CorruptionShockChanceIncrease1: (20-30)%
+          increased chance to Shock, CorruptionSpellDamageOnTwoHandWeapon1: (40-60)% increased Spell Damage, CorruptionGlobalChaosSpellGemsLevel1: +1
+          to Level of all Chaos Spell Skills, CorruptionGlobalColdSpellGemsLevel1: +1 to Level of all Cold Spell Skills, CorruptionGlobalFireSpellGemsLevel1: +1
+          to Level of all Fire Spell Skills, CorruptionGlobalLightningSpellGemsLevel1: +1 to Level of all Lightning Spell Skills, CorruptionGlobalPhysicalSpellGemsLevel1: +1
+          to Level of all Physical Spell Skills, CorruptionManaGainedFromEnemyDeath1: Gain (10-15) Mana per enemy killed, CorruptionLifeGainedFromEnemyDeath1: Gain
+          (20-25) Life per enemy killed}
+      ring: {CorruptionItemFoundRarityIncrease1: (10-15)% increased Rarity of Items found, CorruptionCriticalStrikeMultiplier1: (15-20)%
+          increased Critical Damage Bonus, CorruptionLifeRegenerationRate1: (15-25)% increased Life Regeneration rate, CorruptionAllDamage1: (20-30)%
+          increased Damage, CorruptionManaRegeneration1: (20-30)% increased Mana Regeneration Rate, CorruptionIncreasedSkillSpeed1: (4-6)%
+          increased Skill Speed, CorruptionDexterity1: +(10-15) to Dexterity, CorruptionIntelligence1: +(10-15) to Intelligence, CorruptionStrength1: +(10-15)
+          to Strength, CorruptionChaosResistance1: +(13-19)% to Chaos Resistance, CorruptionIncreasedMana1: +(20-25) to maximum Mana, CorruptionAllResistances1: +(5-10)%
+          to all Elemental Resistances}
+      amulet: {CorruptionItemFoundRarityIncrease1: (10-15)% increased Rarity of Items found, CorruptionDexterity1: +(10-15) to Dexterity,
+        CorruptionIntelligence1: +(10-15) to Intelligence, CorruptionStrength1: +(10-15) to Strength, CorruptionAllResistances1: +(5-10)%
+          to all Elemental Resistances, CorruptionGlobalSkillGemLevel1: +1 to Level of all Skills, CorruptionMaximumElementalResistance1: +1%
+          to all Maximum Elemental Resistances, CorruptionCharmChargeGeneration1: Charms gain (0.08-0.17) charges per Second, CorruptionManaLeech1: Leech
+          2% of Physical Attack Damage as Mana, CorruptionLifeLeech1: Leech 3% of Physical Attack Damage as Life, CorruptionLifeFlaskChargeGeneration1: Life
+          Flasks gain (0.08-0.17) charges per Second, CorruptionManaFlaskChargeGeneration1: Mana Flasks gain (0.08-0.17) charges per Second}
+      body_armour: {CorruptionDamageTakenGainedAsLife1: (10-20)% of Damage taken Recouped as Life, CorruptionDamageTakenGainedAsMana1: (10-20)%
+          of Damage taken Recouped as Mana, CorruptionAdditionalPhysicalDamageReduction1: (3-5)% additional Physical Damage Reduction, CorruptionThornsDamageIncrease1: (40-50)%
+          increased Thorns damage, CorruptionChaosResistance1: +(13-19)% to Chaos Resistance, CorruptionIncreasedLife1: +(30-40) to maximum
+          Life, CorruptionMaximumElementalResistance1: +1% to all Maximum Elemental Resistances}
+      quiver: {CorruptionCriticalStrikeMultiplier1: (15-20)% increased Critical Damage Bonus, CorruptionChanceToPierce1: (20-30)% chance
+          to Pierce an Enemy, CorruptionAllDamage1: (20-30)% increased Damage, CorruptionIncreasedSkillSpeed1: (4-6)% increased Skill Speed,
+        CorruptionIncreasedMana1: +(20-25) to maximum Mana, CorruptionIncreasedAccuracy1: +(50-100) to Accuracy Rating, CorruptionManaGainedFromEnemyDeath1: Gain
+          (10-15) Mana per enemy killed, CorruptionLifeGainedFromEnemyDeath1: Gain (20-25) Life per enemy killed, CorruptionChainFromTerrain1: Projectiles
+          have (10-20)% chance to Chain an additional time from terrain}
+      belt: {CorruptionIncreasedPhysicalDamageReductionRatingPercent1: (15-25)% increased Armour, CorruptionIncreasedEvasionRatingPercent1: (15-25)%
+          increased Evasion Rating, CorruptionIncreasedEnergyShieldPercent1: (15-25)% increased maximum Energy Shield, CorruptionMaximumFireResistance1: +(1-3)%
+          to Maximum Fire Resistance, CorruptionDexterity1: +(10-15) to Dexterity, CorruptionIntelligence1: +(10-15) to Intelligence, CorruptionStrength1: +(10-15)
+          to Strength, CorruptionColdResistance1: +(20-25)% to Cold Resistance, CorruptionFireResistance1: +(20-25)% to Fire Resistance,
+        CorruptionLightningResistance1: +(20-25)% to Lightning Resistance, CorruptionIncreasedLife1: +(30-40) to maximum Life, CorruptionMaximumEnduranceCharges1: +1
+          to Maximum Endurance Charges}
+      str_armour: {CorruptionLocalIncreasedPhysicalDamageReductionRatingPercent1: (15-25)% increased Armour}
+      str_int_armour: {CorruptionLocalIncreasedArmourAndEnergyShield1: (15-25)% increased Armour and Energy Shield}
+      str_dex_armour: {CorruptionLocalIncreasedArmourAndEvasion1: (15-25)% increased Armour and Evasion}
+      int_armour: {CorruptionLocalIncreasedEnergyShieldPercent1: (15-25)% increased Energy Shield}
+      dex_armour: {CorruptionLocalIncreasedEvasionRatingPercent1: (15-25)% increased Evasion Rating}
+      dex_int_armour: {CorruptionLocalIncreasedEvasionAndEnergyShield1: (15-25)% increased Evasion and Energy Shield}
+      helmet: {CorruptionLifeRegenerationRate1: (15-25)% increased Life Regeneration rate, CorruptionManaRegeneration1: (20-30)% increased
+          Mana Regeneration Rate, CorruptionMaximumColdResistance1: +(1-3)% to Maximum Cold Resistance, CorruptionIncreasedSpirit1: +(20-30)
+          to Spirit, CorruptionIncreasedAccuracy1: +(50-100) to Accuracy Rating, CorruptionGlobalMinionSkillGemsLevel1: +1 to Level of all
+          Minion Skills, CorruptionMaximumPowerCharges1: +1 to Maximum Power Charges}
+      weapon: {CorruptionLocalIncreasedPhysicalDamagePercent1: (15-25)% increased Physical Damage, CorruptionReducedLocalAttributeRequirements1: (20-10)%
+          reduced Attribute Requirements, CorruptionLocalIncreasedAttackSpeed1: (6-8)% increased Attack Speed, CorruptionLocalCriticalStrikeMultiplier1: +(5-10)%
+          to Critical Damage Bonus}
+      sceptre: {CorruptionLocalIncreasedSpiritPercent1: (15-25)% increased Spirit, CorruptionReducedLocalAttributeRequirements1: (20-10)%
+          reduced Attribute Requirements, CorruptionAlliesInPresenceAllDamage1: Allies in your Presence deal (20-30)% increased Damage,
+        CorruptionAlliesInPresenceCriticalStrikeMultiplier1: Allies in your Presence have (10-15)% increased Critical Damage Bonus, CorruptionAlliesInPresenceIncreasedAttackSpeed1: Allies
+          in your Presence have (5-10)% increased Attack Speed, CorruptionAlliesInPresenceIncreasedCastSpeed1: Allies in your Presence have
+          (5-10)% increased Cast Speed}
+      armour: {CorruptionReducedLocalAttributeRequirements1: (20-10)% reduced Attribute Requirements}
+      one_hand_weapon: {CorruptionWeaponElementalDamage1: (20-30)% increased Elemental Damage with Attacks, CorruptionLocalAddedLightningDamage1: Adds
+          (1-2) to (29-43) Lightning Damage, CorruptionLocalAddedChaosDamage1: Adds (7-11) to (12-18) Chaos damage, CorruptionLocalAddedColdDamage1: Adds
+          (8-12) to (13-19) Cold Damage, CorruptionLocalAddedFireDamage1: Adds (9-14) to (15-22) Fire Damage}
+      boots: {CorruptionIncreasedFreezeThreshold1: (20-30)% increased Freeze Threshold, CorruptionIncreasedStunThreshold1: (20-30)% increased
+          Stun Threshold, CorruptionMovementVelocity1: (3-5)% increased Movement Speed, CorruptionSlowPotency1: (30-20)% reduced Slowing
+          Potency of Debuffs on You, CorruptionMaximumLightningResistance1: +(1-3)% to Maximum Lightning Resistance, CorruptionColdResistance1: +(20-25)%
+          to Cold Resistance, CorruptionFireResistance1: +(20-25)% to Fire Resistance, CorruptionLightningResistance1: +(20-25)% to Lightning
+          Resistance}
+      focus: {CorruptionSpellDamageOnWeapon1: (20-30)% increased Spell Damage, CorruptionIncreasedMana1: +(20-25) to maximum Mana}
+      two_hand_weapon: {CorruptionWeaponElementalDamageTwoHand1: (40-50)% increased Elemental Damage with Attacks, CorruptionLocalAddedLightningDamageTwoHand1: Adds
+          (1-3) to (41-61) Lightning Damage, CorruptionLocalAddedChaosDamageTwoHand1: Adds (10-16) to (17-25) Chaos damage, CorruptionLocalAddedColdDamageTwoHand1: Adds
+          (11-17) to (18-26) Cold Damage, CorruptionLocalAddedFireDamageTwoHand1: Adds (13-20) to (21-31) Fire Damage}
+      gloves: {CorruptionGoldFoundIncrease1: (5-10)% increased Quantity of Gold Dropped by Slain Enemies, CorruptionGlobalMeleeSkillGemsLevel1: +1
+          to Level of all Melee Skills, CorruptionMaximumFrenzyCharges1: +1 to Maximum Frenzy Charges, CorruptionArmourBreak1: Break (10-15)%
+          increased Armour, CorruptionColdPenetration1: Damage Penetrates (10-15)% Cold Resistance, CorruptionFirePenetration1: Damage Penetrates
+          (10-15)% Fire Resistance, CorruptionLightningPenetration1: Damage Penetrates (10-15)% Lightning Resistance}
+      jewel: {CorruptionJewelChaosResist1: +(3-7)% to Chaos Resistance, CorruptionJewelDexterity1: +(4-6) to Dexterity, CorruptionJewelIntelligence1: +(4-6)
+          to Intelligence, CorruptionJewelStrength1: +(4-6) to Strength, CorruptionJewelColdResist1: +(5-10)% to Cold Resistance, CorruptionJewelFireResist1: +(5-10)%
+          to Fire Resistance, CorruptionJewelLightningResist1: +(5-10)% to Lightning Resistance, CorruptionJewelBlindImmunity1: Cannot be
+          Blinded, CorruptionJewelCorruptedBloodImmunity1: Corrupted Blood cannot be inflicted on you, CorruptionJewelMaimImmunity1: Immune
+          to Maim, CorruptionJewelHinderImmunity1: You cannot be Hindered}
+
+  - id: corruption_outcomes.values_outcome_multiplies
+    statement: Since 0.5.0 the corruption outcome that pushed modifier values beyond their range multiplies each modifier on the item instead;
+      the multiplier's range for non-unique items is not stated in what was read.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: The Corruption outcome that randomises the numeric values of the modifiers on an item beyond the normal range now multiplies
+      each modifier
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    history:
+    - held_until: "0.4.0"
+      source_kind: wiki
+      url: https://maxroll.gg/poe2/resources/corruption-outcomes
+      quote: Randomizing up to 3 affixes on a Rare item
+      statement: In 0.4 the outcome randomised the values of up to three affixes of a rare item.
+
+  - id: corruption_outcomes.equipment_outcomes
+    statement: 'A Vaal Orb on rare or magic equipment gives one of: no change; the modifier values multiplied (corruption_outcomes.values_outcome_multiplies);
+      a corrupted enchantment; +1 augment socket beyond the limit on helmets, gloves, boots, body armours, shields, foci and martial weapons;
+      quality raised up to 23% on wands and staves. Uniques can also have their values rerolled between 0.78 and 1.22 of the current roll.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: Updated for new corruption outcomes from the 0.4 Fate of the Vaal League
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value:
+      rare_magic: [no change, values, enchantment, socket, quality]
+      unique_extra: [divine 0.78 to 1.22]
+    approximate: true
+    approximate_reason: The list is Maxroll's for 0.4; only the values outcome is confirmed changed for 0.5.
+    page_statement: A Vaal Orb on gear can do nothing, change its modifier values, add an enchantment, add a socket or raise quality on
+      caster weapons.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: corruption_outcomes.extra_socket_classes
+    statement: The +1 socket outcome ignores the socket limit and exists for helmets, gloves, boots, body armours, shields, foci and martial
+      weapons; caster weapons, amulets, belts and rings cannot get it.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: +1 Socket (ignoring limit)
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: [Helmet, Gloves, Boots, Body Armour, Shield, Focus, Martial Weapon]
+    approximate: true
+    approximate_reason: Maxroll's 0.4 list, not re-checked for 0.5.
+    page_statement: Corruption can add a socket past the limit on armour pieces, shields, foci and martial weapons.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: corruption_outcomes.jewel_outcomes
+    statement: 'On a magic or rare jewel a Vaal Orb gives no change, randomised values on 1 to 3 affixes, a corrupted enchantment, or adds
+      or removes an affix ignoring the normal limits. On a unique jewel: no change (50%), an enchantment, or values multiplied between 0.78
+      and 1.22.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: No change (50%)
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Maxroll's 0.4 list, not re-checked for 0.5.
+    page_statement: Corrupting a jewel can add or remove a modifier beyond the normal limits, add an enchantment or change values.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: corruption_outcomes.waystone_gem_flask_outcomes
+    statement: 'Waystones: no change, +1 or -1 tier (min 1, max 16), all affixes turned into prefixes or into suffixes, random affixes added
+      to a rare waystone. Skill gems: no change, +/-1 level, +/-1 support socket, -7% to +3% quality. Flasks and charms: quality changed
+      up to 23%.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: +1 Tier/-1 Tier (Min 1, max 16)
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Maxroll's 0.4 list, not re-checked for 0.5.
+    page_statement: Corrupting a waystone, gem or flask changes its tier, level or quality, or does nothing.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: corruption_outcomes.equal_chances
+    statement: 'UNVERIFIED: the outcomes of a Vaal Orb are taken to be equally likely (Maxroll: ''all equally likely''; another site says
+      25% each for gems and uniques; unique jewels: no change 50%). No official numbers exist.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: all equally likely
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: No official probabilities; secondary sources for 0.4 disagree in detail.
+    page_statement: Each possible result of a Vaal Orb is taken to be equally likely.
+    page_source: game guides for the previous patch

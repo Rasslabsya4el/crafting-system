@@ -1,0 +1,162 @@
+# Mechanic family: soul_core (the Vaal soul cores and theses and their effect per slot).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: soul_core.vaal_augments
+    statement: 'Soul cores are Vaal augments: ''Soul Cores are artifacts of the ancient Vaal empire and function as a type of Augment.''
+      There are 48 in the data: 16 ''Soul Core of X'', 28 named ''X''s Soul Core of Y'' (Jiquani''s twelve among them), the four Atziri''s
+      Soul Cores; and four Vaal Theses of the same class (soul_core.vaal_theses).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: Soul Cores are artifacts of the ancient Vaal empire and function as a type of Augment.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Atmohua's Soul Core of Retreat, Atziri's Soul Core of Alacrity, Atziri's Soul Core of Devotion, Atziri's Soul Core of Inoculation,
+      Atziri's Soul Core of Vitality, Cholotl's Soul Core of War, Citaqualotl's Soul Core of Foulness, Estazunti's Soul Core of Convalescence,
+      Guatelitzi's Soul Core of Endurance, Hayoxi's Soul Core of Heatproofing, Jiquani's Soul Core of Abundance, Jiquani's Soul Core of
+        Automation, Jiquani's Soul Core of Malediction, Jiquani's Soul Core of Munitions, Jiquani's Soul Core of Quaking, Jiquani's Soul
+        Core of Radiance, Jiquani's Soul Core of Rallying, Jiquani's Soul Core of Rippling, Jiquani's Soul Core of Severing, Jiquani's Soul
+        Core of Snares, Jiquani's Soul Core of Squalls, Jiquani's Soul Core of Targeting, Jiquani's Soul Core of Thundering, Opiloti's Soul
+        Core of Assault, Quipolatl's Soul Core of Flow, Soul Core of Atmohua, Soul Core of Azcapa, Soul Core of Cholotl, Soul Core of Citaqualotl,
+      Soul Core of Jiquani, Soul Core of Opiloti, Soul Core of Puhuarte, Soul Core of Quipolatl, Soul Core of Tacati, Soul Core of Ticaba,
+      Soul Core of Topotante, Soul Core of Tzamoto, Soul Core of Vizoma, Soul Core of Xopec, Soul Core of Zalatl, Soul Core of Zantipi,
+      Tacati's Soul Core of Affliction, Topotante's Soul Core of Dampening, Tzamoto's Soul Core of Ferocity, Uromoti's Soul Core of Attenuation,
+      Xipocado's Soul Core of Dominion, Xopec's Soul Core of Power, Zalatl's Soul Core of Insulation]
+
+  - id: soul_core.effects
+    statement: 'Effect of each soul core by slot category (`value`: soul core -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Soul Core of Tacati | SoulCoreChaos | 0 | 1 |  | 1 | 1 | 1 | Martial Weapon: base_poison_effect_+%=25; Armour: base_chaos_damage_resistance_%=13'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Soul Core of Vizoma: {Martial Weapon: local_accuracy_rating=150, Wand or Staff: spell_critical_strike_chance_+%=30}
+      Soul Core of Tacati: {Martial Weapon: base_poison_effect_+%=25, Armour: base_chaos_damage_resistance_%=13}
+      Soul Core of Opiloti: {Martial Weapon: base_bleeding_effect_+%=40, Helmet: pin_duration_+%=25}
+      Soul Core of Jiquani: {Martial Weapon: recover_%_maximum_life_on_kill=5, Body Armour: maximum_life_+%=5}
+      Soul Core of Zalatl: {Martial Weapon: recover_%_maximum_mana_on_kill=4, Helmet: maximum_mana_+%=5}
+      Soul Core of Citaqualotl: {Martial Weapon: elemental_damage_with_attack_skills_+%=40, Armour: base_resist_all_elements_%=6}
+      Soul Core of Puhuarte: {Martial Weapon: base_ignite_effect_+%=40, Gloves: base_maximum_fire_damage_resistance_%=2}
+      Soul Core of Tzamoto: {Martial Weapon: hit_damage_freeze_multiplier_+%=60, Helmet: base_maximum_cold_damage_resistance_%=2}
+      Soul Core of Xopec: {Martial Weapon: shock_effect_+%=25, Boots: base_maximum_lightning_damage_resistance_%=2}
+      Soul Core of Azcapa: {Martial Weapon: base_spirit_from_equipment=15, Gloves: gold_+%_from_enemies=10}
+      Soul Core of Topotante: {Martial Weapon: local_elemental_penetration_%=25, Boots: non_damaging_ailment_effect_+%_on_self=-25}
+      Soul Core of Quipolatl: {Martial Weapon: local_attack_speed_+%=5, Boots: base_slow_potency_+%=-15}
+      Soul Core of Ticaba: {Martial Weapon: local_critical_strike_multiplier_+=5, Body Armour: base_self_critical_strike_multiplier_-%=50,
+        Shield or Buckler: base_self_critical_strike_multiplier_-%=50}
+      Soul Core of Atmohua: {Martial Weapon: local_requirements_%_to_convert_to_strength=40, Armour: local_requirements_%_to_convert_to_strength=40}
+      Soul Core of Cholotl: {Martial Weapon: local_requirements_%_to_convert_to_dexterity=40, Armour: local_requirements_%_to_convert_to_dexterity=40}
+      Soul Core of Zantipi: {Martial Weapon: local_requirements_%_to_convert_to_intelligence=40, Armour: local_requirements_%_to_convert_to_intelligence=40}
+      Hayoxi's Soul Core of Heatproofing: {Helmet: base_armour_%_applies_to_cold_damage=40}
+      Zalatl's Soul Core of Insulation: {Boots: base_armour_%_applies_to_lightning_damage=40}
+      Topotante's Soul Core of Dampening: {Gloves: base_armour_%_applies_to_fire_damage=40}
+      Atmohua's Soul Core of Retreat: {Body Armour: energy_shield_from_focus_+%=40, Focus: maximum_energy_shield_from_body_armour_+%=30}
+      Quipolatl's Soul Core of Flow: {Helmet: 'skill_effect_duration_+%=8, base_cooldown_speed_+%=8'}
+      Tzamoto's Soul Core of Ferocity: {Helmet: maximum_rage=4}
+      Uromoti's Soul Core of Attenuation: {Boots: 'base_curse_duration_+%=20, base_poison_duration_+%=20'}
+      Opiloti's Soul Core of Assault: {Martial Weapon: chance_to_gain_1_more_frenzy_charge_%=50, Wand or Staff: chance_to_gain_1_more_frenzy_charge_%=50}
+      Guatelitzi's Soul Core of Endurance: {Martial Weapon: chance_to_gain_1_more_endurance_charge_%=50, Wand or Staff: chance_to_gain_1_more_endurance_charge_%=50}
+      Xopec's Soul Core of Power: {Martial Weapon: chance_to_gain_1_more_power_charge_%=50, Wand or Staff: chance_to_gain_1_more_power_charge_%=50}
+      Estazunti's Soul Core of Convalescence: {Boots: recoup_speed_+%=15, Helmet: damage_taken_goes_to_life_over_4_seconds_%=10}
+      Tacati's Soul Core of Affliction: {Helmet: enemies_chaos_resistance_%_while_cursed=-5}
+      Cholotl's Soul Core of War: {Bow: projectile_chance_to_chain_1_extra_time_from_terrain_%=20}
+      Citaqualotl's Soul Core of Foulness: {Martial Weapon: 'local_minimum_added_chaos_damage=19, local_maximum_added_chaos_damage=29'}
+      Xipocado's Soul Core of Dominion: {Wand or Staff: minion_commanded_skill_damage_+%=40, Sceptre: minion_commanded_skill_damage_+%=40}
+      Jiquani's Soul Core of Automation: {Martial Or Caster Weapon: totem_skill_gem_level_+=1}
+      Jiquani's Soul Core of Malediction: {Martial Or Caster Weapon: curse_skill_gem_level_+=1}
+      Jiquani's Soul Core of Targeting: {Martial Or Caster Weapon: mark_skill_gem_level_+=1}
+      Jiquani's Soul Core of Rallying: {Martial Or Caster Weapon: warcry_skill_gem_level_+=1}
+      Jiquani's Soul Core of Radiance: {Martial Or Caster Weapon: herald_skill_gem_level_+=1}
+      Jiquani's Soul Core of Severing: {Martial Or Caster Weapon: strike_skill_gem_level_+=1}
+      Jiquani's Soul Core of Rippling: {Martial Or Caster Weapon: nova_skill_gem_level_+=1}
+      Jiquani's Soul Core of Quaking: {Martial Or Caster Weapon: slam_skill_gem_level_+=1}
+      Jiquani's Soul Core of Munitions: {Martial Or Caster Weapon: grenade_skill_gem_level_+=1}
+      Jiquani's Soul Core of Snares: {Martial Or Caster Weapon: hazard_skill_gem_level_+=1}
+      Jiquani's Soul Core of Abundance: {Martial Or Caster Weapon: plant_skill_gem_level_+=1}
+      Jiquani's Soul Core of Squalls: {Martial Or Caster Weapon: wind_skill_gem_level_+=1}
+      Jiquani's Soul Core of Thundering: {Martial Or Caster Weapon: storm_skill_gem_level_+=1}
+      Atziri's Soul Core of Devotion: {Helmet: 'soul_core_cannot_roll_no_outcome_with_corruption=1, spirit_+%_per_equipped_corrupted_item=1'}
+      Atziri's Soul Core of Vitality: {Body Armour: 'soul_core_cannot_roll_no_outcome_with_corruption=1, maximum_life_+%_per_equipped_corrupted_item=1'}
+      Atziri's Soul Core of Alacrity: {Gloves: 'soul_core_cannot_roll_no_outcome_with_corruption=1, skill_speed_+%_per_equipped_corrupted_item=1'}
+      Atziri's Soul Core of Inoculation: {Boots: 'soul_core_cannot_roll_no_outcome_with_corruption=1, base_chaos_damage_resistance_%_per_equipped_corrupted_item=2'}
+
+  - id: soul_core.required_levels
+    statement: 'The character level each soul core requires (`value`: soul core -> level; 0 = none).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: Atziri's Soul Core of Devotion | SoulCoreSpecial29 | 50 | 1
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Soul Core of Vizoma: 0, Soul Core of Tacati: 0, Soul Core of Opiloti: 0, Soul Core of Jiquani: 0, Soul Core of Zalatl: 0, Soul Core of Citaqualotl: 0,
+      Soul Core of Puhuarte: 0, Soul Core of Tzamoto: 0, Soul Core of Xopec: 0, Soul Core of Azcapa: 0, Soul Core of Topotante: 0, Soul Core of Quipolatl: 0,
+      Soul Core of Ticaba: 0, Soul Core of Atmohua: 0, Soul Core of Cholotl: 0, Soul Core of Zantipi: 0, Hayoxi's Soul Core of Heatproofing: 50,
+      Zalatl's Soul Core of Insulation: 50, Topotante's Soul Core of Dampening: 50, Atmohua's Soul Core of Retreat: 50, Quipolatl's Soul Core of Flow: 50,
+      Tzamoto's Soul Core of Ferocity: 50, Uromoti's Soul Core of Attenuation: 50, Opiloti's Soul Core of Assault: 50, Guatelitzi's Soul Core of Endurance: 50,
+      Xopec's Soul Core of Power: 50, Estazunti's Soul Core of Convalescence: 50, Tacati's Soul Core of Affliction: 50, Cholotl's Soul Core of War: 50,
+      Citaqualotl's Soul Core of Foulness: 50, Xipocado's Soul Core of Dominion: 50, Jiquani's Soul Core of Automation: 50, Jiquani's Soul Core of Malediction: 50,
+      Jiquani's Soul Core of Targeting: 50, Jiquani's Soul Core of Rallying: 50, Jiquani's Soul Core of Radiance: 50, Jiquani's Soul Core of Severing: 50,
+      Jiquani's Soul Core of Rippling: 50, Jiquani's Soul Core of Quaking: 50, Jiquani's Soul Core of Munitions: 50, Jiquani's Soul Core of Snares: 50,
+      Jiquani's Soul Core of Abundance: 50, Jiquani's Soul Core of Squalls: 50, Jiquani's Soul Core of Thundering: 50, Atziri's Soul Core of Devotion: 50,
+      Atziri's Soul Core of Vitality: 50, Atziri's Soul Core of Alacrity: 50, Atziri's Soul Core of Inoculation: 50, Guatelitzi's Thesis: 60,
+      Citaqualotl's Thesis: 60, Jiquani's Thesis: 60, Quipolatl's Thesis: 60}
+
+  - id: soul_core.limited_to_one
+    statement: 'These soul cores carry ''Limited to: 1'' (one of that name per character).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Soul Core of Topotante | Limited to: 1 ; Martial Weapon: Attacks with this Weapon Penetrate 25% Elemental Resistances'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Atmohua's Soul Core of Retreat, Atziri's Soul Core of Alacrity, Atziri's Soul Core of Devotion, Atziri's Soul Core of Inoculation,
+      Atziri's Soul Core of Vitality, Cholotl's Soul Core of War, Citaqualotl's Soul Core of Foulness, Estazunti's Soul Core of Convalescence,
+      Guatelitzi's Soul Core of Endurance, Hayoxi's Soul Core of Heatproofing, Jiquani's Soul Core of Abundance, Jiquani's Soul Core of
+        Automation, Jiquani's Soul Core of Malediction, Jiquani's Soul Core of Munitions, Jiquani's Soul Core of Quaking, Jiquani's Soul
+        Core of Radiance, Jiquani's Soul Core of Rallying, Jiquani's Soul Core of Rippling, Jiquani's Soul Core of Severing, Jiquani's Soul
+        Core of Snares, Jiquani's Soul Core of Squalls, Jiquani's Soul Core of Targeting, Jiquani's Soul Core of Thundering, Opiloti's Soul
+        Core of Assault, Quipolatl's Soul Core of Flow, Soul Core of Jiquani, Soul Core of Opiloti, Soul Core of Puhuarte, Soul Core of
+        Ticaba, Soul Core of Topotante, Soul Core of Tzamoto, Soul Core of Vizoma, Soul Core of Xopec, Soul Core of Zalatl, Tacati's Soul
+        Core of Affliction, Topotante's Soul Core of Dampening, Tzamoto's Soul Core of Ferocity, Uromoti's Soul Core of Attenuation, Xipocado's
+        Soul Core of Dominion, Xopec's Soul Core of Power, Zalatl's Soul Core of Insulation]
+
+  - id: soul_core.atziri_corruption_always_changes
+    statement: 'The four Atziri''s Soul Cores (Devotion on Helmets, Vitality on Body Armours, Alacrity on Gloves, Inoculation on Boots)
+      are socket-bound, give a bonus per corrupted item equipped, and carry ''Corrupting will always result in change'': a Vaal Orb on the
+      item holding one never gives the ''no change'' outcome (stat soul_core_cannot_roll_no_outcome_with_corruption).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Atziri''s Soul Core of Devotion | SoulCoreSpecial29 | 50 | 1 |  | 1 | 1 | 1 | Helmet: soul_core_cannot_roll_no_outcome_with_corruption=1,
+      spirit_+%_per_equipped_corrupted_item=1'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Atziri's Soul Core of Devotion: Helmet, Atziri's Soul Core of Vitality: Body Armour, Atziri's Soul Core of Alacrity: Gloves,
+      Atziri's Soul Core of Inoculation: Boots}
+
+  - id: soul_core.vaal_theses
+    statement: 'The four Vaal Theses (Guatelitzi''s Thesis, Citaqualotl''s Thesis, Jiquani''s Thesis, Quipolatl''s Thesis) are soul-core
+      class Ancient Augments, Requires Level 60, one Ancient Augment socketed at a time. `value`: thesis -> {category: stats}.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Guatelitzi''s Thesis | Limited to: 1 Ancient Augment ; Requires: Level 60'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Guatelitzi's Thesis: {Helmet: gain_armour_from_%_life_loss_from_hits_lasting_8_seconds=35, Body Armour: physical_damage_prevented_recouped_as_life_%=10,
+        Boots: 'life_loss_%_per_minute_while_sprinting=300, sprint_movement_speed_+%=25'}
+      Citaqualotl's Thesis: {Body Armour: recoup_life_equal_to_%_of_hit_damage_dealt_to_your_offerings=50, Gloves: revive_random_persistent_minion_on_offering_expiration=1,
+        Boots: sacrifice_%_life_to_gain_as_guard_on_dodge_roll=10}
+      Jiquani's Thesis: {Helmet: gain_X_max_mana_per_3_armour_on_equipped_helmet=1, Gloves: energy_shield_recharge_starts_after_spending_2000_mana_every_2_seconds=1,
+        Boots: increases_and_reductions_to_move_speed_apply_to_es_recharge_rate=1}
+      Quipolatl's Thesis: {Helmet: mark_grants_%_max_glory_to_random_skill_on_activate=50, Gloves: energy_shield_recharge_start_when_minions_reform=1,
+        Body Armour: armour_%_also_applies_to_chaos_damage_while_at_full_es=75}
+
+  - id: soul_core.core_destabiliser
+    statement: The Core Destabiliser (Soul Core Infuser room of the Vaal temple) modifies a soul core unpredictably, with a chance to destroy
+      it; its outcomes are not in the sources read.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Modifies a [SoulCore/Soul Core] unpredictably, with a chance to destroy it
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24

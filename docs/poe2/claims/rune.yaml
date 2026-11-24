@@ -1,0 +1,412 @@
+# Mechanic family: rune (the runes: tiered families, named, ancient, warding and legacy runes, and their effect per slot).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: rune.tiered_families
+    statement: 'The tiered runes come in 16 families: Desert, Glacial, Storm, Iron, Body, Mind, Rebirth, Inspiration, Stone, Vision, Robust,
+      Adept, Resolve, Ward and Charging each as Lesser, normal, Greater and Perfect, and Tempered as Lesser, normal and Greater only (no
+      Perfect Tempered Rune exists in the data). `value` lists each family''s runes.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Lesser Tempered Rune | RunePhysicalLesser | 0 | 0 | 1 | 1 | 1 | 1 | Martial Weapon: local_minimum_added_physical_damage=3'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Desert: [Lesser Desert Rune, Desert Rune, Greater Desert Rune, Perfect Desert Rune]
+      Glacial: [Lesser Glacial Rune, Glacial Rune, Greater Glacial Rune, Perfect Glacial Rune]
+      Storm: [Lesser Storm Rune, Storm Rune, Greater Storm Rune, Perfect Storm Rune]
+      Iron: [Lesser Iron Rune, Iron Rune, Greater Iron Rune, Perfect Iron Rune]
+      Body: [Lesser Body Rune, Body Rune, Greater Body Rune, Perfect Body Rune]
+      Mind: [Lesser Mind Rune, Mind Rune, Greater Mind Rune, Perfect Mind Rune]
+      Rebirth: [Lesser Rebirth Rune, Rebirth Rune, Greater Rebirth Rune, Perfect Rebirth Rune]
+      Inspiration: [Lesser Inspiration Rune, Inspiration Rune, Greater Inspiration Rune, Perfect Inspiration Rune]
+      Stone: [Lesser Stone Rune, Stone Rune, Greater Stone Rune, Perfect Stone Rune]
+      Vision: [Lesser Vision Rune, Vision Rune, Greater Vision Rune, Perfect Vision Rune]
+      Robust: [Lesser Robust Rune, Robust Rune, Greater Robust Rune, Perfect Robust Rune]
+      Adept: [Lesser Adept Rune, Adept Rune, Greater Adept Rune, Perfect Adept Rune]
+      Resolve: [Lesser Resolve Rune, Resolve Rune, Greater Resolve Rune, Perfect Resolve Rune]
+      Tempered: [Lesser Tempered Rune, Tempered Rune, Greater Tempered Rune]
+      Ward: [Lesser Ward Rune, Ward Rune, Greater Ward Rune, Perfect Ward Rune]
+      Charging: [Lesser Charging Rune, Charging Rune, Greater Charging Rune, Perfect Charging Rune]
+
+  - id: rune.generic_rune_slots
+    statement: A generic tiered rune has one effect for a Martial Weapon, one for a Wand or Staff, and one for Armour, and fits any of them;
+      the effect is the one of the slot it is socketed in. Named runes, idols and soul cores mostly fit one or two slot types only.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Rune
+    quote: 'Martial Weapon: Adds 7 to 11 Fire Damage ; Wand or Staff: Gain 8% of Damage as Extra Fire Damage ; Armour: +14% to Fire Resistance'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: rune.tiered_effects
+    statement: 'Effect of each tiered rune (and of Greater Rune of Leadership, Tithing, Alacrity and Nobility) by slot category, as the
+      game''s stat ids and values (`value`: rune -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Desert Rune | RuneFire | 15 | 0 | 1 | 1 | 1 | 1 | Martial Weapon: local_minimum_added_fire_damage=7, local_maximum_added_fire_damage=11'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Lesser Desert Rune: {Martial Weapon: 'local_minimum_added_fire_damage=4, local_maximum_added_fire_damage=6', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_fire=6,
+        Armour: base_fire_damage_resistance_%=10}
+      Desert Rune: {Martial Weapon: 'local_minimum_added_fire_damage=7, local_maximum_added_fire_damage=11', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_fire=8,
+        Armour: base_fire_damage_resistance_%=14}
+      Greater Desert Rune: {Martial Weapon: 'local_minimum_added_fire_damage=13, local_maximum_added_fire_damage=16', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_fire=10,
+        Armour: base_fire_damage_resistance_%=18}
+      Perfect Desert Rune: {Martial Weapon: 'local_minimum_added_fire_damage=17, local_maximum_added_fire_damage=20', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_fire=12,
+        Armour: base_fire_damage_resistance_%=22}
+      Lesser Glacial Rune: {Martial Weapon: 'local_minimum_added_cold_damage=3, local_maximum_added_cold_damage=5', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_cold=6,
+        Armour: base_cold_damage_resistance_%=10}
+      Glacial Rune: {Martial Weapon: 'local_minimum_added_cold_damage=6, local_maximum_added_cold_damage=10', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_cold=8,
+        Armour: base_cold_damage_resistance_%=14}
+      Greater Glacial Rune: {Martial Weapon: 'local_minimum_added_cold_damage=9, local_maximum_added_cold_damage=15', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_cold=10,
+        Armour: base_cold_damage_resistance_%=18}
+      Perfect Glacial Rune: {Martial Weapon: 'local_minimum_added_cold_damage=16, local_maximum_added_cold_damage=20', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_cold=12,
+        Armour: base_cold_damage_resistance_%=22}
+      Lesser Storm Rune: {Martial Weapon: 'local_minimum_added_lightning_damage=1, local_maximum_added_lightning_damage=10', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_lightning=6,
+        Armour: base_lightning_damage_resistance_%=10}
+      Storm Rune: {Martial Weapon: 'local_minimum_added_lightning_damage=1, local_maximum_added_lightning_damage=20', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_lightning=8,
+        Armour: base_lightning_damage_resistance_%=14}
+      Greater Storm Rune: {Martial Weapon: 'local_minimum_added_lightning_damage=1, local_maximum_added_lightning_damage=30', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_lightning=10,
+        Armour: base_lightning_damage_resistance_%=18}
+      Perfect Storm Rune: {Martial Weapon: 'local_minimum_added_lightning_damage=1, local_maximum_added_lightning_damage=40', Wand or Staff: non_skill_base_all_damage_%_to_gain_as_lightning=12,
+        Armour: base_lightning_damage_resistance_%=22}
+      Lesser Iron Rune: {Martial Weapon: local_physical_damage_+%=14, Wand or Staff: spell_damage_+%=20, Armour: local_armour_and_evasion_and_energy_shield_+%=14}
+      Iron Rune: {Martial Weapon: local_physical_damage_+%=16, Wand or Staff: spell_damage_+%=25, Armour: local_armour_and_evasion_and_energy_shield_+%=16}
+      Greater Iron Rune: {Martial Weapon: local_physical_damage_+%=18, Wand or Staff: spell_damage_+%=30, Armour: local_armour_and_evasion_and_energy_shield_+%=18}
+      Perfect Iron Rune: {Martial Weapon: local_physical_damage_+%=20, Wand or Staff: spell_damage_+%=35, Armour: local_armour_and_evasion_and_energy_shield_+%=20}
+      Lesser Body Rune: {Martial Weapon: local_life_leech_from_physical_damage_permyriad=300, Wand or Staff: base_maximum_energy_shield=30,
+        Armour: base_maximum_life=30}
+      Body Rune: {Martial Weapon: local_life_leech_from_physical_damage_permyriad=400, Wand or Staff: base_maximum_energy_shield=40, Armour: base_maximum_life=45}
+      Greater Body Rune: {Martial Weapon: local_life_leech_from_physical_damage_permyriad=500, Wand or Staff: base_maximum_energy_shield=50,
+        Armour: base_maximum_life=60}
+      Perfect Body Rune: {Martial Weapon: local_life_leech_from_physical_damage_permyriad=600, Wand or Staff: base_maximum_energy_shield=60,
+        Armour: base_maximum_life=75}
+      Lesser Mind Rune: {Martial Weapon: local_mana_leech_from_physical_damage_permyriad=200, Wand or Staff: base_maximum_mana=45, Armour: base_maximum_mana=20}
+      Mind Rune: {Martial Weapon: local_mana_leech_from_physical_damage_permyriad=300, Wand or Staff: base_maximum_mana=60, Armour: base_maximum_mana=30}
+      Greater Mind Rune: {Martial Weapon: local_mana_leech_from_physical_damage_permyriad=400, Wand or Staff: base_maximum_mana=75, Armour: base_maximum_mana=40}
+      Perfect Mind Rune: {Martial Weapon: local_mana_leech_from_physical_damage_permyriad=500, Wand or Staff: base_maximum_mana=90, Armour: base_maximum_mana=50}
+      Lesser Rebirth Rune: {Martial Weapon: base_life_gained_on_enemy_death=15, Wand or Staff: energy_shield_recharge_rate_+%=6, Armour: life_regeneration_rate_per_minute_%=21}
+      Rebirth Rune: {Martial Weapon: base_life_gained_on_enemy_death=25, Wand or Staff: energy_shield_recharge_rate_+%=8, Armour: life_regeneration_rate_per_minute_%=24}
+      Greater Rebirth Rune: {Martial Weapon: base_life_gained_on_enemy_death=35, Wand or Staff: energy_shield_recharge_rate_+%=10, Armour: life_regeneration_rate_per_minute_%=27}
+      Perfect Rebirth Rune: {Martial Weapon: base_life_gained_on_enemy_death=45, Wand or Staff: energy_shield_recharge_rate_+%=12, Armour: life_regeneration_rate_per_minute_%=30}
+      Lesser Inspiration Rune: {Martial Weapon: base_mana_gained_on_enemy_death=10, Wand or Staff: mana_regeneration_rate_+%=20, Armour: mana_regeneration_rate_+%=12}
+      Inspiration Rune: {Martial Weapon: base_mana_gained_on_enemy_death=20, Wand or Staff: mana_regeneration_rate_+%=25, Armour: mana_regeneration_rate_+%=15}
+      Greater Inspiration Rune: {Martial Weapon: base_mana_gained_on_enemy_death=30, Wand or Staff: mana_regeneration_rate_+%=30, Armour: mana_regeneration_rate_+%=18}
+      Perfect Inspiration Rune: {Martial Weapon: base_mana_gained_on_enemy_death=40, Wand or Staff: mana_regeneration_rate_+%=35, Armour: mana_regeneration_rate_+%=21}
+      Lesser Stone Rune: {Martial Weapon: local_hit_damage_stun_multiplier_+%=20, Wand or Staff: stun_threshold_+_from_%_maximum_energy_shield=10,
+        Armour: stun_threshold_+=50}
+      Stone Rune: {Martial Weapon: local_hit_damage_stun_multiplier_+%=30, Wand or Staff: stun_threshold_+_from_%_maximum_energy_shield=12,
+        Armour: stun_threshold_+=75}
+      Greater Stone Rune: {Martial Weapon: local_hit_damage_stun_multiplier_+%=40, Wand or Staff: stun_threshold_+_from_%_maximum_energy_shield=14,
+        Armour: stun_threshold_+=100}
+      Perfect Stone Rune: {Martial Weapon: local_hit_damage_stun_multiplier_+%=50, Wand or Staff: stun_threshold_+_from_%_maximum_energy_shield=16,
+        Armour: stun_threshold_+=125}
+      Lesser Vision Rune: {Martial Weapon: local_accuracy_rating=60, Wand or Staff: spell_critical_strike_chance_+%=16, Armour: flask_life_and_mana_to_recover_+%=8}
+      Vision Rune: {Martial Weapon: local_accuracy_rating=90, Wand or Staff: spell_critical_strike_chance_+%=20, Armour: flask_life_and_mana_to_recover_+%=12}
+      Greater Vision Rune: {Martial Weapon: local_accuracy_rating=120, Wand or Staff: spell_critical_strike_chance_+%=24, Armour: flask_life_and_mana_to_recover_+%=16}
+      Perfect Vision Rune: {Martial Weapon: local_accuracy_rating=150, Wand or Staff: spell_critical_strike_chance_+%=28, Armour: flask_life_and_mana_to_recover_+%=20}
+      Lesser Robust Rune: {All: additional_strength=6, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Robust Rune: {All: additional_strength=9, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Greater Robust Rune: {All: additional_strength=12, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Perfect Robust Rune: {All: additional_strength=15, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Lesser Adept Rune: {All: additional_dexterity=6, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Adept Rune: {All: additional_dexterity=9, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Greater Adept Rune: {All: additional_dexterity=12, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Perfect Adept Rune: {All: additional_dexterity=15, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Lesser Resolve Rune: {All: additional_intelligence=6, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Resolve Rune: {All: additional_intelligence=9, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Greater Resolve Rune: {All: additional_intelligence=12, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Perfect Resolve Rune: {All: additional_intelligence=15, Martial Weapon: '', Wand or Staff: '', 'Armour:': ''}
+      Lesser Tempered Rune: {Martial Weapon: 'local_minimum_added_physical_damage=3, local_maximum_added_physical_damage=4', Armour: 'thorns_minimum_base_physical_damage=6,
+          thorns_maximum_base_physical_damage=9'}
+      Tempered Rune: {Martial Weapon: 'local_minimum_added_physical_damage=6, local_maximum_added_physical_damage=9', Armour: 'thorns_minimum_base_physical_damage=14,
+          thorns_maximum_base_physical_damage=21'}
+      Greater Tempered Rune: {Martial Weapon: 'local_minimum_added_physical_damage=9, local_maximum_added_physical_damage=12', Armour: 'thorns_minimum_base_physical_damage=31,
+          thorns_maximum_base_physical_damage=52'}
+      Lesser Ward Rune: {Armour: local_ward=15}
+      Ward Rune: {Armour: local_ward=20}
+      Greater Ward Rune: {Armour: local_ward=25}
+      Perfect Ward Rune: {Armour: local_ward=30}
+      Lesser Charging Rune: {Armour: ward_regeneration_rate_+%=8}
+      Charging Rune: {Armour: ward_regeneration_rate_+%=12}
+      Greater Charging Rune: {Armour: ward_regeneration_rate_+%=16}
+      Perfect Charging Rune: {Armour: ward_regeneration_rate_+%=20}
+      Greater Rune of Leadership: {Martial Weapon: minion_physical_damage_%_to_gain_as_lightning=10, Armour: minion_physical_hit_and_dot_damage_%_taken_as_lightning=10}
+      Greater Rune of Tithing: {Martial Weapon: energy_generated_+%=10, Armour: 'thorns_minimum_base_lightning_damage=1, thorns_maximum_base_lightning_damage=100'}
+      Greater Rune of Alacrity: {Martial Weapon: skill_speed_+%=8, Armour: debuff_time_passed_+%=8}
+      Greater Rune of Nobility: {Martial Weapon: local_inflict_exposure_on_hit_%_chance=10, Armour: shocked_effect_on_self_+%=-10}
+
+  - id: rune.named_ezomyte_runes
+    statement: 'Effect of the 21 named runes (Hedgewitch Assandra''s, Saqawal''s, Fenumus'', Farrul''s, Craiceann''s, Courtesan Mannan''s,
+      Thane Grannell''s, Countess Seske''s, Thane Girt''s, Thane Myrk''s, Lady Hestra''s, Thane Leld''s and The Greatwolf''s runes) by slot
+      category (`value`: rune -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Lady Hestra''s Rune of Winter | RuneSpecial22 | 50 | 0 | 1 | 1 | 1 | 1 | Martial Weapon: minimum_added_cold_damage_vs_chilled_enemies=19,
+      maximum_added_cold_damage_vs_chilled_enemies=28'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Hedgewitch Assandra's Rune of Wisdom: {Wand or Staff: spell_skill_gem_level_+=1}
+      Saqawal's Rune of the Sky: {Martial Weapon: non_skill_base_all_damage_%_to_gain_as_cold_fire_lightning=5, Wand or Staff: non_skill_base_all_damage_%_to_gain_as_cold_fire_lightning=5}
+      Fenumus' Rune of Agony: {Martial Weapon: non_skill_base_all_damage_%_to_gain_as_chaos=13, Wand or Staff: non_skill_base_all_damage_%_to_gain_as_chaos=13}
+      Farrul's Rune of Grace: {Boots: deflection_rating_+%_while_moving=8}
+      Farrul's Rune of the Chase: {Boots: base_movement_velocity_+%=5}
+      Craiceann's Rune of Warding: {Body Armour: curse_effect_on_self_+%=-50}
+      Saqawal's Rune of Memory: {Helmet: experience_gain_+%=2}
+      Saqawal's Rune of Erosion: {Helmet: exposure_effect_+%=25}
+      Farrul's Rune of the Hunt: {Martial Weapon: attack_damage_+%_vs_rare_or_unique_enemy=50}
+      Craiceann's Rune of Recovery: {Body Armour: energy_shield_recharge_rate_+%=30}
+      Courtesan Mannan's Rune of Cruelty: {Gloves: base_damaging_ailment_effect_+%=20}
+      Thane Grannell's Rune of Mastery: {Gloves: non_damaging_ailment_effect_+%=30}
+      Fenumus' Rune of Spinning: {Gloves: base_cast_speed_+%=8}
+      Countess Seske's Rune of Archery: {Bow: number_of_additional_arrows=1}
+      Thane Girt's Rune of Wildness: {Wand or Staff: spell_skills_fire_2_additional_projectiles_final_chance_%=25}
+      Fenumus' Rune of Draining: {Gloves: withered_magnitude_+%=20}
+      Thane Myrk's Rune of Summer: {Martial Weapon: 'minimum_added_fire_damage_vs_ignited_enemies=23, maximum_added_fire_damage_vs_ignited_enemies=34'}
+      Lady Hestra's Rune of Winter: {Martial Weapon: 'minimum_added_cold_damage_vs_chilled_enemies=19, maximum_added_cold_damage_vs_chilled_enemies=28'}
+      Thane Leld's Rune of Spring: {Martial Weapon: 'global_minimum_added_lightning_damage_vs_shocked_enemies=1, global_maximum_added_lightning_damage_vs_shocked_enemies=60'}
+      The Greatwolf's Rune of Claws: {Gloves: 'attack_minimum_added_physical_damage=5, attack_maximum_added_physical_damage=12'}
+      The Greatwolf's Rune of Willpower: {Body Armour: base_damage_removed_from_mana_before_life_%=15}
+
+  - id: rune.runes_of_the_ancients
+    statement: 'Effect of the 13 ''Rune of X'' runes new in 0.5 (Rune of Vitality, the Hunt, Acrobatics, Culmination, Renown, Accumulation,
+      Foundations, the Prism, the Blossom, Consistency, Reach, Vital Flame, Confrontation) and of the 13 Ancient Runes by slot category
+      (`value`: rune -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Rune of Reach | RuneOfTheAncients24 | 15 | 0 | 1 | 1 | 1 | 1 | Helmet: remnant_effect_+%=15; Wand or Staff: remnant_pickup_range_+%=50,
+      remnant_effect_+%=-25'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Rune of Vitality: {Martial Or Caster Weapon: base_maximum_life=80, Shield or Buckler: recover_X_life_on_block=15}
+      Rune of the Hunt: {Boots: sprint_movement_speed_+%=8, Sceptre: companion_damage_+%=30}
+      Rune of Acrobatics: {Martial Or Caster Weapon: generate_x_charges_for_any_flask_per_minute=12, Boots: dodge_roll_base_travel_distance=3}
+      Rune of Culmination: {Gloves: additional_combo_gain_chance_%=50, One Hand Mace or Quarterstaff: local_physical_damage_roll_always_min_or_max=1}
+      Rune of Renown: {Gloves: glory_generation_+%=50, Caster Weapon: archon_delay_expires_x%_faster=30}
+      Rune of Accumulation: {Gloves: 'base_life_gain_per_target=3, mana_gain_per_target=1', Crossbow Bow or Spear: local_maximum_added_cold_damage_equal_to_total_monster_power_of_enemies_hit_in_past_20_seconds_up_to_X=32}
+      Rune of Foundations: {Body Armour: 'local_base_physical_damage_reduction_rating=30, local_base_evasion_rating=30, local_energy_shield=10'}
+      Rune of the Prism: {Body Armour: 'base_resist_all_elements_%=20, additional_maximum_all_elemental_resistances_%=-10'}
+      Rune of the Blossom: {Body Armour: 'base_spirit=50, spirit_+_per_2_levels=-1'}
+      Rune of Consistency: {Helmet: 'critical_strike_chance_+%=200, no_critical_strike_multiplier=1', Caster Weapon: spell_damage_+%_while_companion_in_presence=50}
+      Rune of Reach: {Helmet: remnant_effect_+%=15, Wand or Staff: 'remnant_pickup_range_+%=50, remnant_effect_+%=-25'}
+      Rune of Vital Flame: {Maces or Talisman: 'local_minimum_added_fire_damage=13, local_maximum_added_fire_damage=16, base_skill_cost_life_instead_of_mana_%=15'}
+      Rune of Confrontation: {Quarterstaff or Spear: 'gain_x_rage_on_melee_hit=4, maximum_rage=-10'}
+      Ancient Rune of Splinters: {Bow: chance_to_fire_1_additional_projectile_%_with_rollover_with_bow_attacks=50}
+      Ancient Rune of Dueling: {Buckler: parried_magnitude_+%=30}
+      Ancient Rune of the Titan: {Two Hand Mace: your_slam_aftershock_chance_%=10}
+      Ancient Rune of Shattering: {One Hand Mace: broken_armour_and_sundered_armour_debuff_effect_+%=40}
+      Ancient Rune of Prowess: {Spear: chance_to_gain_1_more_charge_%=30}
+      Ancient Rune of Control: {Quarterstaff: hit_damage_immobilisation_multiplier_+%=50}
+      Ancient Rune of Discovery: {Staff: chance_%_to_create_additional_remnant=30}
+      Ancient Rune of Decay: {Wand: withered_magnitude_+%=25}
+      Ancient Rune of Witchcraft: {Focus: curse_area_of_effect_+%=40}
+      Ancient Rune of the Horde: {Sceptre: minion_attack_and_cast_speed_+%=8}
+      Ancient Rune of Animosity: {Talisman: gain_X_druidic_prowess_on_heavy_stunning_rare_or_unique_enemy=2}
+      Ancient Rune of Detonation: {Crossbow: grenade_skill_%_chance_to_explode_twice=10}
+      Ancient Rune of Retaliation: {Shield: attack_speed_+%_if_have_blocked_recently=8}
+
+  - id: rune.warding_runes
+    statement: 'Effect of the 17 Warding Runes (Runic Ward runes) by slot category (`value`: rune -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Warding Rune of Heart | RuneWardSpecial14 | 30 | 0 | 1 | 1 | 1 | 1 | Body Armour: base_maximum_life_%_to_gain_as_maximum_ward=5'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Warding Rune of Reinforcement: {Armour: local_ward_+%=20}
+      Warding Rune of Protection: {Armour: gain_guard_%_of_max_ward_for_2s_every_4s=20}
+      Warding Rune of Disintegration: {Martial Weapon: break_armour_on_attack_hit_%_of_max_ward=15}
+      Warding Rune of Desperation: {Wand or Staff: spells_penetrates_elemental_resist_%_while_on_low_ward=25}
+      Warding Rune of Symbiosis: {Boots: energy_shield_recharge_rate_+%_per_X_maximum_ward=30}
+      Warding Rune of Courage: {Helmet: armour_and_evasion_rating_+%_while_on_low_ward=25}
+      Warding Rune of Stability: {Shield or Buckler: stun_threshold_+_per_10_maximum_ward=4}
+      Warding Rune of Glancing: {Body Armour: +_deflection_rating_per_10_maximum_ward=3}
+      Warding Rune of Heart: {Body Armour: base_maximum_life_%_to_gain_as_maximum_ward=5}
+      Warding Rune of Nourishment: {Armour: life_recovery_from_flasks_also_recovers_ward_%=15}
+      Warding Rune of Annihilation: {Martial Weapon: attack_spend_x%_maximum_ward_for_added_physical_damage=5}
+      Warding Rune of Armature: {Martial Weapon: local_socketable_%_maximum_weapon_damage_to_gain_as_maximum_ward=15}
+      Warding Rune of Obsession: {Wand: 'damage_cannot_be_taken_from_ward=1, ward_regeneration_rate_is_doubled=1'}
+      Warding Rune of Equinox: {Caster Weapon: 'recover_ward_as_well_as_mana_from_mana_regeneration=1, mana_regeneration_rate_+%_final_from_caster_weapon_runic_ward_socketable=-40'}
+      Warding Rune of Salvaging: {Sceptre: recover_x%_of_maximum_ward_on_persistent_minion_death=3}
+      Warding Rune of Bodyguards: {Sceptre: minions_in_presence_have_onslaught_while_you_are_on_low_ward=1}
+      Warding Rune of Hollowing: {Caster Weapon: 'maximum_life_+%_final_from_caster_weapon_runic_ward_socketable=-15, base_maximum_life_%_to_gain_as_maximum_ward=15'}
+
+  - id: rune.aldurs_legacies
+    statement: 'Aldur''s Legacy socketed into a unique Kalguuran or Ezomyte item destroys the item and makes a ''Legacy of <unique>'' rune;
+      there are 63 of them, each fitting one slot type, Requires Level 65, one Aldur''s Legacy socketed at a time. `value`: rune -> {category:
+      stats}.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'All Equipment: When socketed into a Unique Kalguuran or Ezomyte item, destroys the item to create a Rune imbued with that item''s
+      power'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Legacy of Bramblejack: {Body Armour: melee_physical_damage_taken_%_to_deal_to_attacker=250}
+      Legacy of Blackbraid: {Body Armour: armour_%_applies_to_fire_cold_lightning_damage=50}
+      Legacy of Edyrn's Tusks: {Body Armour: 'base_chance_to_inflict_bleeding_%=50, base_slow_potency_+%=-50'}
+      Legacy of Kingsguard: {Body Armour: recover_%_life_per_endurance_charge_consumed=5}
+      Legacy of Bristleboar: {Body Armour: 'gain_x_rage_when_hit=5, gain_x_rage_when_taken_crit=10'}
+      Legacy of Foxshade: {Body Armour: 'movement_velocity_+%_when_on_full_life=10, evasion_rating_+%_when_on_full_life=100'}
+      Legacy of Ashrend: {Body Armour: 'base_cannot_be_ignited=1, physical_attack_damage_taken_+=-10'}
+      Legacy of Briskwrap: {Body Armour: base_deflection_rating_%_of_evasion_rating=30}
+      Legacy of The Unleashed: {Body Armour: hit_damage_bypass_energy_shield_%_when_below_half_energy_shield=25}
+      Legacy of Horns of Bynden: {Helmet: 'armour_+%_per_rage=1, gain_x_rage_on_melee_hit=1'}
+      Legacy of Wings of Caelyn: {Helmet: 'stun_threshold_+%_per_rage=1, gain_x_rage_on_melee_hit=1'}
+      Legacy of Ezomyte Peak: {Helmet: 'base_skill_area_of_effect_+%=15, keystone_unwavering_stance=1'}
+      Legacy of Deidbell: {Helmet: corpses_in_your_area_of_effect_explode_dealing_%_maximum_life_physical_damage_on_warcry=10}
+      Legacy of Elevore: {Helmet: 'generate_x_charges_for_charms_per_minute=60, num_charm_slots=1'}
+      Legacy of Starkonja's Head: {Helmet: 'companion_takes_%_damage_before_you=5, evasion_rating_+%_when_on_low_life=100'}
+      Legacy of Crown of Thorns: {Helmet: keystone_pain_attunement=1}
+      Legacy of Greymake: {Helmet: base_all_attributes=50}
+      Legacy of Erian's Cobble: {Helmet: 'accuracy_rating=30, base_maximum_life=10, base_maximum_mana=10, base_item_found_rarity_+%=10,
+          critical_strike_chance_+%=10, additional_all_attributes=5, base_resist_all_elements_%=5, base_life_regeneration_rate_per_minute=180'}
+      Legacy of The Smiling Knight: {Helmet: aggravate_bleeding_on_attack_crit_chance_%=100}
+      Legacy of The Vile Knight: {Helmet: unique_damage_+%_vs_rare_or_unique_enemy_per_second_ever_in_presence_up_to_max=4}
+      Legacy of Northpaw: {Gloves: override_weapon_base_critical_strike_chance=700}
+      Legacy of Candlemaker: {Gloves: 'chance_to_ignite_is_doubled=1, fire_damage_+%=40'}
+      Legacy of Deathblow: {Gloves: kill_enemy_on_hit_if_under_10%_life=1}
+      Legacy of Legionstride: {Boots: additional_block_%=10}
+      Legacy of Trampletoe: {Boots: overkill_damage_%_as_physical_to_nearby_enemies=10}
+      Legacy of Briarpatch: {Boots: base_thorns_critical_strike_chance=1500}
+      Legacy of Bushwhack: {Boots: base_physical_damage_can_pin=1}
+      Legacy of Wanderlust: {Boots: slows_have_no_potency_on_you=1}
+      Legacy of The Knight-errant: {Boots: keystone_iron_reflexes=1}
+      Legacy of Obern's Bastion: {Boots: base_stun_recovery_+%=200}
+      Legacy of Dionadair: {Shield: local_shield_double_stun_threshold_while_active_blocking=1}
+      Legacy of Wulfsbane: {Shield: intimidate_enemy_on_block_for_duration_ms=8000}
+      Legacy of Chernobog's Pillar: {Shield: non_skill_all_damage_%_to_gain_as_fire_+_per_2%_attack_block_chance=1}
+      Legacy of Alkem Eira: {Shield: damage_blocked_%_recouped_as_mana=30}
+      Legacy of Oaksworn: {Shield: life_regeneration_rate_+%=50}
+      Legacy of Dunkelhalt: {Buckler: parried_magnitude_+%=50}
+      Legacy of Rondel de Ezo: {Buckler: curse_on_block_enfeeble_chance_%=100}
+      Legacy of Brynhand's Mark: {One Hand Mace: local_double_hit_damage_stun_build_up=1}
+      Legacy of Trenchtimbre: {One Hand Mace: additive_modifiers_to_minion_attack_speed_also_affect_you=1}
+      Legacy of Mjölner: {One Hand Mace: 'local_intelligence_requirement_+=200, lightning_skill_gem_level_+=3'}
+      Legacy of Twisted Empyrean: {Two Hand Mace: 'local_attacks_have_added_min_cold_damage_equal_to_%_of_maximum_mana=6, local_attacks_have_added_max_cold_damage_equal_to_%_of_maximum_mana=10'}
+      Legacy of Hoghunt: {Two Hand Mace: 'local_critical_strike_chance=500, local_always_maim_on_crit=1'}
+      Legacy of Hrimnor's Hymn: {Two Hand Mace: your_slam_aftershock_chance_%=25}
+      Legacy of Brain Rattler: {Two Hand Mace: local_all_damage_can_electrocute=1}
+      Legacy of Lifesprig: {Wand: spell_skill_gem_level_+=2}
+      Legacy of Duality: {Quarterstaff: unique_gain_x_guard_for_500_ms_per_combo_lost_using_skills=250}
+      Legacy of Tyranny's Grip: {Spear: melee_splash=1}
+      Legacy of The Sentry: {Quarterstaff: 'ignite_chance_+%=100, attack_minimum_added_fire_damage=23, attack_maximum_added_fire_damage=34'}
+      Legacy of Adonia's Ego: {Wand: max_power_charges=1}
+      Legacy of Cursecarver: {Wand: curse_skill_gem_level_+=3}
+      Legacy of Dusk Vigil: {Staff: non_skill_base_physical_damage_%_to_gain_as_fire=30}
+      Legacy of The Blood Thorn: {Quarterstaff: 'local_bleed_on_hit=1, local_minimum_added_physical_damage=4, local_maximum_added_physical_damage=8'}
+      Legacy of Quill Rain: {Bow: 'local_attack_speed_+%=50, unique_quill_rain_damage_+%_final=-20'}
+      Legacy of Ironbound: {Bow: 'main_hand_attacks_with_this_weapon_minimum_added_physical_damage_per_1%_block_chance=1, main_hand_attacks_with_this_weapon_maximum_added_physical_damage_per_1%_block_chance=3'}
+      Legacy of Amor Mandragora: {Talisman: gain_druidic_prowess_per_X_rage_spent=20}
+      Legacy of Spiteful Floret: {Talisman: x%_damage_taken_recouped_as_life_per_5_rage=5}
+      Legacy of Svalinn: {Shield: 'base_block_chance_luck=1, base_block_%_damage_taken=20'}
+      Legacy of Keeper of the Arc: {Helmet: has_trickster_alternating_damage_taken_+%_final=-20}
+      Legacy of Olrovasara: {One Hand Mace: local_maximum_added_lightning_damage_equal_to_total_monster_power_of_enemies_hit_in_past_20_seconds_up_to_X=120}
+      Legacy of A Worthy Foe: {Shield: off_hand_apply_ancients_challenge_on_hit=1}
+      Legacy of Serle's Grit: {One Hand Mace: local_maximum_quality_is_%=40}
+      Legacy of Runeseeker's Call: {Wand: local_rune_effect_+%=75}
+      Legacy of Facebreaker: {Gloves: gain_armour_equal_to_strength=1}
+
+  - id: rune.required_levels
+    statement: 'The character level each rune requires (`value`: rune -> level; 0 = none): Lesser 0, normal 15, Greater 30, Perfect 50 for
+      the tiered runes; Legacies 65.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: Perfect Desert Rune | RuneFirePerfect | 50 | 0
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Lesser Desert Rune: 0, Desert Rune: 15, Greater Desert Rune: 30, Perfect Desert Rune: 50, Lesser Glacial Rune: 0, Glacial Rune: 15,
+      Greater Glacial Rune: 30, Perfect Glacial Rune: 50, Lesser Storm Rune: 0, Storm Rune: 15, Greater Storm Rune: 30, Perfect Storm Rune: 50,
+      Lesser Iron Rune: 0, Iron Rune: 15, Greater Iron Rune: 30, Perfect Iron Rune: 50, Lesser Body Rune: 0, Body Rune: 15, Greater Body Rune: 30,
+      Perfect Body Rune: 50, Lesser Mind Rune: 0, Mind Rune: 15, Greater Mind Rune: 30, Perfect Mind Rune: 50, Lesser Rebirth Rune: 0, Rebirth Rune: 15,
+      Greater Rebirth Rune: 30, Perfect Rebirth Rune: 50, Lesser Inspiration Rune: 0, Inspiration Rune: 15, Greater Inspiration Rune: 30,
+      Perfect Inspiration Rune: 50, Lesser Stone Rune: 0, Stone Rune: 15, Greater Stone Rune: 30, Perfect Stone Rune: 50, Lesser Vision Rune: 0,
+      Vision Rune: 15, Greater Vision Rune: 30, Perfect Vision Rune: 50, Lesser Robust Rune: 0, Robust Rune: 15, Greater Robust Rune: 30,
+      Perfect Robust Rune: 50, Lesser Adept Rune: 0, Adept Rune: 15, Greater Adept Rune: 30, Perfect Adept Rune: 50, Lesser Resolve Rune: 0,
+      Resolve Rune: 15, Greater Resolve Rune: 30, Perfect Resolve Rune: 50, Lesser Tempered Rune: 0, Tempered Rune: 15, Greater Tempered Rune: 30,
+      Lesser Ward Rune: 0, Ward Rune: 15, Greater Ward Rune: 30, Perfect Ward Rune: 50, Lesser Charging Rune: 0, Charging Rune: 15, Greater Charging Rune: 30,
+      Perfect Charging Rune: 50, Greater Rune of Leadership: 0, Greater Rune of Tithing: 0, Greater Rune of Alacrity: 0, Greater Rune of Nobility: 0,
+      Hedgewitch Assandra's Rune of Wisdom: 50, Saqawal's Rune of the Sky: 50, Fenumus' Rune of Agony: 50, Farrul's Rune of Grace: 50, Farrul's Rune of the Chase: 50,
+      Craiceann's Rune of Warding: 50, Saqawal's Rune of Memory: 50, Saqawal's Rune of Erosion: 50, Farrul's Rune of the Hunt: 50, Craiceann's Rune of Recovery: 50,
+      Courtesan Mannan's Rune of Cruelty: 50, Thane Grannell's Rune of Mastery: 50, Fenumus' Rune of Spinning: 50, Countess Seske's Rune of Archery: 50,
+      Thane Girt's Rune of Wildness: 50, Fenumus' Rune of Draining: 50, Thane Myrk's Rune of Summer: 50, Lady Hestra's Rune of Winter: 50,
+      Thane Leld's Rune of Spring: 50, The Greatwolf's Rune of Claws: 50, The Greatwolf's Rune of Willpower: 50, Rune of Vitality: 15, Rune of the Hunt: 15,
+      Rune of Acrobatics: 15, Rune of Culmination: 15, Rune of Renown: 15, Rune of Accumulation: 15, Rune of Foundations: 15, Rune of the Prism: 15,
+      Rune of the Blossom: 15, Rune of Consistency: 15, Rune of Reach: 15, Rune of Vital Flame: 15, Rune of Confrontation: 15, Warding Rune of Reinforcement: 15,
+      Warding Rune of Protection: 15, Warding Rune of Disintegration: 15, Warding Rune of Desperation: 15, Warding Rune of Symbiosis: 30,
+      Warding Rune of Courage: 15, Warding Rune of Stability: 30, Warding Rune of Glancing: 30, Warding Rune of Heart: 30, Warding Rune of Nourishment: 15,
+      Warding Rune of Annihilation: 30, Warding Rune of Armature: 45, Warding Rune of Obsession: 45, Warding Rune of Equinox: 45, Warding Rune of Salvaging: 30,
+      Warding Rune of Bodyguards: 45, Warding Rune of Hollowing: 45, Ancient Rune of Splinters: 30, Ancient Rune of Dueling: 30, Ancient Rune of the Titan: 30,
+      Ancient Rune of Shattering: 30, Ancient Rune of Prowess: 30, Ancient Rune of Control: 30, Ancient Rune of Discovery: 30, Ancient Rune of Decay: 30,
+      Ancient Rune of Witchcraft: 30, Ancient Rune of the Horde: 30, Ancient Rune of Animosity: 30, Ancient Rune of Detonation: 30, Ancient Rune of Retaliation: 30,
+      Legacy of Bramblejack: 65, Legacy of Blackbraid: 65, Legacy of Edyrn's Tusks: 65, Legacy of Kingsguard: 65, Legacy of Bristleboar: 65,
+      Legacy of Foxshade: 65, Legacy of Ashrend: 65, Legacy of Briskwrap: 65, Legacy of The Unleashed: 65, Legacy of Horns of Bynden: 65,
+      Legacy of Wings of Caelyn: 65, Legacy of Ezomyte Peak: 65, Legacy of Deidbell: 65, Legacy of Elevore: 65, Legacy of Starkonja's Head: 65,
+      Legacy of Crown of Thorns: 65, Legacy of Greymake: 65, Legacy of Erian's Cobble: 65, Legacy of The Smiling Knight: 65, Legacy of The Vile Knight: 65,
+      Legacy of Northpaw: 65, Legacy of Candlemaker: 65, Legacy of Deathblow: 65, Legacy of Legionstride: 65, Legacy of Trampletoe: 65,
+      Legacy of Briarpatch: 65, Legacy of Bushwhack: 65, Legacy of Wanderlust: 65, Legacy of The Knight-errant: 65, Legacy of Obern's Bastion: 65,
+      Legacy of Dionadair: 65, Legacy of Wulfsbane: 65, Legacy of Chernobog's Pillar: 65, Legacy of Alkem Eira: 65, Legacy of Oaksworn: 65,
+      Legacy of Dunkelhalt: 65, Legacy of Rondel de Ezo: 65, Legacy of Brynhand's Mark: 65, Legacy of Trenchtimbre: 65, Legacy of Mjölner: 65,
+      Legacy of Twisted Empyrean: 65, Legacy of Hoghunt: 65, Legacy of Hrimnor's Hymn: 65, Legacy of Brain Rattler: 65, Legacy of Lifesprig: 65,
+      Legacy of Duality: 65, Legacy of Tyranny's Grip: 65, Legacy of The Sentry: 65, Legacy of Adonia's Ego: 65, Legacy of Cursecarver: 65,
+      Legacy of Dusk Vigil: 65, Legacy of The Blood Thorn: 65, Legacy of Quill Rain: 65, Legacy of Ironbound: 65, Legacy of Amor Mandragora: 65,
+      Legacy of Spiteful Floret: 65, Legacy of Svalinn: 65, Legacy of Keeper of the Arc: 65, Legacy of Olrovasara: 65, Legacy of A Worthy Foe: 65,
+      Legacy of Serle's Grit: 65, Legacy of Runeseeker's Call: 65, Legacy of Facebreaker: 65}
+
+  - id: rune.limited_to_one
+    statement: 'These runes carry ''Limited to: 1'' (one of that name per character); the Legacies are limited to one Aldur''s Legacy socketed
+      at a time.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Limited to: 1 ; Requires: Level 15 ; Helmets: Remnants you create have 15% increased effect'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Ancient Rune of Animosity, Ancient Rune of Control, Ancient Rune of Decay, Ancient Rune of Detonation, Ancient Rune of Discovery,
+      Ancient Rune of Dueling, Ancient Rune of Prowess, Ancient Rune of Retaliation, Ancient Rune of Shattering, Ancient Rune of Splinters,
+      Ancient Rune of Witchcraft, Ancient Rune of the Horde, Ancient Rune of the Titan, Countess Seske's Rune of Archery, Courtesan Mannan's
+        Rune of Cruelty, Craiceann's Rune of Recovery, Craiceann's Rune of Warding, Farrul's Rune of Grace, Farrul's Rune of the Chase,
+      Farrul's Rune of the Hunt, Fenumus' Rune of Agony, Fenumus' Rune of Draining, Fenumus' Rune of Spinning, Hedgewitch Assandra's Rune
+        of Wisdom, Lady Hestra's Rune of Winter, Legacy of A Worthy Foe, Legacy of Adonia's Ego, Legacy of Alkem Eira, Legacy of Amor Mandragora,
+      Legacy of Ashrend, Legacy of Blackbraid, Legacy of Brain Rattler, Legacy of Bramblejack, Legacy of Briarpatch, Legacy of Briskwrap,
+      Legacy of Bristleboar, Legacy of Brynhand's Mark, Legacy of Bushwhack, Legacy of Candlemaker, Legacy of Chernobog's Pillar, Legacy
+        of Crown of Thorns, Legacy of Cursecarver, Legacy of Deathblow, Legacy of Deidbell, Legacy of Dionadair, Legacy of Duality, Legacy
+        of Dunkelhalt, Legacy of Dusk Vigil, Legacy of Edyrn's Tusks, Legacy of Elevore, Legacy of Erian's Cobble, Legacy of Ezomyte Peak,
+      Legacy of Facebreaker, Legacy of Foxshade, Legacy of Greymake, Legacy of Hoghunt, Legacy of Horns of Bynden, Legacy of Hrimnor's Hymn,
+      Legacy of Ironbound, Legacy of Keeper of the Arc, Legacy of Kingsguard, Legacy of Legionstride, Legacy of Lifesprig, Legacy of Mjölner,
+      Legacy of Northpaw, Legacy of Oaksworn, Legacy of Obern's Bastion, Legacy of Olrovasara, Legacy of Quill Rain, Legacy of Rondel de
+        Ezo, Legacy of Runeseeker's Call, Legacy of Serle's Grit, Legacy of Spiteful Floret, Legacy of Starkonja's Head, Legacy of Svalinn,
+      Legacy of The Blood Thorn, Legacy of The Knight-errant, Legacy of The Sentry, Legacy of The Smiling Knight, Legacy of The Unleashed,
+      Legacy of The Vile Knight, Legacy of Trampletoe, Legacy of Trenchtimbre, Legacy of Twisted Empyrean, Legacy of Tyranny's Grip, Legacy
+        of Wanderlust, Legacy of Wings of Caelyn, Legacy of Wulfsbane, Rune of Accumulation, Rune of Acrobatics, Rune of Confrontation,
+      Rune of Consistency, Rune of Culmination, Rune of Foundations, Rune of Reach, Rune of Renown, Rune of Vital Flame, Rune of Vitality,
+      Rune of the Blossom, Rune of the Hunt, Rune of the Prism, Saqawal's Rune of Erosion, Saqawal's Rune of Memory, Saqawal's Rune of the
+        Sky, Thane Girt's Rune of Wildness, Thane Grannell's Rune of Mastery, Thane Leld's Rune of Spring, Thane Myrk's Rune of Summer,
+      The Greatwolf's Rune of Claws, The Greatwolf's Rune of Willpower, Warding Rune of Annihilation, Warding Rune of Armature, Warding
+        Rune of Bodyguards, Warding Rune of Equinox, Warding Rune of Heart, Warding Rune of Hollowing, Warding Rune of Nourishment, Warding
+        Rune of Obsession, Warding Rune of Protection, Warding Rune of Salvaging, Warding Rune of Symbiosis]
+
+  - id: rune.lady_hestra_winter_conditional
+    statement: 'Lady Hestra''s Rune of Winter adds 19 to 28 cold damage on a Martial Weapon only against chilled enemies: the 0.5.0 note
+      ''no longer grants Adds 19 to 28 Cold Damage'' means the unconditional line became this conditional one, as the game data''s stat
+      (added cold damage versus chilled enemies) shows.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Lady Hestra''s Rune of Winter | RuneSpecial22 | 50 | 0 | 1 | 1 | 1 | 1 | Martial Weapon: minimum_added_cold_damage_vs_chilled_enemies=19,
+      maximum_added_cold_damage_vs_chilled_enemies=28'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: rune.tempered_not_on_trade
+    statement: The three Tempered runes are in the game data but not in the trade site's static list of 2026-11-24 (the other 15 tiered
+      families are).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Greater Tempered Rune | Requires: Level 30 ; Martial Weapon: Adds 9 to 12 Physical Damage ; Armour: 31 to 52 Physical Thorns
+      damage'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24

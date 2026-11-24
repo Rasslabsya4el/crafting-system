@@ -1,0 +1,134 @@
+# Mechanic family: abyss_reveal (revealing desecrated modifiers, the lords' named mods, the Altered Collarbone and the Abyssal Eyes).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: abyss_reveal.reveal_at_the_well_of_souls
+    statement: A desecrated item holds an unrevealed modifier until it is revealed at the Well of Souls, where the player chooses one of
+      three offered modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Abyss
+    quote: These modifiers can be revealed at the Well of Souls.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The choice of one out of three rests on game-guide snippets; no game text gives it.
+    page_statement: At the Well of Souls you pick one of three offered modifiers for each desecrated item.
+    page_source: game guides seen as search-result excerpts
+
+  - id: abyss_reveal.bones_feed_the_reveal
+    statement: 'Every desecrated modifier revealed at the Well of Souls comes from one of the twelve bones: Gnawed Jawbone, Preserved Jawbone,
+      Ancient Jawbone, Gnawed Rib, Preserved Rib, Ancient Rib, Gnawed Collarbone, Preserved Collarbone, Ancient Collarbone, Altered Collarbone,
+      Preserved Cranium, Preserved Vertebrae (or from Omen of Putrefaction). Which item each bone takes and its item-level limits are the
+      desecration family''s.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '[Abyssalify / Desecrates] a [ItemRarity / Rare] Weapon or [Quiver]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Gnawed Jawbone, Preserved Jawbone, Ancient Jawbone, Gnawed Rib, Preserved Rib, Ancient Rib, Gnawed Collarbone, Preserved Collarbone,
+      Ancient Collarbone, Altered Collarbone, Preserved Cranium, Preserved Vertebrae]
+
+  - id: abyss_reveal.offers_may_be_base_mods
+    statement: The modifiers offered at a reveal may include ordinary (base) modifiers, not only the Abyssal lords' named ones, unless an
+      omen guarantees a named one (socketable_rules.lord_omens).
+    source_kind: wiki
+    url: https://poe2db.tw/us/Abyss
+    quote: Reveal desecrated modifiers may include base modifiers. Unless you use Omen to guarantee named modifiers.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Community text on poe2db, not game text.
+    page_statement: A reveal can offer ordinary modifiers as well as the lords' special ones.
+    page_source: a community note on poe2db
+
+  - id: abyss_reveal.lord_mods_level_65
+    statement: 'The named desecrated modifiers of the three Abyssal lords are all level 65: Amanamu''s 26 prefixes, Kurgal''s 23, Ulaman''s
+      22; ''of Amanamu'' 44 suffixes, ''of Kurgal'' 39, ''of Ulaman'' 44 (198 in all).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Desecrated_Modifiers
+    quote: Desecrated Mods /198
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Amanamu's prefix: 26, Kurgal's prefix: 23, Ulaman's prefix: 22, of Amanamu suffix: 44, of Kurgal suffix: 39, of Ulaman suffix: 44}
+
+  - id: abyss_reveal.lord_mods_need_item_level_65
+    statement: 'UNVERIFIED: a named lord modifier (level 65) is offered only on an item of item level 65 or more, as for any modifier of
+      that level; no source states it for reveals.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Desecrated_Modifiers
+    quote: Desecrated Mods /198
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The mod level is printed; whether the reveal respects item level is untested.
+    page_statement: The Abyssal lords' special modifiers are taken to need an item of level 65 or more.
+    page_source: the modifier level on poe2db, not checked in game
+
+  - id: abyss_reveal.no_armour_prefixes
+    statement: Body Armour, Gloves, Boots and Helmet have no prefix desecrated modifiers; Sceptres have no desecrated modifiers of their
+      own; the jewel-only ones roll on regular jewels, not Time-Lost jewels.
+    source_kind: wiki
+    url: https://poe2db.tw/us/Desecrated_Modifiers
+    quote: Body Armour, Gloves, Boots and Helmet do not have Prefix desecrated modifiers.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Community notes on poe2db, not game text.
+    page_statement: Armour pieces get no desecrated prefixes, and sceptres have none of their own.
+    page_source: a community note on poe2db
+
+  - id: abyss_reveal.jewel_and_waystone_pools
+    statement: Jewels have 29 'Lightless' desecrated prefixes and 3 'of the Abyss' suffixes, at level 1; waystones have 19 'Abyssal' modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Desecrated_Modifiers
+    quote: Jewel exclusive modifiers only roll on regular jewels, not Time-Lost jewels.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {jewel_prefixes: 29, jewel_suffixes: 3, waystone: 19}
+
+  - id: abyss_reveal.data_counts
+    statement: The game data (0.5.5.10) holds, in the desecrated domain, 147 prefixes, 175 desecrated suffixes and 93 unique-item desecrated
+      modifiers.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.min.json
+    quote: '"domain": "desecrated"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {prefixes: 147, suffixes: 175, unique: 93}
+
+  - id: abyss_reveal.no_instant_leech
+    statement: Since 0.5.0 desecrated modifiers granting instant leech can no longer roll.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Desecrated Modifiers granting Instant Leech can no longer roll
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: abyss_reveal.altered_collarbone_otherworldly
+    statement: The Altered Collarbone desecrates a Rare Amulet, Ring or Belt 'with a chance for otherworldly modifiers'; poe2db lists 4
+      otherworldly amulet modifiers and 16 each for rings and belts. The data gives it the tag 1254 and the same 0.08 figure as the other
+      non-Gnawed bones; the chance itself is not stated.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '[Abyssalify / Desecrates] a [ItemRarity / Rare] Amulet, Ring or Belt with a chance for otherworldly modifiers'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Amulet: 4, Ring: 16, Belt: 16}
+
+  - id: abyss_reveal.abyssal_eyes
+    statement: 'The four Abyssal Eyes (Amanamu''s Gaze, Tecrod''s Gaze, Kurgal''s Gaze, Ulaman''s Gaze) are Ancient Augments for helmets,
+      body armours, gloves or boots, Requires Level 60, one Ancient Augment at a time (`value`: gaze -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Tecrod''s Gaze | TecrodsGaze | 60 | 3 |  | 1 | 1 | 1 | Body Armour: life_regeneration_rate_per_minute_%=90'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Amanamu's Gaze: {Helmet: remove_damaging_ailment_on_using_command_skill=1, Body Armour: armour_+_per_1_spirit=2, Boots: abyss_socketable_movement_speed_is_only_base_+%_per_15_spirit_up_to_+40%=1}
+      Tecrod's Gaze: {Body Armour: life_regeneration_rate_per_minute_%=90, Gloves: base_life_cost_efficiency_+%=25, Boots: movement_velocity_+%_when_on_low_life=10}
+      Kurgal's Gaze: {Helmet: additive_modifiers_to_life_regeneration_also_apply_to_mana_regeneration_rate=1, Gloves: arcane_surge_effect_on_self_+%=40,
+        Boots: mana_cost_efficiency_+%_if_not_dodge_rolled_recently=15}
+      Ulaman's Gaze: {Helmet: accuracy_rating_+_per_evasion_rating_on_helmet=1, Gloves: critical_chance_luck_against_parry_debuffed_enemies=1,
+        Body Armour: base_damage_%_deflected=3}

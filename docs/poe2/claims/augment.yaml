@@ -1,0 +1,234 @@
+# Mechanic family: augment (rules of augment sockets and the Kalguuran crafting augments).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: augment.five_kinds
+    statement: 'Augment is the name for every socketable; there are five kinds: Rune, Soul Core, Idol, Abyssal Eye and Congealed Mist (Raven-Touched
+      Shard is the one Congealed Mist).'
+    source_kind: wiki
+    url: https://poe2db.tw/us/Augment
+    quote: 'The current types of Augment are: Rune, Soul Core, Idol, Abyssal Eye, Congealed Mist'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Rune, Soul Core, Idol, Abyssal Eye, Congealed Mist]
+
+  - id: augment.replace_not_remove
+    statement: An augment goes into an Augment socket, usually on equipment. Once socketed it can be replaced by another augment but not
+      removed by normal means.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: Augments are items which can be placed into Augment sockets, usually on Equipment items. Once socketed, they can be replaced
+      by other Augments, but cannot be removed by normal means.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: augment.replacing_destroys_old
+    statement: Replacing a socketed augment destroys the one it replaces.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/runes-and-soul-cores
+    quote: can only be replaced, which destroys the previous Augment
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: One guide written for 0.4 says it; not re-read for 0.5.
+    page_statement: Putting a new augment over an old one destroys the old one.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: augment.socket_bound
+    statement: 'Socket-bound augments fill their socket for good: they cannot be removed, replaced or extracted. They are the four Aldur
+      runes, Serle''s Triumph, Cadigan''s Epiphany, Uhtred''s Sidereus, Kolr''s Hunt, Vorana''s Carnage, Thrud''s Might, Medved''s Tending,
+      Katla''s Gloom, the four Atziri''s Soul Cores and the Raven-Touched Shard; Astrid''s Creativity is not.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: permanently fill any Augment Socket they are placed into. Once Socketed, they cannot be removed, replaced or extracted by any
+      means.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Atziri's Soul Core of Alacrity, Atziri's Soul Core of Devotion, Atziri's Soul Core of Inoculation, Atziri's Soul Core of Vitality,
+      Betrayal of Aldur, Breath of Aldur, Cadigan's Epiphany, Ire of Aldur, Katla's Gloom, Kolr's Hunt, Medved's Tending, Passion of Aldur,
+      Raven-Touched Shard, Serle's Triumph, Thrud's Might, Uhtred's Sidereus, Vorana's Carnage]
+
+  - id: augment.ancient_augment_limit
+    statement: 'Ancient Augments (the four Abyssal Eyes, the four Vaal Theses, and the Emergent and Carved augments) and Aldur''s Legacies:
+      one augment of that type socketed at a time.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: You may not have more than one Augment of this type socketed at a time.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: augment.ancient_augments
+    statement: 'The Emergent and Carved ancient augments (Emergent Vigour, Emergent Possibility, Emergent Protection, Emergent Instinct,
+      Carved Cunning, Carved Majesty, Carved Mischief, Carved Tenacity), Requires Level 60, and their effect per slot (`value`: augment
+      -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Emergent Vigour | EmergentVigour | 60 | 0 | 1 | 1 | 1 | 1 | Helmet: gain_X_max_life_per_8_armour_on_equipped_helmet=1'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Emergent Vigour: {Helmet: gain_X_max_life_per_8_armour_on_equipped_helmet=1, Body Armour: gain_maximum_energy_shield_equal_to_%_total_strength_requirement_of_equipped_armour_items=50,
+        Boots: self_take_no_extra_damage_from_critical_strikes_while_on_consecrated_ground=1}
+      Emergent Possibility: {Body Armour: chaos_damage_from_hits_%_taken_as_random_element=15, Gloves: non_skill_base_all_damage_%_to_gain_as_random_element_per_socketed_rune=1,
+        Boots: ward_regeneration_rate_+%_while_sprinting=50}
+      Emergent Protection: {Helmet: gain_endurance_charge_on_reaching_low_life_once_per_2s=1, Gloves: base_banner_life_regeneration_rate_per_minute_%_to_apply=120,
+        Boots: gain_guard_after_sprinting_equal_to_x%_of_maximum_life_per_second_sprinted_up_to_20%=4}
+      Emergent Instinct: {Helmet: hits_cannot_be_evaded_vs_blinded_maimed_bleeding_enemies=1, Gloves: life_regeneration_per_minute_%_if_used_a_command_skill_recently=300,
+        Body Armour: thorns_damage_is_lucky_against_enemies_with_fully_broken_armour=1}
+      Carved Cunning: {Helmet: cannot_miss_against_full_life_enemies=1, Body Armour: base_damage_%_deflected_if_you_have_not_deflected_recently=5,
+        Boots: gain_onslaught_for_x_seconds_when_your_marks_activate=4}
+      Carved Majesty: {Body Armour: base_spirit_per_socketed_idol=3, Gloves: companions_gain_onslaught_on_hitting_enemies_marked_by_you_ms=4000,
+        Boots: sprint_movement_speed_+%_per_active_persistent_minion=1}
+      Carved Mischief: {Helmet: gain_guard_%_of_maximum_life_for_4_seconds_on_taking_savage_hit=10, Gloves: additional_maximum_block_%_if_blocked_with_active_block_recently=5,
+        Body Armour: stun_threshold_+%_if_stunned_recently=200}
+      Carved Tenacity: {Helmet: enemies_you_blind_have_no_crit_bonus_for_x_seconds=4, Gloves: critical_hits_apply_life_regeneration_rate_+%_for_4_seconds=-100,
+        Boots: slows_have_no_potency_on_you_while_sprinting=1}
+
+  - id: augment.bonded_lines
+    statement: Runes and idols carry a second block of lines marked 'Bonded:'. They are active only for a character with the Shaman ascendancy
+      passive Wisdom of the Maji, and, for idols, inside a Body Armour that holds a Fox Idol (idol.fox_idol_turns_on_bonded). The Druid-ascendancy
+      wording of another site is taken to name the same node.
+    source_kind: wiki
+    url: https://www.poe2wiki.net/
+    quote: are only active while equipped on a character with this passive
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Rests on a search snippet of the PoE2 wiki; the wiki page could not be opened; another site names a Druid node.
+    page_statement: Bonded lines on runes and idols work only with the Shaman's Wisdom of the Maji passive, or for idols beside a Fox Idol
+      in the body armour.
+    page_source: a search-result excerpt of the PoE2 wiki
+
+  - id: augment.standard_rune_bonded_armour
+    statement: Since 0.5.0 the Bonded line of the standard runes in Armour is +20 to maximum Life and +20 to maximum Mana.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Standard Rune Bonded Modifiers now grant 20 Life and 20 Mana when socketed in Armour items
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: augment.bonded_lines_are_not_affixes
+    statement: Bonded lines are not item modifiers that take a prefix or suffix slot, so they change nothing in crafting.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Bonded: ; Martial Weapon: 30% increased Ignite Magnitude ; Wand or Staff: 30% increased Ignite Magnitude ; Armour: +20 to maximum
+      Life, +20 to maximum Mana'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Inferred from how augment lines work; no source says it.
+    page_statement: The bonded lines of an augment do not use up an affix slot.
+    page_source: our reading of the item text
+
+  - id: augment.serles_triumph_extra_suffix
+    statement: Serle's Triumph (socket-bound, any equipment) allows one more suffix and one more modifier in all on the item (+1 Suffix
+      Modifier allowed; local maximum mods allowed +1).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Serle''s Triumph | RuneWarpingAdditionalSuffix | 0 | 0 |  |  | 1 |  | All: local_maximum_suffixes_allowed_+=1, local_maximum_mods_allowed_+=1'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {suffixes: 1, modifiers: 1}
+
+  - id: augment.astrids_creativity_extra_crafted
+    statement: Astrid's Creativity (any equipment, not socket-bound) lets the item have one more crafted modifier; since 0.5 an item otherwise
+      has at most one crafted modifier.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'All Equipment: Can have 1 additional Crafted Modifiers'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {crafted_modifiers: 1}
+
+  - id: augment.cadigans_epiphany_jewel_socket
+    statement: Cadigan's Epiphany (socket-bound, Gloves) destroys all augment sockets of the gloves to create a jewel socket.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Gloves: Destroys all Augment Sockets on the item to create a Jewel Socket'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: augment.warping_runes_add_mod_families
+    statement: 'Six socket-bound Kalguuran runes add a family of modifiers to what the item can roll (`value`: rune -> [slot, modifier family]).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Boots: Can roll Chronomancy modifiers'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Uhtred's Sidereus: [Boots, Chronomancy]
+      Kolr's Hunt: [Gloves, Marksman]
+      Vorana's Carnage: [Helmet, Berserking]
+      Thrud's Might: [Weapon, Destruction]
+      Medved's Tending: [Body Armour, Soul]
+      Katla's Gloom: [Gloves, Decay]
+
+  - id: augment.aldur_runes_convert_elements
+    statement: 'The four Aldur runes (socket-bound, weapons) transform elemental modifiers on the item: Passion of Aldur turns Cold and
+      Lightning modifiers into equivalent Fire ones, Breath of Aldur into Cold, Ire of Aldur into Lightning, Betrayal of Aldur turns all
+      Fire, Cold and Lightning modifiers into equivalent Chaos ones.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: Transforms all Cold and Lightning modifiers on the item into equivalent Fire modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Passion of Aldur: Fire, Breath of Aldur: Cold, Ire of Aldur: Lightning, Betrayal of Aldur: Chaos}
+
+  - id: augment.aldurs_legacy
+    statement: Aldur's Legacy (any equipment) socketed into a unique Kalguuran or Ezomyte item destroys that item and creates the matching
+      'Legacy of <unique>' rune (rune.aldurs_legacies). The Reforging Bench also lists each as a recipe (reforging_recipes.legacy_runes).
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: When socketed into a Unique Kalguuran or Ezomyte item, destroys the item to create a Rune imbued with that item's power
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: augment.masterwork_rune
+    statement: A Masterwork Rune placed into a socket holding a tiered rune upgrades that rune. Whether it lifts a Greater rune to Perfect,
+      and what it does to a Perfect rune or a Greater Tempered Rune (no Perfect tier), is not stated; until checked it is taken to raise
+      the rune one tier and to do nothing on a rune with no higher tier.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Masterwork_Rune
+    quote: Place into an Augment Socket containing any tiered Rune to upgrade that Rune.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The upgrade step and its top end are not stated anywhere read.
+    page_statement: A Masterwork Rune is taken to raise a socketed rune by one tier.
+    page_source: the item text only
+
+  - id: augment.raven_touched_shard_allows_instilling
+    statement: 'The Raven-Touched Shard (Congealed Mist, socket-bound, Helmets, Requires Level 60) makes the helmet ''Raven-Touched''; its
+      data stat is local_item_can_be_instilled, read as: the helmet can be instilled like an amulet.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Raven-Touched Shard | AugmentAnoint | 60 | 4 |  | 1 |  |  | Helmet: local_item_can_be_instilled=1'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The meaning is read from the stat name; the game text says only 'Raven-Touched'.
+    page_statement: A Raven-Touched Shard lets a helmet be instilled with a notable, like an amulet.
+    page_source: the game's data files, our reading of a stat name
+
+  - id: augment.socketing_into_corrupted_items
+    statement: Augments can still be socketed into a corrupted item.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: You can socket new Runes or Soul cores or level up a Corrupted Skill Gem
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: One guide for 0.4 says it.
+    page_statement: You can still put runes and soul cores into a corrupted item.
+    page_source: a Maxroll guide for the previous patch
+
+  - id: augment.remnant_rewards
+    statement: The Kalguuran crafting augments are rewards of Runic Remnants (Runeshape Combinations, e.g. Serle's Triumph and Medved's
+      Tending from level 70).
+    source_kind: datamined
+    url: https://poe2db.tw/us/Runeshape_Combinations
+    quote: Serle's Triumph Lv70+
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24

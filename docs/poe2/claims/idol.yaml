@@ -1,0 +1,122 @@
+# Mechanic family: idol (the Azmeri idols and their effect per slot).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: idol.azmeri_augments
+    statement: 'Idols are Azmeri augments (''Idols are a type of Augment fashioned by the Azmeri.''). The data has 31 (the four Carved augments
+      of the same class are under augment.ancient_augments): 11 animal idols on the trade site (Bear, Primate, Stag, Boar, Snake, Wolf,
+      Cat, Owl, Ox, Fox, Rabbit Idol), 17 named (Idol of Sirrius, Thruldana, Grold, Eeshta, Egrin, Maxarius, Ralakesh, the Sycophant, the
+      Martyr, the Pharisee, Greust, Yeena, Eramir, Oak, Alira, Kraityn, Silk), and Panther, Hawk and Stoat Idol, which are in the data but
+      not on the trade site.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: Idols are a type of Augment fashioned by the Azmeri.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Bear Idol, Boar Idol, Cat Idol, Fox Idol, Hawk Idol, Idol of Alira, Idol of Eeshta, Idol of Egrin, Idol of Eramir, Idol of Greust,
+      Idol of Grold, Idol of Kraityn, Idol of Maxarius, Idol of Oak, Idol of Ralakesh, Idol of Silk, Idol of Sirrius, Idol of Thruldana,
+      Idol of Yeena, Idol of the Martyr, Idol of the Pharisee, Idol of the Sycophant, Owl Idol, Ox Idol, Panther Idol, Primate Idol, Rabbit
+        Idol, Snake Idol, Stag Idol, Stoat Idol, Wolf Idol]
+
+  - id: idol.effects
+    statement: 'Effect of each idol by slot category (`value`: idol -> {category: stats}).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Fox Idol | TalismanFox | 0 | 2 |  | 1 | 1 | 1 | Body Armour: local_idols_gain_additional_socketable_mods=1, display_additional_socketable_mods_for_idols=1;
+      Sceptre: presence_area_+%=50'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Snake Idol: {Gloves: curse_effect_+%=8, Sceptre: allies_in_presence_attack_speed_+%=10}
+      Primate Idol: {Helmet: minion_maximum_life_+%=15, Sceptre: allies_in_presence_damage_+%=40}
+      Owl Idol: {Focus: base_cooldown_speed_+%=12, Sceptre: allies_in_presence_cast_speed_+%=10}
+      Cat Idol: {Gloves: accuracy_rating_+%=25, Sceptre: allies_in_presence_critical_strike_chance_+%=14}
+      Wolf Idol: {Gloves: base_bleeding_effect_+%=15, Sceptre: allies_in_presence_critical_strike_multiplier_+=20}
+      Stag Idol: {Helmet: projectile_chance_to_fork_%=15, Sceptre: 'allies_in_presence_attack_minimum_added_lightning_damage=1, allies_in_presence_attack_maximum_added_lightning_damage=40'}
+      Boar Idol: {Gloves: gain_x_rage_on_melee_hit=1, Sceptre: allies_in_presence_life_regeneration_rate_per_minute_equal_to_your_maximum_life_%=30}
+      Bear Idol: {Helmet: base_skill_area_of_effect_+%=10, Sceptre: 'allies_in_presence_attack_minimum_added_physical_damage=12, allies_in_presence_attack_maximum_added_physical_damage=18'}
+      Ox Idol: {Shield or Buckler: local_block_chance_+%=15, Sceptre: allies_in_presence_resist_all_elements_%=12}
+      Rabbit Idol: {Body Armour: base_item_found_rarity_+%=12, Sceptre: local_spirit_+%=15}
+      Fox Idol: {Body Armour: 'local_idols_gain_additional_socketable_mods=1, display_additional_socketable_mods_for_idols=1', Sceptre: presence_area_+%=50}
+      Idol of Sirrius: {Gloves: attack_speed_+%=8, Sceptre: allies_in_presence_movement_speed_+%=8}
+      Idol of Thruldana: {Martial Weapon: 'number_of_additional_poison_stacks=1, base_poison_duration_+%=-25', Sceptre: 'allies_in_presence_attack_minimum_added_chaos_damage=13,
+          allies_in_presence_attack_maximum_added_chaos_damage=27'}
+      Idol of Grold: {Boots: warcry_monster_power_+%=50, Sceptre: damage_+%_per_different_companion_in_presence=15}
+      Idol of Eeshta: {Helmet: base_skill_cost_efficiency_+%=15, Sceptre: mana_recovery_rate_+%_while_companion_in_presence=15}
+      Idol of Egrin: {Helmet: enemies_damage_taken_+%_while_cursed=6, Sceptre: base_curse_duration_+%=20}
+      Idol of Maxarius: {Body Armour: num_charm_slots=1, Sceptre: generate_x_charges_for_any_flask_per_minute=12}
+      Idol of Ralakesh: {Helmet: reservation_efficiency_+%_of_minion_skills=8, Sceptre: global_armour_evasion_energy_shield_while_in_presence_of_companion_+%=40}
+      Idol of Greust: {Shield: armour_%_applies_to_fire_cold_lightning_damage=25, Buckler: base_deflection_rating_%_of_evasion_rating=20,
+        Sceptre: companion_damage_+%_final_from_idol_per_different_dead_companion=10}
+      Idol of Yeena: {Boots: plant_skill_effect_duration_+%=30, Sceptre: chance_%_for_plants_to_overgrow_when_entering_your_presence=25}
+      Idol of Eramir: {Body Armour: charge_skip_consume_chance_%=10, Sceptre: allies_in_your_presence_share_charges_with_you=1}
+      Idol of Oak: {Boots: chance_to_gain_1_more_endurance_charge_%=15, Sceptre: endurance_only_conduit=1}
+      Idol of Alira: {Helmet: chance_to_gain_1_more_power_charge_%=15, Sceptre: power_only_conduit=1}
+      Idol of Kraityn: {Gloves: chance_to_gain_1_more_frenzy_charge_%=15, Sceptre: frenzy_only_conduit=1}
+      Idol of Silk: {Shield: block_chance_+%_while_companion_in_presence=15, Buckler: companions_gain_onslaught_when_you_parry=1, Sceptre: companions_in_presence_gain_x_rage_on_hit=1}
+      Idol of the Sycophant: {Martial Weapon Wand or Staff: 'non_skill_base_all_damage_%_to_gain_as_random_element=20, base_resist_all_elements_%=-20',
+        Sceptre: 'companions_in_presence_non_skill_base_all_damage_%_to_gain_as_random_element=20, companions_in_presence_base_resist_all_elements_%=-20'}
+      Idol of the Martyr: {Martial Weapon Wand or Staff: 'energy_generated_+%=40, spirit_+%=-25', Sceptre: 'aura_effect_+%=25, presence_area_+%=-40'}
+      Idol of the Pharisee: {Martial Weapon Wand or Staff: 'non_skill_base_all_damage_%_to_gain_as_physical_per_10%_missing_mana_permyriad=200,
+          maximum_mana_+%=-30', Sceptre: 'minion_commanded_skill_damage_+%=60, base_mana_cost_efficiency_+%_of_command_skills=-30'}
+      Panther Idol: {Body Armour: base_armour_%_applies_to_chaos_damage=10, Sceptre: minion_chaos_resistance_%=20}
+      Hawk Idol: {Body Armour: deflection_rating_+%=10, Sceptre: companion_attack_speed_+%=12}
+      Stoat Idol: {Body Armour: base_all_damage_bypass_energy_shield_%=5, Sceptre: companion_maximum_life_+%=25}
+
+  - id: idol.required_levels
+    statement: 'The character level each idol requires (`value`: idol -> level): the named idols and Panther, Hawk, Stoat 50, the animal
+      idols 0.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv
+    quote: 'Idol of Sirrius | Limited to: 1 ; Requires: Level 50'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Snake Idol: 0, Primate Idol: 0, Owl Idol: 0, Cat Idol: 0, Wolf Idol: 0, Stag Idol: 0, Boar Idol: 0, Bear Idol: 0, Ox Idol: 0,
+      Rabbit Idol: 0, Fox Idol: 0, Idol of Sirrius: 50, Idol of Thruldana: 50, Idol of Grold: 50, Idol of Eeshta: 50, Idol of Egrin: 50,
+      Idol of Maxarius: 50, Idol of Ralakesh: 50, Idol of Greust: 50, Idol of Yeena: 50, Idol of Eramir: 50, Idol of Oak: 50, Idol of Alira: 50,
+      Idol of Kraityn: 50, Idol of Silk: 50, Idol of the Sycophant: 50, Idol of the Martyr: 50, Idol of the Pharisee: 50, Panther Idol: 50,
+      Hawk Idol: 50, Stoat Idol: 50}
+
+  - id: idol.limited_to_one
+    statement: 'These idols carry ''Limited to: 1''. Since 0.5.0 the Fox Idol and the Stag Idol are limited to one.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Fox Idol now has a limit of 1.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: [Fox Idol, Hawk Idol, Idol of Alira, Idol of Eeshta, Idol of Egrin, Idol of Eramir, Idol of Greust, Idol of Grold, Idol of Kraityn,
+      Idol of Maxarius, Idol of Oak, Idol of Ralakesh, Idol of Silk, Idol of Sirrius, Idol of Thruldana, Idol of Yeena, Idol of the Martyr,
+      Idol of the Pharisee, Idol of the Sycophant, Panther Idol, Rabbit Idol, Stag Idol, Stoat Idol]
+
+  - id: idol.all_fit_sceptres
+    statement: Since 0.5.0 every idol can also be socketed into a Sceptre, with the Sceptre effect listed for it; the Idol of Grold goes
+      into Boots.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: All Idols can now also be socketed into Sceptres.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: idol.fox_idol_turns_on_bonded
+    statement: A Fox Idol in a Body Armour makes the idols socketed in that item gain the benefits of their Bonded modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Augment
+    quote: 'Body Armours: Idols socketed in this item gain the benefits of their Bonded modifiers'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Fox Idol: Body Armour}
+
+  - id: idol.formerly_talismans
+    statement: Idols were called Talismans before 0.4.0; in 0.5 'Talisman' is a two-handed weapon class, not an augment, so this repository
+      keeps no talisman augment family.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/runes-and-soul-cores
+    quote: called Talismans prior to 0.4.0
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The rename rests on one secondary guide; the weapon class is in the data.
+    page_statement: What older guides call talismans are today's idols.
+    page_source: a Maxroll guide

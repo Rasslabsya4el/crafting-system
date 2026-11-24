@@ -1,0 +1,192 @@
+# Mechanic family: reforging_recipes (the three-to-one recipes of the Reforging Bench for essences, runes, emotions and waystones).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: reforging_recipes.essences_three_to_one
+    statement: 'At the Reforging Bench three essences of one family and tier make one of the next tier: Lesser to normal and normal to Greater,
+      for all 19 families (`value`: [three of, make one]).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: Lesser Essence of the Body x3 | Essence of the Body x1
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+    - [Lesser Essence of the Body, Essence of the Body]
+    - [Lesser Essence of the Mind, Essence of the Mind]
+    - [Lesser Essence of Enhancement, Essence of Enhancement]
+    - [Lesser Essence of Abrasion, Essence of Abrasion]
+    - [Lesser Essence of Flames, Essence of Flames]
+    - [Lesser Essence of Ice, Essence of Ice]
+    - [Lesser Essence of Electricity, Essence of Electricity]
+    - [Lesser Essence of Ruin, Essence of Ruin]
+    - [Lesser Essence of Battle, Essence of Battle]
+    - [Lesser Essence of Sorcery, Essence of Sorcery]
+    - [Lesser Essence of Haste, Essence of Haste]
+    - [Lesser Essence of the Infinite, Essence of the Infinite]
+    - [Lesser Essence of Seeking, Essence of Seeking]
+    - [Lesser Essence of Insulation, Essence of Insulation]
+    - [Lesser Essence of Thawing, Essence of Thawing]
+    - [Lesser Essence of Grounding, Essence of Grounding]
+    - [Lesser Essence of Alacrity, Essence of Alacrity]
+    - [Lesser Essence of Opulence, Essence of Opulence]
+    - [Lesser Essence of Command, Essence of Command]
+    - [Essence of the Body, Greater Essence of the Body]
+    - [Essence of the Mind, Greater Essence of the Mind]
+    - [Essence of Enhancement, Greater Essence of Enhancement]
+    - [Essence of Abrasion, Greater Essence of Abrasion]
+    - [Essence of Flames, Greater Essence of Flames]
+    - [Essence of Ice, Greater Essence of Ice]
+    - [Essence of Electricity, Greater Essence of Electricity]
+    - [Essence of Ruin, Greater Essence of Ruin]
+    - [Essence of Battle, Greater Essence of Battle]
+    - [Essence of Sorcery, Greater Essence of Sorcery]
+    - [Essence of Haste, Greater Essence of Haste]
+    - [Essence of the Infinite, Greater Essence of the Infinite]
+    - [Essence of Seeking, Greater Essence of Seeking]
+    - [Essence of Insulation, Greater Essence of Insulation]
+    - [Essence of Thawing, Greater Essence of Thawing]
+    - [Essence of Grounding, Greater Essence of Grounding]
+    - [Essence of Alacrity, Greater Essence of Alacrity]
+    - [Essence of Opulence, Greater Essence of Opulence]
+    - [Essence of Command, Greater Essence of Command]
+
+  - id: reforging_recipes.no_recipe_to_perfect_or_special_essences
+    statement: No bench recipe makes a Perfect essence or one of the six special essences.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: X of a Kind Recipe /93
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: reforging_recipes.runes_three_to_one
+    statement: 'Three runes of one tiered family and tier make one of the next tier, Lesser to normal and normal to Greater, for 16 families
+      (`value`: [three of, make one]); no recipe makes a Perfect rune.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: X of a Kind Recipe /93
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+    - [Lesser Desert Rune, Desert Rune]
+    - [Lesser Glacial Rune, Glacial Rune]
+    - [Lesser Storm Rune, Storm Rune]
+    - [Lesser Iron Rune, Iron Rune]
+    - [Lesser Body Rune, Body Rune]
+    - [Lesser Mind Rune, Mind Rune]
+    - [Lesser Rebirth Rune, Rebirth Rune]
+    - [Lesser Inspiration Rune, Inspiration Rune]
+    - [Lesser Stone Rune, Stone Rune]
+    - [Lesser Vision Rune, Vision Rune]
+    - [Lesser Robust Rune, Robust Rune]
+    - [Lesser Adept Rune, Adept Rune]
+    - [Lesser Resolve Rune, Resolve Rune]
+    - [Lesser Tempered Rune, Tempered Rune]
+    - [Lesser Ward Rune, Ward Rune]
+    - [Lesser Charging Rune, Charging Rune]
+    - [Desert Rune, Greater Desert Rune]
+    - [Glacial Rune, Greater Glacial Rune]
+    - [Storm Rune, Greater Storm Rune]
+    - [Iron Rune, Greater Iron Rune]
+    - [Body Rune, Greater Body Rune]
+    - [Mind Rune, Greater Mind Rune]
+    - [Rebirth Rune, Greater Rebirth Rune]
+    - [Inspiration Rune, Greater Inspiration Rune]
+    - [Stone Rune, Greater Stone Rune]
+    - [Vision Rune, Greater Vision Rune]
+    - [Robust Rune, Greater Robust Rune]
+    - [Adept Rune, Greater Adept Rune]
+    - [Resolve Rune, Greater Resolve Rune]
+    - [Tempered Rune, Greater Tempered Rune]
+    - [Ward Rune, Greater Ward Rune]
+    - [Charging Rune, Greater Charging Rune]
+
+  - id: reforging_recipes.named_runes_not_combined
+    statement: Named and endgame runes (the named, Ancient, Warding and Legacy runes) have no combining recipe.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: X of a Kind Recipe /93
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Rests on a guide for 0.4 and on their absence from poe2db's recipe list.
+    page_statement: Named runes cannot be combined into better ones at the bench.
+    page_source: a Maxroll guide and poe2db's recipe list
+
+  - id: reforging_recipes.emotions_three_to_one
+    statement: 'Three core emotions make one of the next in the chain from Diluted Liquid Ire to Concentrated Liquid Isolation (`value`:
+      [three of, make one]); no recipe makes or uses the Potent or Ancient emotions.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: Diluted Liquid Ire x3 | Diluted Liquid Guilt x1
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+    - [Diluted Liquid Ire, Diluted Liquid Guilt]
+    - [Diluted Liquid Guilt, Diluted Liquid Greed]
+    - [Diluted Liquid Greed, Liquid Paranoia]
+    - [Liquid Paranoia, Liquid Envy]
+    - [Liquid Envy, Liquid Disgust]
+    - [Liquid Disgust, Liquid Despair]
+    - [Liquid Despair, Concentrated Liquid Fear]
+    - [Concentrated Liquid Fear, Concentrated Liquid Suffering]
+    - [Concentrated Liquid Suffering, Concentrated Liquid Isolation]
+
+  - id: reforging_recipes.waystones_three_to_one
+    statement: Three waystones of one tier make one of the next tier; poe2db's recipes run over tiers 1 to 15. Whether the last recipe makes
+      a tier 16 waystone is not stated.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: X of a Kind Recipe /93
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {lowest_tier: 1, highest_tier_listed: 15}
+    approximate: true
+    approximate_reason: The note gives the range as tiers 1 to 15 without saying whether 15 is the last input or the last output.
+    page_statement: Three waystones of a tier make one of the next tier at the bench.
+    page_source: poe2db's recipe list
+
+  - id: reforging_recipes.legacy_runes
+    statement: 'Each of the 63 ''Legacy of <unique>'' runes has an Equip recipe: one Aldur''s Legacy plus that unique.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: Equip Recipe /68
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: reforging_recipes.equip_recipes
+    statement: 'Other Equip recipes: Pearlescent Amulet = Jade + Amber + Lapis Amulet; Diamond = Ruby + Emerald + Sapphire; Time-Lost Diamond
+      = Time-Lost Ruby + Emerald + Sapphire; Grasping Mail (rare, unidentified) = 60 Breach Rings, at the Genesis Tree.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: Equip Recipe /68
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Pearlescent Amulet: [Jade Amulet, Amber Amulet, Lapis Amulet]
+      Diamond: [Ruby, Emerald, Sapphire]
+      Time-Lost Diamond: [Time-Lost Ruby, Time-Lost Emerald, Time-Lost Sapphire]
+      Grasping Mail: {Breach Ring: 60}
+
+  - id: reforging_recipes.recipe_counts
+    statement: poe2db lists 93 Forge, 68 Equip, 2 Gem, 2 Unique Item and 93 X-of-a-Kind recipes.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: Forge Recipe /93
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Forge: 93, Equip: 68, Gem: 2, Unique Item: 2, X of a Kind: 93}
+
+  - id: reforging_recipes.no_gear_three_to_one
+    statement: 'UNVERIFIED: the 0.5 recipe list has no ''three items of one base make one'' recipe for gear; the three-to-one recipes are
+      for stackables and waystones only. poe2db may omit a generic rule.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Reforging_Bench
+    quote: X of a Kind Recipe /93
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Absence from poe2db's list only.
+    page_statement: There is no bench recipe that turns three pieces of gear into one.
+    page_source: poe2db's recipe list

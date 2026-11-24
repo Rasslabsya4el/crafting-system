@@ -1,0 +1,205 @@
+# Mechanic family: distilled_emotion (Liquid Emotions: instilling amulets, waystone lines and the 0.5 jewel craft).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: distilled_emotion.names_and_tiers
+    statement: Liquid Emotions (formerly Distilled Emotions; Delirium drops) come as 10 core emotions in tier order (Diluted Liquid Ire,
+      Diluted Liquid Guilt, Diluted Liquid Greed, Liquid Paranoia, Liquid Envy, Liquid Disgust, Liquid Despair, Concentrated Liquid Fear,
+      Concentrated Liquid Suffering, Concentrated Liquid Isolation), 3 Potent ones (Potent Liquid Melancholy, Potent Liquid Ferocity, Potent
+      Liquid Contempt) dropped by the bosses of Delirious maps, and an Ancient version of all 13 (Atlas-tree unlock).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Map bosses of Delirious Maps can additionally drop a new set of 3 Potent emotions
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value:
+      core_in_order: [Diluted Liquid Ire, Diluted Liquid Guilt, Diluted Liquid Greed, Liquid Paranoia, Liquid Envy, Liquid Disgust, Liquid
+          Despair, Concentrated Liquid Fear, Concentrated Liquid Suffering, Concentrated Liquid Isolation]
+      potent: [Potent Liquid Melancholy, Potent Liquid Ferocity, Potent Liquid Contempt]
+      ancient: [Ancient Diluted Liquid Ire, Ancient Diluted Liquid Guilt, Ancient Diluted Liquid Greed, Ancient Liquid Paranoia, Ancient
+          Liquid Envy, Ancient Liquid Disgust, Ancient Liquid Despair, Ancient Concentrated Liquid Fear, Ancient Concentrated Liquid Suffering,
+        Ancient Concentrated Liquid Isolation, Ancient Potent Liquid Melancholy, Ancient Potent Liquid Ferocity, Ancient Potent Liquid Contempt]
+
+  - id: distilled_emotion.instil_amulets
+    statement: The 10 core and 3 Potent emotions are used at The Withered Willow to instil an amulet with a Notable Passive Skill; the Ancient
+      ones cannot (their directions name only Time-Lost jewels).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Can be used at The Withered Willow to Instil Amulets with a Notable Passive Skill. Right click this item then left click a Rare
+      Jewel to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: distilled_emotion.three_emotions_per_notable
+    statement: 'Each instillable notable has a recipe of three emotions (e.g. Insulated Treads: Ire, Ire, Ire); 875 notables can be instilled,
+      17 of them only by emotions (e.g. Zarokh''s Gift, a Sinister Jewel Socket; Augmented Flesh, 2 additional skill slots). Instilling
+      a notable already allocated on the tree does not grant it twice.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Liquid_Emotions
+    quote: Instilling a Notable Passive Skill which you have already allocated normally will not grant its effects a second time.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: distilled_emotion.strugglescream_three_more
+    statement: The unique amulet Strugglescream can have 3 additional instilled modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Liquid_Emotions
+    quote: Can have 3 additional Instilled Modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: distilled_emotion.instil_replaces_and_corrupted
+    statement: 'UNVERIFIED: instilling an amulet that already has an instilled notable replaces it, and a corrupted amulet cannot be instilled
+      (the usual rule that corrupted items cannot be modified). No source read states either.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Liquid_Emotions
+    quote: Liquid Emotions allow you to instil an amulet with a Notable Passive Skill from the Passive Tree.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Neither re-instilling nor corrupted amulets are covered by any source read.
+    page_statement: A new instil is taken to replace the old one, and a corrupted amulet is taken not to accept one.
+    page_source: common player knowledge, not checked in game
+
+  - id: distilled_emotion.jewel_craft
+    statement: 'Since 0.5 every emotion also crafts jewels: it removes a random modifier of a Rare jewel and adds a guaranteed crafted modifier
+      that depends on the jewel type (Ruby, Sapphire, Emerald, and Diamond for some). The core and Potent emotions work on Rare basic jewels,
+      the Ancient ones on Rare Time-Lost jewels.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Liquid Emotions can now be used to craft additional mods on Jewels.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {takes: Rare jewel, removes: 1, adds: crafted}
+
+  - id: distilled_emotion.jewel_craft_mods
+    statement: 'The modifier each emotion adds by jewel type and side (`value`: emotion -> {jewel type and side: modifier text}); Potent
+      Liquid Contempt adds ''+1 Suffix Modifier allowed'' as a prefix or ''+1 Prefix Modifier allowed'' as a suffix, Potent Liquid Ferocity
+      ''(40-60)% increased Effect of Suffixes / Prefixes'', Ancient Potent Liquid Melancholy ''Upgrades Radius to Very Large''.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Liquid_Emotions
+    quote: Removes a random modifer and Augments a Rare Basic Jewel with a new guaranteed Crafted modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Diluted Liquid Ire: {Ruby Prefix: (10—20)% increased Armour, Sapphire Prefix: (10—20)% increased maximum Energy Shield, Emerald Prefix: (10—20)%
+          increased Evasion Rating}
+      Diluted Liquid Guilt: {Ruby Prefix: (5—15)% increased Fire Damage, Sapphire Prefix: (5—15)% increased Cold Damage, Emerald Prefix: (5—15)%
+          increased Lightning Damage}
+      Diluted Liquid Greed: {Ruby Prefix: (5—15)% increased Global Physical Damage, Sapphire Prefix: (7—13)% increased Chaos Damage, Emerald Prefix: (5—15)%
+          increased Elemental Damage}
+      Liquid Paranoia: {Ruby Prefix: (5—15)% increased Attack Damage, Sapphire Suffix: (2—4)% increased Cast Speed, Emerald Suffix: (2—4)%
+          increased Attack Speed}
+      Liquid Envy: {Ruby Suffix: (4—6)% of Skill Mana Costs Converted to Life Costs, Sapphire Prefix: (5—15)% increased Spell Damage, Emerald Suffix: (3—5)%
+          increased Cooldown Recovery Rate}
+      Liquid Disgust: {Ruby Suffix: (5—10)% increased Life Regeneration rate, Sapphire Suffix: Recover (1—2)% of maximum Mana on Kill, Emerald Suffix: Recover
+          (1—2)% of maximum Life on Kill}
+      Liquid Despair: {Ruby Suffix: Gain 1 Rage on Melee Hit, Sapphire Suffix: (5—15)% increased Critical Hit Chance for Spells, Emerald Suffix: (6—16)%
+          increased Critical Hit Chance for Attacks}
+      Concentrated Liquid Fear: {Ruby Suffix: (10—20)% increased Warcry Speed, Sapphire Suffix: (10—20)% increased Critical Spell Damage
+          Bonus, Emerald Suffix: (10—20)% increased Critical Damage Bonus for Attack Damage}
+      Concentrated Liquid Suffering: {Ruby Prefix: +(1—2) to Maximum Rage, Sapphire Prefix: (4—6)% increased Area of Effect, Emerald Suffix: (1—2)%
+          increased Movement Speed}
+      Concentrated Liquid Isolation: {Ruby Suffix: +1% to Maximum Fire Resistance, Sapphire Suffix: +1% to Maximum Cold Resistance, Emerald Suffix: +1%
+          to Maximum Lightning Resistance, Diamond Suffix: +1% to Maximum Chaos Resistance}
+      Ancient Diluted Liquid Ire: {Ruby Prefix: Small Passive Skills in Radius also grant (2—3)% increased Armour, Sapphire Prefix: Small
+          Passive Skills in Radius also grant (2—3)% increased maximum Energy Shield, Emerald Prefix: Small Passive Skills in Radius also
+          grant (2—3)% increased Evasion Rating}
+      Ancient Diluted Liquid Guilt: {Ruby Prefix: Small Passive Skills in Radius also grant (1—2)% increased Fire Damage, Sapphire Prefix: Small
+          Passive Skills in Radius also grant (1—2)% increased Cold Damage, Emerald Prefix: Small Passive Skills in Radius also grant (1—2)%
+          increased Lightning Damage}
+      Ancient Diluted Liquid Greed: {Ruby Prefix: Small Passive Skills in Radius also grant (1—2)% increased Global Physical Damage, Sapphire Prefix: Small
+          Passive Skills in Radius also grant (1—2)% increased Chaos Damage, Emerald Prefix: Small Passive Skills in Radius also grant (1—2)%
+          increased Elemental Damage}
+      Ancient Liquid Paranoia: {Ruby Prefix: Small Passive Skills in Radius also grant (1—2)% increased Attack Damage, Sapphire Suffix: Notable
+          Passive Skills in Radius also grant (1—2)% increased Cast Speed, Emerald Suffix: Notable Passive Skills in Radius also grant (1—2)%
+          increased Attack Speed}
+      Ancient Liquid Envy: {Ruby Suffix: Notable Passive Skills in Radius also grant (2—3)% of Skill Mana Costs Converted to Life Costs,
+        Sapphire Prefix: Small Passive Skills in Radius also grant (1—2)% increased Spell Damage, Emerald Suffix: Notable Passive Skills
+          in Radius also grant (1—3)% increased Cooldown Recovery Rate}
+      Ancient Liquid Disgust: {Ruby Suffix: Notable Passive Skills in Radius also grant (3—5)% increased Life Regeneration rate, Sapphire Suffix: Notable
+          Passive Skills in Radius also grant Recover 1% of maximum Mana on Kill, Emerald Suffix: Notable Passive Skills in Radius also
+          grant Recover 1% of maximum Life on Kill}
+      Ancient Liquid Despair: {Ruby Suffix: Notable Passive Skills in Radius also grant Gain 1 Rage on Melee Hit, Sapphire Suffix: Notable
+          Passive Skills in Radius also grant (3—7)% increased Critical Hit Chance for Spells, Emerald Suffix: Notable Passive Skills in
+          Radius also grant (3—7)% increased Critical Hit Chance for Attacks}
+      Ancient Concentrated Liquid Fear: {Ruby Suffix: Small Passive Skills in Radius also grant (2—3)% increased Warcry Speed, Sapphire Suffix: Notable
+          Passive Skills in Radius also grant (5—10)% increased Critical Spell Damage Bonus, Emerald Suffix: Notable Passive Skills in Radius
+          also grant (5—10)% increased Critical Damage Bonus for Attack Damage}
+      Ancient Concentrated Liquid Suffering: {Ruby Prefix: Notable Passive Skills in Radius also grant +1 to Maximum Rage, Sapphire Prefix: Notable
+          Passive Skills in Radius also grant (2—3)% increased Area of Effect, Emerald Suffix: Notable Passive Skills in Radius also grant
+          1% increased Movement Speed}
+      Ancient Concentrated Liquid Isolation: {Ruby Prefix: Increases and Reductions to Cold and Lightning Damage in Radius are transformed
+          to apply to Fire Damage, Sapphire Prefix: Increases and Reductions to Fire and Lightning Damage in Radius are transformed to apply
+          to Cold Damage, Emerald Prefix: Increases and Reductions to Cold and Fire Damage in Radius are transformed to apply to Lightning
+          Damage}
+      Potent Liquid Melancholy: {Ruby Suffix: Debilitate Enemies on Hit while you have an Emerald and a Sapphire socketed in your tree,
+        Sapphire Suffix: Inflict Elemental Exposure on Hit while you have a Ruby and an Emerald socketed in your tree, Emerald Suffix: Blind
+          Enemies on Hit while you have a Ruby and a Sapphire socketed in your tree}
+      Potent Liquid Ferocity: {Ruby Prefix: (40—60)% increased Effect of Suffixes, Ruby Suffix: (40—60)% increased Effect of Prefixes, Sapphire Prefix: (40—60)%
+          increased Effect of Suffixes, Sapphire Suffix: (40—60)% increased Effect of Prefixes, Emerald Prefix: (40—60)% increased Effect
+          of Suffixes, Emerald Suffix: (40—60)% increased Effect of Prefixes, Diamond Prefix: (40—60)% increased Effect of Suffixes, Diamond Suffix: (40—60)%
+          increased Effect of Prefixes}
+      Potent Liquid Contempt: {Ruby Prefix: +1 Suffix Modifier allowed, Ruby Suffix: +1 Prefix Modifier allowed, Sapphire Prefix: +1 Suffix
+          Modifier allowed, Sapphire Suffix: +1 Prefix Modifier allowed, Emerald Prefix: +1 Suffix Modifier allowed, Emerald Suffix: +1
+          Prefix Modifier allowed, Diamond Prefix: +1 Suffix Modifier allowed, Diamond Suffix: +1 Prefix Modifier allowed}
+      Ancient Potent Liquid Melancholy: {Ruby Prefix: 'Upgrades Radius to Very Large local jewel effect base radius [500]', Sapphire Prefix: 'Upgrades
+          Radius to Very Large local jewel effect base radius [500]', Emerald Prefix: 'Upgrades Radius to Very Large local jewel effect
+          base radius [500]', Diamond Prefix: 'Upgrades Radius to Very Large local jewel effect base radius [500]'}
+      Ancient Potent Liquid Ferocity: {Ruby Suffix: Notable Passive Skills in Radius also grant +(5—7)% to Fire Resistance, Sapphire Suffix: Notable
+          Passive Skills in Radius also grant +(5—7)% to Cold Resistance, Emerald Suffix: Notable Passive Skills in Radius also grant +(5—7)%
+          to Lightning Resistance, Diamond Suffix: Notable Passive Skills in Radius also grant +(4—5)% to Chaos Resistance}
+      Ancient Potent Liquid Contempt: {Ruby Prefix: +1 Suffix Modifier allowed, Ruby Suffix: +1 Prefix Modifier allowed, Sapphire Prefix: +1
+          Suffix Modifier allowed, Sapphire Suffix: +1 Prefix Modifier allowed, Emerald Prefix: +1 Suffix Modifier allowed, Emerald Suffix: +1
+          Prefix Modifier allowed, Diamond Prefix: +1 Suffix Modifier allowed, Diamond Suffix: +1 Prefix Modifier allowed}
+
+  - id: distilled_emotion.jewel_craft_counts_as_crafted
+    statement: 'The jewel modifier of an emotion is a crafted modifier, so the 0.5 rule of one crafted modifier per item applies: a jewel
+      that already has a crafted modifier is taken not to accept an emotion (or to lose it) until checked.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: All crafted modifiers are now guaranteed, but items can only have 1 crafted modifier at a time.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: That the emotion's mod falls under the crafted limit is an inference from the word 'Crafted' in its text.
+    page_statement: An emotion's jewel modifier is a crafted one, so a jewel holds only one of them.
+    page_source: the patch notes and the item text, read together by us
+
+  - id: distilled_emotion.waystone_effect
+    statement: 'The first lines of a core or Potent emotion are what it adds to a waystone (`value`: emotion -> lines), up to three emotions
+      per waystone; the Ancient ones add nothing to a waystone.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Diluted_Liquid_Ire
+    quote: Players in Area are 7% Delirious
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Diluted Liquid Ire: [Players in Area are 7% Delirious, 20% increased Magic Monsters]
+      Diluted Liquid Guilt: [Players in Area are 9% Delirious, 8% increased Pack Size]
+      Diluted Liquid Greed: [Players in Area are 10% Delirious, 8% increased Rarity of Items found]
+      Liquid Paranoia: [Players in Area are 12% Delirious, 15% increased Rare Monsters]
+      Liquid Envy: [Players in Area are 15% Delirious, 30% increased Waystones found in Area]
+      Liquid Disgust: [Players in Area are 18% Delirious, 30% increased Tablets found in Area]
+      Liquid Despair: [Players in Area are 20% Delirious, 30% increased Stack size of Simulacrum Splinters found in your Maps]
+      Concentrated Liquid Fear: [Players in Area are 22% Delirious, Rare Monsters have a 25% Surpassing chance to have an additional Modifier]
+      Concentrated Liquid Suffering: [Players in Area are 25% Delirious, Unique Monsters in your Maps have 1 additional Rare Modifiers]
+      Concentrated Liquid Isolation: [Players in Area are 50% Delirious]
+      Potent Liquid Melancholy: [Players in Area are 50% Delirious]
+      Potent Liquid Ferocity: [Players in Area are 50% Delirious]
+      Potent Liquid Contempt: [Players in Area are 50% Delirious]
+    approximate: true
+    approximate_reason: The lines are game text; the limit of three per waystone rests on search snippets.
+    page_statement: Up to three emotions can be added to a waystone, each adding delirium and its own map bonus.
+    page_source: the game's item text, with the limit from search-result excerpts
+
+  - id: distilled_emotion.liquid_verisium_is_not_an_emotion
+    statement: Liquid Verisium is filed with the emotions by poe2db but is an Expedition item that starts a Runic Remnant encounter; it
+      crafts nothing.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Liquid_Emotions
+    quote: Immediately start a Runic Remnant Encounter with a random Runic Inscription
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24

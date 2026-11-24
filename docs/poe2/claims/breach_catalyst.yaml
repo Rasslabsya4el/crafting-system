@@ -1,0 +1,48 @@
+# Mechanic family: breach_catalyst (the 26 Breach catalysts and the Genesis Tree that makes them).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: breach_catalyst.jewellery_catalysts
+    statement: 'The 13 Breach catalysts for rings and amulets and the modifier type their quality enhances (`value`: catalyst -> type).
+      The quality rules are in the catalyst family.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds [Quality / quality] that enhances Life modifiers on a ring or amulet Replaces other quality types
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Flesh Catalyst: Life, Neural Catalyst: Mana, Carapace Catalyst: 'Armour, Evasion and Energy Shield', Uul-Netol's Catalyst: Physical,
+      Xoph's Catalyst: Fire, Tul's Catalyst: Cold, Esh's Catalyst: Lightning, Chayula's Catalyst: Chaos, Reaver Catalyst: Attack, Sibilant Catalyst: Caster,
+      Skittering Catalyst: Speed, Adaptive Catalyst: Attribute, Necrotic Catalyst: Minion}
+
+  - id: breach_catalyst.refined_jewel_catalysts
+    statement: 'The 13 Refined catalysts do the same on a jewel (`value`: catalyst -> type).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Adds [Quality / quality] that enhances Life modifiers on a jewel Replaces other quality types
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Refined Flesh Catalyst: Life, Refined Neural Catalyst: Mana, Refined Carapace Catalyst: 'Armour, Evasion and Energy Shield',
+      Refined Uul-Netol's Catalyst: Physical, Refined Xoph's Catalyst: Fire, Refined Tul's Catalyst: Cold, Refined Esh's Catalyst: Lightning,
+      Refined Chayula's Catalyst: Chaos, Refined Reaver Catalyst: Attack, Refined Sibilant Catalyst: Caster, Refined Skittering Catalyst: Speed,
+      Refined Adaptive Catalyst: Attribute, Refined Necrotic Catalyst: Minion}
+
+  - id: breach_catalyst.only_from_the_genesis_tree
+    statement: Since 0.5.0 catalysts no longer drop from monsters; they come only from the Genesis Tree.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Catalysts can no longer drop from Monsters, these are now solely obtained from the Genesis Tree.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: breach_catalyst.genesis_tree_wombgifts
+    statement: 'The Genesis Tree (Monastery of the Keepers) consumes Wombgifts and Hiveblood to create rings, amulets, belts and currency:
+      Lavish Wombgift -> currency, Ornate -> amulet, Banded -> belt, Signet -> ring, Revelatory -> Breachstone. Hiveblood stacks to 100,000.
+      300 Breach Splinters make a Revelatory Wombgift.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: The Genesis Tree allows consuming of Wombgifts and Hiveblood to create Rings, Amulets, Belts and Currency.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {Lavish Wombgift: currency, Ornate Wombgift: amulet, Banded Wombgift: belt, Signet Wombgift: ring, Revelatory Wombgift: Breachstone}

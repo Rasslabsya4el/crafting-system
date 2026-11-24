@@ -1,0 +1,598 @@
+# Mechanic family: essence (the 82 essences: Magic to Rare with a guaranteed mod, and the Perfect and special ones that swap one mod of a Rare).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: essence.lower_tiers_turn_magic_into_rare
+    statement: 'A Lesser, normal or Greater essence (the 57 of the first three tiers: Lesser Essence of X, Essence of X, Greater Essence
+      of X) is used on a Magic item and makes it Rare, adding the essence''s guaranteed modifier.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [ItemRarity / Magic] item to a [ItemRarity / Rare] item, adding a guaranteed modifier | Right click this item then
+      left click a Magic item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      tiers: [Lesser, normal, Greater]
+      takes: Magic
+      gives: Rare
+
+  - id: essence.perfect_and_special_reroll_one_mod_of_a_rare
+    statement: 'A Perfect essence and each of the six special essences (Essence of Hysteria, Essence of Delirium, Essence of Horror, Essence
+      of Insanity, Essence of the Abyss, Essence of the Breach) is used on a Rare item: it removes one random modifier and adds the essence''s
+      guaranteed modifier.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Removes a random modifier and augments a [ItemRarity / Rare] item with a new guaranteed modifier | Right click this item then
+      left click a Rare item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {takes: Rare, removes: 1, adds: 1}
+
+  - id: essence.no_tier_crosses_rarity
+    statement: No Lesser, normal or Greater essence can be used on a Rare item, and no Perfect or special essence on a Magic item; none
+      of them is used on a Normal item (each one's directions name a single rarity).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Right click this item then left click a Magic item to apply it.
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Lesser: Magic, normal: Magic, Greater: Magic, Perfect: Rare, special: Rare}
+
+  - id: essence.magic_to_rare_keeps_existing_mods
+    statement: 'APPROXIMATE: a Lesser, normal or Greater essence on a Magic item keeps the item''s one or two magic modifiers and adds only
+      the essence''s modifier (no random modifiers are added). No page read on 2026-11-24 says it in words; it is the established PoE2 behaviour
+      and matches the item text ''Upgrades ... adding a guaranteed modifier''.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [ItemRarity / Magic] item to a [ItemRarity / Rare] item, adding a guaranteed modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: No source states what happens to the magic mods; inferred from the item text and common knowledge; the case of a
+      full affix side is unknown.
+    page_statement: An essence on a magic item is taken to keep its magic modifiers and add only the essence's modifier.
+    page_source: the game's item text and common player knowledge, not checked in game
+
+  - id: essence.families_and_tiers
+    statement: 'There are 19 essence families, each in four tiers (Lesser, normal, Greater, Perfect): 76 essences, plus 6 special essences
+      (Hysteria, Delirium, Horror, Insanity, the Abyss, the Breach), 82 in all. The trade site''s static list of 2026-11-24 holds the same
+      82 names (the 84 counted earlier is not borne out).'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence
+    quote: Essence /95
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      families: [the Body, the Mind, Enhancement, Abrasion, Flames, Ice, Electricity, Ruin, Battle, Sorcery, Haste, the Infinite, Seeking,
+        Insulation, Thawing, Grounding, Alacrity, Opulence, Command]
+      Lesser: [Lesser Essence of the Body, Lesser Essence of the Mind, Lesser Essence of Enhancement, Lesser Essence of Abrasion, Lesser
+          Essence of Flames, Lesser Essence of Ice, Lesser Essence of Electricity, Lesser Essence of Ruin, Lesser Essence of Battle, Lesser
+          Essence of Sorcery, Lesser Essence of Haste, Lesser Essence of the Infinite, Lesser Essence of Seeking, Lesser Essence of Insulation,
+        Lesser Essence of Thawing, Lesser Essence of Grounding, Lesser Essence of Alacrity, Lesser Essence of Opulence, Lesser Essence of
+          Command]
+      normal: [Essence of the Body, Essence of the Mind, Essence of Enhancement, Essence of Abrasion, Essence of Flames, Essence of Ice,
+        Essence of Electricity, Essence of Ruin, Essence of Battle, Essence of Sorcery, Essence of Haste, Essence of the Infinite, Essence
+          of Seeking, Essence of Insulation, Essence of Thawing, Essence of Grounding, Essence of Alacrity, Essence of Opulence, Essence
+          of Command]
+      Greater: [Greater Essence of the Body, Greater Essence of the Mind, Greater Essence of Enhancement, Greater Essence of Abrasion, Greater
+          Essence of Flames, Greater Essence of Ice, Greater Essence of Electricity, Greater Essence of Ruin, Greater Essence of Battle,
+        Greater Essence of Sorcery, Greater Essence of Haste, Greater Essence of the Infinite, Greater Essence of Seeking, Greater Essence
+          of Insulation, Greater Essence of Thawing, Greater Essence of Grounding, Greater Essence of Alacrity, Greater Essence of Opulence,
+        Greater Essence of Command]
+      Perfect: [Perfect Essence of the Body, Perfect Essence of the Mind, Perfect Essence of Enhancement, Perfect Essence of Abrasion, Perfect
+          Essence of Flames, Perfect Essence of Ice, Perfect Essence of Electricity, Perfect Essence of Ruin, Perfect Essence of Battle,
+        Perfect Essence of Sorcery, Perfect Essence of Haste, Perfect Essence of the Infinite, Perfect Essence of Seeking, Perfect Essence
+          of Insulation, Perfect Essence of Thawing, Perfect Essence of Grounding, Perfect Essence of Alacrity, Perfect Essence of Opulence,
+        Perfect Essence of Command]
+      special: [Essence of Hysteria, Essence of Delirium, Essence of Horror, Essence of Insanity, Essence of the Abyss, Essence of the Breach]
+
+  - id: essence.tier_column
+    statement: 'The game''s Essences table puts the essences in three groups by its tier column: 0 = the Lesser, normal and Greater essences
+      (Magic to Rare); 1 = the Perfect essences, Essence of the Abyss, Essence of the Breach and the 13 Expedition alloys; 2 = Essence of
+      Hysteria, Essence of Delirium, Essence of Horror, Essence of Insanity. The meaning of the column is read from which essences carry
+      each value.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Essences.csv
+    quote: Essence of Hysteria | 2 |  | Amulet | DamageTakenGainedAsLife4_
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {0: 'Lesser, normal, Greater', 1: 'Perfect, the Abyss, the Breach, alloys', 2: 'Hysteria, Delirium, Horror, Insanity'}
+    approximate: true
+    approximate_reason: The column is unnamed in meaning; read from its values.
+    page_statement: The game groups Hysteria, Delirium, Horror and Insanity apart from the Abyss and Breach essences, which sit with the
+      Perfect ones.
+    page_source: the game's data files, our reading of them
+
+  - id: essence.guaranteed_mod_by_category
+    statement: 'The guaranteed modifier of an essence is fixed by the essence and the item category of the base: `value` maps each essence
+      to {item category: mod id}. A base whose class is in no listed category cannot take the essence. The categories'' item classes are
+      essence.item_categories. Essences whose modifier is drawn from a list are essence.guaranteed_mod_from_a_list.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Greater Essence of the Body | 0 |  | ShieldBeltHelmetBody | IncreasedLife8: +(100-119) to maximum Life (level 54, prefix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Essence of Abrasion: {OneHandMartialBow: LocalAddedPhysicalDamage5, TwoHandMartialCrossBow: LocalAddedPhysicalDamageTwoHand5}
+      Essence of Alacrity: {FocusWand: IncreasedCastSpeed3, Staff: IncreasedCastSpeedTwoHand3}
+      Essence of Battle: {Weapons: LocalIncreasedAccuracy5}
+      Essence of Command: {Sceptre: NearbyAlliesAllDamage4}
+      Essence of Delirium: {BodyArmour: EssenceGrantedPassive}
+      Essence of Electricity: {OneHandMartialBow: LocalAddedLightningDamage5, TwoHandMartialCrossBow: LocalAddedLightningDamageTwoHand5}
+      Essence of Flames: {OneHandMartialBow: LocalAddedFireDamage5, TwoHandMartialCrossBow: LocalAddedFireDamageTwoHand5}
+      Essence of Grounding: {ArmourJewellery: LightningResist4}
+      Essence of Haste: {BowCrossbow: LocalIncreasedAttackSpeed3, MeleeMartialWeapons: LocalIncreasedAttackSpeed5}
+      Essence of Horror: {GlovesBoots: EssenceLocalRuneAndSoulCoreEffect1}
+      Essence of Hysteria: {Amulet: DamageTakenGainedAsLife4_, Belt: StunThreshold10, BodyArmour: AttackerTakesDamage6, Boots: MovementVelocity5,
+        Focus: EnergyShieldRechargeRate5______, Gloves: CriticalMultiplier4, Helmet: GlobalMinionSpellSkillGemLevel1, Quiver: DamageWithBows5,
+        Ring: ManaRegeneration5, Shield: LocalBlockChance2}
+      Essence of Ice: {OneHandMartialBow: LocalAddedColdDamage5, TwoHandMartialCrossBow: LocalAddedColdDamageTwoHand5}
+      Essence of Insanity: {Belt: EssenceCorruptForTwoEnchantments1}
+      Essence of Insulation: {ArmourJewellery: FireResist4}
+      Essence of Opulence: {HelmetRingAmulet: ItemFoundRarityIncrease2}
+      Essence of Ruin: {ArmourJewellery: ChaosResist2}
+      Essence of Seeking: {FocusWand: SpellCriticalStrikeChance3, Staff: SpellCriticalStrikeChanceTwoHand3, Weapons: LocalCriticalStrikeChance3}
+      Essence of Sorcery: {FocusWand: SpellDamageOnWeapon4, Staff: SpellDamageOnTwoHandWeapon4}
+      Essence of Thawing: {ArmourJewellery: ColdResist4}
+      Essence of the Body: {AmuletBootsGlovesRing: IncreasedLife6, ShieldBeltHelmetBody: IncreasedLife7}
+      Essence of the Breach: {AmuletRing: EssenceBreach}
+      Essence of the Mind: {AmuletRing: IncreasedMana7, BeltBootsGlovesHelmet: IncreasedMana6}
+      Greater Essence of Abrasion: {OneHandMartialBow: LocalAddedPhysicalDamage7, TwoHandMartialCrossBow: LocalAddedPhysicalDamageTwoHand7}
+      Greater Essence of Alacrity: {FocusWand: IncreasedCastSpeed5, Staff: IncreasedCastSpeedTwoHand5}
+      Greater Essence of Command: {Sceptre: NearbyAlliesAllDamage6}
+      Greater Essence of Electricity: {OneHandMartialBow: LocalAddedLightningDamage7, TwoHandMartialCrossBow: LocalAddedLightningDamageTwoHand7}
+      Greater Essence of Flames: {OneHandMartialBow: LocalAddedFireDamage7, TwoHandMartialCrossBow: LocalAddedFireDamageTwoHand7}
+      Greater Essence of Grounding: {ArmourJewellery: LightningResist6}
+      Greater Essence of Haste: {BowCrossbow: LocalIncreasedAttackSpeed4, MeleeMartialWeapons: LocalIncreasedAttackSpeed7}
+      Greater Essence of Ice: {OneHandMartialBow: LocalAddedColdDamage7, TwoHandMartialCrossBow: LocalAddedColdDamageTwoHand7}
+      Greater Essence of Insulation: {ArmourJewellery: FireResist6}
+      Greater Essence of Opulence: {HelmetRingAmulet: ItemFoundRarityIncrease3}
+      Greater Essence of Ruin: {ArmourJewellery: ChaosResist4}
+      Greater Essence of Seeking: {FocusWand: SpellCriticalStrikeChance4, Staff: SpellCriticalStrikeChanceTwoHand4, Weapons: LocalCriticalStrikeChance4}
+      Greater Essence of Sorcery: {FocusWand: SpellDamageOnWeapon6, Staff: SpellDamageOnTwoHandWeapon6}
+      Greater Essence of Thawing: {ArmourJewellery: ColdResist6}
+      Greater Essence of the Body: {AmuletBootsGloves: IncreasedLife7, ShieldBeltHelmetBody: IncreasedLife8}
+      Greater Essence of the Mind: {AmuletRing: IncreasedMana8, BeltBootsGlovesHelmet: IncreasedMana7}
+      Lesser Essence of Abrasion: {OneHandMartialBow: LocalAddedPhysicalDamage2, TwoHandMartialCrossBow: LocalAddedPhysicalDamageTwoHand2}
+      Lesser Essence of Alacrity: {FocusWand: IncreasedCastSpeed2, Staff: IncreasedCastSpeedTwoHand2}
+      Lesser Essence of Battle: {Weapons: LocalIncreasedAccuracy3}
+      Lesser Essence of Command: {Sceptre: NearbyAlliesAllDamage2}
+      Lesser Essence of Electricity: {OneHandMartialBow: LocalAddedLightningDamage2, TwoHandMartialCrossBow: LocalAddedLightningDamageTwoHand2}
+      Lesser Essence of Flames: {OneHandMartialBow: LocalAddedFireDamage2, TwoHandMartialCrossBow: LocalAddedFireDamageTwoHand2}
+      Lesser Essence of Grounding: {ArmourJewellery: LightningResist2}
+      Lesser Essence of Haste: {BowCrossbow: LocalIncreasedAttackSpeed2, MeleeMartialWeapons: LocalIncreasedAttackSpeed3}
+      Lesser Essence of Ice: {OneHandMartialBow: LocalAddedColdDamage2, TwoHandMartialCrossBow: LocalAddedColdDamageTwoHand2}
+      Lesser Essence of Insulation: {ArmourJewellery: FireResist2}
+      Lesser Essence of Opulence: {HelmetRingAmulet: ItemFoundRarityIncrease1}
+      Lesser Essence of Ruin: {ArmourJewellery: ChaosResist1}
+      Lesser Essence of Seeking: {FocusWand: SpellCriticalStrikeChance2, Staff: SpellCriticalStrikeChanceTwoHand2, Weapons: LocalCriticalStrikeChance2}
+      Lesser Essence of Sorcery: {FocusWand: SpellDamageOnWeapon2, Staff: SpellDamageOnTwoHandWeapon2}
+      Lesser Essence of Thawing: {ArmourJewellery: ColdResist2}
+      Lesser Essence of the Body: {AmuletRing: IncreasedLife2, ArmourBelt: IncreasedLife3}
+      Lesser Essence of the Mind: {BeltBootsGlovesHelmetJewellery: IncreasedMana3}
+      Perfect Essence of Abrasion: {OneHandMartialBow: EssenceDamageasExtraPhysical1, TwoHandMartialCrossBow: EssenceDamageasExtraPhysical2H}
+      Perfect Essence of Alacrity: {FocusWand: EssenceManaCostReduction, Staff: EssenceManaCostReduction2H}
+      Perfect Essence of Battle: {OneHandMartialBow: EssenceAttackSkillLevel1H1, TwoHandMartialCrossBow: EssenceAttackSkillLevel2H1}
+      Perfect Essence of Command: {Sceptre: EssenceAuraEffect1}
+      Perfect Essence of Electricity: {OneHandMartialBow: EssenceDamageasExtraLightning1, TwoHandMartialCrossBow: EssenceDamageasExtraLightning2H}
+      Perfect Essence of Enhancement: {Amulet: EssenceGlobalDefences1}
+      Perfect Essence of Flames: {OneHandMartialBow: EssenceDamageasExtraFire1, TwoHandMartialCrossBow: EssenceDamageasExtraFire2H}
+      Perfect Essence of Grounding: {Gloves: EssenceLightningRecoupLife1}
+      Perfect Essence of Haste: {Weapons: EssenceOnslaughtonKill1}
+      Perfect Essence of Ice: {OneHandMartialBow: EssenceDamageasExtraCold1, TwoHandMartialCrossBow: EssenceDamageasExtraCold2H}
+      Perfect Essence of Insulation: {Belt: EssenceFireRecoupLife1}
+      Perfect Essence of Opulence: {Gloves: EssenceGoldDropped1}
+      Perfect Essence of Ruin: {BodyArmour: EssencePhysicalDamageTakenAsChaos1}
+      Perfect Essence of Seeking: {BodyArmour: EssenceReducedCriticalDamageAgainstYou1}
+      Perfect Essence of Sorcery: {Staff: EssenceSpellSkillLevel2H1, Wand: EssenceSpellSkillLevel1H1}
+      Perfect Essence of Thawing: {Helmet: EssenceColdRecoupLife1}
+      Perfect Essence of the Body: {BodyArmour: EssenceIncreasedLifePercent1}
+      Perfect Essence of the Mind: {Ring: EssenceIncreasedManaPercent1}
+
+  - id: essence.guaranteed_mod_from_a_list
+    statement: 'Five essences give one modifier out of a list instead of one fixed modifier: Lesser Essence of Enhancement, Essence of Enhancement
+      and Greater Essence of Enhancement (one per armour defence type), Lesser Essence of the Infinite, Essence of the Infinite, Greater
+      Essence of the Infinite and Perfect Essence of the Infinite (Strength, Dexterity or Intelligence), Greater Essence of Battle (local
+      or global accuracy), and Essence of the Abyss (the Mark as a prefix or a suffix). Weights are in the data only for Perfect Essence
+      of the Infinite (50, 50, 50) and Essence of the Abyss (50, 50). APPROXIMATE: which mod the others give is taken to be the one that
+      fits the base (its defence type, local versus global) and, where several fit, an even draw.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: Essence of the Abyss | 1 |  | AllEquipment |  | EssenceAbyssPrefix, EssenceAbyssSuffix | [50,50]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Essence of Enhancement:
+        Armour:
+          mods: [LocalIncreasedPhysicalDamageReductionRatingPercent4, LocalIncreasedEvasionRatingPercent4, LocalIncreasedEnergyShieldPercent4,
+            LocalIncreasedArmourAndEvasion4, LocalIncreasedArmourAndEnergyShield4, LocalIncreasedEvasionAndEnergyShield4]
+          weights: '[]'
+      Essence of the Abyss:
+        AllEquipment:
+          mods: [EssenceAbyssPrefix, EssenceAbyssSuffix]
+          weights: '[50,50]'
+      Essence of the Infinite:
+        AllEquipment:
+          mods: [Strength4, Dexterity4, Intelligence4]
+          weights: '[]'
+      Greater Essence of Battle:
+        GlovesQuiver:
+          mods: [LocalIncreasedAccuracy7, IncreasedAccuracy7]
+          weights: '[]'
+      Greater Essence of Enhancement:
+        Armour:
+          mods: [LocalIncreasedPhysicalDamageReductionRatingPercent5, LocalIncreasedEvasionRatingPercent5, LocalIncreasedEnergyShieldPercent5,
+            LocalIncreasedArmourAndEvasion5, LocalIncreasedArmourAndEnergyShield5, LocalIncreasedEvasionAndEnergyShield5_]
+          weights: '[]'
+      Greater Essence of the Infinite:
+        AllEquipment:
+          mods: [Strength6, Dexterity6, Intelligence6]
+          weights: '[]'
+      Lesser Essence of Enhancement:
+        Armour:
+          mods: [LocalIncreasedPhysicalDamageReductionRatingPercent2, LocalIncreasedEvasionRatingPercent2, LocalIncreasedEnergyShieldPercent2,
+            LocalIncreasedArmourAndEvasion2, LocalIncreasedArmourAndEnergyShield2, LocalIncreasedEvasionAndEnergyShield2]
+          weights: '[]'
+      Lesser Essence of the Infinite:
+        AllEquipment:
+          mods: [Strength2, Dexterity2, Intelligence2]
+          weights: '[]'
+      Perfect Essence of the Infinite:
+        Amulet:
+          mods: [EssencePercentStrength1, EssencePercentDexterity1, EssencePercentIntelligence1]
+          weights: '[50,50,50]'
+    approximate: true
+    approximate_reason: The data lists the outcome mods; the rule choosing among them is not stated for lists without weights.
+    page_statement: Essences of Enhancement and of the Infinite give the defence or attribute modifier that fits the item, chosen evenly
+      when several fit.
+    page_source: the game's data files and our reading of them
+
+  - id: essence.item_categories
+    statement: 'The item categories named by essences and alloys stand for these item classes (`value`: category -> classes).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceTargetItemCategories.csv
+    quote: '`OneHandMartialBow`: One Hand Sword, One Hand Axe, One Hand Mace, Spear, Dagger, Bow, Flail'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      AllEquipment: [One Hand Sword, One Hand Axe, One Hand Mace, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Bow, Warstaff, Dagger,
+        Helmet, Body Armour, Gloves, Boots, Shield, Staff, Wand, Sceptre, Ring, Amulet, Belt, Quiver, Crossbow, Flail, Talisman, Focus,
+        Buckler]
+      AllWeapons: [One Hand Sword, One Hand Axe, One Hand Mace, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Bow, Warstaff, Dagger,
+        Crossbow, Flail, Talisman, Sceptre, Staff, Wand]
+      Amulet: [Amulet]
+      AmuletBootsGloves: [Amulet, Boots, Gloves]
+      AmuletBootsGlovesRing: [Amulet, Boots, Gloves, Ring]
+      AmuletRing: [Ring, Amulet]
+      Armour: [Helmet, Body Armour, Gloves, Boots, Shield, Buckler, Focus]
+      ArmourBelt: [Helmet, Body Armour, Gloves, Boots, Shield, Belt, Buckler, Focus]
+      ArmourJewellery: [Helmet, Body Armour, Gloves, Boots, Shield, Ring, Amulet, Belt, Buckler, Focus]
+      Belt: [Belt]
+      BeltBootsGlovesHelmet: [Boots, Gloves, Helmet, Belt]
+      BeltBootsGlovesHelmetJewellery: [Belt, Boots, Gloves, Helmet, Amulet, Ring]
+      BodyArmour: [Body Armour]
+      Boots: [Boots]
+      Bow: [Bow]
+      BowCrossbow: [Bow, Crossbow]
+      Caster: [Staff, Wand, Sceptre]
+      Crossbow: [Crossbow]
+      Focus: [Focus]
+      FocusWand: [Focus, Wand]
+      Gloves: [Gloves]
+      GlovesBoots: [Gloves, Boots]
+      GlovesQuiver: [Gloves, Quiver, One Hand Sword, One Hand Axe, One Hand Mace, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Bow,
+        Warstaff, Dagger, Crossbow, Flail, Talisman]
+      Helmet: [Helmet]
+      HelmetRingAmulet: [Helmet, Ring, Amulet, Boots, Gloves]
+      Jewellery: [Ring, Amulet, Belt]
+      Maces: [One Hand Mace, Two Hand Mace]
+      MeleeMartialWeapons: [One Hand Sword, One Hand Axe, One Hand Mace, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Warstaff, Dagger,
+        Flail, Talisman]
+      OneHandMartialBow: [One Hand Sword, One Hand Axe, One Hand Mace, Spear, Dagger, Bow, Flail]
+      Quarterstaff: [Warstaff]
+      Quiver: [Quiver]
+      Ring: [Ring]
+      Sceptre: [Sceptre]
+      Shield: [Shield, Buckler]
+      ShieldBeltHelmetBody: [Belt, Body Armour, Helmet, Shield, Buckler]
+      ShieldFocus: [Shield, Buckler, Focus]
+      Spear: [Spear]
+      Staff: [Staff]
+      StaffWand: [Staff, Wand, Focus]
+      StaffWandNoFocus: [Staff, Wand]
+      Talisman: [Talisman]
+      TwoHandMartialCrossBow: [Two Hand Sword, Two Hand Axe, Two Hand Mace, Warstaff, Crossbow, Talisman]
+      Wand: [Wand]
+      Weapons: [One Hand Sword, One Hand Axe, One Hand Mace, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Bow, Warstaff, Dagger,
+        Crossbow, Flail, Talisman]
+
+  - id: essence.mod_level_and_side
+    statement: 'Each essence modifier has a modifier level and a side (`value`: mod id -> [level, prefix or suffix]). Lesser mods sit at
+      levels 3 to 22, normal at 22 to 46, Greater at 30 to 60, Perfect at 72; Essence of Hysteria''s at 5 to 72; the Delirium, Horror, Insanity,
+      Abyss and Breach mods at level 1.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Perfect Essence of the Body | 1 | 1 | BodyArmour | EssenceIncreasedLifePercent1: (8-10)% increased maximum Life (level 72, prefix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      LocalAddedPhysicalDamage5: [46, prefix]
+      LocalAddedPhysicalDamageTwoHand5: [46, prefix]
+      IncreasedCastSpeed3: [30, suffix]
+      IncreasedCastSpeedTwoHand3: [30, suffix]
+      LocalIncreasedAccuracy5: [36, prefix]
+      NearbyAlliesAllDamage4: [33, prefix]
+      EssenceGrantedPassive: [1, prefix]
+      LocalAddedLightningDamage5: [46, prefix]
+      LocalAddedLightningDamageTwoHand5: [46, prefix]
+      LocalAddedFireDamage5: [46, prefix]
+      LocalAddedFireDamageTwoHand5: [46, prefix]
+      LightningResist4: [37, suffix]
+      LocalIncreasedAttackSpeed3: [22, suffix]
+      LocalIncreasedAttackSpeed5: [37, suffix]
+      EssenceLocalRuneAndSoulCoreEffect1: [1, suffix]
+      DamageTakenGainedAsLife4_: [68, suffix]
+      StunThreshold10: [72, suffix]
+      AttackerTakesDamage6: [63, prefix]
+      MovementVelocity5: [65, prefix]
+      EnergyShieldRechargeRate5______: [66, suffix]
+      CriticalMultiplier4: [45, suffix]
+      GlobalMinionSpellSkillGemLevel1: [5, suffix]
+      DamageWithBows5: [60, prefix]
+      ManaRegeneration5: [55, suffix]
+      LocalBlockChance2: [33, prefix]
+      LocalAddedColdDamage5: [46, prefix]
+      LocalAddedColdDamageTwoHand5: [46, prefix]
+      EssenceCorruptForTwoEnchantments1: [1, suffix]
+      FireResist4: [36, suffix]
+      ItemFoundRarityIncrease2: [24, suffix]
+      ChaosResist2: [30, suffix]
+      SpellCriticalStrikeChance3: [28, suffix]
+      SpellCriticalStrikeChanceTwoHand3: [28, suffix]
+      LocalCriticalStrikeChance3: [30, suffix]
+      SpellDamageOnWeapon4: [33, prefix]
+      SpellDamageOnTwoHandWeapon4: [33, prefix]
+      ColdResist4: [38, suffix]
+      IncreasedLife6: [38, prefix]
+      IncreasedLife7: [46, prefix]
+      EssenceBreach: [1, prefix]
+      IncreasedMana7: [46, prefix]
+      IncreasedMana6: [38, prefix]
+      LocalAddedPhysicalDamage7: [60, prefix]
+      LocalAddedPhysicalDamageTwoHand7: [60, prefix]
+      IncreasedCastSpeed5: [60, suffix]
+      IncreasedCastSpeedTwoHand5: [60, suffix]
+      NearbyAlliesAllDamage6: [60, prefix]
+      LocalAddedLightningDamage7: [60, prefix]
+      LocalAddedLightningDamageTwoHand7: [60, prefix]
+      LocalAddedFireDamage7: [60, prefix]
+      LocalAddedFireDamageTwoHand7: [60, prefix]
+      LightningResist6: [60, suffix]
+      LocalIncreasedAttackSpeed4: [30, suffix]
+      LocalIncreasedAttackSpeed7: [60, suffix]
+      LocalAddedColdDamage7: [60, prefix]
+      LocalAddedColdDamageTwoHand7: [60, prefix]
+      FireResist6: [60, suffix]
+      ItemFoundRarityIncrease3: [40, suffix]
+      ChaosResist4: [56, suffix]
+      SpellCriticalStrikeChance4: [41, suffix]
+      SpellCriticalStrikeChanceTwoHand4: [41, suffix]
+      LocalCriticalStrikeChance4: [44, suffix]
+      SpellDamageOnWeapon6: [60, prefix]
+      SpellDamageOnTwoHandWeapon6: [60, prefix]
+      ColdResist6: [60, suffix]
+      IncreasedLife8: [54, prefix]
+      IncreasedMana8: [54, prefix]
+      LocalAddedPhysicalDamage2: [8, prefix]
+      LocalAddedPhysicalDamageTwoHand2: [8, prefix]
+      IncreasedCastSpeed2: [15, suffix]
+      IncreasedCastSpeedTwoHand2: [15, suffix]
+      LocalIncreasedAccuracy3: [18, prefix]
+      NearbyAlliesAllDamage2: [8, prefix]
+      LocalAddedLightningDamage2: [8, prefix]
+      LocalAddedLightningDamageTwoHand2: [8, prefix]
+      LocalAddedFireDamage2: [8, prefix]
+      LocalAddedFireDamageTwoHand2: [8, prefix]
+      LightningResist2: [13, suffix]
+      LocalIncreasedAttackSpeed2: [11, suffix]
+      LocalAddedColdDamage2: [8, prefix]
+      LocalAddedColdDamageTwoHand2: [8, prefix]
+      FireResist2: [12, suffix]
+      ItemFoundRarityIncrease1: [3, suffix]
+      ChaosResist1: [16, suffix]
+      SpellCriticalStrikeChance2: [21, suffix]
+      SpellCriticalStrikeChanceTwoHand2: [21, suffix]
+      LocalCriticalStrikeChance2: [20, suffix]
+      SpellDamageOnWeapon2: [8, prefix]
+      SpellDamageOnTwoHandWeapon2: [8, prefix]
+      ColdResist2: [14, suffix]
+      IncreasedLife2: [6, prefix]
+      IncreasedLife3: [16, prefix]
+      IncreasedMana3: [16, prefix]
+      EssenceDamageasExtraPhysical1: [72, prefix]
+      EssenceDamageasExtraPhysical2H: [72, prefix]
+      EssenceManaCostReduction: [72, suffix]
+      EssenceManaCostReduction2H: [72, suffix]
+      EssenceAttackSkillLevel1H1: [72, suffix]
+      EssenceAttackSkillLevel2H1: [72, suffix]
+      EssenceAuraEffect1: [72, suffix]
+      EssenceDamageasExtraLightning1: [72, prefix]
+      EssenceDamageasExtraLightning2H: [72, prefix]
+      EssenceGlobalDefences1: [72, prefix]
+      EssenceDamageasExtraFire1: [72, prefix]
+      EssenceDamageasExtraFire2H: [72, prefix]
+      EssenceLightningRecoupLife1: [72, suffix]
+      EssenceOnslaughtonKill1: [72, suffix]
+      EssenceDamageasExtraCold1: [72, prefix]
+      EssenceDamageasExtraCold2H: [72, prefix]
+      EssenceFireRecoupLife1: [72, suffix]
+      EssenceGoldDropped1: [72, suffix]
+      EssencePhysicalDamageTakenAsChaos1: [72, prefix]
+      EssenceReducedCriticalDamageAgainstYou1: [72, suffix]
+      EssenceSpellSkillLevel2H1: [72, suffix]
+      EssenceSpellSkillLevel1H1: [72, suffix]
+      EssenceColdRecoupLife1: [72, suffix]
+      EssenceIncreasedLifePercent1: [72, prefix]
+      EssenceIncreasedManaPercent1: [72, prefix]
+
+  - id: essence.poe2db_required_level_is_four_fifths
+    statement: 'The ''Required Level'' poe2db prints for an essence modifier is the character level the modifier asks, about four fifths
+      of the modifier level in the data (Greater Essence of the Body on a helmet: 43 printed, level 54; Perfect essences: 57 printed, level
+      72; Essence of Hysteria on a helmet: 4 printed, level 5). It is not the modifier level.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Greater_Essence_of_the_Body
+    quote: +(100—119) to maximum Life | Prefix | 43
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Read by comparing poe2db's numbers with the data's modifier levels; the four-fifths ratio is inferred.
+    page_statement: The level poe2db shows beside an essence's modifier is the character level it asks, not the item level it needs.
+    page_source: poe2db compared with the game's data files
+
+  - id: essence.item_level_does_not_gate
+    statement: 'UNVERIFIED: an essence is taken to apply to an item whatever its item level, even below the level of the essence''s modifier
+      (Greater Essence of the Body, level 54, on an item level 30 helmet). No source states it either way; the essence''s text names no
+      item level.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Upgrades a [ItemRarity / Magic] item to a [ItemRarity / Rare] item, adding a guaranteed modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: No source says whether item level limits an essence; the default follows the item text, which names no limit.
+    page_statement: An essence is taken to work on an item of any item level; this is not checked in game.
+    page_source: the game's item text only
+
+  - id: essence.perfect_tier_changes_class_and_mod
+    statement: 'A Perfect essence gives a different modifier, on fewer item classes, than the lower tiers of its family: Perfect Essence
+      of the Body (8-10)% increased maximum Life on Body Armour only; Perfect Essence of the Mind (4-6)% increased maximum Mana on Rings;
+      Perfect Essence of Battle +2 to Level of all Attack Skills on one-hand weapons and bows, +3 on two-hand weapons and crossbows; Perfect
+      Essence of Sorcery +3 (Wand) or +5 (Staff) to spell skills; Perfect Essence of Insulation, Thawing and Grounding (26-30)% of Fire,
+      Cold or Lightning damage taken recouped as Life on Belt, Helmet or Gloves. The full map is essence.guaranteed_mod_by_category.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: The Perfect Essence of Battle now provides +3 to Level of all Attack Skills on Two Hand Melee Weapons or Crossbows
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: essence.tiers_do_not_share_classes
+    statement: 'The tiers of one family do not always cover the same classes: Essence of the Body gives +(70-84) life on Amulet, Boots,
+      Gloves and Ring, while Greater Essence of the Body gives +(85-99) on Amulet, Boots and Gloves only (its ring row is gone) and +(100-119)
+      on Belt, Body Armour, Helmet and Shield.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Greater Essence of the Body | 0 |  | AmuletBootsGloves | IncreasedLife7: +(85-99) to maximum Life (level 46, prefix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: essence.removed_mod_is_random
+    statement: A Perfect or special essence removes a random modifier of the item before adding its own; without an omen any modifier can
+      be the one removed. The Crystallisation omens that restrict the side are socketable_rules.crystallisation_omens.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence
+    quote: Removes a random modifier and augments a Rare item with a new guaranteed modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: essence.removal_skips_fractured
+    statement: 'UNVERIFIED: the random removal of a Perfect or special essence never removes a fractured modifier, by the usual rule that
+      fractured modifiers cannot be removed; no page read states it for essences.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence
+    quote: Removes a random modifier and augments a Rare item with a new guaranteed modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The general fractured rule is assumed; no source names essences.
+    page_statement: A Perfect essence is taken never to remove a fractured modifier.
+    page_source: the general rule for fractured modifiers, not checked for essences
+
+  - id: essence.hysteria_mods
+    statement: 'Essence of Hysteria gives: Helmet +1 to Level of all Minion Skills; Body Armour (64-97) to (98-145) Physical Thorns damage;
+      Gloves (25-29)% increased Critical Damage Bonus; Boots 30% increased Movement Speed; Ring (50-59)% increased Mana Regeneration Rate;
+      Amulet (19-21)% of Damage taken Recouped as Life; Belt +(254-304) to Stun Threshold; Shield and Buckler (20-24)% increased Block chance;
+      Quiver (43-50)% increased Damage with Bow Skills; Focus (20-23)% increased Energy Shield Recharge Rate (the focus line since 0.5.0).'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Essence of Hysteria now grants 20-23% increased Energy Shield Recharge Rate when applied to Foci
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: essence.delirium_allocates_a_notable
+    statement: Essence of Delirium on a Body Armour adds a prefix that allocates a random Notable Passive Skill (mod EssenceGrantedPassive).
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence_of_Delirium
+    quote: Allocates a random Notable Passive Skill
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Body Armour: EssenceGrantedPassive}
+
+  - id: essence.horror_boosts_augments
+    statement: Essence of Horror on Gloves or Boots adds the suffix '60% increased effect of Socketed Augment Items' (EssenceLocalRuneAndSoulCoreEffect1).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Essence of Horror | 2 |  | GlovesBoots | EssenceLocalRuneAndSoulCoreEffect1: 60% increased effect of Socketed [Augment] Items
+      (level 1, suffix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Gloves: EssenceLocalRuneAndSoulCoreEffect1, Boots: EssenceLocalRuneAndSoulCoreEffect1}
+
+  - id: essence.insanity_two_enchantments
+    statement: 'Essence of Insanity on a Belt adds the suffix ''On Corruption, Item gains two Enchantments'' (EssenceCorruptForTwoEnchantments1):
+      a later corruption of that belt gives two corrupted enchantments.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Essence of Insanity | 2 |  | Belt | EssenceCorruptForTwoEnchantments1: On Corruption, Item gains two Enchantments (level 1,
+      suffix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Belt: EssenceCorruptForTwoEnchantments1}
+
+  - id: essence.abyss_mark
+    statement: Essence of the Abyss works on any equipment and adds 'Bears the Mark of the Abyssal Lord', as a prefix (EssenceAbyssPrefix)
+      or a suffix (EssenceAbyssSuffix), weights 50 and 50.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: Essence of the Abyss | 1 |  | AllEquipment |  | EssenceAbyssPrefix, EssenceAbyssSuffix | [50,50]
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {EssenceAbyssPrefix: 50, EssenceAbyssSuffix: 50}
+
+  - id: essence.abyss_mark_effect_unknown
+    statement: 'UNVERIFIED: what the Mark of the Abyssal Lord does in crafting is not stated by any source read; it is understood to interact
+      with desecration. Until checked, the planner treats the Mark as an ordinary modifier that takes an affix slot and does nothing else.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence
+    quote: Bears the Mark of the Abyssal Lord
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: No source describes the Mark's effect.
+    page_statement: What the Essence of the Abyss mark does is unknown; it is counted only as a modifier taking a slot.
+    page_source: the game's item text only
+
+  - id: essence.breach_raises_max_quality
+    statement: Essence of the Breach on a Ring or Amulet adds the prefix '+20% to Maximum Quality' (EssenceBreach).
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Essence of the Breach | 1 |  | AmuletRing | EssenceBreach: +20% to Maximum [Quality] (level 1, prefix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Ring: EssenceBreach, Amulet: EssenceBreach}
+
+  - id: essence.corrupting_essence_monsters
+    statement: A Vaal Orb used on an imprisoned essence monster can change the number of essences, reroll them all to one type, or upgrade
+      them (to Greater, then to Essence of Hysteria, Delirium, Horror or Insanity). This is how the corrupted essences are made; no bench
+      recipe makes them. 0.5.0 fixed a bug where corrupting essences could remove an essence.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: Change the number of Essences; reroll all to the same type; or upgrade Essences to Greater, then Corrupted (Hysteria, Delirium,
+      Horror, Insanity)
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: Maxroll's page is written for 0.4 and the quote is a summary read through a model, not verbatim.
+    page_statement: Corrupting an essence monster with a Vaal Orb can upgrade its essences, up to the corrupted ones.
+    page_source: a Maxroll guide written for the previous patch

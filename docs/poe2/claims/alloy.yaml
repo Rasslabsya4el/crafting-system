@@ -1,0 +1,127 @@
+# Mechanic family: alloy (the 13 Expedition alloys, which swap one modifier of a Rare for a guaranteed one).
+# PoE2 research of 2026-11-24, docs/poe2/research/essences-socketables-corruption-abyss.md
+# (PoE2 0.5.5.10; game data pin research/poe2/data/PIN.json, derived tables under research/poe2/data/derived/).
+# APPROXIMATE (ADR-0028): a claim marked approximate: true rests on one secondary source, an older patch,
+# a search snippet or an inference from data; the open checks are in docs/poe2/notes/essences-socketables-corruption-abyss.md.
+rules:
+  - id: alloy.thirteen_alloys
+    statement: Expedition has 13 Alloys (Runic Alloy, Adaptive Alloy, Protective Alloy, Expansive Alloy, Swift Alloy, Cyclonic Alloy, Prismatic
+      Alloy, Mystic Alloy, Sovereign Alloy, Celestial Alloy, Transcendent Alloy, The Runebinder's Alloy, The Runefather's Alloy), unlocked
+      through Remnant encounters after Farrow's quest in Act 2. The trade site lists them under Verisium.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: Added 13 new Alloy currency items, which can be unlocked through Remnant encounters after completing Farrow's quest in Act 2.
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: [Runic Alloy, Adaptive Alloy, Protective Alloy, Expansive Alloy, Swift Alloy, Cyclonic Alloy, Prismatic Alloy, Mystic Alloy,
+      Sovereign Alloy, Celestial Alloy, Transcendent Alloy, The Runebinder's Alloy, The Runefather's Alloy]
+
+  - id: alloy.works_like_perfect_essence
+    statement: 'An Alloy is used on a Rare item like a Perfect essence: it removes a random modifier and adds its guaranteed modifier. The
+      game data files the alloys in the essence tables (tier 1, with the Perfect essences).'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: Removes a random modifier and augments a [ItemRarity / Rare] item with a new guaranteed modifier
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {takes: Rare, removes: 1, adds: 1}
+
+  - id: alloy.guaranteed_mod_by_category
+    statement: 'The guaranteed modifier of each alloy by item category (`value`: alloy -> {category: mod id}); the categories'' classes
+      are essence.item_categories. A class in no listed category cannot take the alloy.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Runic Alloy | 1 |  | Ring | AlloyMaximumRunicWard1: +(37-49) to maximum [Ward/Runic Ward] (level 13, prefix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Adaptive Alloy: {Gloves: AlloyAttackSpeedIfMissingWardRecently1, Sceptre: AlloyPuppetMasterChance1, Staff: AlloyDamageAsExtraFireTwoHandWhileMissingRunicWard1,
+        Wand: AlloyDamageAsExtraFireWhileMissingRunicWard1}
+      Celestial Alloy: {StaffWandNoFocus: AlloySpellLevelManaHybrid1, Weapons: AlloyAccuracyAttackSpeedHybrid1}
+      Cyclonic Alloy: {BodyArmour: AlloyReducedSlowPotency1, Boots: AlloySkillEffectDuration1, Gloves: AlloyDamagingAilmentDuration1, Helmet: AlloyArchonDuration1}
+      Expansive Alloy: {BodyArmour: AlloyPresenceAreaOfEffect1, Boots: AlloyTemporaryMinionSkillLimit1, Gloves: AlloyRemnantPickupRange1,
+        Helmet: AlloyManaCostEfficiency1}
+      Mystic Alloy: {Boots: AlloySpiritOnBoots1, Caster: AlloyMaximumElementalInfusions1, Gloves: AlloyAttackAreaOfEffect1, Helmet: AlloySpellAreaOfEffect1,
+        Quiver: AlloyChanceToChain1}
+      Prismatic Alloy: {Gloves: AlloyElementalPenetration1, Sceptre: AlloyMinionDamagingAilmentMagnitude1, StaffWand: AlloyExposureEffect1,
+        Weapons: AlloyAilmentMagnitude1}
+      Protective Alloy: {AllWeapons: AlloyMaximumRunicWardWeapon1, Belt: AlloyRecoverRunicWardOnCharmUse1, Shield: AlloyRunicWardOnBlock1}
+      Runic Alloy: {Amulet: AlloyMaximumRunicWardPercent1, Belt: AlloyRunicWardRechargeRate1, Ring: AlloyMaximumRunicWard1}
+      Sovereign Alloy: {AllWeapons: AlloyEffectOfSocketedAugments1, Armour: AlloyLocalWardIncreasePercent1, Jewellery: AlloyEffectOfResistanceMods1}
+      Swift Alloy: {Belt: AlloyFlaskChargesPerSecond1, Gloves: AlloyCastSpeedGloves1, Ring: AlloyAttackSpeedRing1, ShieldFocus: AlloyTotemPlacementSpeed1}
+      The Runebinder's Alloy: {Bow: AlloyMarkEffect, Crossbow: AlloyBallistaLimit1, Sceptre: AlloyPuppeteerStacks1, Staff: AlloyNaturesArchon1,
+        Wand: AlloyElementalSkillLimit1}
+      The Runefather's Alloy: {Maces: AlloyRetainGlory1, Quarterstaff: AlloyBellLimit1, Spear: AlloyMeleeStrikeRange1, Talisman: AlloyLightningDamageIgnites1}
+      Transcendent Alloy: {FocusWand: AlloyCastSpeedDamageAsExtraColdHybridOneHand1, Staff: AlloyCastSpeedDamageAsExtraColdHybrid1, Weapons: AlloyAttributeIncreasedLocalPhysicalDamageHybrid1}
+
+  - id: alloy.mod_level_and_side
+    statement: 'Each alloy modifier''s level and side (`value`: mod id -> [level, prefix or suffix]); alloy mods sit at levels 13, 25, 45
+      and 65.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv
+    quote: 'Celestial Alloy | 1 |  | Weapons | AlloyAccuracyAttackSpeedHybrid1: +(327-427) to [Accuracy/Accuracy] Rating (5-8)% increased
+      [Attack] Speed (level 65, prefix)'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      AlloyAttackSpeedIfMissingWardRecently1: [25, suffix]
+      AlloyPuppetMasterChance1: [25, prefix]
+      AlloyDamageAsExtraFireTwoHandWhileMissingRunicWard1: [25, prefix]
+      AlloyDamageAsExtraFireWhileMissingRunicWard1: [25, prefix]
+      AlloySpellLevelManaHybrid1: [65, prefix]
+      AlloyAccuracyAttackSpeedHybrid1: [65, prefix]
+      AlloyReducedSlowPotency1: [45, suffix]
+      AlloySkillEffectDuration1: [45, suffix]
+      AlloyDamagingAilmentDuration1: [45, suffix]
+      AlloyArchonDuration1: [45, suffix]
+      AlloyPresenceAreaOfEffect1: [25, suffix]
+      AlloyTemporaryMinionSkillLimit1: [25, suffix]
+      AlloyRemnantPickupRange1: [25, suffix]
+      AlloyManaCostEfficiency1: [25, prefix]
+      AlloySpiritOnBoots1: [45, suffix]
+      AlloyMaximumElementalInfusions1: [45, suffix]
+      AlloyAttackAreaOfEffect1: [45, suffix]
+      AlloySpellAreaOfEffect1: [45, suffix]
+      AlloyChanceToChain1: [45, suffix]
+      AlloyElementalPenetration1: [45, prefix]
+      AlloyMinionDamagingAilmentMagnitude1: [45, suffix]
+      AlloyExposureEffect1: [45, suffix]
+      AlloyAilmentMagnitude1: [45, suffix]
+      AlloyMaximumRunicWardWeapon1: [25, suffix]
+      AlloyRecoverRunicWardOnCharmUse1: [25, prefix]
+      AlloyRunicWardOnBlock1: [13, suffix]
+      AlloyMaximumRunicWardPercent1: [13, prefix]
+      AlloyRunicWardRechargeRate1: [13, prefix]
+      AlloyMaximumRunicWard1: [13, prefix]
+      AlloyEffectOfSocketedAugments1: [65, suffix]
+      AlloyLocalWardIncreasePercent1: [25, prefix]
+      AlloyEffectOfResistanceMods1: [65, prefix]
+      AlloyFlaskChargesPerSecond1: [45, suffix]
+      AlloyCastSpeedGloves1: [45, suffix]
+      AlloyAttackSpeedRing1: [45, suffix]
+      AlloyTotemPlacementSpeed1: [45, suffix]
+      AlloyMarkEffect: [65, suffix]
+      AlloyBallistaLimit1: [65, suffix]
+      AlloyPuppeteerStacks1: [65, suffix]
+      AlloyNaturesArchon1: [65, suffix]
+      AlloyElementalSkillLimit1: [65, suffix]
+      AlloyRetainGlory1: [65, suffix]
+      AlloyBellLimit1: [65, suffix]
+      AlloyMeleeStrikeRange1: [65, suffix]
+      AlloyLightningDamageIgnites1: [65, suffix]
+      AlloyCastSpeedDamageAsExtraColdHybridOneHand1: [65, suffix]
+      AlloyCastSpeedDamageAsExtraColdHybrid1: [65, suffix]
+      AlloyAttributeIncreasedLocalPhysicalDamageHybrid1: [65, suffix]
+
+  - id: alloy.crystallisation_omens_not_assumed
+    statement: 'UNVERIFIED: the Crystallisation omens name only ''Perfect or Corrupted Essence'', so the planner does not let them restrict
+      an Alloy''s removal until a check shows they do.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen_of_Dextral_Crystallisation
+    quote: your next Perfect or Corrupted Essence will remove only Suffix modifiers
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: The omen text names only essences; whether alloys count as essences for it is untested.
+    page_statement: The omens that make a Perfect essence remove only prefixes or only suffixes are not assumed to work on alloys.
+    page_source: the omen's item text only
