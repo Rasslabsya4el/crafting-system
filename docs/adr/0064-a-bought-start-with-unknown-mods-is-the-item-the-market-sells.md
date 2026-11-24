@@ -58,7 +58,8 @@ start, an Orb of Transmutation for a Magic one (the same 1 or 2 mods as an Alter
 price file; a restart pays it again. An orb with no price leaves the free draw. A search of the start's own rarity or of any rarity
 (`nonunique`, R14), a hand price with no stored search (R07, R20) and a run's own `--start-price` keep the free draw (#1537; changed for
 R14 and R07 by the amendment below). The rows of R08
-and R09 still add an Alchemy (0.02409) to the base's price, a data fix of its own (#1535). Planning such a start from the Normal base itself,
+and R09 added an Alchemy (0.02409) to the base's price, so it was paid twice; since #1535 they are the Normal base alone (43.8, 5.0; 29.8, 5.0
+in the files of 2026-10-31 and 2026-11-01) and `.github/scripts/price_snapshot.py` adds nothing to them. Planning such a start from the Normal base itself,
 so that an essence or another first step may replace the Alchemy, is #1537's.
 
 ## Amendment: a price of another rarity or of any scours first; a hand price may state its rarity ([#1537](https://github.com/Rasslabsya4el/crafting-system/issues/1537), OR-43, OR-16)

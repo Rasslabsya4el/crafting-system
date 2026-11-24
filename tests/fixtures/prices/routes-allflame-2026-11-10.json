@@ -37,7 +37,7 @@
       "usable": 10
     },
     "Sorcerer Boots, item level 86-100": {
-      "chaos": 43.82409,
+      "chaos": 43.8,
       "date": "2026-11-10",
       "league": "Allflame",
       "listings": 21,
@@ -51,7 +51,7 @@
       "usable": 10
     },
     "Two-Toned Boots [BootsAtlas1], item level 86-100": {
-      "chaos": 5.02409,
+      "chaos": 5.0,
       "date": "2026-11-10",
       "league": "Allflame",
       "listings": 35,
@@ -2666,7 +2666,7 @@
       "source": "trade-api"
     },
     "Sorcerer Boots, item level 86-100": {
-      "chaos": 43.82409,
+      "chaos": 43.8,
       "detail": {
         "date": "2026-11-10",
         "k": 5,
@@ -2718,7 +2718,7 @@
         "usable": 9,
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 21 on the site, listed any time; plus one Orb of Alchemy (0.02409): the item is a normal base made rare by the Alchemy the plan casts",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 21 on the site, listed any time; the Normal base alone: the Orb of Alchemy that makes it rare is the plan's first step, paid at the file's price (OR-43, #1522; until #1535 this row also held one Alchemy at 0.02409)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,
@@ -2834,7 +2834,7 @@
       "source": "trade-api"
     },
     "Two-Toned Boots [BootsAtlas1], item level 86-100": {
-      "chaos": 5.02409,
+      "chaos": 5.0,
       "detail": {
         "date": "2026-11-10",
         "k": 5,
@@ -2886,7 +2886,7 @@
         "usable": 10,
         "used": 5
       },
-      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 35 on the site, listed any time; plus one Orb of Alchemy (0.02409): the item is a normal base made rare by the Alchemy the plan casts",
+      "note": "mean of the 5 cheapest instant-buyout listings of 10 fetched, 35 on the site, listed any time; the Normal base alone: the Orb of Alchemy that makes it rare is the plan's first step, paid at the file's price (OR-43, #1522; until #1535 this row also held one Alchemy at 0.02409)",
       "provenance": {
         "date": "2026-11-10",
         "depth": 5.0,

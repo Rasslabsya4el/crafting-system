@@ -75,11 +75,10 @@ from crafting_system.prices.trade_query import build_query, query_hash  # noqa: 
 from crafting_system.prices.trade_stats import resolve_buy_mod  # noqa: E402
 from crafting_system.targets import StartKind, buy_spec_of, load_target, start_price_key  # noqa: E402
 
-COMPOSITES = {  # old key -> the item the price is of: a normal base plus one typed Alchemy (#494 point 2)
+COMPOSITES = {  # old key -> the item the price is of: a Normal base the plan makes rare with its own, paid Orb of Alchemy (#494 point 2, #1522, #1535)
     "Sorcerer Boots, item level 86-100": EXACT,
     "Two-Toned Boots [BootsAtlas1], item level 86-100": WIDER,
 }
-ALCHEMY = "Orb of Alchemy"
 QUIVER_KEY = "Penetrating Arrow Quiver [QuiverNew5], normal, item level 81"
 QUIVER_ALIAS = "Penetrating Arrow Quiver (ilvl 81)"
 QUIVER_LEVEL = 81
@@ -121,15 +120,15 @@ def remembered_starts(old: PriceFile, league: str) -> dict[str, DeepReading]:
     return deep
 
 
-def start_record(state: str, prices: list[float], total: int, stored: dict, digest: str, league: str, day, extra: float = 0.0) -> tuple[MarketRecord | None, DeepReading | None]:
+def start_record(state: str, prices: list[float], total: int, stored: dict, digest: str, league: str, day) -> tuple[MarketRecord | None, DeepReading | None]:
     """What one start item's search of today leaves in the file's memory: a thin or none record, or the deep reading.
 
-    `prices` are the priced listings, cheapest first; `extra` is what the plan adds to the bought item (the Orb of Alchemy of a
-    composite), so a remembered or thin price is on the same footing as the quoted one."""
+    `prices` are the priced listings, cheapest first. The price is the bought item's alone: what the plan casts on it (the Orb of
+    Alchemy of a composite's Normal base) is the plan's own step, paid at the file's price (OR-43, #1522), never added here (#1535)."""
     if state == QUOTED:
-        return None, DeepReading(statistics.fmean(prices[:DEFAULT_K]) + extra, league, day, total, len(prices))
+        return None, DeepReading(statistics.fmean(prices[:DEFAULT_K]), league, day, total, len(prices))
     thin = prices[:DEFAULT_K] if state == MARKET_THIN else []
-    record = MarketRecord(state, league, day, total, len(prices), digest, stored, statistics.fmean(thin) + extra if thin else None, len(thin))
+    record = MarketRecord(state, league, day, total, len(prices), digest, stored, statistics.fmean(thin) if thin else None, len(thin))
     return record, None
 
 
@@ -149,7 +148,6 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
     deep = {**remembered_starts(old, new.league), **new.deep}
     dropped: set[str] = set()
     notes: list[str] = []
-    alchemy = new.prices[ALCHEMY].chaos
     for name, entry in sorted(old.prices.items()):
         stored = (entry.detail or {}).get("query")
         if entry.source != "trade-api" or not isinstance(stored, dict):
@@ -163,7 +161,7 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         total, rows = _listings(client, league, stored, cache / "trade" / f"{digest}.json", now)
         prices = priced_rows(rows, spec, new)
         state = classify(total, len(prices))  # the market rule of #355, the one `cli trade` applies
-        record, reading = start_record(state, prices, total, stored, digest, league, day, alchemy if COMPOSITES.get(name) is not None else 0.0)
+        record, reading = start_record(state, prices, total, stored, digest, league, day)
         if record is not None:
             markets[name] = record
             dropped.add(name)
@@ -186,11 +184,9 @@ def reread_start_items(old: PriceFile, new: PriceFile, cache: Path, now: datetim
         )  # the same record `cli trade` makes; `entry_for` is the one writer of the entry and its provenance
         made = entry_for(today, taken_for, exact, "any of the bases that share this name on the trade site" if composite == WIDER else None)
         chaos, item, exact_listings, exact_price = made.chaos, made.provenance.item, made.provenance.exact_listings, made.provenance.exact_price
-        sentence = made.note
-        if composite is not None:
-            chaos += alchemy
-            sentence += f"; plus one Orb of Alchemy ({alchemy:g}): the item is a normal base made rare by the Alchemy the plan casts"
-        found[name] = replace(made, chaos=chaos, note=sentence)
+        if composite is not None:  # the Normal base alone: the plan casts and pays its Orb of Alchemy as its first step (OR-43, #1522, #1535)
+            made = replace(made, note=f"{made.note}; the Normal base alone: the Orb of Alchemy that makes it rare is the plan's first step, paid at the file's price")
+        found[name] = made
         notes.append(f"{name}: {entry.chaos:g} -> {chaos:g} ({item}; exact listings {exact_listings}, ask {exact_price})")
     prices_left = {name: entry for name, entry in new.prices.items() if name not in dropped or entry.source != "trade-api"}  # a poe.ninja stand-in stays (OR-7)
     return replace(new, prices=prices_left, markets=markets, deep=deep), found, notes

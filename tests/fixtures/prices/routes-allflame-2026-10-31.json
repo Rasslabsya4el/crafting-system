@@ -821,7 +821,7 @@
       "source": "trade-api"
     },
     "Sorcerer Boots, item level 86-100": {
-      "chaos": 29.82716,
+      "chaos": 29.8,
       "detail": {
         "date": "2026-11-01",
         "k": 5,
@@ -872,7 +872,7 @@
         "query_hash": "d467d2c75cacc86cc4851e454966d8c884b9e4f4094b1b3ca65fb1609efe2e6e",
         "used": 5
       },
-      "note": "trade price of a normal base of item level 86 (29.8) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target; the key names a rare item with no mods, this price is of a normal base plus the typed Alchemy (#494 point 2)",
+      "note": "trade price of a normal base of item level 86 (29.8), the Normal base alone: the start item is that base made rare by the Orb of Alchemy the plan casts as its first step, paid at the file's price (OR-43, #1522; until #1535 this row also held one Alchemy at 0.02716); the key names a rare item with no mods (#494 point 2)",
       "source": "trade-api"
     },
     "Thicket Bow, magic, item level 78-79, Hunter influence": {
@@ -939,7 +939,7 @@
       "source": "trade-api"
     },
     "Two-Toned Boots [BootsAtlas1], item level 86-100": {
-      "chaos": 5.02716,
+      "chaos": 5.0,
       "detail": {
         "date": "2026-11-01",
         "k": 5,
@@ -990,7 +990,7 @@
         "query_hash": "5df0f609e43627b47c12a3ab884def71f47c36c291610427e98328e8741e1f92",
         "used": 5
       },
-      "note": "trade price of a normal base of item level 86 (5.0) plus one Orb of Alchemy (0.02716): the start item is that base made rare; see the target; the key names a rare item with no mods and the base BootsAtlas1, this price is of a normal base plus the typed Alchemy (#494 point 2), taken for any of the three Two-Toned Boots (#483, #486)",
+      "note": "trade price of a normal base of item level 86 (5.0), the Normal base alone: the start item is that base made rare by the Orb of Alchemy the plan casts as its first step, paid at the file's price (OR-43, #1522; until #1535 this row also held one Alchemy at 0.02716); the key names a rare item with no mods and the base BootsAtlas1 (#494 point 2), taken for any of the three Two-Toned Boots (#483, #486)",
       "source": "trade-api"
     },
     "Vaal Orb": {
