@@ -317,6 +317,13 @@
       "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/UncutGemTiers.csv",
       "sha256": "a5177a6b49dd084fd9cbca1b49150eba64cb3e4d64dcf172490919b897b11e73",
       "size": 644
+    },
+    {
+      "path": "coe/data-0.5.5.5.json",
+      "url": "https://beta.craftofexile.com/json/poe2/0.5.5.5/data.json",
+      "note": "Craft of Exile beta PoE2 emulator data (estimated spawn weights in classmods). No licence: cached, never committed (as ADR-0003 keeps the PoE1 CoE copy out of git). A versioned URL that the site may still rewrite: a mismatch means re-pin on purpose.",
+      "sha256": "2fd3656fb5c89a53272dd771bed12a483a227a96f2375e788ec895811afa7d3b",
+      "size": 3016597
     }
   ],
   "tables_source": {
