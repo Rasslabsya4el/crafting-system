@@ -184,7 +184,7 @@
     {
       "kind": "corrupting",
       "what": "Not offered",
-      "why": "the target takes no corrupted item, so these would only corrupt it",
+      "why": "each of these corrupts the item it is used on, and the target takes no corrupted item",
       "guarantee": "The plan is unaffected: nothing here could be used for this target.",
       "count": 2,
       "labels": [

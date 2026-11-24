@@ -149,7 +149,7 @@ def test_the_donors_of_the_awakener_and_the_recombinator_are_nowhere_on_the_page
     plan = plain_plan(BOOTS_TARGET)
     text = render_text(build_report(plan, TOY), target_name="toy.yaml")
     page = tmp_path / "route.html"
-    write_route_page(page, build_report(plan, TOY), TOY, target_name="toy.yaml")
+    write_route_page(page, build_report(plan, TOY), TOY)
     html = page.read_text(encoding="utf-8")
 
     for output in (text, html):

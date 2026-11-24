@@ -589,13 +589,17 @@ def offers_for(
         else ()
     )
     if left_out_corrupting or unlisted:
+        corrupting = tuple(dict.fromkeys((*unlisted, *left_out_corrupting)))
+        # each of these corrupts the item it is used on; a fossil set is here only when it holds a Bloodstained Fossil, the one fossil that
+        # corrupts (#1442: "2,028 Fossils ... would only corrupt it" read as if every fossil corrupts, and as if a set did nothing else)
+        fossils = " (a fossil set is listed only when it holds a Bloodstained Fossil)" if any("Fossil" in label for label in corrupting) else ""
         limits += (
             Limit(
                 _limits.CORRUPTING,
                 "Not offered",
-                "the target takes no corrupted item, so these would only corrupt it",
+                f"each of these corrupts the item it is used on{fossils}, and the target takes no corrupted item",
                 "The plan is unaffected: nothing here could be used for this target.",
-                tuple(dict.fromkeys((*unlisted, *left_out_corrupting))),
+                corrupting,
             ),
         )
     if left_out_asked:

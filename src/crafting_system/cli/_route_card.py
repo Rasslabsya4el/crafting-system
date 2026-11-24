@@ -88,7 +88,7 @@ from crafting_system.items import (
     natural_tiers,
     tier_table,
 )
-from crafting_system.items.model import MAX_ITEM_LEVEL
+from crafting_system.items.model import EXPLICIT_EXTRA_DOMAINS, MAX_ITEM_LEVEL, UNVEILED_DOMAIN
 from crafting_system.items.words import mod_text as mod_text_of
 from crafting_system.targets import ImplicitRequirement, KOfN, Target
 
@@ -155,6 +155,24 @@ EMPTY = Slot("empty", "empty")
 
 def _hashes(text: str) -> str:
     return _RANGE.sub("#", text)
+
+
+_FIGURE = re.compile(rf"(?<![\w.]){_NUMBER}(?![\w.])")
+
+
+def _tiers_joined(texts: Iterable[str]) -> str:
+    """The texts of the tiers of one line (ranges already `#`) joined by ` or `, a fixed tier beside the ranged ones of its text said once (#1442).
+
+    The lowest tier of a ladder often rolls no range ("Adds 1 to 2 Physical Damage to Attacks" beside "Adds # to # Physical Damage to
+    Attacks"): to a player that is one mod, so a group of texts that are the same with every figure as `#`, one of them written with `#`
+    already, is written that way. Tiers that are all fixed values keep them ("35% increased Speed or 30% increased Speed"): there the
+    figures are what tells the tiers apart."""
+    groups: dict[str, list[str]] = {}
+    for text in dict.fromkeys(texts):
+        groups.setdefault(_FIGURE.sub("#", text), []).append(text)
+    return " or ".join(
+        key if len(members) > 1 and any("#" in member for member in members) else " or ".join(members) for key, members in groups.items()
+    )
 
 
 def _factor(text_low: float, text_high: float, stat_low: int, stat_high: int) -> float | None:
@@ -416,10 +434,10 @@ def _leaf_slot(
     side = Side(data.mods[candidates[0]].generation_type)
     if len(candidates) == 1:
         return side, mod_text_of(data.mods[candidates[0]]), (forced or {}).get(candidates[0]) or _tier_note(tiers, candidates)
-    shown = mod_text_of if getattr(tiers, "tierless", False) else (lambda mod: _hashes(mod_text_of(mod)))  # no tiers: each mod with its ranges (#963)
-    texts = list(dict.fromkeys(shown(data.mods[mod_id]) for mod_id in candidates))
     limited = tier_ok is not None and any(mod_id not in tier_ok for mod_id in spawning)  # the leaf's tier limit left some spawning mod out
-    return side, " or ".join(texts), _tier_note(tiers, candidates, min_tier, limited)
+    if getattr(tiers, "tierless", False):  # no tiers: each mod with its ranges (#963)
+        return side, " or ".join(dict.fromkeys(mod_text_of(data.mods[mod_id]) for mod_id in candidates)), _tier_note(tiers, candidates, min_tier, limited)
+    return side, _tiers_joined(_hashes(mod_text_of(data.mods[mod_id])) for mod_id in candidates), _tier_note(tiers, candidates, min_tier, limited)
 
 
 # --- the card of a concrete item ------------------------------------------------------------------------
@@ -657,7 +675,7 @@ class _StateReader:
         else:  # the texts of the tiers, as the target card writes a leaf drawn from several mods
             stands_for.sort(key=lambda other: (self.tiers[other], other))
             mod = self.data.mods[stands_for[0]]
-            text = " or ".join(dict.fromkeys(_hashes(mod_text_of(self.data.mods[other])) for other in stands_for))
+            text = _tiers_joined(_hashes(mod_text_of(self.data.mods[other])) for other in stands_for)
             note = _tier_note(self.tiers, stands_for)
         tone: Tone = "wanted" if Status.PASSING in contribution else "mod"
         return Side(mod.generation_type), Slot(text, tone, ("fractured", *_marks(mod)), note)
@@ -674,19 +692,31 @@ class _StateReader:
         return self._families[key]
 
     def _family_row(self, slot: StateSlot) -> Slot:
-        family = [
+        """The mods of the slot's family a slot of that kind can hold, as the abstraction finds them (`_kinds._find_mod`): the base's domain and the
+        extra explicit ones, never a crafted mod nor a mod unveiled from the pool, which has a kind of its own (#1442: a Jun mod read as a ring's
+        Mana prefix). The mods that spawn on the base come first; a family none of whose mods does is one only an essence gives (Avoid being
+        Frozen on boots), said by the mods an essence forces on this base, each with its essence; none forced here leaves "any mod"."""
+        domains = ({self.data.base_items[self.ab.base_id].domain} | EXPLICIT_EXTRA_DOMAINS) - {CRAFTED_DOMAIN, UNVEILED_DOMAIN}
+        held = [
             mod
             for mod_id, mod in self.data.mods.items()
-            if mod_id in self.tiers
-            and mod.generation_type == slot.side.value
-            and ("|".join(mod.families) or f"#{mod_id}") == slot.kind
+            if mod.generation_type == slot.side.value and mod.domain in domains and ("|".join(mod.families) or f"#{mod_id}") == slot.kind
         ]
-        if not family:
-            return ANY_MOD
-        ordered = sorted(family, key=lambda mod: (self.tiers[mod.id], mod.id))
+        family = [mod for mod in held if mod.id in self.tiers]
+        if not family:  # a family only an essence gives on this base: its mods, each with the essence that forces it, as a leaf line says it
+            forced = [(mod, essence_tier(self.data, self.ab.base_id, mod.id)) for mod in held if mod.is_essence_only]
+            forced = [(mod, note) for mod, note in forced if note]
+            if not forced:
+                return ANY_MOD
+            if len(forced) == 1:
+                mod, note = forced[0]
+                return Slot(mod_text(mod), "mod", tuple(mark for mark in _marks(mod) if mark != "essence only"), note)
+            text = _tiers_joined(_hashes(mod_text_of(mod)) for mod, _ in forced)
+            return Slot(text, "mod", tuple(mark for mark in _marks(forced[0][0]) if mark != "essence only"), " or ".join(dict.fromkeys(note for _, note in forced)))
+        ordered = sorted(family, key=lambda mod: (self.tiers.get(mod.id, 0), mod.id))
         if len(ordered) == 1:
             return Slot(mod_text(ordered[0]), "mod", _marks(ordered[0]), _tier_note(self.tiers, [ordered[0].id]))
-        text = " or ".join(dict.fromkeys(_hashes(mod_text_of(mod)) for mod in ordered))
+        text = _tiers_joined(_hashes(mod_text_of(mod)) for mod in ordered)
         return Slot(text, "mod", _marks(ordered[0]), _tier_note(self.tiers, [mod.id for mod in ordered]))
 
     def read(self, state: CompressedState) -> _Rows:

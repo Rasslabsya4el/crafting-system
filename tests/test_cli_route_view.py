@@ -36,7 +36,7 @@ from route_view_support import (
 )
 from targets_support import EXAMPLES
 
-from crafting_system.actions import DRAW_LABEL, HarvestReforge
+from crafting_system.actions import HarvestReforge
 from crafting_system.budget import Budget
 from crafting_system.cli import _route_flow, evaluate_route, main, make_plan, parse_route
 from crafting_system.planner._limits import STRANDS
@@ -47,6 +47,7 @@ from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
 from crafting_system.cli._route_view import (
+    DRAW_TITLE,
     Field,
     Line,
     Page,
@@ -766,10 +767,10 @@ def test_a_route_that_only_restarts_finishes_by_the_draw_of_the_bought_item(two_
 
     section = build_section(given(two_leaf_plan, only_restart), DATA)
 
-    assert section.rows[1].title == DRAW_LABEL  # the bought rare opens with the draw of its mods, then the route restarts
+    assert section.rows[1].title == DRAW_TITLE  # the bought rare opens with the draw of its mods (a player checks them), then the route restarts
     row = section.rows[2]
     assert row.title.startswith("Restart")
-    assert lines_of(row, "Uses on average")[0].startswith("1 each time, ≈")  # one restart each time, many times in a run (#892)
+    assert lines_of(row, "Uses on average")[0].startswith("an item comes to this step ≈")  # one restart each time, many times in a run (#892)
     assert "Step cost" in labels_of(row) and row.cost is not None
     assert {field.label: field.lines[0].text for field in section.goal.fields}["Mean"].startswith("≈")
 

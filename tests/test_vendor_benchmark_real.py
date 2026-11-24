@@ -216,7 +216,7 @@ def test_the_json_policy_is_the_golden(report):
 def test_the_route_page_is_the_golden(report, data, tmp_path):
     page = tmp_path / "v01.route.html"
 
-    write_route_page(page, report, data, target_name="v01-minion-helmet.yaml")
+    write_route_page(page, report, data)
 
     assert_golden("v01_minion_helmet", page.read_text(encoding="utf-8"))
 
