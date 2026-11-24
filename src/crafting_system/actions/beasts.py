@@ -81,7 +81,7 @@ class RareBeastFee:
         beasts = chaos // self.rare_creature_price
         return {
             CHAOS_ORB: f"the recipe's {beasts} rare beast{'' if beasts == 1 else 's'} of any kind, at {self.rare_creature_price} Chaos each "
-            "(a setting: no price list holds them)"
+            "(a fixed price: no price list holds them)"
         }
 
 

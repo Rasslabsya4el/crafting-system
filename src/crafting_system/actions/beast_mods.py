@@ -118,6 +118,12 @@ class WildBristleMatron(RareBeastFee, Action):
     def label(self, data: GameData | None = None) -> str:
         return "Beastcraft Wild Bristle Matron (add a metamod)"
 
+    def sure_reason(self, data: GameData | None = None) -> str | None:
+        return (
+            "the Wild Bristle Matron adds one metamod at random among those the item has room for (an open slot on the metamod's side, and "
+            "not on the item already)"
+        )
+
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         return recipe_resources("add_metamod", self.rare_creature_price)
 

@@ -816,6 +816,11 @@ class Action(ABC):
         recipe's rare beasts of any kind, paid as Chaos Orbs, #1518): a page that names the resource says what it is. Empty by default."""
         return {}
 
+    def sure_reason(self, data: GameData | None = None) -> str | None:
+        """For a craft that draws its result at random among those the item allows: the rule of that choice in a player's words, which a
+        page gives where the craft is sure on every item of a step (the Wild Bristle Matron on a suffix-full item, #1518). None by default."""
+        return None
+
     def reads(self, data: GameData) -> Reads:
         """What of the item the result depends on; the default is everything (see `Reads`): every mod and the implicits, the quality, the offer, the enchantment and the sockets."""
         return Reads(
