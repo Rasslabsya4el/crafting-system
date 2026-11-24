@@ -228,6 +228,10 @@ def batch_line(n: int, record, grown: bool = False, twin: int = 0) -> str:
         end = "finished" + (f"; {plan}" if plan else "")
     elif record.status == WITHIN:
         end = f"finished, to within {gap_text(record.within or 0.0)}" + (f"; {plan}" if plan else "")
+    elif record.status == BEATEN and getattr(record, "beaten_later", False):  # stopped, then beaten by the plan found after it (#1559)
+        then = f"no plan of them costs less than {_money(record.lower)} of crafting" if record.lower is not None else "its figure"
+        by = f" to within {gap_text(record.within)}" if record.within else ""
+        end = f"stopped when the {_net(record)} set aside for it ran out, then beaten: {then}, and the plan shown costs no more than that{by}"
     elif record.status == BEATEN:
         then = f" (no plan of them costs less than {_money(record.lower)} of crafting)" if record.lower is not None else ""
         by = f" by more than {gap_text(record.within)}" if record.within else ""
