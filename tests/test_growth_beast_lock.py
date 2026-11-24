@@ -5,13 +5,17 @@ rare Leather Belt whose three suffixes are full (Fire, Cold Resistance and Life 
 the goal adds the top Life prefix, `IncreasedLife3`. Every beta method is on (no methods setting), the start is bought at `S` = 50.
 
 * A Chaos Orb under the suffix lock keeps the three suffixes and rerolls the prefixes, the lock with them (a crafted prefix). It makes 4
-  mods with chance 2/3 (one prefix) and 5 or 6 with 1/3 (two prefixes: the belt's prefix families are Life and Energy Shield). The prefix
+  mods with chance 2/3 (one prefix) and more with 1/3, which is two prefixes (the belt's prefix families are Life and Energy Shield). The prefix
   pool is Life 1, 2, 3 and Energy Shield 1, 1,000 each: one prefix is Life 3 with chance 1/4; two hold it with 1/4 + (1/4)(1/3) = 1/3.
   So `p = (2/3)(1/4) + (1/3)(1/3) = 5/18`, and a plan that locks before each Chaos Orb costs `V = (lock + 1) / p = (18/5)(lock + 1)`.
 * On these suffix-full items the Matron's one metamod with room is the suffix lock (the other four are suffixes): it puts on the same lock
   for the Matron's price `m` and three rare beasts priced as Chaos Orbs, `m + 3`.
 * At `d` = 3.5 (the bench lock at 7): with the Matron at 1, `V = (18/5)(1 + 3 + 1)` = 18; with it at 30, the bench lock's
   `(18/5)(7 + 1)` = 28.8, below every plan without a lock (30.74).
+
+This toy holds the figures of the two locks through the entry; it does not witness the closure rule, since its rounds after the growth
+hold every method and main reaches the same plans. The rule is held by the table tests: `tests/test_growth.py` (the hand table and the
+growth's protector round) and the R24 test below.
 
 The R24 test reads the real 3.29.3.3 dump (it skips without it): the table of every offer of the reference craft R24, whose plan in the hour
 paid the bench lock (353.2 c) where the Matron (238 c) puts the same lock on.
