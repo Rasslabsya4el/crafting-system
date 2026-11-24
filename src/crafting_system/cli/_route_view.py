@@ -1543,6 +1543,51 @@ def _parting(given: RouteSection, shared: dict[int, StepRow], prefix: str) -> di
     return found
 
 
+COST_AGAINST_GIVEN = "Where the cost differs from the given route"
+START_SPEND = "the start item (row 1 and every restart)"
+SHOWN_DIFFERENCES = 4  # the steps named one by one; the rest is one line
+SAME_COST = 0.01  # under this share of the given route's cost apart, the two routes cost the same and nothing is named
+
+
+def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...]) -> Field | None:
+    """What the plan spends on each kind of step against what the given route (the guide's) spends on it, the largest difference first
+    (#1305, crafter Q9: a plan several times cheaper than its guide names the choices that make the difference).
+
+    A kind of step is a row title; the start item's row 1 and every restart are one kind, the buys of the start item. Each route's
+    spend on a kind is the sum of its rows' step costs, so a route's kinds add up to its cost with the start item (`StepRow.cost`). None
+    when either route has no cost (a gap, a row that never finishes) or the two costs are within `SAME_COST` of each other."""
+
+    def spend(rows: tuple[StepRow, ...]) -> dict[str, float] | None:
+        found: dict[str, float] = {}
+        for row in rows:
+            if row.cost is None or not math.isfinite(row.cost):
+                return None  # a gap ("No action") or a row that never finishes: the route has no cost to split
+            kind = START_SPEND if row.number == 1 or row.title.startswith("Restart") else row.title
+            found[kind] = found.get(kind, 0.0) + row.cost
+        return found
+
+    ours, theirs = spend(planned), spend(given)
+    if not ours or not theirs:
+        return None
+    mine, guide = math.fsum(ours.values()), math.fsum(theirs.values())
+    if abs(mine - guide) <= SAME_COST * guide:
+        return None
+    kinds = sorted(set(ours) | set(theirs), key=lambda kind: (-abs(ours.get(kind, 0.0) - theirs.get(kind, 0.0)), kind))
+    named = [kind for kind in kinds if abs(ours.get(kind, 0.0) - theirs.get(kind, 0.0)) > 0][:SHOWN_DIFFERENCES]
+
+    def side(value: float) -> str:
+        return money(value) if value > 0 else "nothing"
+
+    lines = [Line(f"this plan {money(mine)}, the given route {money(guide)}; by step, the largest difference first:")]
+    lines.extend(Line(f"{kind}: {side(ours.get(kind, 0.0))} here, {side(theirs.get(kind, 0.0))} in the given route") for kind in named)
+    rest = [kind for kind in kinds if kind not in named]
+    if rest:
+        here, there = math.fsum(ours.get(kind, 0.0) for kind in rest), math.fsum(theirs.get(kind, 0.0) for kind in rest)
+        if abs(here - there) > 0:
+            lines.append(Line(f"the other {len(rest)} kinds of step together: {side(here)} here, {side(there)} in the given route"))
+    return Field(COST_AGAINST_GIVEN, tuple(lines))
+
+
 def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tuple[RouteSection, ...]:
     """The planner's section and the given route's: one when they are the same, else the given route's differing steps.
 
@@ -1555,6 +1600,9 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tupl
     planner's section; the given section holds only what its own steps cannot show (`flow_limits`).
     """
     prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
+    differs = cost_against_given(policy.rows, given.rows)  # from every row of both routes, before the shared ones are taken out
+    if differs is not None:
+        policy = replace(policy, goal=replace(policy.goal, fields=(*policy.goal.fields, differs)))
     alike = _same_steps(policy, given, prefix)
     if len(alike) == len(given.rows) == len(policy.rows) == len({row.number for row in alike.values()}):
         head = (Field("Route", (Line(policy.title),)), Field("Given route", (Line(f"Same as the given route ({name})"),)))
