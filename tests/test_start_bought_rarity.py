@@ -13,7 +13,7 @@ import pytest
 from listing_support import ALTERATION, AUGMENTATION, LISTING, magic_sets, magic_toy, prices, rare_toy, target
 
 from crafting_system.actions import DRAW_LABEL
-from crafting_system.cli import make_plan
+from crafting_system.cli import evaluate_route, make_plan, parse_route
 from crafting_system.items import Rarity
 from crafting_system.planner._offers import DRAW_COST_SHARE, RESTART
 from crafting_system.prices import PriceEntry, PriceFile
@@ -108,3 +108,18 @@ def test_a_start_that_names_its_mods_keeps_its_rarity_whatever_the_search():
     assert plan.start_price.rarity is None and plan.target.start_item.rarity is Rarity.MAGIC
     assert [mod.mod_id for mod in plan.target.start_item.mods] == ["ToyA"]
 
+
+
+def test_a_guide_route_on_a_start_bought_normal_names_the_step_that_makes_it_rare():
+    """R08 and R09's guide routes (`examples/routes/`): a rule for a rare item alone leaves the Normal base a gap; the Alchemy is the player's step."""
+    data = rare_toy()
+    aim = target(data, rarity="rare", actions="alchemy-orb, chaos-orb", wanted=("ToyP1", "ToyS1"))
+    key = start_price_key(data, aim)
+    plan = make_plan(data, aim, searched_at(prices(key), key, "normal"), judges_route=True)
+    chaos_only = parse_route("rules:\n  - when: {rarity: rare}\n    do: Chaos Orb\n", plan, data)
+    with_alchemy = parse_route("rules:\n  - when: {rarity: normal}\n    do: Orb of Alchemy\n  - when: {rarity: rare}\n    do: Chaos Orb\n", plan, data)
+
+    assert evaluate_route(plan, chaos_only, data).gaps != ()  # no free draw stands in for the Alchemy any more
+    result = evaluate_route(plan, with_alchemy, data)
+    assert result.gaps == () and result.risk.success_probability.value == pytest.approx(1.0)
+    assert plan.solution.values[plan.start] <= result.risk.mean.value + 1e-9

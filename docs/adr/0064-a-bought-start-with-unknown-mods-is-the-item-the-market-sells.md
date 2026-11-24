@@ -59,3 +59,7 @@ from that rarity (`planner._plan.bought_rarity`, `StartPrice.rarity`, `start_as_
 the Alteration's draw; the planner's own offers (an Orb of Alchemy, an Orb of Transmutation, an essence, a fossil) make it the rarity, each a
 step with its price, and a restart buys that item again. A search of the start's own rarity, of any rarity (`nonunique`, R14: a wider item,
 marked), a hand price with no stored search (R07, R20), and a start that names its mods are as before.
+
+A start price given by the run (`--start-price`) has no stored search, so it is taken as the listing's and the draw stays. The guide routes of
+R08 and R09 (`examples/routes/`) name the Orb of Alchemy on the Normal base, the player's step before the fossils (a resonator works on a
+rare item only). The rows of R08 and R09 in the price files still add an Alchemy (0.02409) to the base's price: a data fix of its own.

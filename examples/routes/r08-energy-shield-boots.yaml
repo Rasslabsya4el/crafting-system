@@ -24,6 +24,11 @@
 name: R08, PoE Vault guide
 
 rules:
+  # The bought start is a Normal base (its price is a Normal base's trade search, so the plan starts from it: OR-43, #1522), and a
+  # resonator works on a rare item only: the Orb of Alchemy that makes it rare is the player's step before the fossils (OR-16).
+  - when:
+      rarity: normal
+    do: Orb of Alchemy
   # Step 1: use the two fossils (this is also the first use), until the target.
   - when:
       rarity: rare

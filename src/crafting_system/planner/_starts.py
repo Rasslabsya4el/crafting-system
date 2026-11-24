@@ -37,7 +37,7 @@ from ._offers import Offer
 from ._envelope import Net
 from ._envelope_plan import certificate_gap, certificate_gap_text
 from ._limits import approximate_limits
-from ._plan import Plan, PlanError, StartPrice, add_risk, as_budget, make_plan, resolve_start_price, with_bindings, with_methods
+from ._plan import Plan, PlanError, StartPrice, add_risk, as_budget, make_plan, resolve_start_price, start_as_bought, with_bindings, with_methods
 from ._start_options import StartContext, StartList, StartSource, combine, vendor_recipe_starts
 from ._start_types import (
     SOURCE_PLAIN,
@@ -60,13 +60,15 @@ def plain_candidate(
 
     A given start item (OR-6) costs 0 and is marked given; a bought one with no price is reported as unpriced, never as an infinite price.
     """
+    item = target.start_item
     try:
         price = resolve_start_price(data, target, prices, override, price_source)
         chaos, name, source, mark = price.chaos, price.name, price.source, price.mark
+        item = start_as_bought(data, target, price).start_item  # the item the price was searched for (OR-43, #1522): the one the plan starts from
     except PlanError as error:
         chaos, name, source, mark = None, _key_of(data, target), str(error), None
     return StartCandidate(
-        PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, target.start_item, chaos, name, source, given=target.start is not StartKind.BOUGHT, price_mark=mark
+        PLAIN_KEY, SOURCE_PLAIN, PLAIN_LABEL, item, chaos, name, source, given=target.start is not StartKind.BOUGHT, price_mark=mark
     )
 
 
