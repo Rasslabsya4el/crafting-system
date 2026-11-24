@@ -38,7 +38,7 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
-from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, default_offers, guide_plan, made_start, plan_target
+from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, default_offers, made_start, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
@@ -47,6 +47,8 @@ from ._inputs import load_target_prices, write_json
 from ._report import interval_answer_of, money, name_states, number_states, percent
 from ._report_net import ask, report_net
 from ._route import RouteError, RouteResult, evaluate_route, load_route, route_actions
+from ._route_view import judged_on as guide_judged_on
+from ._route_view import kept_finishes
 from ._shares import weight_share
 from ._start_report import first_step_document
 from ._start_step import first_step
@@ -552,25 +554,16 @@ def _guide_plan_of(entry: dict, bench: BenchmarkRoute, plan: Plan, data: GameDat
     its completed one name and starts from the target's own item, else the guide's own offers from the catalog (`guide_plan`), whichever groups the site's search ran; None, with
     the reason in `entry["guide_not_evaluable"]`, when the guide names an action the model does not hold (a deferred method, OR-37)."""
     labels = _route_labels(root, bench)
-    plain = plan.starts is None or plan.starts.chosen.key == "plain"  # the guide starts from the target's own item, not from a vendor recipe's
-    if plain and set(labels) <= {priced.label for priced in plan.offers}:
-        return plan
     try:
-        return guide_plan(data, target, prices, labels)
+        return guide_judged_on(plan, labels, data, target, prices)
     except PlanError as refused:  # `NotModelled` names the actions; another refusal (no price for one) says its own problem
         entry["guide_not_evaluable"] = f"guide not evaluable: {_without_root(str(refused), root)}"
         return None
 
 
-def _kept_finishes(plan: Plan, judged_on: Plan) -> float:
-    """What the site `plan` leaves to a finish after its mods (its `solver` mean holds the mods alone) and the guide's own plan `judged_on`
-    keeps in its model, since the guide names the catalyst or the orb (`guide_plan`): the guide's cost holds it, so the plan is compared
-    with its mods and that finish (#1442). 0 when the guide is read on the plan itself."""
-    if judged_on is plan:
-        return 0.0
-    quality = plan.quality_finish_value if judged_on.target.quality is not None else 0.0
-    implicit = plan.implicit_finish_value if judged_on.target.implicits else 0.0
-    return quality + implicit
+def _kept_finishes(plan: Plan, judged: Plan) -> float:
+    """The site plan's finish that the guide's own plan keeps in its model: `_route_view.kept_finishes`, which the route page shares (#1305)."""
+    return kept_finishes(plan, judged)
 
 
 def _judge_guide(

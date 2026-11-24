@@ -176,17 +176,19 @@ def test_a_given_route_the_saved_plan_was_not_offered_is_priced_on_the_guides_ow
 
     from test_cli_route_view import RESTART_ROUTE
 
-    from crafting_system.cli import _page_main
+    from crafting_system.cli import _route_view
+    from crafting_system.cli._route import route_actions
 
     route = tmp_path / "route.yaml"
     route.write_text(RESTART_ROUTE, encoding="utf-8")  # it names the Chaos Orb (and restart)
     own = SimpleNamespace(name="the guide's own plan")
     asked = []
-    monkeypatch.setattr(_page_main, "guide_plan", lambda data, target, prices, labels: asked.append(labels) or own)
+    monkeypatch.setattr(_route_view, "guide_plan", lambda data, target, prices, labels: asked.append(labels) or own)
 
     def plan_offering(*labels):
         return SimpleNamespace(offers=[SimpleNamespace(label=label) for label in labels], starts=None, target="t", prices="p")
 
     offering = plan_offering("Chaos Orb", "Exalted Orb")
-    assert _page_main.judged_on(offering, route, DATA) is offering and asked == []
-    assert _page_main.judged_on(plan_offering("Exalted Orb"), route, DATA) is own and asked == [("Chaos Orb",)]
+    labels = route_actions(route)
+    assert _route_view.judged_on(offering, labels, DATA) is offering and asked == []
+    assert _route_view.judged_on(plan_offering("Exalted Orb"), labels, DATA) is own and asked == [("Chaos Orb",)]
