@@ -107,13 +107,12 @@ def test_the_rule_is_the_search_s_own_and_reads_only_set_aside_stopped_rounds_of
 def test_the_gap_counts_only_once_the_aim_has_passed_as_in_the_search():
     # OR-39: under the aim the search keeps proving, past it the gap applies (`_plan.search_gap`); the rule at the end of the rounds reads the same
     import dataclasses
-    import time
 
     from crafting_system.budget import Budget, Clock
     from crafting_system.planner._plan import end_gap
 
     budget = dataclasses.replace(Budget.unlimited(), gap=0.01, aim_seconds=60.0)
-    clock = Clock(budget, began=time.perf_counter())  # 0 s of a 60 s aim spent
+    clock = Clock(budget, began=float("inf"))  # the run has spent nothing of its 60 s aim (no clock read by the test)
     assert end_gap(None) == 0.0 and end_gap(clock) == 0.0
-    clock.began -= 100.0  # 100 s spent
+    clock.began = -float("inf")  # the aim long past
     assert end_gap(clock) == 0.01
