@@ -1,0 +1,51 @@
+# Mechanic family: reforging_bench (three items in, one unidentified item out).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (fact 36), quotes re-read
+# on the Maxroll page the note cites.
+rules:
+  - id: reforging_bench.gear_three_to_one
+    statement: Three magic or rare items (armour, weapons, jewellery, flasks, charms, jewels) of the same base type and the same rarity, none corrupted, give one unidentified item of that base and rarity.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/reforging-bench-guide
+    quote: "3x Equippable Gear in Magic or Rare . (Armour, Weapons, Jewellery, Flasks, Charms and Jewels) Unidentified items of same Rarity and Base Type. All three items must be same base type and rarity. No items can be Corrupted ."
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "One guide site (Maxroll, updated for 0.5.2 with a 0.5.4 title); whether the inputs must be unidentified is disputed by another guide."
+    page_statement: "The reforging bench rules come from one guide site; whether the three items must be unidentified is not settled."
+    page_source: "a guide site"
+
+  - id: reforging_bench.lowest_item_level
+    statement: The item a reforge returns has the lowest item level among the three inputs.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/reforging-bench-guide
+    quote: "The item returned when reforging has the Item Level of the lowest Item Level you placed in the Reforging Bench."
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "One guide site only."
+    page_statement: "A reforged item takes the lowest item level of the three items put in, as a guide site says."
+    page_source: "a guide site"
+
+  - id: reforging_bench.three_affix_rares_give_four
+    statement: Three rares with three affixes each reforge into an unidentified rare with four affixes.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/reforging-bench-guide
+    quote: "You can reforge three Rare items with only three affixes each into an unidentified Rare with 4 affixes (saving you 1 Exalted Orb)!"
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "One guide site; how many affixes a reforged rare gets in general is not stated."
+    page_statement: "A reforged rare is said to come out with four modifiers; the general count is not known."
+    page_source: "a guide site"
+
+  - id: reforging_bench.other_inputs
+    statement: 'Other reforges: 3 copies of one unique give a new unidentified copy (uncorrupted); 3 waystones of one tier (mixed rarity, uncorrupted) give a random waystone one tier higher at the lowest input rarity; 3 magic Precursor Tablets give a random tablet; Ruby, Emerald and Sapphire give a Diamond, and Diamonds can be reforged since 0.5.2; 3 of one relic give an unidentified relic of that type; 3 of one catalyst, essence (very small chance of a Greater), soul core or distilled emotion (next tier) give one; 3 Lesser runes give a normal rune and 3 normal a Greater one. Since 0.5.0 a bench stands at the Trial of the Sekhemas entrance.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/reforging-bench-guide
+    quote: "3x Waystones of the same Tier. A new Randomized Waystone, one Tier Higher. Rarity returned is based on lowest Rarity Input. Can be mixed Rarity. Must not be Corrupted . 3x Precursor Tablets A new randomized Precursor Tablet. Must all be Magic Rarity."
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "One guide site; the page notes 3- and 4-slot relics as bugged."
+    page_statement: "What the reforging bench gives for uniques, waystones, tablets, jewels, relics and stackable items comes from one guide site."
+    page_source: "a guide site"

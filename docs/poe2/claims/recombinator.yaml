@@ -1,0 +1,32 @@
+# Mechanic family: recombinator (the Expedition recombinator that merged two items).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (facts 18, 35), with
+# research/poe2/data/derived/recombinable-classes.md.
+rules:
+  - id: recombinator.disabled
+    statement: The recombinator is disabled since 0.5.0 and the Omen of Recombination was removed (existing omens deleted at login); the 0.5.5 notes say nothing about turning it back on. A planner offers no recombination.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "The Recombinator has been disabled. The Omen of Recombination has been removed."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {enabled: false}
+    history:
+      - statement: Before 0.5.0 the recombinator was active and Craft of Exile (with Krakenbul and the community) used its results to estimate the PoE2 modifier weights.
+        held_until: "0.4.0"
+        source_kind: coe
+        url: https://craftofexile.com/weightings?game=poe2
+        quote: "have devised a way of finding them out using recombinators"
+        value: {enabled: true}
+
+  - id: recombinator.classes_still_in_data
+    statement: 'The client data still lists the item classes a recombinator takes and the artifact each costs: Amulet, Ring, Belt cost a Black Scythe Artifact; Gloves, Boots, Body Armour, Helmet, Shield, Buckler an Order Artifact; FishingRod a Sun Artifact; every weapon class, Quiver and Focus a Broken Circle Artifact. This is dormant data while the recombinator is disabled.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/RecombinableClasses.csv
+    quote: '"rownum","Id","Currency","i32_32"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Black Scythe Artifact: [Amulet, Ring, Belt]
+      Order Artifact: [Gloves, Boots, Body Armour, Helmet, Shield, Buckler]
+      Sun Artifact: [FishingRod]
+      Broken Circle Artifact: [Claw, Dagger, Wand, One Hand Sword, One Hand Axe, One Hand Mace, Bow, Staff, Two Hand Sword, Two Hand Axe, Two Hand Mace, Quiver, Sceptre, Warstaff, Spear, Crossbow, Focus, Flail, TrapTool, Talisman]

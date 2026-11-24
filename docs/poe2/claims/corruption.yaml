@@ -1,0 +1,154 @@
+# Mechanic family: corruption (Vaal Orb outcomes per class, the second corruption, corrupted items).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (facts 10, 29, 30), with
+# research/poe2/data/derived/temple-benches.md. The Vaal Orb as a currency item belongs to the
+# vaal_orb family another file holds; this file holds the outcomes on items.
+rules:
+  - id: corruption.vaal_orb_corrupts
+    statement: A Vaal Orb modifies an item unpredictably and corrupts it; the Corruption Altar (Act 3 and the temple) does the same.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Incursion2Crafting.csv
+    quote: "Modifies an item unpredictably and [Corrupted|Corrupts] it"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: corruption.final_for_currency
+    statement: A corrupted item takes no normal crafting currency. Only corruption-specific means still work on it (the Architect's Orb and the Corruption Altar for a second enchantment, desecration reveal, the Vaal Cultivation Orb on uniques); augments can still be socketed and corrupted gems levelled.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "Corruption is also final, as the items cannot be modified by currency items afterward."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Guide page (updated for 0.4) and the note's list of exceptions; no GGG text lists what a corrupted item still takes."
+    page_statement: "A corrupted item is taken to accept no ordinary crafting currency, with a few corruption-specific exceptions, as guides describe."
+    page_source: "a guide site"
+
+  - id: corruption.magic_rare_gear_outcomes
+    statement: 'A Vaal Orb on magic or rare gear does one of: nothing; randomise 1 to 3 affixes; add a corrupted enchantment; a special outcome by class (helmet, gloves, boots, body armour, shield, focus, martial weapon +1 socket ignoring the limit; wand and staff quality up to 23%).'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "There are several outcomes when corrupting Magic / Rare gear. Nothing happens 1-3 Affixes are randomized Add a Corrupted enchantment Special outcome: Helmet , Gloves , Boots , Chestpiece , Shield , Focus , Martial Weapons : +1 Socket (ignoring limit) Wand , Staff : Quality increases (up to 23%)"
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: [nothing, randomise_1_to_3_affixes, corrupted_enchantment, class_special]
+    approximate: true
+    approximate_reason: "Guide page updated for 0.4 only; no outcome odds are published."
+    page_statement: "The possible results of corrupting a magic or rare item come from a guide site, and their chances are not known."
+    page_source: "a guide site"
+
+  - id: corruption.unique_outcomes
+    statement: 'A Vaal Orb on a unique does one of: nothing; multiply its modifier values by 0.78 to 1.22 of the current roll; add a corrupted enchantment; the same class special outcome as rare gear. The multiplier method dates from 0.5.0.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "There are several outcomes when corrupting Unique items. Nothing happens Affixes divined (up to 0.78-1.22 current roll) Add a Corrupted enchantment Special outcome"
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: {multiplier_min: 0.78, multiplier_max: 1.22}
+    approximate: true
+    approximate_reason: "Guide page; odds unknown."
+    page_statement: "The possible results of corrupting a unique item come from a guide site, and their chances are not known."
+    page_source: "a guide site"
+
+  - id: corruption.jewel_outcomes
+    statement: 'A Vaal Orb on a magic or rare jewel does one of: nothing; randomise 1 to 3 affixes; add a corrupted enchantment; add or remove an affix ignoring the normal limits (3 prefixes and 2 suffixes, or 2 and 3, become possible). On a unique jewel: no change (50%), a corrupted enchantment, or a 0.78x to 1.22x multiplier on its explicit modifiers.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "Add or Remove an affix, ignoring normal limits This can result in a Jewel with 3 Prefixes and 2 Suffixes or 2 Prefixes and 3 Suffixes."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: {unique_jewel_no_change: 0.5}
+    approximate: true
+    approximate_reason: "Guide page; only the unique jewel's 50% no-change share is given, other odds unknown."
+    page_statement: "The possible results of corrupting a jewel come from a guide site; only one chance (half of unique jewels stay unchanged) is given."
+    page_source: "a guide site"
+
+  - id: corruption.waystone_outcomes
+    statement: 'A Vaal Orb on a magic or rare waystone does one of: nothing; tier +1 or -1 (within 1 to 16); turn all affixes into prefixes or all into suffixes; add random affixes to a rare waystone (up to 5 prefixes and 5 suffixes).'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "There are several outcomes when corrupting Magic / Rare Waystones. Nothing happens +1 Tier/-1 Tier (Min 1, max 16) Convert all affixes into Prefixes or Suffixes Add random affixes to a Rare Waystone"
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Guide page; odds unknown."
+    page_statement: "The possible results of corrupting a waystone come from a guide site, and their chances are not known."
+    page_source: "a guide site"
+
+  - id: corruption.charm_flask_gem_outcomes
+    statement: A Vaal Orb on a charm or flask can raise its quality up to 23%; on a skill gem it does nothing, +1 or -1 level, +1 or -1 socket, or -7% to +3% quality.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "You can Corrupt Charms and Flasks to modify the quality up to 23%, but this is usually not very impactful."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Guide page; odds unknown."
+    page_statement: "The results of corrupting charms, flasks and skill gems come from a guide site."
+    page_source: "a guide site"
+
+  - id: corruption.outcome_odds_unknown
+    statement: The chances of the Vaal Orb outcomes are not published; secondary guides say the four outcomes are equally weighted.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/path-of-exile-2-crafting-overview
+    quote: "Vaal Orb are powerful crafting items that corrupt your gear with random, mysterious outcomes, and the chances of each are currently unknown."
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Nobody publishes the odds; the equal split is a low-confidence guide claim."
+    page_statement: "The chance of each corruption result is not known; equal chances are only a guess from guides."
+    page_source: "guide sites"
+
+  - id: corruption.architects_orb_second_enchantment
+    statement: The Architect's Orb (temple room Corruption Instiller) modifies a corrupted equipment or jewel item, with a 50/50 chance between adding a second enchantment and destroying the item; it cannot give the other corruption outcomes.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "The Architect's Orb has a 50/50 chance to add a second Enchantment to an item, allowing an item to reach new powerful heights. However, a failure results in the item being destroyed."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: {destroy_chance: 0.5}
+    approximate: true
+    approximate_reason: "The item text says only 'unpredictably or destroys it'; the 50/50 is a guide's figure."
+    page_statement: "A second corruption is taken to succeed or destroy the item half of the time each, as a guide says."
+    page_source: "a guide site"
+
+  - id: corruption.corruption_altar_second_enchantment
+    statement: The temple's Corruption Altar adds a second enchantment to an already corrupted item, with a 50% chance to destroy it.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Fate_of_the_Vaal_league
+    quote: "The corruption Altar allows you to add a second enchantment to your already corrupted items, but beware, there is a 50% chance to destroy the item irreversably."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {destroy_chance: 0.5}
+    approximate: true
+    approximate_reason: "Database page league text; not checked in game on 0.5.5."
+    page_statement: "The altar's second corruption is taken to destroy the item half of the time, as a game database page says."
+    page_source: "a game database site"
+
+  - id: corruption.temple_rooms
+    statement: 'The Temple of Atziri crafting rooms (core since 0.5) hold: Corruption Instiller (Architect''s Orb), Gem Corrupter (Crystallised Corruption), Soul Core Infuser (Core Destabiliser), Corrupted Precursor Machine (Ancient Infuser, on tablets), Morphology Mechanism (Vaal Cultivation Orb), Masterwork and Triumphant Forges (Vaal infusers), Forging Mechanism (adds an Augment Socket), Extraction Workbench (Orb of Extraction), Gemcutting rooms, Corruption Altar (Vaal Orb), and campaign Alchemy, Regal and Exalted workbenches.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Incursion2Crafting.csv
+    quote: "Modifies a [Corrupted] [Equipment] or [Jewel] item unpredictably or destroys it"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: corruption.ancient_infuser_tablets
+    statement: 'The Ancient Infuser on a tablet does one of: add a random tablet modifier past its limit; add up to 10 uses; transform it into a random tablet type with all modifiers rerolled; destroy it.'
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "Add a random tablet modifier, bypassing its default modifier limit. Add up to 10 additional uses. Transform the tablet into a random type of tablet, rerolling all of its modifiers. Destroy the tablet."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Guide page; odds unknown."
+    page_statement: "The results of the tablet infuser come from a guide site, and their chances are not known."
+    page_source: "a guide site"
+
+  - id: corruption.corrupted_implicit_mods
+    statement: The export holds 126 modifiers of generation type corrupted (corruption implicits), e.g. 15-25% increased Energy Shield on int armour.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"domain": "item", "generation_type": "corrupted", "generation_weights": [], "grants_effects": [], "groups": ["DefencesPercent"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {corrupted_mods: 126}

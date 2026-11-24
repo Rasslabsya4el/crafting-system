@@ -1,0 +1,132 @@
+# Mechanic family: affix_pool (which modifiers a random add can pick from, and with what weight).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (section 3 and fact 20),
+# with the census of research/poe2/data/derived/mod-census.md.
+rules:
+  - id: affix_pool.spawn_weights_are_flags
+    statement: In the PoE2 client export every spawn-weight entry of every modifier is 0 or 1 (16,911 mods; 7,933 entries of weight 1, 9,249 of weight 0, no other value), so the export says only whether a modifier is allowed on a tag, not how likely it is.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"spawn_weights": [{"tag": "body_armour", "weight": 1}, {"tag": "shield", "weight": 1}, {"tag": "helmet", "weight": 1}, {"tag": "gloves", "weight": 1}, {"tag": "boots", "weight": 1}, {"tag": "belt", "weight": 1}, {"tag": "amulet", "weight": 1}, {"tag": "ring", "weight": 1}, {"tag": "default", "weight": 0}]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {mods: 16911, entries_weight_1: 7933, entries_weight_0: 9249}
+
+  - id: affix_pool.real_weights_not_in_client
+    statement: The real spawn weights of PoE2 modifiers are not in the game client, and no statement of them by GGG was found; every weight a tool shows for PoE2 is an estimate.
+    source_kind: coe
+    url: https://craftofexile.com/weightings?game=poe2
+    quote: "Unfortunaly the information regarding modifier weightings is not part of the game client's for Path of Exile 2."
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+
+  - id: affix_pool.coe_weights_from_recombinators
+    statement: Craft of Exile estimates the PoE2 weights of most equipment modifiers from recombinator results gathered by the community (Krakenbul), then applies a normalisation script that sets breakpoints and smooth curves. Its last weight update says it used Krakenbul's gathered data (2026-09-03), and since 2026-04-07 it marks modifiers whose weight is unknown.
+    source_kind: coe
+    url: https://craftofexile.com/weightings?game=poe2
+    quote: "have devised a way of finding them out using recombinators"
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The weights are Craft of Exile's estimates, not game data; the recombinator is disabled since 0.5.0, so how the 2026-09-03 data was gathered is not stated."
+    page_statement: "How often each modifier rolls is an estimate from Craft of Exile, built from player experiments, because the game does not publish these numbers."
+    page_source: "Craft of Exile's estimates from player experiments"
+
+  - id: affix_pool.coe_weights_from_trade_listings
+    statement: For charms, jewels, tablets and waystones Craft of Exile takes its PoE2 weights from parsed trade-site listings, which it says lean towards wanted and higher-tier modifiers.
+    source_kind: coe
+    url: https://craftofexile.com/weightings?game=poe2
+    quote: "The data is obtained from parsing trade-site listings."
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Trade listings are biased towards desired and high-tier mods, as Craft of Exile itself says; no game source exists."
+    page_statement: "How often each modifier rolls on charms, jewels, tablets and waystones is estimated from items listed for sale, which over-represents good modifiers."
+    page_source: "Craft of Exile's estimates from trade listings"
+
+  - id: affix_pool.first_match_spawn_tag
+    statement: The weight of a modifier on an item is read from the first entry of the modifier's ordered spawn-weight list whose tag the item has; later entries are ignored, and a 0 there removes the modifier from the pool (the PoE1 rule, assumed for PoE2; the export's lists end in "default 0" in the same way).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"spawn_weights": [{"tag": "amulet", "weight": 1}, {"tag": "default", "weight": 0}, {"tag": "ulaman_mod", "weight": 1}]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "PoE1 rule carried over; GGG has not restated it for PoE2 and no PoE2 source was found."
+    page_statement: "Which modifiers can roll on an item is worked out the same way as in the first game, which nobody has confirmed for this one."
+    page_source: "the game data read with the first game's rule"
+
+  - id: affix_pool.group_exclusion
+    statement: An item cannot hold two modifiers of the same modifier group (family). A hybrid modifier is one modifier with several stats and sits in one group, e.g. the Medved's life and mana prefix is in group IncreasedLife and so excludes the plain life prefixes.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"groups": ["IncreasedLife"], "implicit_tags": ["resource", "life", "mana"], "is_essence_only": false, "name": "Medved''s", "required_level": 65'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The groups are in the data, but the exclusion itself is the PoE1 rule, not restated by GGG for PoE2."
+    page_statement: "An item is taken to hold at most one modifier of each kind, as in the first game; this game has not confirmed it."
+    page_source: "the game data read with the first game's rule"
+
+  - id: affix_pool.side_is_generation_type
+    statement: Each modifier has a generation type (prefix, suffix, unique, corrupted, essence and others); a random add picks only prefix or suffix modifiers and the generation type is the side the modifier takes.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"domain": "item", "generation_type": "prefix", "generation_weights": [], "grants_effects": [], "groups": ["IncreasedLife"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The field is in the data; that a random add draws from prefix and suffix rows only is the PoE1 rule."
+    page_statement: "Random modifiers are drawn only from the ordinary prefixes and suffixes, as in the first game."
+    page_source: "the game data read with the first game's rule"
+
+  - id: affix_pool.local_mods_by_id
+    statement: Local modifiers, which change the item's own properties, are marked in the modifier id with "Local" (e.g. CorruptionLocalIncreasedEnergyShieldPercent1, 15-25% increased Energy Shield on int armour).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"stats": [{"id": "local_energy_shield_+%", "max": 25, "min": 15}], "text": "(15-25)% increased [EnergyShield|Energy Shield]", "type": "LocalEnergyShieldPercent"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: affix_pool.class_census
+    statement: Per item class, the number of modifiers / modifier types that can spawn (prefixes, suffixes, desecrated prefixes, desecrated suffixes), counted over the released bases of the class with the first-match rule. HiddenItem, Claw, One Hand Sword, One Hand Axe, Dagger and TrapTool are rows of the export, not classes a player can find (see item_classes.released_flag_trap).
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"domain": "desecrated", "generation_type": "suffix", "generation_weights": [], "grants_effects": [], "groups": ["IncreaseSocketedGemLevel"], "implicit_tags": ["unveiled_mod", "ulaman_mod", "gem"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The counts depend on the first-match rule assumed from PoE1 (affix_pool.first_match_spawn_tag)."
+    page_statement: "The number of modifiers each kind of item can roll is counted from the game data with the first game's rule."
+    page_source: "the game data read with the first game's rule"
+    value:
+      "Amulet": {bases: 25, prefixes: [81, 12], suffixes: [128, 21], desecrated_prefixes: [11, 11], desecrated_suffixes: [20, 20]}
+      "Belt": {bases: 19, prefixes: [53, 7], suffixes: [82, 11], desecrated_prefixes: [9, 8], desecrated_suffixes: [12, 12]}
+      "Body Armour": {bases: 368, prefixes: [207, 28], suffixes: [110, 16], desecrated_prefixes: [0, 0], desecrated_suffixes: [10, 10]}
+      "Boots": {bases: 191, prefixes: [143, 22], suffixes: [107, 17], desecrated_prefixes: [0, 0], desecrated_suffixes: [15, 15]}
+      "Bow": {bases: 35, prefixes: [71, 8], suffixes: [69, 13], desecrated_prefixes: [8, 8], desecrated_suffixes: [9, 9]}
+      "Buckler": {bases: 52, prefixes: [64, 9], suffixes: [92, 16], desecrated_prefixes: [0, 0], desecrated_suffixes: [14, 14]}
+      "Claw": {bases: 13, prefixes: [70, 8], suffixes: [80, 14], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "Crossbow": {bases: 34, prefixes: [71, 8], suffixes: [83, 16], desecrated_prefixes: [7, 7], desecrated_suffixes: [8, 8]}
+      "Dagger": {bases: 22, prefixes: [70, 8], suffixes: [88, 15], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "FishingRod": {bases: 1, prefixes: [28, 6], suffixes: [72, 16], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "Flail": {bases: 21, prefixes: [70, 8], suffixes: [88, 15], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "Focus": {bases: 51, prefixes: [70, 10], suffixes: [70, 12], desecrated_prefixes: [6, 6], desecrated_suffixes: [12, 12]}
+      "Gloves": {bases: 202, prefixes: [182, 26], suffixes: [113, 20], desecrated_prefixes: [0, 0], desecrated_suffixes: [11, 11]}
+      "Helmet": {bases: 260, prefixes: [193, 29], suffixes: [92, 16], desecrated_prefixes: [0, 0], desecrated_suffixes: [11, 11]}
+      "HiddenItem": {bases: 74, prefixes: [554, 65], suffixes: [496, 80], desecrated_prefixes: [62, 56], desecrated_suffixes: [98, 92]}
+      "One Hand Axe": {bases: 21, prefixes: [70, 8], suffixes: [80, 14], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "One Hand Mace": {bases: 44, prefixes: [70, 8], suffixes: [80, 14], desecrated_prefixes: [8, 8], desecrated_suffixes: [9, 8]}
+      "One Hand Sword": {bases: 24, prefixes: [70, 8], suffixes: [88, 15], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "Quiver": {bases: 11, prefixes: [56, 7], suffixes: [44, 9], desecrated_prefixes: [3, 3], desecrated_suffixes: [5, 5]}
+      "Ring": {bases: 28, prefixes: [100, 13], suffixes: [103, 18], desecrated_prefixes: [7, 7], desecrated_suffixes: [15, 15]}
+      "Sceptre": {bases: 16, prefixes: [70, 8], suffixes: [80, 14], desecrated_prefixes: [0, 0], desecrated_suffixes: [0, 0]}
+      "Shield": {bases: 150, prefixes: [84, 12], suffixes: [114, 20], desecrated_prefixes: [0, 0], desecrated_suffixes: [17, 17]}
+      "Spear": {bases: 36, prefixes: [70, 8], suffixes: [92, 16], desecrated_prefixes: [8, 8], desecrated_suffixes: [9, 9]}
+      "Staff": {bases: 19, prefixes: [44, 6], suffixes: [61, 10], desecrated_prefixes: [7, 7], desecrated_suffixes: [7, 7]}
+      "Talisman": {bases: 31, prefixes: [70, 8], suffixes: [88, 15], desecrated_prefixes: [9, 9], desecrated_suffixes: [9, 9]}
+      "TrapTool": {bases: 13, prefixes: [66, 8], suffixes: [77, 12], desecrated_prefixes: [0, 0], desecrated_suffixes: [0, 0]}
+      "Two Hand Axe": {bases: 21, prefixes: [70, 8], suffixes: [80, 14], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "Two Hand Mace": {bases: 43, prefixes: [70, 8], suffixes: [80, 14], desecrated_prefixes: [8, 8], desecrated_suffixes: [9, 8]}
+      "Two Hand Sword": {bases: 22, prefixes: [70, 8], suffixes: [88, 15], desecrated_prefixes: [3, 3], desecrated_suffixes: [3, 3]}
+      "Wand": {bases: 18, prefixes: [44, 6], suffixes: [61, 10], desecrated_prefixes: [6, 6], desecrated_suffixes: [9, 9]}
+      "Warstaff": {bases: 38, prefixes: [70, 8], suffixes: [88, 15], desecrated_prefixes: [6, 6], desecrated_suffixes: [6, 6]}

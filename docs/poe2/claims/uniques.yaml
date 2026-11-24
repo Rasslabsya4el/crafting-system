@@ -1,0 +1,40 @@
+# Mechanic family: uniques (how a unique is made and how it can be changed).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (facts 46, 47). The Orb of
+# Chance and its omens as currency items belong to the orb_of_chance and omen families another
+# file holds; this file holds what happens to the item.
+rules:
+  - id: uniques.chance_makes_unique_or_destroys
+    statement: An Orb of Chance on a normal item either upgrades it to a unique or destroys it; the odds are not published. The Omen of Chance prevents the destruction and the Omen of the Ancients makes the result a random unique of the same item class.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Orb of Chance Stack Size: 1 / 10 Unpredictably either upgrades a Normal item to Unique rarity or destroys it"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: uniques.omen_of_chance_no_destroy
+    statement: Under the Omen of Chance the next Orb of Chance does not destroy the item.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Orb of Chance will not destroy the Item"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: uniques.omen_of_the_ancients_same_class
+    statement: Under the Omen of the Ancients the next Orb of Chance upgrades the item to a random unique of the same item class.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Orb of Chance will upgrade the Item to a random Unique of the same Item Class"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: uniques.ways_to_modify
+    statement: 'A unique can be changed by: a Divine Orb (rerolls its values); a Vaal Orb (values times 0.78 to 1.22, an enchantment or a socket, corruption.unique_outcomes); the Vaal Cultivation Orb (up to 2 modifiers replaced on a corrupted Vaal unique, other uniques turned into a corrupted unique of the same class); reforging 3 copies; unique Verisium runeforging (base upgrade below level 55); destroying it to make a rune (Runes of Aldur).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Incursion2Crafting.csv
+    quote: "Replaces up to 2 modifiers on a [Corrupted] [UniqueCulture|Vaal Unique]"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Medium to high confidence in the note: the list joins item texts, guides and league notes, not one source."
+    page_statement: "The ways to change a unique item are gathered from item texts, guides and league notes."
+    page_source: "item texts, guide sites and patch notes"

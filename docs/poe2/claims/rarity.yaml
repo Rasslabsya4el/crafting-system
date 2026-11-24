@@ -1,0 +1,58 @@
+# Mechanic family: rarity (normal, magic, rare, unique; identification; unidentified and Exceptional drops).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (section 1).
+# The affix limits per rarity (1+1 magic, 3+3 rare) are in item_rules.yaml (they belong to the
+# affix_limits family another file holds).
+rules:
+  - id: rarity.scroll_of_wisdom_identifies
+    statement: A Scroll of Wisdom identifies an item.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Scroll of Wisdom Stack Size: 1 / 40 Identifies an item"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: rarity.waystone_must_be_identified
+    statement: Since 0.5.0 a waystone must be identified before the Map Device can activate it.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "Waystones must now be identified in order to activate them in the Map Device."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: rarity.megalomaniac_drops_identified
+    statement: Since 0.5.0 the Megalomaniac unique jewel drops identified.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "now drops identified"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: rarity.unidentified_tier_mod_level_floor
+    statement: An unidentified rare dropped with the label "Tier N" rolls its modifiers at identification with a floor on their modifier level, by tier (needs item level / floor) 2 = 66 / 11, 3 = 71 / 23, 4 = 76 / 35, 5 = 79 / 48. The floor does not apply to modifiers added after identification (crafting), and the tier changes nothing on magic items.
+    source_kind: wiki
+    url: https://www.poe2wiki.net/wiki/Rare
+    quote: "does not affect modifiers added after the item is identified, such as through crafting"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value:
+      tier_2: {item_level: 66, min_mod_level: 11}
+      tier_3: {item_level: 71, min_mod_level: 23}
+      tier_4: {item_level: 76, min_mod_level: 35}
+      tier_5: {item_level: 79, min_mod_level: 48}
+    approximate: true
+    approximate_reason: "Only search-engine snippets of the bot-walled PoE2 wiki and one player thread; the snippet is undated and may predate 0.5."
+    page_statement: "The minimum modifier level of a rare dropped unidentified with a tier label is taken from a fan wiki excerpt that may be out of date."
+    page_source: "a fan wiki excerpt and a player forum post"
+
+  - id: rarity.exceptional_normal_drop
+    statement: A high-tier rare can instead drop as an Exceptional normal item, which has either quality above the maximum (up to 30%) or one extra Augment Socket. Atlas passives (Dressed in Fineries, Exceptional Footwear, Handiwork, Adornments, Armaments, Vestments, Fabled Treasures) enable or raise these drops.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Exceptional_Item
+    quote: "Exceptional Items have Quality over maximum or an additional Augment Socket. High Tier Rare Items found have a chance to instead drop as an Exceptional Normal Item."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {max_quality: 30, extra_sockets: 1}
+    approximate: true
+    approximate_reason: "One current database page; the 30% quality ceiling, the item-level threshold and the drop rate are not stated by GGG."
+    page_statement: "Exceptional items, with extra quality up to 30% or one extra socket, are described from a game database page; how often they drop and from which item level is not known."
+    page_source: "a game database site"

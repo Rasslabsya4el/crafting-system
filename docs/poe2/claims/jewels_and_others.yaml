@@ -1,0 +1,121 @@
+# Mechanic family: jewels_and_others (jewels, Precursor Tablets, waystones, flasks, charms, relics:
+# their affix limits and the currencies they take). PoE2 research of 2026-11-24,
+# docs/poe2/research/items-and-modifiers.md (facts 2, 3, 4, 39, 41 to 45).
+rules:
+  - id: jewels_and_others.jewel_affix_limit
+    statement: Jewels have at most 4 affixes, 2 prefixes and 2 suffixes; some uniques and jewel modifiers raise it ("+1 Prefix Modifier allowed", "+1 Suffix Modifier allowed"), and a Potent Liquid Emotion is said to add a fifth slot.
+    source_kind: wiki
+    url: https://www.poe2wiki.net/wiki/Rarity
+    quote: "Some item types, such as jewels and tablets, can only have up to four affixes (two prefixes and two suffixes)."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {max_affixes: 4, max_prefixes: 2, max_suffixes: 2}
+    approximate: true
+    approximate_reason: "Wiki snippet only for jewels (bot-walled page); the fifth slot is one secondary source."
+    page_statement: "Jewels are taken to hold at most two prefixes and two suffixes, from a fan wiki excerpt."
+    page_source: "a fan wiki excerpt"
+
+  - id: jewels_and_others.tablet_affix_limit
+    statement: Precursor Tablets have at most 4 modifiers; going past 2 needs the Arbiter of Ash defeated. Whether the 4 split as 2 prefixes and 2 suffixes is not confirmed.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3883495
+    quote: "Tablets now have a maximum of 4 modifiers."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: {max_affixes: 4, unlock_past_2: Arbiter of Ash}
+
+  - id: jewels_and_others.tablet_arbiter_unlock
+    statement: Crafting a tablet beyond 2 modifiers is unlocked by defeating the Arbiter of Ash.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3883495
+    quote: "To unlock the ability to craft a tablet beyond 2 modifiers you need to have defeated the Arbiter of Ash."
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+
+  - id: jewels_and_others.tablet_takes_chance
+    statement: Since 0.5.0 an Orb of Chance can be used on a tablet. Tablets carry implicits of the form "Adds X to a Map, 10 uses remaining"; 3 of the same magic tablet reforge into one, and the Ancient Infuser can add a modifier past the limit.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "You can now use Orbs of Chance on Tablets."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: jewels_and_others.flask_charm_relic_magic_only
+    statement: Flasks, charms and non-unique relics cannot be rare; they hold at most 2 modifiers, 1 prefix and 1 suffix. The data agrees (flask domain 70 prefixes and 35 suffixes; relic domain sanctum_relic 71 prefixes and 67 suffixes).
+    source_kind: wiki
+    url: https://www.poe2wiki.net/wiki/Item
+    quote: "non-unique relics and flasks cannot be upgraded to rare as they are capped at 2 modifiers"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {max_prefixes: 1, max_suffixes: 1, rare_allowed: false}
+    approximate: true
+    approximate_reason: "Wiki snippets only, consistent with the export's flask and relic mod counts."
+    page_statement: "Flasks, charms and relics are taken to stay magic with one prefix and one suffix, from a fan wiki excerpt that matches the game data."
+    page_source: "a fan wiki excerpt and the game data"
+
+  - id: jewels_and_others.jewel_bases_and_currencies
+    statement: 'Jewel bases are Ruby (strjewel), Emerald (dexjewel), Sapphire (intjewel), Diamond (all three), and the Time-Lost Ruby, Emerald, Sapphire and Diamond (radius jewels). Jewels take Transmutation, Augmentation, Regal, Exalted, Chaos and Annulment; the Preserved Cranium desecrates a rare jewel; jewel catalysts exist since 0.5.0.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '"tags": ["jewel", "not_for_sale", "str_radius_jewel", "dex_radius_jewel", "int_radius_jewel", "radius_jewel", "default"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The bases are data; which currencies a jewel takes is the note's medium-confidence reading of database pages."
+    page_statement: "Which currencies work on jewels comes from game database pages, not from a full in-game test."
+    page_source: "the game data and a game database site"
+
+  - id: jewels_and_others.liquid_emotions_on_time_lost_jewels
+    statement: Ancient Diluted, Liquid and Potent emotions remove a random modifier from a rare Time-Lost jewel and add a guaranteed crafted one. Since 0.4.0 waystones can no longer be instilled with Liquid Emotions.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Jewels
+    quote: "Removes a random modifer and Augments a Rare Time-Lost Jewel with a new guaranteed Crafted modifier"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: jewels_and_others.waystone_limits
+    statement: Waystones can be normal, magic or rare, use the 1+1 and 3+3 affix limits, and have tiers 1 to 16.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "Nothing happens +1 Tier/-1 Tier (Min 1, max 16)"
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    value: {min_tier: 1, max_tier: 16}
+    approximate: true
+    approximate_reason: "The affix limits for waystones are inferred from guides, not stated for waystones by GGG."
+    page_statement: "Waystones are taken to follow the same affix limits as gear, from guides."
+    page_source: "a guide site"
+
+  - id: jewels_and_others.waystone_chaos_omens
+    statement: The Chaos Orb omens (Chaotic Rarity, Quantity, Monsters and, since 0.5.0, Effectiveness) replace all modifiers of a waystone with modifiers that do not grant the named stat; up to 3 of them can be used at once.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Chaos Orb will replace all Modifiers on a Waystone with Modifiers that do not grant Monster Effectiveness"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: jewels_and_others.charm_slot_cap
+    statement: Charms are magic at most, take quality from the Glassblower's Bauble and from a Vaal Orb up to 23%; the number of charm slots is capped at 3, although uniques on the same page grant +2 charm slots.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Charms
+    quote: "The maximum number of Charm slots is capped at 3."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {max_charm_slots: 3}
+    approximate: true
+    approximate_reason: "The same page lists a unique with +2 Charm Slots, which conflicts with the cap."
+    page_statement: "Characters are taken to hold at most three charms, which a game database page states but also seems to contradict."
+    page_source: "a game database site"
+
+  - id: jewels_and_others.relic_bases
+    statement: Relics have seven bases (Urn, Amphora, Vase, Seal, Coffer, Tapestry, Incense), are used in the Trial of the Sekhemas, are magic at most with 1 prefix and 1 suffix, and 3 of the same relic reforge into one.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Relics
+    quote: "The Peacemaker's Draught Amphora Relic"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [Urn, Amphora, Vase, Seal, Coffer, Tapestry, Incense]
+    approximate: true
+    approximate_reason: "Medium confidence in the note; the base list was read from the database page, the limits from wiki snippets."
+    page_statement: "Relic types and their limits come from a game database site and a fan wiki excerpt."
+    page_source: "a game database site and a fan wiki excerpt"

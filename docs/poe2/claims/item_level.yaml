@@ -1,0 +1,50 @@
+# Mechanic family: item_level (item level, the required level of a modifier, tier numbering, base drop level).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (section 2).
+# The minimum modifier level of Greater and Perfect currency is in item_rules.yaml (it belongs to the
+# currency families another file holds); the bones' item-level limits are in desecration.yaml.
+rules:
+  - id: item_level.mod_required_level
+    statement: Every modifier has a required (spawn) level and can roll only on an item whose item level is at or above it. Example from the data, the life prefixes IncreasedLife1 to IncreasedLife13 on armour and jewellery require levels 1, 6, 16, 24, 33, 38, 46, 54, 60, 65, 70, 75, 80 for +10-19 up to +200-214 maximum Life.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"name": "Prime", "required_level": 80, "spawn_weights": [{"tag": "body_armour", "weight": 1}, {"tag": "default", "weight": 0}], "stats": [{"id": "base_maximum_life", "max": 214, "min": 200}]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      increased_life_required_levels: [1, 6, 16, 24, 33, 38, 46, 54, 60, 65, 70, 75, 80]
+
+  - id: item_level.required_levels_change_by_patch
+    statement: GGG changes the required level of single modifiers in patch notes, so the required levels must be read from the export of the current patch (0.5.0 example, the Precise accuracy prefix on weapons moved from level 1 to level 8).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "The 'Precise' Accuracy modifier on Weapons now has a minimum level of 8 (previously 1)."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: item_level.base_has_drop_level
+    statement: Every base in the export carries a drop level.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '"domain": "flask", "drop_level": 12, "implicits": ["CharmImplicitUseOnFreeze1"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_level.base_drops_at_or_above_drop_level
+    statement: A base can drop only when the item level is at or above its drop level; drops from chests and other non-monster sources take the area level as item level.
+    source_kind: wiki
+    url: https://www.poe2wiki.net/wiki/Drop_level
+    quote: "An item base type can only drop if the item level is equal to or greater than its minimum drop level."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Search-engine snippet of the bot-walled PoE2 wiki only, undated; the chest rule has no quote."
+    page_statement: "Which item bases can drop at which item level follows a fan wiki excerpt."
+    page_source: "a fan wiki excerpt"
+
+  - id: item_level.tier_one_is_best
+    statement: In the advanced item description and in GGG's patch notes, Tier 1 is the best tier of a modifier, and the worst tier number differs per modifier (down to tier 10 or lower). The "Tier N" label of unidentified rares and the waystone tiers count the other way (higher is better).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "+Level of all Melee Skills on Two Handed Attack Weapons now has a value of +5 at Tier 1 (previously +7)"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24

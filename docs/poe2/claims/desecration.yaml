@@ -1,0 +1,95 @@
+# Mechanic family: desecration (Abyss bones, unrevealed desecrated modifiers, the Well of Souls reveal).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (facts 5, 16, 27), with
+# research/poe2/data/derived/abyss-bones.md. The desecration omens are in item_rules.yaml (they
+# belong to the omen family another file holds).
+rules:
+  - id: desecration.bone_item_classes
+    statement: 'Each bone desecrates a rare item of fixed classes: Jawbone weapons and quivers (Claw, Dagger, One Hand Sword, One Hand Axe, One Hand Mace, Bow, Warstaff, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Crossbow, Flail, FishingRod, Talisman, Quiver, Sceptre, Wand, Staff); Rib armour (Body Armour, Helmet, Gloves, Boots, Shield, Focus, Buckler); Collarbone and Altered Collarbone jewellery (Amulet, Ring, Belt); Preserved Cranium jewels; Preserved Vertebrae waystones (Map).'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/AbyssBenchTicketTypes.csv
+    quote: '"rownum","BaseItemType","UsableOnItemClasses","i32_32","i32_36","MaximumItemLevel","MinimumModLevel","f32_48","bool_52","Tag"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Jawbone: [Claw, Dagger, One Hand Sword, One Hand Axe, One Hand Mace, Bow, Warstaff, Two Hand Sword, Two Hand Axe, Two Hand Mace, Spear, Crossbow, Flail, FishingRod, Talisman, Quiver, Sceptre, Wand, Staff]
+      Rib: [Body Armour, Helmet, Gloves, Boots, Shield, Focus, Buckler]
+      Collarbone: [Amulet, Ring, Belt]
+      Altered Collarbone: [Amulet, Ring, Belt]
+      Preserved Cranium: [Jewel]
+      Preserved Vertebrae: [Map]
+
+  - id: desecration.bone_grades
+    statement: Gnawed bones work only on items of item level 64 or lower; Preserved and Ancient bones have no item-level limit; Ancient bones set a minimum modifier level of 40 on the desecrated modifier.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/AbyssBenchTicketTypes.csv
+    quote: '0,4875,"[6,7,9,11,12,13,58,15,16,17,79,80,85,37,110,20,32,8,14]",0,0,64,0,0,"",""'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Gnawed: {max_item_level: 64, min_mod_level: 0}
+      Preserved: {max_item_level: null, min_mod_level: 0}
+      Ancient: {max_item_level: null, min_mod_level: 40}
+
+  - id: desecration.bone_drop_levels
+    statement: Gnawed bones drop from level 25, Preserved bones from 61, Ancient bones from 75; the Preserved Cranium and Preserved Vertebrae from 65 and the Altered Collarbone from 1 (the drop levels of the base_items export).
+    source_kind: datamined
+    url: https://poe2db.tw/us/Preserved_Jawbone
+    quote: "NoteCode preserved-jawbone DropLevel 61 BaseType Preserved Jawbone Class Stackable Currency"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Gnawed: 25, Preserved: 61, Ancient: 75, Preserved Cranium: 65, Preserved Vertebrae: 65, Altered Collarbone: 1}
+
+  - id: desecration.unnamed_columns
+    statement: 'Preserved, Ancient and Altered bones carry 0.08 in an unnamed float column (Preserved Vertebrae 1, Gnawed 0), and Preserved and Ancient Jawbones and Collarbones set an unnamed flag; the meaning (perhaps the chance and the flag of otherworldly modifiers) is not known.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/AbyssBenchTicketTypes.csv
+    quote: '2,4877,"[6,7,9,11,12,13,58,15,16,17,79,80,85,37,110,20,32,8,14]",0,1,0,40,0.08,1,""'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The columns are unnamed in the community schema; the meaning is a guess."
+    page_statement: "Two values of each bone in the game data have no known meaning, so their effect is not modelled."
+    page_source: "the game data, with columns nobody has named"
+
+  - id: desecration.unrevealed_then_revealed
+    statement: A bone adds one unrevealed desecrated modifier to a rare item; it is revealed at the Well of Souls, where the player picks one of the offered options (guides say 3).
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory the next time you reveal Desecrated modifiers you can reroll the options once"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The number of reveal options (3) is from secondary guides only; whether the Ancient bone's level-40 floor applies to every option is not checked."
+    page_statement: "Revealing a desecrated modifier is taken to offer a choice of three, as guides say; the game does not state the number."
+    page_source: "player guides"
+
+  - id: desecration.one_desecrated_mod
+    statement: Since 0.5.0 desecrated modifiers no longer count as crafted modifiers, and an item may hold only one desecrated modifier. Desecrated modifiers count toward the normal prefix and suffix limits. The Omen of Putrefaction is the exception (up to 6 unrevealed modifiers, then the item is corrupted).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "Desecrated modifiers no longer count as crafted modifiers, but items are limited to 1 Desecrated modifier."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    history:
+      - statement: Before 0.5.0 desecrated modifiers counted as crafted modifiers.
+        held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: "Desecrated modifiers no longer count as crafted modifiers"
+
+  - id: desecration.mod_census
+    statement: 'The export holds 147 desecrated prefixes, 175 desecrated suffixes and 93 desecrated unique entries (map and jewel ones included). The lord-specific item modifiers carry the tag kurgal_mod, amanamu_mod or ulaman_mod and all 199 of them require level 65.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/mods.json
+    quote: '"domain": "desecrated", "generation_type": "suffix", "generation_weights": [], "grants_effects": [], "groups": ["IncreaseSocketedGemLevel"], "implicit_tags": ["unveiled_mod", "ulaman_mod", "gem"], "is_essence_only": false, "name": "of Ulaman", "required_level": 65'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {prefixes: 147, suffixes: 175, unique: 93, lord_mods: 199, lord_mod_required_level: 65, lord_tags: [kurgal_mod, amanamu_mod, ulaman_mod]}
+
+  - id: desecration.no_instant_leech
+    statement: Since 0.5.0 desecrated modifiers that grant instant leech can no longer roll.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "Desecrated Modifiers granting Instant Leech can no longer roll"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24

@@ -1,0 +1,38 @@
+# Mechanic family: sanctification (Omen of Sanctification with a Divine Orb on a rare item).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (fact 32). The omen as a
+# currency item belongs to the omen family another file holds.
+rules:
+  - id: sanctification.multiplies_each_mod
+    statement: Sanctifying a rare item (a Divine Orb under the Omen of Sanctification) multiplies the value of each modifier by its own random factor from 78% to 122% of the current value; since 0.5.0 it multiplies the current value instead of rerolling.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Sanctified_Items
+    quote: "Sanctifying an item will multiply the values of an items modifiers by a random value ranging from 78% to 122% for each modifier."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {factor_min: 0.78, factor_max: 1.22}
+    history:
+      - statement: Before 0.5.0 sanctifying randomised the modifier values (an older guide gives 80% to 120%).
+        held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: "Sanctifying an item now multiplies each modifier value based on the current value, instead of randomising values."
+
+  - id: sanctification.factor_steps
+    statement: Each modifier's factor rolls independently in steps of 0.01 and the result is rounded up.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Sanctified_Items
+    quote: "Sanctifying an item will multiply the values of an items modifiers by a random value ranging from 78% to 122% for each modifier."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The step and the rounding are from a wiki snippet only; the quote shows the per-modifier roll."
+    page_statement: "How a sanctified value is rounded is taken from a fan wiki excerpt."
+    page_source: "a fan wiki excerpt"
+
+  - id: sanctification.blocks_most_crafting
+    statement: A sanctified item can barely be changed afterwards; most crafting and modification methods cannot be used on it.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Sanctified_Items
+    quote: "Most methods of item crafting and modification cannot be used on Sanctified items."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24

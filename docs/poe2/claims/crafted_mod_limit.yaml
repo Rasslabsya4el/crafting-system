@@ -1,0 +1,30 @@
+# Mechanic family: crafted_mod_limit (how many crafted, desecrated and essence modifiers an item may hold).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (facts 5, 6).
+rules:
+  - id: crafted_mod_limit.one_crafted_mod
+    statement: Since 0.5.0 every crafted modifier is guaranteed and an item can hold only one crafted modifier at a time.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "All crafted modifiers are now guaranteed, but items can only have 1 crafted modifier at a time."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: crafted_mod_limit.desecrated_separate
+    statement: Since 0.5.0 a desecrated modifier is not a crafted modifier; an item may hold one crafted and one desecrated modifier together (the desecrated limit is desecration.one_desecrated_mod).
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "Desecrated modifiers no longer count as crafted modifiers, but items are limited to 1 Desecrated modifier."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: crafted_mod_limit.one_essence_mod
+    statement: Since 0.5 an item can hold only one essence modifier at a time; whether an essence modifier is the item's single crafted modifier (so that an essence and an alloy cannot share an item) is not settled.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "All crafted modifiers are now guaranteed, but items can only have 1 crafted modifier at a time."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Stated only by a Mobalytics guide snippet (page refused, 403); the official notes speak of crafted modifiers only, and whether essence mods count as crafted is open."
+    page_statement: "An item is taken to hold at most one essence modifier, as a guide says; whether that essence modifier also uses up the one crafted modifier slot is not known."
+    page_source: "a guide site and the patch notes"

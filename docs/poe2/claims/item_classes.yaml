@@ -1,0 +1,58 @@
+# Mechanic family: item_classes (item classes, base tags, implicits, which classes are live).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (facts 22, 23).
+rules:
+  - id: item_classes.armour_attribute_tags
+    statement: Armour bases are tagged by their attribute, one of str_armour, dex_armour, int_armour, str_dex_armour, str_int_armour, dex_int_armour, str_dex_int_armour, and the attribute tags decide which modifiers they can roll.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '"item_class": "Body Armour", "name": "Rusted Cuirass", "tags": ["str_armour", "ezomyte_basetype", "body_armour", "armour", "default"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [str_armour, dex_armour, int_armour, str_dex_armour, str_int_armour, dex_int_armour, str_dex_int_armour]
+
+  - id: item_classes.culture_tags
+    statement: Bases also carry a culture tag (ezomyte_basetype, karui_basetype, maraketh_basetype, vaal_basetype) and runeforged bases carry the tag runeforged.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '"tags": ["str_armour", "ezomyte_basetype", "body_armour", "armour", "default"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: [ezomyte_basetype, karui_basetype, maraketh_basetype, vaal_basetype, runeforged]
+
+  - id: item_classes.implicits_by_class
+    statement: 'Among released bases, implicits are carried by 27 of 28 rings, all 25 amulets, all 19 belts, all 11 quivers, 93 of 368 body armours and 16 of 35 bows; no focus and no life flask has one. Charms and tablets carry implicits too.'
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '"domain": "flask", "drop_level": 12, "implicits": ["CharmImplicitUseOnFreeze1"]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Ring: [27, 28]
+      Amulet: [25, 25]
+      Belt: [19, 19]
+      Quiver: [11, 11]
+      Body Armour: [93, 368]
+      Bow: [16, 35]
+      Focus: [0, 51]
+      LifeFlask: [0, 9]
+
+  - id: item_classes.charms_are_utility_flasks
+    statement: Charms are item class UtilityFlask in the data (e.g. Thawing Charm), with a flask domain.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: '"item_class": "UtilityFlask", "name": "Thawing Charm"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_classes.released_flag_trap
+    statement: 'The export marks bases of One Hand Sword (24), One Hand Axe (21), Dagger (22), Claw (13) and TrapTool (13) as released, but these classes are not obtainable in 0.5.5; the 0.5.5 notes name unique swords, axes and daggers dropping only as a bug they fixed. A planner must not take the released flag as "in the game".'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/4000864
+    quote: "Unique Swords, Axes and Daggers were able to drop"
+    patch_verified: "0.5.5"
+    date_checked: 2026-11-24
+    value: {One Hand Sword: 24, One Hand Axe: 21, Dagger: 22, Claw: 13, TrapTool: 13}
+    approximate: true
+    approximate_reason: "Which classes are live is inferred from the bug-fix line and absence from the game, not from a list by GGG."
+    page_statement: "Swords, axes, daggers, claws and trap tools are treated as not in the game, although the game data still lists them."
+    page_source: "the patch notes read together with the game data"

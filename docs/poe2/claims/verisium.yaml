@@ -1,0 +1,67 @@
+# Mechanic family: verisium (Runes of Aldur: Verisium runeforging, alloys, fluxes, remnants, the Verisium Anvil).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (fact 33), with
+# research/poe2/data/derived/verisium-crafts.md.
+rules:
+  - id: verisium.runeforging_runic_ward
+    statement: Verisium runeforging turns an armour base into a runeforged base that gains Runic Ward; armours above level 55 trade part of their base defences for it.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "trade some of their regular base defences for Runic Ward."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: verisium.base_conversion_table
+    statement: 'The client table of Verisium crafts has 718 rows. 446 turn a base into its Runeforged version, 383 of them for Verisium alone (10 to 495 per craft), others for Exceptional Verisium or with a lord crest. 264 turn a base into a Runemastered version and always need a crest (Medved''s Crest of the Circle, Vorana''s Crest of the Scythe, Uhtred''s Crest of the Chalice or Olroth''s Crest of the Sun) besides Verisium or Exceptional Verisium. A few rows turn Starlit Ore or a shattered unique into a named unique.'
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2VerisiumCrafts.csv
+    quote: '"rownum","OriginalBaseType","UniqueName","NewBaseType","CraftingItem","CraftingItemCount","[i32]_80","[rid]_96","i32_112","NewUniqueName"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {rows: 718, runeforged: 446, runeforged_verisium_only: 383, verisium_cost_min: 10, verisium_cost_max: 495, runemastered: 264}
+
+  - id: verisium.alloys_replace_a_mod
+    statement: Alloys add new crafted modifiers by replacing an existing modifier, like Perfect Essences; the result is the item's one crafted modifier (crafted_mod_limit.one_crafted_mod). Which classes each alloy takes and its modifier list were not read.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "add various new crafted modifiers to items by replacing an existing modifier, similar to Perfect Essences"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: verisium.alloy_names
+    statement: 'There are 13 alloys: Runic, Adaptive, Protective, Expansive, Swift, Cyclonic, Prismatic, Mystic, Sovereign, Celestial, Transcendent, The Runebinder''s and The Runefather''s Alloy.'
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "add various new crafted modifiers to items by replacing an existing modifier, similar to Perfect Essences"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: [Runic, Adaptive, Protective, Expansive, Swift, Cyclonic, Prismatic, Mystic, Sovereign, Celestial, Transcendent, The Runebinder's, The Runefather's]
+    approximate: true
+    approximate_reason: "The names come from a poe2db snapshot; the poe2db alloy page returned 404, so the list was not read on a current page."
+    page_statement: "The list of alloys comes from an older snapshot of a game database site."
+    page_source: "a game database site, older copy"
+
+  - id: verisium.fluxes_change_resistance_element
+    statement: Three fluxes change the element of the resistances on an item from one element to another.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "transform the resistances on your items from one element to another"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {fluxes: 3}
+
+  - id: verisium.remnants
+    statement: Remnants start with between 2 and 10 slots and craft an item of the player's choosing from Runic Recipes.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "start with any number of slots between 2 and 10"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+    value: {min_slots: 2, max_slots: 10}
+
+  - id: verisium.anvil_unlock_outside_league
+    statement: Since 0.5.5, outside the Runes of Aldur league, the Verisium Anvil is unlocked by completing The Runeseeker quest in Act 4.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/4000864
+    quote: "The Verisium Anvil is now unlocked by completing The Runeseeker quest in Act 4"
+    patch_verified: "0.5.5"
+    date_checked: 2026-11-24

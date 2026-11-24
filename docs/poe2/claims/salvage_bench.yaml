@@ -1,0 +1,22 @@
+# Mechanic family: salvage_bench (what salvaging an item returns).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (fact 37).
+rules:
+  - id: salvage_bench.alternate_quality_returns_catalysts
+    statement: Since 0.5.0 an item with alternate quality from Breach catalysts can be salvaged to return part of the catalysts used.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/3932540
+    quote: "Alternate Quality items (from Breach Catalysts) may now be salvaged to return a portion of the Catalysts used."
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-24
+
+  - id: salvage_bench.sockets_give_artificer_shards
+    statement: Salvaging an item gives one Artificer's Shard per socket (10 shards make an Artificer's Orb), and destroys the augments socketed in it; quality gives quality currency, about one per 5% quality with a chance of one more.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Artificer's Shard Stack Size: 1 / 10"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "The quote only shows the shard exists (stack of 10); the yield per socket and per quality is from wiki snippets and guides, and the quality yield is low confidence."
+    page_statement: "What salvaging gives back for sockets and quality comes from a fan wiki excerpt and guides, and the quality part is a rough figure."
+    page_source: "a fan wiki excerpt and player guides"

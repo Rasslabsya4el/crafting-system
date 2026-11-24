@@ -1,0 +1,37 @@
+# Mechanic family: sockets (Augment Sockets per class, extra sockets from corruption and Exceptional drops).
+# PoE2 research of 2026-11-24, docs/poe2/research/items-and-modifiers.md (fact 26).
+# The Artificer's Orb and the Jeweller's Orbs are in item_rules.yaml (they belong to the
+# artificers_orb and jewellers_orb families another file holds); salvage is salvage_bench.yaml.
+rules:
+  - id: sockets.max_by_class
+    statement: Body armours and two-handed weapons take up to 2 Augment Sockets, other armour and weapons up to 1, and quivers and jewellery none; an item never has more sockets than inventory cells. Rune sockets were renamed Augment Sockets in 0.4.0.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/path-of-exile-2-crafting-overview
+    quote: "Chestpieces and 2-handed weapons can have 2 sockets, all other items can have 1."
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    value: {Body Armour: 2, two_handed_weapon: 2, other_armour_and_weapon: 1, Quiver: 0, Ring: 0, Amulet: 0, Belt: 0}
+    approximate: true
+    approximate_reason: "Maxroll says all other items take 1; the zero for quivers and jewellery and the inventory-cell cap are from a wiki snippet only."
+    page_statement: "How many sockets each kind of item can hold comes from a guide site and a fan wiki excerpt, not from the game's own text."
+    page_source: "a guide site and a fan wiki excerpt"
+
+  - id: sockets.corruption_socket_ignores_limit
+    statement: A Vaal Orb on a helmet, gloves, boots, body armour, shield, focus or martial weapon (magic, rare or unique) can add one socket that ignores the class limit; an Exceptional item's extra socket stacks with it.
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/corruption-outcomes
+    quote: "Special outcome: Helmet , Gloves , Boots , Chestpiece , Shield , Focus , Martial Weapons : +1 Socket (ignoring limit)"
+    patch_verified: "0.4.0"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "Maxroll page updated for 0.4; that the Exceptional socket stacks with it is a wiki snippet only."
+    page_statement: "A corrupted item can gain one socket over the usual limit, which a guide site lists but the game does not state."
+    page_source: "a guide site and a fan wiki excerpt"
+
+  - id: sockets.exceptional_extra_socket
+    statement: An Exceptional item can carry one Augment Socket over the normal limit for its class.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Exceptional_Item
+    quote: "Exceptional Items have Quality over maximum or an additional Augment Socket."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24

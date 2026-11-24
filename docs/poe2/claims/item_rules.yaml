@@ -1,0 +1,142 @@
+# Mechanic family: item_rules (overflow: item facts of the note that belong to families another file
+# holds, or to no family of this set). PoE2 research of 2026-11-24,
+# docs/poe2/research/items-and-modifiers.md. Each claim names the family it would go to.
+rules:
+  - id: item_rules.rarity_affix_limits
+    statement: (Family affix_limits.) Normal items have no affixes, magic items at most 1 prefix and 1 suffix, rare items at most 3 prefixes and 3 suffixes (6 modifiers).
+    source_kind: wiki
+    url: https://maxroll.gg/poe2/resources/path-of-exile-2-crafting-overview
+    quote: "Normal items have no affixes, Magic items have up to 1 Prefix and 1 Suffix, whereas Rare items have up to 3 Prefixes and 3 Suffixes."
+    patch_verified: "0.5.2"
+    date_checked: 2026-11-24
+    value: {normal: [0, 0], magic: [1, 1], rare: [3, 3]}
+
+  - id: item_rules.rare_six_mods_item_text
+    statement: (Family affix_limits.) The Exalted Orb's text confirms that a rare item can have up to six random modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Exalted_Orb
+    quote: "Rare items can have up to six random modifiers."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.greater_perfect_min_mod_level
+    statement: '(Families modifier_level and the currency families.) Greater and Perfect currency set a minimum modifier level for the modifier they add: Transmutation and Augmentation 44 and 70; Regal, Exalted and Chaos 35 and 50. Since 0.5.0 Greater Transmutation and Augmentation are at 44 (previously 55), and Greater and Perfect currency became rarer.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Perfect Orb of Transmutation Stack Size: 1 / 40 Minimum Modifier Level : 70 Upgrades a Normal item to a Magic item with 1 modifier"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value:
+      Orb of Transmutation: {greater: 44, perfect: 70}
+      Orb of Augmentation: {greater: 44, perfect: 70}
+      Regal Orb: {greater: 35, perfect: 50}
+      Exalted Orb: {greater: 35, perfect: 50}
+      Chaos Orb: {greater: 35, perfect: 50}
+    history:
+      - statement: Before 0.5.0 Greater Orbs of Transmutation and Augmentation had a minimum modifier level of 55.
+        held_until: "0.4.0"
+        source_kind: official
+        url: https://www.pathofexile.com/forum/view-thread/3932540
+        quote: "Greater Orbs of Transmutation and Greater Orbs of Augmentation now have a minimum Modifier Level of 44 (previously 55)"
+        value: {Orb of Transmutation: {greater: 55}, Orb of Augmentation: {greater: 55}}
+
+  - id: item_rules.fracturing_orb
+    statement: (Family fracturing_orb.) A Fracturing Orb fractures one random modifier of a rare item with at least 4 modifiers, locking it in place.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Fracture a random modifier on a rare item with at least 4 modifiers, locking it in place."
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.hinekoras_lock
+    statement: (Family hinekora_lock.) Hinekora's Lock lets an item foresee the result of the next currency used on it; modifying the item in any way removes the foresight.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Allows an item to foresee the result of the next Currency item used on it Modifying the item in any way removes the ability to foresee"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.artificers_orb
+    statement: (Family artificers_orb.) An Artificer's Orb adds an Augment Socket to a martial weapon, wand, staff or armour.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Adds an Augment Socket to a Martial Weapon , wand, staff or Armour"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.jewellers_orbs
+    statement: (Family jewellers_orb.) Lesser, Greater and Perfect Jeweller's Orbs set a skill gem to 3, 4 or 5 support sockets; since 0.5.0 they also work on items that grant skills.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Currency
+    quote: "Perfect Jeweller's Orb Stack Size: 1 / 20 Sets a Skill Gem to have 5 Support Gem Sockets"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Lesser: 3, Greater: 4, Perfect: 5}
+
+  - id: item_rules.omen_of_the_blessed
+    statement: (Family omen.) Under the Omen of the Blessed the next Divine Orb rerolls only implicit modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Divine Orb will only reroll Implicit Modifiers"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.desecration_lord_omens
+    statement: (Family omen.) The Omens of the Sovereign, the Liege and the Blackblooded make the next weapon or jewellery desecration guarantee a random Ulaman, Amanamu or Kurgal modifier.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Weapon or Jewellery Desecration attempt will guarantee a random Ulaman modifier"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.desecration_side_omens
+    statement: (Family omen.) Sinistral and Dextral Necromancy make the next desecration add only a prefix or only a suffix; Abyssal Echoes lets the reveal options be rerolled once; Omen of Light makes the next Annulment remove only desecrated modifiers.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Desecration attempt will add only suffix modifiers"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.omen_of_putrefaction
+    statement: (Family omen.) Under the Omen of Putrefaction the next desecration replaces all modifiers of the item with up to 6 unrevealed modifiers and corrupts it.
+    source_kind: datamined
+    url: https://poe2db.tw/us/Omen
+    quote: "While this item is active in your inventory your next Desecration attempt will replace all modifiers on the item creating an item with up to 6 Unrevealed modifiers and Corrupting the item"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.essence_kinds
+    statement: '(No family in this set: essences.) Lesser, normal and Greater essences upgrade a magic item to rare with a guaranteed modifier; Perfect essences remove a random modifier and add a guaranteed one to a rare; corrupted essences (Hysteria, Delirium, Horror, Insanity), the Essence of the Abyss and the Essence of the Breach work like Perfect ones with slot-specific results. The essence-only item modifiers cannot be built from the export''s is_essence_only flag; use the per-essence outcome table.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence
+    quote: "Removes a random modifier and augments a Rare item with a new guaranteed modifier"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.essence_magic_to_rare
+    statement: '(No family in this set: essences.) A Lesser, normal or Greater essence upgrades a magic item to rare and adds a guaranteed modifier.'
+    source_kind: datamined
+    url: https://poe2db.tw/us/Essence
+    quote: "Upgrades a Magic item to a Rare item, adding a guaranteed modifier"
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: item_rules.forbidden_rites_no_new_crafting
+    statement: (No family in this set.) The Forbidden Rites event league (0.5.5) is a Ritual variant and its notes list no new item-crafting mechanic.
+    source_kind: official
+    url: https://www.pathofexile.com/forum/view-thread/4000864
+    quote: "The Verisium Anvil is now unlocked by completing The Runeseeker quest in Act 4"
+    patch_verified: "0.5.5"
+    date_checked: 2026-11-24
+    approximate: true
+    approximate_reason: "An absence read from the full 0.5.5 notes; no sentence states it, so the quote is only a line of those notes."
+    page_statement: "The current event league is taken to add no new way to craft items, since its patch notes name none."
+    page_source: "the patch notes, read for what they leave out"
+
+  - id: item_rules.coe_reveal_on_corrupted
+    statement: (Family desecration or corruption.) Craft of Exile allows the desecration reveal on corrupted items since 2026-08-01.
+    source_kind: coe
+    url: https://www.craftofexile.com/changelog
+    quote: "desecration reveal on corrupted items"
+    patch_verified: "0.5.5.5"
+    date_checked: 2026-11-24
