@@ -563,7 +563,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines = []
     if target_name:
         lines.append(f"Target: {target_name}")
-    lines.append(f"Proof: {proof_words(plan, guide).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-58, #1576)
+    lines.append(f"Proof: {proof_words(plan, guide).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-59, #1576)
     lines.extend(marking_lines(plan.approximation, shift, divine))
     if report.interval is not None:
         lines.extend(report.interval.text_lines(divine))
@@ -772,7 +772,7 @@ def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None
         "format": FORMAT,
         "unit": "chaos",
         RECORD: {"report_built": False, "stopped": stopped},
-        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-58, #1576)
+        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-59, #1576)
         "answer": marking_document(plan.approximation, shift),
         "target": target_name,
         "requirements": requirements_document(plan),
@@ -809,7 +809,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
     document: dict = {
         "format": FORMAT,
         "unit": "chaos",
-        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-58, #1576)
+        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-59, #1576)
         "answer": marking_document(plan.approximation, shift),
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         **({"interval": report.interval.document()} if report.interval is not None else {}),

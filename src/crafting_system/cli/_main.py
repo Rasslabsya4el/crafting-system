@@ -253,7 +253,7 @@ def main(
                 if check is not None:
                     stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
 
-                guide = given_cost(plan, given)  # the guide's route's cost with the start item: the proof sentence says the plan's against it (OR-58)
+                guide = given_cost(plan, given)  # the guide's route's cost with the start item: the proof sentence says the plan's against it (OR-59)
                 print(render_text(report, check, target_name=name, guide=guide), end="")
                 printed = True
                 stage("text written")
@@ -285,7 +285,7 @@ def main(
                 print(f"The plan's record (its cost, odds, start and limits) is written to {out}")
             return 2 if check is not None and not check.agrees else 0
     except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
-        if isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-58, #1576)
+        if isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-59, #1576)
             print(f"Proof: {no_plan_words().sentence}")
         print(f"Error: {error}", file=sys.stderr)
         return 1

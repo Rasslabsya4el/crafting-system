@@ -214,7 +214,7 @@ class RouteInput:
     reasons: Mapping[CompressedState, str] = field(default_factory=dict)
     interval: IntervalAnswer | None = None  # the plan's interval over a rule axis (ticket #221); only the planner's own policy has one
     chain: Chain | None = None  # the policy on item states as arrays, when `policy` is a lumped view (then the rows are made from this, not from the shown members of blocks)
-    guide: float | None = None  # the guide's route's cost with the start item, when one was given: the proof sentence says the plan's against it (OR-58)
+    guide: float | None = None  # the guide's route's cost with the start item, when one was given: the proof sentence says the plan's against it (OR-59)
 
 
 def route_input(plan: Plan, interval: IntervalAnswer | None = None, guide: float | None = None) -> RouteInput:
@@ -1291,7 +1291,7 @@ class _View:
         return _plain("Start", *lines)
 
     def proof_field(self) -> Field | None:
-        """The goal card's "Proof" field: the planner's one proof sentence (`planner.proof_words`, OR-58), the same as the text report's and the
+        """The goal card's "Proof" field: the planner's one proof sentence (`planner.proof_words`, OR-59), the same as the text report's and the
         JSON's; None for a given route."""
         if self.inp.label != PLANNER_LABEL:
             return None

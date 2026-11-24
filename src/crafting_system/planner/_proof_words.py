@@ -1,4 +1,4 @@
-"""The one sentence that says how sure a plan is, in a player's words (#1576, OR-58): the route page's "Proof" field, the text report's
+"""The one sentence that says how sure a plan is, in a player's words (#1576, OR-59): the route page's "Proof" field, the text report's
 "Proof:" line and the JSON's `proof` say it from here, and nothing else words the answer's proof.
 
 Three cases, no more:
@@ -11,7 +11,7 @@ Three cases, no more:
   methods alone do not reach the target does not (it did not hold the plan's actions). With a guide's route, its cost beside the plan's.
 * **No plan** (`NO_PLAN`): the search stopped before any plan reached the target; that is not a proof that none does (OR-33).
 
-The rule (OR-58, owner 2026-11-24): a craft is shown as proved only when the plan is proved within 1% over every method; otherwise "best plan
+The rule (OR-59, owner 2026-11-24): a craft is shown as proved only when the plan is proved within 1% over every method; otherwise "best plan
 found, not proved", what was considered, and the cost against the guide. The words carry no search term (round, bound, key, envelope); "a group
 of methods" is the most technical phrase they use.
 """

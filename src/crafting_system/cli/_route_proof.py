@@ -6,7 +6,7 @@ The planner's records say how its search ended (`Plan.search`, `_envelope_plan.E
 says three things a player can act on:
 
 * **How sure the plan is** (`Proof`): read by the batches' sentences below. The goal card's "Proof" field is the planner's one proof
-  sentence (`planner.proof_words`, OR-58, #1576), the same as the text report's "Proof:" line and the JSON's `proof`.
+  sentence (`planner.proof_words`, OR-59, #1576), the same as the text report's "Proof:" line and the JSON's `proof`.
 * **The sentences of the limits that claim cheapness** say the same: "within 1% of the cheapest" for a proved plan, "the best the search
   found before it stopped, not proved the cheapest" for a stopped one (`guarantee_words`); never "the stated gap".
 * **The rounds** are told as batches of methods, each by its methods' game names and how it ended, with no search word (`rounds_line`,

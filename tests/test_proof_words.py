@@ -1,4 +1,4 @@
-"""The one proof sentence (#1576, OR-58): "proved" only over every method; otherwise best found, not proved, with how many of the actions open
+"""The one proof sentence (#1576, OR-59): "proved" only over every method; otherwise best found, not proved, with how many of the actions open
 to the craft were searched to the end together with the plan; or no plan. Through the planner's entry on a small world, counted in states.
 
 The fixture belt of `test_planner_blocking_crafts` (`test_stop_is_not_unreachable`): the Exalted Orb reaches the goal, the bench's two filler
