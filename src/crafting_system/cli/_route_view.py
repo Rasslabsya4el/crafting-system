@@ -1618,8 +1618,8 @@ def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...],
     lines.extend(
         Line(f"{kind}: {side(kind, ours, our_uses)} here, {side(kind, theirs, their_uses)} in the given route") for kind in named
     )
-    if rest:
-        here, there = math.fsum(ours.get(kind, 0.0) for kind in rest), math.fsum(theirs.get(kind, 0.0) for kind in rest)
+    here, there = math.fsum(ours.get(kind, 0.0) for kind in rest), math.fsum(theirs.get(kind, 0.0) for kind in rest)
+    if rest and (here or there):
         lines.append(Line(f"the other steps that differ ({len(rest)}) together: {money(here) if here else 'nothing'} here, {money(there) if there else 'nothing'} in the given route"))
     return Field(COST_AGAINST_GIVEN, tuple(lines))
 
