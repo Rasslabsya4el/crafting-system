@@ -5,14 +5,15 @@ The body of `POST /api/v1/<game>/jobs` is a JSON object:
     {"target": {...},                                   # the target as a JSON object, with the keys of a target file (`targets`)
      "methods": {"recipe_starts": true, "strands": false,    # optional: the method switches the planner has today, and
                  "allowed": ["chaos-orb", "essence"]},      # the methods the plan may use (#405; null or missing: every beta method)
-     "settings": {"start_price": null, "price_source": "both"}}  # optional: the user's settings
+     "settings": {"start_price": null, "price_source": "both",   # optional: the user's settings, and
+                  "time_limit_seconds": 1800}}             # the time this request may take, within the machine's own limit (#1577)
 
 A missing switch or setting is the machine's planner setting (`crafting.toml`, `Config`). Unknown keys are refused, so a key added later
 (the economy modes of #323, more method switches) never changes what an older request meant. The prices are the site's snapshot, so a
 target may not name a `price_file`.
 
 The **key** of a request is the SHA-256 of one canonical JSON text: the game, the target's canonical form (`target_form`: the parsed
-target, so two spellings of one item are one key, #966), the method switches and settings with their defaults filled in, the planner settings of the machine that change an answer (the proof gap, the time and memory nets, the imprint
+target, so two spellings of one item are one key, #966), the method switches and settings with their defaults filled in (the request's time limit among them, #1577), the planner settings of the machine that change an answer (the proof gap, the time and memory nets, the imprint
 cap, the recombinator variant), the price snapshot, the game data version and the planner version. Two requests with the same key get the
 same plan, so the second is answered from the store (OR-36). The calendar day is not in it: the site judges a price's age on the day its
 snapshot was fetched (`World.price_day`), which the snapshot's identity already holds, so a route is reused for as long as its snapshot
@@ -28,13 +29,14 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from crafting_system.config import PRICE_SOURCES
+from crafting_system.planner import PlanError, request_budget
 from crafting_system.targets import EnchantmentRequirement, ImplicitRequirement, KOfN, Requirement, Target, TargetError, parse_target
 
 from ._world import World
 
 _TOP_KEYS = ("target", "methods", "settings")
 _METHOD_KEYS = ("recipe_starts", "strands", "allowed")
-_SETTING_KEYS = ("start_price", "price_source")
+_SETTING_KEYS = ("start_price", "price_source", "time_limit_seconds")
 
 
 class RequestError(ValueError):
@@ -134,6 +136,17 @@ def _chaos_or_none(value: object, where: str) -> float | None:
     return float(value)
 
 
+def _time_limit(value: object, where: str, world: World) -> float | None:
+    """The time limit a user asks for one request (#1577, OR-40): a number of seconds above zero, at most the machine's own limit
+    (`World.budget`), or None for the machine's limit. It is filled in with the machine's figure, so a request that leaves it out and one that
+    names that figure are one request; a request that asks for more time than another is another request, planned from its start."""
+    try:
+        budget = request_budget(world.budget, value)  # type: ignore[arg-type]  (the planner says what is wrong with any other value)
+    except PlanError as problem:
+        raise RequestError(f"{where}: {problem}") from None
+    return None if budget is None else budget.seconds
+
+
 def parse_request(body: object, game: str, world: World) -> Request:
     """Check `body` against `world` and give the request with its key; raises `RequestError` with what is wrong."""
     top = _object(body, "the request", _TOP_KEYS)
@@ -163,7 +176,8 @@ def parse_request(body: object, game: str, world: World) -> Request:
             "strands": _switch(methods.get("strands"), "methods.strands", config.memory_strands),
             "allowed": _allowed(methods.get("allowed"), "methods.allowed"),
         },
-        "settings": {"start_price": start_price, "price_source": price_source},
+        "settings": {"start_price": start_price, "price_source": price_source,
+                     "time_limit_seconds": _time_limit(settings.get("time_limit_seconds"), "settings.time_limit_seconds", world)},
     }
     keyed = {"game": game, "target": target_form(target), "methods": document["methods"], "settings": document["settings"], "machine": world.machine, "prices": world.price_snapshot, "data": world.data.version, "planner": world.planner_version}
     return Request(game, target, document, hashlib.sha256(_canonical(keyed).encode("utf-8")).hexdigest())

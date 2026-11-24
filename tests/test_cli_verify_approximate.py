@@ -118,7 +118,7 @@ def command(tmp_path, monkeypatch):
     """The command on the fixture amulet; the plan is made with the fixture's offers and rates."""
     path = tmp_path / "amulet.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    monkeypatch.setattr(_main, "plan_target", lambda data, target, prices, settings: plan_with_starts(data, target, prices, **vars(settings), offers=OFFERS, rates=RATES))  # the entry takes no offers and no rates (#880)
+    monkeypatch.setattr(_main, "plan_target", lambda data, target, prices, settings: plan_with_starts(data, target, prices, **{k: v for k, v in vars(settings).items() if k != "time_limit_seconds"}, offers=OFFERS, rates=RATES))  # the entry takes no offers and no rates (#880)
     monkeypatch.setattr(_main, "write_route_page", lambda path, *a, **k: path)
 
     def run(*arguments):

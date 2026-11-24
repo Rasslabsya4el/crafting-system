@@ -68,6 +68,7 @@ def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
                 recipe_starts=methods["recipe_starts"], strands=methods["strands"], start_price=settings["start_price"],
                 methods=None if methods.get("allowed") is None else tuple(methods["allowed"]),
                 price_source=settings["price_source"], price_gap_percent=world.config.price_gap_percent, today=world.price_day, budget=world.budget,
+                time_limit_seconds=settings.get("time_limit_seconds"),
                 watch=lambda standing: watch(standing_document(standing)),
             ),
         )  # fmt: skip
@@ -89,6 +90,7 @@ def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
         "prices": policy["prices"],
         "limits": policy["limits"],
         "search": _search_document(plan),
+        "time_limit_seconds": settings.get("time_limit_seconds"),  # the time limit the plan ran under (#1577; None: no time limit)
     }
     return {"summary": summary, "policy": policy, "page": page}
 

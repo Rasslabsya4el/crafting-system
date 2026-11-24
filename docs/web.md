@@ -70,6 +70,7 @@ and plans one request through the API (#969, #1008).
 The limits of one plan are the machine's planner settings, as for the command (OR-40): `time_limit_seconds` and `memory_limit_mb` of the
 `[planner]` table of `crafting.toml` (default 600 s and 80% of the machine's memory). The memory limit is per plan, so a machine that runs
 several plans at once sets it to its share. Each plan also uses the cores `CRAFTING_WORKERS` gives it (default: all).
+A request may ask for less time, or as much, never more (`settings.time_limit_seconds`, #1577, below); the memory limit is the machine's.
 
 ## The API
 
@@ -90,6 +91,11 @@ POST /api/v1/poe1/jobs
 
 202 {"id": "3f2a…", "state": "queued", "from_store": false, "standing": null, "route": null, "error": null, "request": {…}, "key": "…", …}
 ```
+
+`settings.time_limit_seconds` is the time this request's plan may take, in seconds: at most the machine's `time_limit_seconds` (a request
+past it is `400`, saying the machine's limit), and the machine's when left out (`planner.request_budget`, OR-40). It is in the request's key,
+so a request that asks for another time limit is another request, planned from its start: today a longer run does not continue from the
+plan a shorter one found (#1577). A route's `summary.time_limit_seconds` says the limit its plan ran under (`null`: none).
 
 A request already answered comes back at once with `200` and a job that is `done` with `"from_store": true`. A request identical to one
 still queued or running gets that job, so two identical requests at once plan once. A request that cannot be planned as written (an unknown
