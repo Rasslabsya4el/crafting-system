@@ -51,6 +51,7 @@ GAME, GAP, RECORDS, EITHER, LISTS = "game", "gap", "records", "either", "lists"
 # game refusal skipped silently and the model gap written in `Abstraction.gaps` (the plan says so). LISTS: the same in a kind's listing (#511), the
 # model gap said with `listing_gap` (a limit of the kinds), the game refusal silent. EITHER: both families, named, and why.
 CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
+    ("abstraction/_bound.py", "holdable", ("OutOfScopeError",), GAP, "an influence the item class has no key for: its pool below rare is not modelled, so nothing is cut and the holdable mods are those of the base (#1506)"),
     ("abstraction/_bound.py", "reach_bound", ("OutOfScopeError",), GAP, "no bound is given for a pool the model cannot build"),
     ("actions/fossil_reach.py", "declared", ("NotApplicableError", "OutOfScopeError"), EITHER, "the item takes no resonator (the game) or no rule covers it (a gap): no set declares anything, and the floors start at pbar 1 (#1073)"),
     ("actions/fossil_reach.py", "declared", ("NotApplicableError", "OutOfScopeError", "ValueError"), EITHER, "the set is refused (the game) or out of scope (a gap) on the bare item: it declares nothing, and its floor is raised as before (#1073)"),
