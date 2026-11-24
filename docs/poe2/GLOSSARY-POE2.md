@@ -29,7 +29,7 @@ The choice step that turns an unrevealed desecrated mod into one mod chosen by t
 _Avoid_: unveil (PoE1)
 
 **Sanctified item**:
-An item whose mod values were changed by the Omen of Sanctification with a Divine Orb; it can no longer be modified. (Confirm the exact text in `docs/poe2/claims/omen.yaml`.)
+A rare whose mod values were multiplied, each by its own factor from 0.78 to 1.22 of its current value, by a Divine Orb under the Omen of Sanctification; it can no longer be modified (`claims/sanctification.yaml`).
 _Avoid_: blessed item
 
 **Augment**:
@@ -60,7 +60,7 @@ _Avoid_: metamod (PoE1's bench mods that act alike)
 ## Methods and places
 
 **Reforging bench**:
-The bench that takes three items and gives one item of the same kind (or class); no PoE1 counterpart in the planner.
+The bench that takes three items of one base and rarity and gives one of that base at the lowest item level among them, and turns three essences, runes, emotions or waystones of one tier into one of the next (`claims/reforging_bench.yaml`, `claims/reforging_recipes.yaml`). Not PoE2 1.0's "Reforging" with Crimson Iron, a different system announced for 2026-12-11.
 _Avoid_: vendor recipe
 
 **Salvage bench**:
@@ -74,7 +74,7 @@ _Avoid_: Incursion room (PoE1)
 Modifying an item that is already corrupted, with an Architect's Orb (equipment or jewel) or Crystallised Corruption (gem); the outcome may destroy the item.
 
 **Recombinator** (PoE2):
-The Expedition recombination of two items of a recombinable class into one, paid in Expedition artifacts (Black Scythe, Broken Circle, Order, Sun) per class (`RecombinableClasses`).
+The Expedition recombination of two items of a recombinable class into one, paid in Expedition artifacts (Black Scythe, Broken Circle, Order, Sun) per class (`RecombinableClasses`). **Disabled since 0.5.0** (`claims/recombinator.yaml`).
 _Avoid_: PoE1's Sentinel recombinator (dust and gold)
 
 **Verisium craft**:
