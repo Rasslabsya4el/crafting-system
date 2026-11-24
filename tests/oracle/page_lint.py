@@ -359,11 +359,11 @@ GUARANTEE = re.compile(r"\b(the plan|the answer|the odds|the mean)\b", re.I)
 
 def check_cut_guarantee(page: Page) -> list[Fault]:
     """OR-13: every line of the part "What this answer leaves out" says, after what is left out, what the answer still guarantees
-    ("The plan is the cheapest among the kinds offered."), and a plan that is "Cheapest policy of the planner" has that part (R13's
-    and R14's pages said "Cheapest policy of the planner" and named no kind left out)."""
+    ("The plan is the cheapest among the kinds offered."), and a plan whose route or proof claims the cheapest has that part (R13's
+    and R14's pages said "Cheapest policy of the planner" and named no kind left out; the claim is the "Proof" field's since #1161)."""
     faults = []
     for route in page.routes:
-        route_says = [line.text for line in route.goal_lines("Route")]
+        route_says = [line.text for line in (*route.goal_lines("Route"), *route.goal_lines("Proof"))]
         if any("cheapest" in text.lower() for text in route_says) and not route.leaves_out and not route.has_leaves_out_heading:
             faults.append(_fault("OR-13", check_cut_guarantee, "goal card", f'"{route_says[0]}" with no part "{LEAVES_OUT}"'))
         for label, lines in route.leaves_out:

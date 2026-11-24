@@ -25,7 +25,7 @@ from test_envelope_gap_stop_plan import at_once
 
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.planner import _envelope_plan, _limits, _plan
 from crafting_system.planner._envelope_plan import (
     EnvelopeInfo,
@@ -155,7 +155,7 @@ def test_the_text_report_the_json_and_the_page_say_one_gap_and_one_interval(monk
     text = render_text(report)
     (entry,) = [entry for entry in policy_document(report)["limits"] if entry["what"] == cut.what]
     page = render_page(Page("x", (build_section(route_input(plan), DATA),)))
-    assert limit_text(cut) in text and escape(limit_text(cut, SHOWN_LABELS)) in page
+    assert limit_text(cut) in text and escape(planner_limit_line(plan, cut).text) in page  # the page says the gap by its figure (#1161)
     for sentence in said:
         assert sentence in text, sentence
         assert sentence in entry["guarantee"], sentence
