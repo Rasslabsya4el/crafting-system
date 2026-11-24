@@ -123,7 +123,7 @@ from crafting_system.data import GameData
 from crafting_system.items import ExplicitMod, Item, Metamod, Rarity
 from crafting_system.solver import linear_solve
 
-from ._offer_kinds import ADD, CRAFT, FINISHING, REFUSED, REROLL, RESTART_KIND, _kind_of, finishes
+from ._offer_kinds import ADD, CRAFT, FINISHING, IMPLICIT, REFUSED, REROLL, RESTART_KIND, _kind_of, finishes
 from ._offers import BuyStartItem, PricedOffer, reached_by
 
 GROWS = True  # every run grows its rounds from the plan in hand; the tests of the widening rounds' own mechanism set it off (`_plan.rounds_grower`)
@@ -161,6 +161,9 @@ class Entry:
     more_crafted: bool = False  # it may add the metamod of more crafted mods
     fans: str = ""  # why one use fans out over two random choices or copies the item (module text, the later group; #1440), or ""
     need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
+    fills: frozenset[str] = frozenset()  # the side of the crafted mod it adds by name, when it adds one side's mod and draws none (#1542)
+    clears: frozenset[str] = frozenset()  # the sides it takes a mod off of and from that side alone, adding none there (`OfferTable._read_sides`)
+    sets: dict[str, tuple[int, ...]] = field(default_factory=dict)  # side -> the offers that set what it reads to clear that side, cheapest first
 
     def acts_at(self, shapes) -> bool:
         """Whether it is read as acting at one of `shapes` (its kind there is not a refusal)."""
@@ -189,6 +192,7 @@ class OfferTable:
     under: dict  # (side, shape, leaf, held) -> the rerolls ranked at the item under the lock (`under_lock`), read once each
     named_ids: set[str] | frozenset[str] = frozenset()  # the mods an offer names at the start item or gives by a finishing kind at a shape (`item_mod_ids`)
     _item_ids: frozenset[str] | None = None  # `item_mod_ids`, read once
+    _wanted_families: frozenset[str] | None = None  # `wanted_families`, read once
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
                  ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None) -> None:  # fmt: skip
@@ -205,6 +209,7 @@ class OfferTable:
             self._read_shape(abstraction, view, priced, ask)
         for entry, offer in zip(self.entries, priced):
             self._read_declarations(entry, offer, item)
+        self._read_sides(priced, ask)
         self.priced_needs()
 
     def priced_needs(self) -> None:
@@ -300,6 +305,101 @@ class OfferTable:
         entry.locks = frozenset(_LOCKS[family] for family in families if family in _LOCKS)
         entry.keeps_out = frozenset(_TAGS[family] for family in families if family in _TAGS)
         entry.more_crafted = Metamod.MULTIPLE_CRAFTED_MODS.value in families
+        if entry.crafted and not entry.draws and CRAFT in entry.kinds.values() and not families & self.wanted_families():
+            sides = {data.mods[mod_id].generation_type for mod_id in adds.named if mod_id in data.mods}
+            if len(sides) == 1 and sides <= _SIDES:
+                entry.fills = frozenset(sides)  # a filler takes a slot of its side and no wanted mod's family (#1542)
+
+    def wanted_families(self) -> frozenset[str]:
+        """The families of every mod that can pass a wanted mod: a filler that took one would block the wanted mod."""
+        if self._wanted_families is None:
+            mods = self.data.mods
+            self._wanted_families = frozenset(family for leaf in self.goal.leaves for mod_id in leaf.mod_ids if mod_id in mods for family in mods[mod_id].families)
+        return self._wanted_families
+
+    def _read_sides(self, priced: Sequence[PricedOffer], ask=None) -> None:
+        """The sides each offer clears (#1542, module text): at the item of each shape with a junk mod of each side (`_probe`), an offer that
+        removes a mod and adds none, or an addition, clears a side when an outcome takes a mod off it and none takes one off the other side
+        or adds one to it. An offer refused there that reads the implicits is read again after each outcome of each offer that changes only the
+        implicits (an Ember, an Ichor): the sides it clears so are those it clears with that offer before it (`sets`)."""
+        data = self.data
+        setters = [entry for entry in self.entries if IMPLICIT in entry.kinds.values()]
+        probes = [probe for shape, view in sorted(self.views.items(), key=lambda each: str(each[0])) if (probe := self._probe(view)) is not None]
+        for entry, offer in zip(self.entries, priced):
+            action = offer.offer.action
+            if isinstance(action, BuyStartItem) or getattr(action, "opens_listing", False) or entry.fans == COPIES:
+                continue
+            try:
+                adds, reads = action.adds(data, self.views.get(self.start_rarity)), action.reads(data)
+            except (NotApplicableError, OutOfScopeError, ValueError):
+                continue
+            if not (ADD in entry.kinds.values() or (adds.named == frozenset() and not adds.draws and not adds.implicits and not adds.fractures)):
+                continue
+            if ask is not None:
+                ask()
+            sides: set[str] = set()
+            sets: dict[str, list[int]] = {}
+            for probe in probes:
+                cleared = self._cleared(action, probe)
+                if cleared is not None:
+                    sides |= cleared
+                    continue
+                if not reads.implicits:
+                    continue
+                for setter in setters:
+                    try:
+                        results = getattr(self.actions[setter.position].outcomes(data, probe), "results", None) or ()
+                    except (NotApplicableError, OutOfScopeError, ValueError):
+                        continue
+                    for _chance, after in results:
+                        for side in self._cleared(action, after) or ():
+                            sets.setdefault(side, []).append(setter.position)
+            entry.clears = frozenset(sides | set(sets))
+            entry.sets = {
+                side: tuple(sorted(set(found), key=lambda position: (self.entries[position].cost, position))) for side, found in sets.items() if side not in sides
+            }  # fmt: skip
+
+    def _probe(self, view: Item) -> Item | None:
+        """`view`'s item with its fractured mods and one junk mod of each side (a mod of its own pool that passes no wanted mod), or None."""
+        data = self.data
+        wanted = {mod_id for leaf in self.goal.leaves for mod_id in leaf.mod_ids}
+        try:
+            item = view.changed(data, mods=tuple(entry for entry in view.mods if entry.fractured))
+            for side in sorted(_SIDES):
+                mod = next((data.mods[mod_id] for mod_id in sorted(self.pool_ids(view, {side}) - wanted) if mod_id in data.mods and item.can_add(data, data.mods[mod_id])), None)
+                if mod is None:
+                    return None
+                item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.min for stat in mod.stats)))
+        except (NotApplicableError, OutOfScopeError, ValueError):
+            return None
+        return item
+
+    def _cleared(self, action, item: Item) -> frozenset[str] | None:
+        """The side `action` clears at `item` (`_read_sides`): a set of one side, or empty when it clears none; None when it is refused there.
+        Its outcomes are read on the mixture the kernel is built from (`ActionOutcomes.components`): each part's kept item, and the sides
+        of the pool it draws on."""
+        data = self.data
+        try:
+            outcome = action.outcomes(data, item)
+        except (NotApplicableError, OutOfScopeError, ValueError):
+            return None
+        parts = [  # each part of the mixture the kernel is built from: its kept item and the sides of the pool it draws on (`ActionOutcomes`)
+            (part.retained, frozenset(getattr(family.side, "value", family.side) for family in getattr(part, "pool", ()) or ()))
+            for _chance, part in outcome.components
+        ]
+        if not parts:
+            return None
+        side_of = lambda mod_id: data.mods[mod_id].generation_type if mod_id in data.mods else None  # noqa: E731
+        held = {entry.mod_id for entry in item.mods if not entry.fractured}
+        lost: set = set()
+        gained: set = set()
+        for after, drawn in parts:
+            now = {entry.mod_id for entry in after.mods}
+            lost |= {side_of(mod_id) for mod_id in held - now}
+            gained |= {side_of(mod_id) for mod_id in now - {entry.mod_id for entry in item.mods}} | drawn
+        if len(lost) != 1 or not lost <= _SIDES or lost & gained:
+            return frozenset()
+        return frozenset(lost)
 
     def _fans_at(self, action, view: Item) -> str:
         """Why an addition at `view`'s shape fans out over two random choices (module text, the later group), or "": one of its outcomes at
@@ -418,13 +518,57 @@ class OfferTable:
             imprint = self.cheapest(lambda entry: entry.makes_imprint and not entry.draws and any(shape in entry.leads for shape in shapes))
             if imprint is not None:
                 named.add(imprint)
+        named |= self.side_roles(waits, risks)
         if adders or any(self.entries[position].crafted for position in current):
             holding = current | named
-            cleaner = self.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
-            if cleaner is not None:
-                named.add(cleaner)
+            named |= self.cleaners()
             named |= self.narrowers(set(waits) | set(self.open if pending is None else pending), holding)
             named |= self.crafted_roles(current | named)
+        return named
+
+    def cleaners(self) -> set[int]:
+        """The cleaner role (module text): the cheapest craft that adds no mod and needs no crafted one, and the cheapest offer that clears
+        each side (`remover`; #1542)."""
+        cleaner = self.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
+        named = {cleaner} if cleaner is not None else set()
+        for side in sorted(_SIDES):
+            named |= self.remover(side)
+        return named
+
+    def one_side(self, leaves) -> str | None:
+        """The side every wanted mod of `leaves` sits on (`side_of`), or None: none given, or on both sides, or one with no side."""
+        sides = {self.side_of(leaf) for leaf in leaves}
+        return next(iter(sides)) if len(sides) == 1 and None not in sides else None
+
+    def remover(self, side: str, draws: bool | None = None, waiting: bool = False) -> set[int]:
+        """The cheapest offer that clears `side` (`Entry.clears`), with the cheapest offer that sets what it reads to clear it (`sets`), ranked
+        by the two prices; `draws` keeps those that draw a mod (True) or none (False) alone. With `waiting` an offer held back for the later
+        group is ranked too (the one-side role, #1542). Empty when none clears it."""
+        best = None
+        for entry in self.entries:
+            if side not in entry.clears or (draws is not None and entry.draws != draws) or (entry.position in self.held_back and not waiting):
+                continue
+            setters = entry.sets.get(side, ())[:1]
+            key = (entry.cost + sum(self.entries[position].cost for position in setters), entry.position)
+            if best is None or key < best[0]:
+                best = (key, {entry.position, *setters})
+        return set(best[1]) if best is not None else set()
+
+    def side_roles(self, waits: set[int], risks: set[int]) -> set[int]:
+        """The one-side role (module text, #1542): when the wanted mods a step waits for, or those it can lose, sit on one side, the cheapest
+        crafted mod that fills the other side (`fills`), and the cheapest offer that clears the other side alone, one that draws no mod and one
+        that draws one (`remover`): an addition to the one side, or a removal kept off it."""
+        named: set[int] = set()
+        for leaves in (waits, risks):
+            side = self.one_side(leaves) if leaves else None
+            if side is None:
+                continue
+            other = next(iter(_SIDES - {side}))
+            filler = self.cheapest(lambda entry, other=other: other in entry.fills and not entry.draws)
+            if filler is not None:
+                named.add(filler)
+            for draws in (False, True):
+                named |= self.remover(other, draws, waiting=True)
         return named
 
     def step_adders(self, waits: set[int], shapes: frozenset[Rarity], held: frozenset[int]) -> set[int]:
@@ -553,6 +697,10 @@ class OfferTable:
                 more.update(entry.position for entry in self.entries if entry.restores or entry.makes_imprint)
             for side in sorted({getattr(side, "value", side) for entry in chosen if not entry.draws for side in entry.locks}):
                 more.update(self.lockers(side))  # where the bench lock of a side is, every offer that may put that lock on is (#1513)
+            for entry in chosen:  # an offer that clears a side only with an offer that sets what it reads brings the cheapest of those (#1542)
+                setters = {position for each in entry.sets.values() for position in each}
+                if setters and not setters & found:
+                    more.add(min(setters, key=lambda position: (self.entries[position].cost, position)))
             if more <= found:
                 return found
             found |= more
@@ -824,8 +972,7 @@ class Grower:
         held = current | self.plan_set | named
         self._named_later(lambda: table.step_adders(waits, shapes, held))
         named = named | table.step_adders(waits, shapes, held)
-        cleaner = table.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
-        chosen = table.closure(set(current) | named | ({cleaner} if cleaner is not None else set()))
+        chosen = table.closure(set(current) | named | table.cleaners())
         if not self._new(chosen):
             return None
         return tuple(sorted(chosen)), (
