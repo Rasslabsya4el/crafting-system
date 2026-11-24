@@ -10,8 +10,9 @@ rest is rolled anew as a Chaos Orb rolls a rare (`awakener.rest_rerolled_like_ch
 item as the bought Rare listing (`actions.listing`, an Orb of Alchemy's roll), without the two kept mods: the page's step says so.
 
 `made_start` prices that recipe from the price file: the two items at the target's item level under `input_line_name` ("Eternal Burgonet (ilvl 86,
-Shaper), Rare with a Shaper mod") and one Awakener's Orb. The second item's level does not matter to the result beyond the orb's 68; it is priced
-at the target's level. A good with no price, or with a thin market's marked price, gives no recipe (a recipe good is not priced from a thin market,
+Shaper), Rare with a Shaper mod") and one Awakener's Orb. Both items are priced at the target's item level: the first
+item's level is the result's, and the second is priced at the same level, the line the price file holds. A good with no price, or with a
+thin market's marked price, gives no recipe (a recipe good is not priced from a thin market,
 as in `_start_options._goods`). `resolve_start_price` takes the recipe when the file has no line for the dual-influenced item, or when the recipe
 is cheaper than that line.
 """

@@ -1,4 +1,4 @@
-"""A bought Shaper/Elder start item is made by its recipe, an Awakener's Orb on two single-influence Normal bases (ticket #1523, OR-7, OR-16).
+"""A bought Shaper/Elder start item is made by its recipe, an Awakener's Orb on two single-influence Rare helmets (ticket #1523, OR-7, OR-16).
 
 R20 starts from a Rare Shaper/Elder Eternal Burgonet whose mods the target does not name. No market line prices it: the guide makes it with an
 Awakener's Orb from two single-influence helmets. The orb refuses a Normal item and an item with no influenced mod (ADR-0032), so each is a

@@ -1092,7 +1092,7 @@ class _View:
 
     def made_row(self, final: bool) -> StepRow:
         """Row 1 of a plan whose start item has no market line and is made by its recipe (#1523): an Awakener's Orb on two single-influence
-        Normal bases, each good with its own price; the item card is the Rare the orb gives, whose mods the next row draws."""
+        Rare helmets holding an influenced mod, each good with its own price; the item card is the Rare the orb gives, whose mods the next row draws."""
         price = self.plan.start_price
         made = price.made
         assert made is not None
