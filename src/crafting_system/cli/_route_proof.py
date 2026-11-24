@@ -94,7 +94,7 @@ class Proof:
             return said
         dearer = self.mean - lower
         # the proof may get closer than the gap it was allowed: the floor beside the mean says by how much this plan can be beaten (crafter, #1161)
-        return said + (", so this plan is the cheapest to the cent" if dearer < 0.005 else f", so this plan is at most {_money(dearer)} dearer than the cheapest")
+        return said + (", so no plan of them is cheaper by even 0.01 c" if dearer < 0.005 else f", so this plan is at most {_money(dearer)} dearer than the cheapest")
 
     def reach_words(self) -> str:
         """How far a stopped search got: the batches of methods it finished, or the figure its proof reached."""
@@ -111,7 +111,7 @@ def proof_of(plan: Plan) -> Proof:
     start = plan.start_price.chaos
     info = plan.search
     if info is None:
-        return Proof(APPROXIMATE if plan.approximation is not None else EXACT, start=start)
+        return _proof_of_limits(plan, start)
     rounds = tuple(info.widening)
     lower = info.lower if math.isfinite(info.lower) and info.lower > 0 else None
     mean = plan.risk.mean.value if plan.risk is not None and math.isfinite(plan.risk.mean.value) else None
@@ -120,6 +120,26 @@ def proof_of(plan: Plan) -> Proof:
     if info.within is not None:
         return Proof(PROVED_WITHIN, gap=info.within, lower=lower, start=start, rounds=rounds, mean=mean)
     return Proof(STOPPED_SEARCH, lower=lower, start=start, rounds=rounds, mean=mean)
+
+
+_AT_MOST = re.compile(r"at most ([0-9.]+)% above it")
+
+
+def _proof_of_limits(plan: Plan, start: float) -> Proof:
+    """The proof of a plan with no search record (`Plan.search` is None: a plan of another path, or one whose solution Hinekora's Lock changed,
+    `_plan.py`, which drops the packed result and keeps the limits): read off its limits. Rounds that did not all finish (an untried limit, or
+    the rounds' head that says so) are a stopped search; rounds that all finished within a gap are that gap; a claim already said "within
+    the stated gap" with no rounds is an approximate answer; otherwise the answer is exact (checker, #1161)."""
+    limits = plan.limits
+    rounds = [limit for limit in limits if limit.kind == _limits.ROUNDS and not limit.what.startswith("The given route's methods")]
+    if any(limit.kind == _limits.UNTRIED for limit in limits) or any("not every round finished" in limit.what for limit in rounds):
+        return Proof(STOPPED_SEARCH, start=start)
+    for limit in rounds:
+        if (found := _AT_MOST.search(limit.guarantee)) is not None:
+            return Proof(PROVED_WITHIN, gap=float(found.group(1)) / 100, start=start)
+    if plan.approximation is not None or any(WITHIN_GAP in limit.guarantee for limit in limits):
+        return Proof(APPROXIMATE, start=start)
+    return Proof(EXACT, start=start)
 
 
 _CLAIM = re.compile(rf"The plan is {re.escape(WITHIN_GAP)} among ([^.]+)\.")
@@ -174,14 +194,15 @@ def _why(record) -> str:
 
 
 def _net(record) -> str:
-    return "memory" if "memory" in record.reason else "time"
+    """What ran out: the memory, the work of a run counted in states (`StatesMeter`), or the time."""
+    return "memory" if "memory" in record.reason else "work" if record.states is not None or "states" in record.reason else "time"
 
 
 def batch_line(n: int, record, grown: bool = False, twin: int = 0) -> str:
     """One batch of methods as a player reads it: its methods, how much it held, and how it ended (no search word, no seconds of a share)."""
     held = f"{record.offers:,} action{'' if record.offers == 1 else 's'}"
     # a widening round holds its base too (`_rounds`): after a growth, the plan's own methods; otherwise those of the earlier batches
-    joined = "" if record.growth is not None or n == 1 else " with the methods of the plan found so far" if grown else " with the methods of the earlier batches"
+    joined = "" if record.growth is not None or n == 1 else " with the methods of the plan found so far" if grown else " with the methods kept from the earlier batches"
     head = f"Batch {n} ({_why(record)}{_methods(record, twin)}{joined}; {held})"
     plan = f"its best plan costs {_money(record.upper)} of crafting" if record.upper is not None and math.isfinite(record.upper) else ""
     if record.status == CLOSED:
@@ -189,8 +210,9 @@ def batch_line(n: int, record, grown: bool = False, twin: int = 0) -> str:
     elif record.status == WITHIN:
         end = f"finished, to within {gap_text(record.within or 0.0)}" + (f"; {plan}" if plan else "")
     elif record.status == BEATEN:
-        then = f" (it cost {_money(record.lower)} of crafting at that point)" if record.lower is not None else ""
-        end = f"finished early: these methods cannot beat the plan the search already held{then}"
+        then = f" (no plan of them costs less than {_money(record.lower)} of crafting)" if record.lower is not None else ""
+        by = f" by more than {gap_text(record.within)}" if record.within else ""
+        end = f"finished early: these methods cannot beat the plan the search already held{by}{then}"
     elif record.status == NONE:
         end = "finished: these methods alone do not reach the target"
     elif record.status in (STOPPED, GAVE_WAY):
@@ -216,13 +238,22 @@ def rounds_line(limit: Limit, proof: Proof) -> "Line":
     records = proof.rounds
     count = len(records)
     done = sum(1 for record in records if record.status in FINISHED)
-    if not records:  # a rounds' limit with no records (a plan of another path): its own words, the claim said as the proof stands
-        return Line(limit_text(limit))
+    if not records:  # a rounds' limit with no records (`_proof_of_limits`): what the batches prove, with no batch named
+        if proof.how == STOPPED_SEARCH:
+            return Line(
+                "The planner searched the methods in batches and did not finish all of them before the time or memory ran out. The plan shown "
+                "is the best the search found, not proved the cheapest: a plan that uses the methods of the batches not finished may cost less."
+            )
+        if proof.how == PROVED_WITHIN:
+            return Line(f"The planner searched the methods in batches, the last one with every method. The plan is within {gap_text(proof.gap or 0.0)} of the cheapest of the methods searched.")
+        return Line("The planner searched the methods in batches, the last one with every method. No plan of the methods searched costs less than the plan shown.")
     head = f"The planner searched the methods in {count:,} batch{'' if count == 1 else 'es'}"
+    # a batch grown from the plan in hand may stop and the proof still hold: it rests on the last batch, which held every method (`all_closed`)
+    ended = (" and finished every one" if done == count else f" and finished {done:,} of them; the last one held every method") + _again(records)
     if proof.how == EXACT:
-        tail = f" and finished every one{_again(records)}. No plan of the methods searched costs less than the plan shown."
+        tail = f"{ended}. No plan of the methods searched costs less than the plan shown."
     elif proof.how == PROVED_WITHIN:
-        tail = f" and finished every one{_again(records)}. The plan is within {gap_text(proof.gap or 0.0)} of the cheapest of the methods searched: {proof.floor_words()}."
+        tail = f"{ended}. The plan is within {gap_text(proof.gap or 0.0)} of the cheapest of the methods searched: {proof.floor_words()}."
     else:
         grown = any(record.growth is not None for record in records)
         tail = (
@@ -230,9 +261,9 @@ def rounds_line(limit: Limit, proof: Proof) -> "Line":
             + (
                 "each finished batch showed only that no plan made of its own methods costs less than its own best plan, "
                 if grown
-                else "no plan made only of the methods of the finished batches costs less than it, "
+                else "no plan made only of the methods of the finished batches that the later batches kept costs less than it, "
             )
-            + "and a plan that uses the methods of the batches not finished may cost less."
+            + "and a plan that uses the methods of the batches not finished, or of a batch that finished early and was not kept, may cost less."
         )
     grown = any(record.growth is not None for record in records)
     seen = Counter(record.kinds for record in records if record.growth is None)
@@ -267,25 +298,36 @@ def untried_line(limit: Limit, proof: Proof) -> "Line":
     said = Limit(
         limit.kind,
         "Not searched to the end",
-        f"the batches that held them ran out of the {'memory' if 'memory' in limit.why and 'time' not in limit.why else 'time or memory'} given before they finished, or were not reached",
+        f"the batches that held them ran out of the {'work or memory' if 'states' in limit.why else 'time or memory'} given before they finished, "
+        "finished early without being kept by the batches after them, or were not reached",
         "The plan shown is the best the search found without them; a plan that uses them may cost less.",
         labels=labels,
     )
     return Line(limit_text(said, SHOWN_LABELS), more=more_labels(said))
 
 
+_FOUND = re.compile(r"a plan already found \(([0-9,.]+) on average\)")
+
+
 def price_cut_why(limit: Limit, plan: Plan) -> str | None:
     """The cause of the actions the price cut left out (`_price_cut.price_cut_limit`), against the plan shown (#1512): the figure the limit
     holds is that of the plan in hand when its round ran (235.04 c on R12 beside a plan of 40.93 c), and a use of each costs at least as much as
-    buying a new start item and following the plan shown, which is no dearer than that plan. None for any other limit."""
+    buying a new start item and following that plan. The plan shown is said in its place only when it is no dearer than that one (on the
+    rounds it always is: the plan shown is the cheapest of them; a cut made before the last search, `_plan.py`, need not be); otherwise the
+    figure of the plan the cut was made against is said, as "a plan found during the search". None for any other limit."""
     if limit.kind != _limits.PROVED or limit.what != "Not searched" or not limit.why.startswith("each costs at least "):
         return None
-    start, mean = plan.start_price.chaos, plan.risk.mean.value
-    whole = _money(start + mean)
-    return (
-        f"a use of each costs at least as much as buying a new start item and following this plan from there ({whole} in all), "
-        "whatever the item is at"
-    )
+    found = _FOUND.search(limit.why)
+    start = plan.start_price.chaos
+    mean = plan.risk.mean.value if plan.risk is not None else math.nan
+    against = float(found.group(1).replace(",", "")) if found is not None else math.nan
+    if math.isfinite(mean) and (not math.isfinite(against) or mean <= against * (1 + 1e-9) + 1e-9):
+        said = f"buying a new start item and following this plan from there ({_money(start + mean)} in all)"
+    elif math.isfinite(against):
+        said = f"buying a new start item and following a plan found during the search from there ({_money(start + against)} in all)"
+    else:
+        return None
+    return f"a use of each costs at least as much as {said}, whatever the item is at"
 
 
 def page_line(limit: Limit, proof: Proof, plan: Plan) -> "Line | None":

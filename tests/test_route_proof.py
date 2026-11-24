@@ -125,7 +125,7 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
     rounds = next(line for label, line in leaves if label == "How the methods were searched")
     assert rounds.text.startswith("The planner searched the methods in 3 batches and finished every one. The plan is within 1% of the cheapest")
     assert rounds.more[0] == f"Batch 1 (Chaos Orb; 2 actions): finished; its best plan costs {money(235.04)} of crafting."
-    assert rounds.more[2].startswith("Batch 3 (Essences, Fossil sets with the methods of the earlier batches; 9,297 actions): finished early: these methods cannot beat")
+    assert rounds.more[2].startswith("Batch 3 (Essences, Fossil sets with the methods kept from the earlier batches; 9,297 actions): finished early: these methods cannot beat")
 
 
 def test_an_exact_plan_is_the_cheapest_of_the_methods_searched(r12):
@@ -148,3 +148,47 @@ def test_the_batches_are_drawn_one_to_a_line(r12):
     plan = searched(r12, STOPPED_ROUNDS, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0)
     html = render_page(Page("Route to craft: Paua Amulet", (build_section(route_input(plan), DATA),)))
     assert "<summary>each batch</summary><div>Batch 1 (" in html
+
+
+def test_a_stopped_plan_with_no_search_record_is_read_off_its_limits(r12):
+    # checker, #1161: Hinekora's Lock drops the packed result (`_plan.py`) and keeps the limits; the page must still not say "Proved the cheapest"
+    plan = searched(r12, STOPPED_ROUNDS, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0)
+    plan = dataclasses.replace(plan, packed=None)
+    assert plan.search is None
+    _, fields, leaves = goal(plan)
+    assert fields["Proof"].lines[0].text.startswith("Not proved the cheapest") and fields["Proof"].tone == "warn"
+    rounds = next(line for label, line in leaves if label == "How the methods were searched")
+    assert "not proved the cheapest" in rounds.text and not SEARCH_WORDS.search(rounds.text)
+
+
+def test_a_batch_grown_from_the_plan_that_stopped_is_not_counted_finished_on_an_exact_plan(r12):
+    # checker, #1161: `all_closed` ignores the growth, so an exact plan can hold a stopped growth batch
+    records = (CLOSED_ROUNDS[0], dataclasses.replace(STOPPED_ROUNDS[2]), *CLOSED_ROUNDS[1:2])
+    plan = searched(r12, records, exact=True, within=None, stopped=None, lower=r12.risk.mean.value)
+    _, _, leaves = goal(plan)
+    rounds = next(line for label, line in leaves if label == "How the methods were searched")
+    assert rounds.text.startswith("The planner searched the methods in 3 batches and finished 2 of them; the last one held every method.")
+
+
+def test_a_run_counted_in_states_says_its_work_ran_out_not_its_time(r12):
+    counted = (CLOSED_ROUNDS[0], RoundRecord(("essence",), 9, STOPPED, "the limit of 100 states (120 reached)", None, None, 0.0, states=120))
+    plan = searched(r12, counted, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0)
+    _, _, leaves = goal(plan)
+    rounds = next(line for label, line in leaves if label == "How the methods were searched")
+    assert rounds.more[1].endswith("not finished: the work set aside for it ran out, with no plan.")
+
+
+def test_a_floor_at_the_plan_s_own_cost_says_no_plan_is_cheaper_by_a_hundredth(r12):
+    plan = searched(r12, CLOSED_ROUNDS, exact=False, within=0.01, stopped=None, lower=r12.risk.mean.value)
+    _, fields, _ = goal(plan)
+    assert fields["Proof"].lines[0].text.endswith(", so no plan of them is cheaper by even 0.01 c.")
+
+
+def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_figure(r12):
+    # checker, #1161: a cut made before the last search (`_plan.py`) may be against a plan cheaper than the one a stopped search returned
+    from crafting_system.cli._route_proof import price_cut_why
+
+    cut = price_cut_limit([SimpleNamespace(label="Harvest Reforge Elemental")], r12.start_price.chaos, 2.0)
+    assert r12.risk.mean.value > 2.0
+    said = price_cut_why(cut, r12)
+    assert said is not None and "a plan found during the search" in said and f"({money(r12.start_price.chaos + 2.0)} in all)" in said
