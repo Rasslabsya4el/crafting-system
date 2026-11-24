@@ -704,6 +704,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
 
     divergences: list[Divergence] = []
     for state in policy_states(plan.start, plan.policy, plan.is_goal):
+        ask()  # the divergences are read on the plan's own policy: on R13's site plan its reach held 16 GB in 4 minutes (#1600)
         if plan.is_goal(state) or state not in plan.policy:
             continue
         choice = choices[state] if state in choices else _decide(plan, route, data, state)

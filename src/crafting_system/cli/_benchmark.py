@@ -39,7 +39,7 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
-from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, default_offers, guide_plan, made_start, plan_target
+from crafting_system.planner import BUDGET_SECONDS, PackedPolicy, Plan, PlanError, PlanSettings, default_offers, guide_plan, made_start, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
@@ -579,6 +579,8 @@ def _guide_own_plan(
     """The guide's own plan (`guide_plan`, #1442) when the guide's walk on the site plan, which offers every action it names, passed the run's
     memory net (OR-40, #1600): the site plan's memos are let go, what was read of the guide is cleared, and the entry says in words which
     plan the guide's figure is read on (`guide_judged_on`). None, with the reason in `guide_not_evaluable`, when that plan cannot be made."""
+    if isinstance(plan.policy, PackedPolicy):
+        plan.policy.release()  # the actions the walk built of the site plan's own policy (its divergences)
     abstraction = getattr(plan, "abstraction", None)
     if abstraction is not None:
         abstraction.release_memos()

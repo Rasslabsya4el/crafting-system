@@ -13,6 +13,8 @@ from collections.abc import Callable, Hashable, Mapping
 from crafting_system.solver import Action
 from crafting_system.planner import STATE_LINE, Limit
 
+from ._report_net import ask
+
 
 MAX_TRANSIENT = 400
 
@@ -25,6 +27,7 @@ def policy_states[S: Hashable](
     seen = {start}
     index = 0
     while index < len(order):
+        ask()  # the report's memory net (#1381): each state builds its action, and a site plan's whole reach held 16 GB on R13 (#1600)
         state = order[index]
         index += 1
         if is_goal(state) or state not in policy:

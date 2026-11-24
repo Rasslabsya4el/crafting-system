@@ -157,3 +157,17 @@ def test_the_object_walk_of_a_given_route_asks_the_report_s_memory_net():
     with report_net(0.001), pytest.raises(BudgetExceeded):  # a net every process passes
         evaluate_route(own, route, DATA)
     assert evaluate_route(own, route, DATA).risk.mean.value > 0  # outside the net nothing is asked
+
+
+def test_the_reach_of_a_plan_s_own_policy_asks_the_report_s_memory_net_and_a_packed_policy_lets_its_built_actions_go():
+    # #1600: the divergences are read on the site plan's own policy, whose whole reach `policy_states` lists first, each state building its
+    # action (R13: 12 GB in 156 s); the net now stops it, and the fallback lets the actions built so far go
+    from crafting_system.budget import BudgetExceeded
+    from crafting_system.cli._reach import policy_states
+    from crafting_system.cli._report_net import report_net
+
+    target = load_target(R12, DATA)
+    plan = make_plan(DATA, dataclasses.replace(target, actions=("harvest-reforge",)), price_file())
+    with report_net(0.001), pytest.raises(BudgetExceeded):
+        policy_states(plan.start, plan.policy, plan.is_goal)
+    assert policy_states(plan.start, plan.policy, plan.is_goal)[0] == plan.start

@@ -188,6 +188,11 @@ class PackedPolicy(Mapping):
     def __len__(self) -> int:
         return len(self._keys)
 
+    def release(self) -> None:
+        """Let go of the actions built so far (each holds its kernel's outcomes); they are built again when asked. A walk of the whole policy
+        that stopped at a memory net leaves them all held (R13's divergence walk under #1600)."""
+        self._built.clear()
+
     def __iter__(self) -> Iterator[CompressedState]:
         states = self._walked.states
         return (states[i] for i in self._keys.tolist())
