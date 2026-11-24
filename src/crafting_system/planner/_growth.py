@@ -318,8 +318,8 @@ class OfferTable:
         entry.more_crafted = Metamod.MULTIPLE_CRAFTED_MODS.value in families
         if entry.crafted and not entry.draws and CRAFT in entry.kinds.values() and not families & self.wanted_families():
             sides = {data.mods[mod_id].generation_type for mod_id in adds.named if mod_id in data.mods}
-            if len(sides) == 1 and sides <= _SIDES:
-                entry.fills = frozenset(sides)  # a filler takes a slot of its side and no wanted mod's family (#1542)
+            if len(sides) == 1 and sides <= _SIDES and not (entry.locks or entry.keeps_out or entry.more_crafted):
+                entry.fills = frozenset(sides)  # a filler takes a slot of its side and no wanted mod's family, and is no metamod (#1542)
 
     def wanted_families(self) -> frozenset[str]:
         """The families of every mod that can pass a wanted mod: a filler that took one would block the wanted mod."""
@@ -354,8 +354,7 @@ class OfferTable:
                 cleared = self._cleared(action, probe)
                 if cleared is not None:
                     sides |= cleared
-                    continue
-                if not reads.implicits:
+                if not reads.implicits:  # one that reads the implicits is read after each setter too: the other side may be its after one
                     continue
                 for setter in setters:
                     try:
@@ -710,7 +709,7 @@ class OfferTable:
                 more.update(self.lockers(side))  # where the bench lock of a side is, every offer that may put that lock on is (#1513)
             for entry in chosen:  # an offer that clears a side only with an offer that sets what it reads brings the cheapest of those (#1542)
                 setters = {position for each in entry.sets.values() for position in each}
-                if setters and not setters & found:
+                if setters and not setters & found and not entry.clears - set(entry.sets):
                     more.add(min(setters, key=lambda position: (self.entries[position].cost, position)))
             if more <= found:
                 return found

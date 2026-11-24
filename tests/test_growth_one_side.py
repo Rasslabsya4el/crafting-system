@@ -95,6 +95,20 @@ def _one_side_world():
     return table, offers, groups, grower, run, seen
 
 
+def _netted(groups, offers, run, grower, rounds):
+    """`_rounds.widen` under a net that runs out after `rounds` searches (the run's time, counted in rounds)."""
+    calls = []
+
+    def counted(chosen, call):
+        calls.append(chosen)
+        return run(chosen, call)
+
+    return _rounds.widen(
+        groups, offers, counted, upper_of=lambda plan: plan.mean_remaining, mean_of=lambda plan: plan.mean_remaining,
+        ended=lambda plan: (_rounds.CLOSED, ""), left=lambda: 1000.0 - 1000.0 * (len(calls) >= rounds), clock_now=lambda: 0.0, grow=grower,
+    )  # fmt: skip
+
+
 def test_the_growth_s_second_round_names_the_one_side_offers_and_makes_the_cheaper_plan_before_any_widening_round():
     _table_, offers, groups, grower, run, seen = _one_side_world()
     widened = _widen(groups, offers, run, grower)
@@ -102,13 +116,18 @@ def test_the_growth_s_second_round_names_the_one_side_offers_and_makes_the_cheap
     made = widened.records[1]
     assert made.growth is not None and "exalt" in made.growth and made.upper == 10.0
     assert {"fill prefix", "swap remove prefix", "eldritch annul", "ember"} <= seen[1]
+    # under a net of three rounds the branch holds the plan of 10
+    _table_, offers, groups, grower, run, _seen = _one_side_world()
+    assert _netted(groups, offers, run, grower, 3).plan.mean_remaining == 10.0
 
 
-def test_without_the_one_side_role_main_s_growth_names_nothing_for_the_step_and_the_plan_of_10_waits_for_the_widening(monkeypatch):
+def test_without_the_one_side_role_main_s_growth_names_nothing_for_the_step_and_ends_dearer_under_the_same_net(monkeypatch):
     monkeypatch.setattr(OfferTable, "side_roles", lambda self, waits, risks: set())
     _table_, offers, groups, grower, run, _seen = _one_side_world()
+    assert _netted(groups, offers, run, grower, 3).plan.mean_remaining == 100.0  # main: the exalt alone, 100
+    _table_, offers, groups, grower, run, _seen = _one_side_world()
     widened = _widen(groups, offers, run, grower)
-    assert widened.plan.mean_remaining == 10.0  # every method closes in the end
+    assert widened.plan.mean_remaining == 10.0  # with no net every method closes in the end
     made = next(record for record in widened.records if record.upper == 10.0)
     assert made.growth is None or made.growth.startswith("the later group")  # not a round the growth named for the step
 
@@ -141,9 +160,13 @@ def test_on_r14_the_role_names_the_hand_lists_fillers_and_beast_swaps():
     assert not any(entry.clears for entry in table.entries if entry.label not in swaps)  # an Orb of Annulment takes either side: no one side
     # the Augmentation step waits for Attack Speed, a suffix: the prefix filler of the hand list and the swap that removes a prefix
     speed = next(leaf for leaf in range(len(table.goal.leaves)) if table.side_of(leaf) == "suffix")
-    assert _labels(table, table.side_roles({speed}, set())) == {"Bench craft Adds (19-21) to (32-41) Fire Damage", "Beastcraft Add Suffix Remove Prefix"}
     prefix = next(leaf for leaf in range(len(table.goal.leaves)) if table.side_of(leaf) == "prefix")
-    assert _labels(table, table.side_roles(set(), {prefix})) == {"Bench craft +(91-120) to Accuracy Rating", "Beastcraft Add Prefix Remove Suffix"}
+    for leaves, side, swap in ((({speed}, set()), "prefix", "Beastcraft Add Suffix Remove Prefix"), ((set(), {prefix}), "suffix", "Beastcraft Add Prefix Remove Suffix")):
+        named = table.side_roles(*leaves)
+        fillers = [table.entries[position] for position in named if table.entries[position].fills]
+        # one filler of the other side, among the cheapest (four prefix crafts tie at 0.042 c), and the swap that removes from that side
+        assert [entry.fills for entry in fillers] == [{side}] and fillers[0].cost == min(entry.cost for entry in table.entries if entry.fills == {side})
+        assert _labels(table, named) == {fillers[0].label, swap}
 
 
 def test_on_r24_the_eldritch_annulment_removes_a_prefix_after_an_ember_and_a_suffix_after_an_ichor():
@@ -158,3 +181,6 @@ def test_on_r24_the_eldritch_annulment_removes_a_prefix_after_an_ember_and_a_suf
     assert filler.fills == {"prefix"} and filler.cost < 0.05
     # a filler never takes a wanted mod's family: the Fire Resistance craft would block the T2+ resistance R24 wants
     assert not any(entry.fills and entry.label.endswith("Fire Resistance") for entry in table.entries)
+    # nor is a metamod a filler: a lock, a tag kept out of the draws, more crafted mods
+    assert not any(entry.fills and (entry.locks or entry.keeps_out or entry.more_crafted) for entry in table.entries)
+    assert any(entry.locks and entry.crafted for entry in table.entries)
