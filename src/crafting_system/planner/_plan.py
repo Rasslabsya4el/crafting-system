@@ -68,6 +68,7 @@ from ._start_types import StartChoice
 
 VIEW_FROM_STATES = 1_000  # a packed plan whose policy visits more item states than this is shown by its lumped chain (ticket #70)
 MERGE_EQUAL = True  # offers with an equal kernel at a state: only the cheapest (exact; a test turns it off for the reference)
+IMPRINTS_WORTH_SAVING = True  # an imprint only of an item worth coming back to (`Abstraction.imprint_offer_pruned`, #1567; not exact, a limit names it; a test turns it off)
 PRUNE_CORRUPTING = True  # corrupting offers of a target that asks are left out of the states that cannot reach its goal (exact, ADR-0036; a test turns it off)
 PRUNE_BOUND = True  # with `MIN_OFFERS` offers or more the dearer twins are left out of the solve (exact; a test turns it off for the reference)
 FORECAST_SOLVERS = ("packed", "object")  # a walk asked for by name: the only way left to the retired forecast and its ladder under a budget (#926)
@@ -940,7 +941,7 @@ def _make_plan(
         )
     def model(reading: Reading | None = None) -> Abstraction:
         """The abstraction of the target at `reading` of the rule axes (None: the plan reading, ADR-0033)."""
-        return Abstraction(
+        made = Abstraction(
             data,
             goal,
             target.base_id,
@@ -951,6 +952,8 @@ def _make_plan(
             allow_inputs=bool(donated) or bool(awakened),
             reading=reading,
         )
+        made.imprints_worth_saving = IMPRINTS_WORTH_SAVING
+        return made
 
     abstraction = model()
     start = abstraction.compress(listing or target.start_item)

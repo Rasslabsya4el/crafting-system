@@ -105,6 +105,20 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   OR-13): the members the roles named run in that group, and every offer keeps its group in the widening rounds after the growth. A member
   another offer needs (`closure`: a veiled placeholder, the imprint chain) comes in with it, as a dependency is never held back.
 
+* **The full item** (#1567, hypothesis H49 of #1434). The finished shape is the rarity whose item holds the most mods (`OfferTable.finished`);
+  a side of it is full when the target asks as many mods of that side as it has room for. On a full side a miss takes a slot the target
+  needs, so a player plans how a miss is undone, and two rules read that from the table:
+  - **the reroll back** (`rerolls_back`): on a target that fills both sides, an addition the seed ranks first on a wanted mod at a shape
+    (an Orb of Augmentation on a magic item) brings the cheapest reroll that keeps that shape on the same mod (the Orb of Alteration:
+    alt-aug), with the moves to its shape, when no offer of the seed rerolls the item back there already. Ranked by its own figure the
+    Orb of Transmutation, a reroll that does not keep the magic shape, beat the Alteration on R17's Talisman, and the Alteration never
+    entered (#1567 fault 2). On a target with room left a miss can stay on the item, and the seed is the ranking alone (the listing of
+    the 13 reference crafts: only R17 and R04 fill both sides);
+  - **the undo of a miss** (in `roles`): where the roles name a drawing addition at the finished shape for a waited mod of a full side (an
+    Exalted Orb on R17's rare Talisman), the cheapest imprint made at that shape comes with it, though nothing is at risk yet and the
+    imprints wait for their later group: the imprint before the slam, restored on a miss (#1567 fault 1: the imprint was named only as the
+    protector of a step that can lose a wanted mod).
+
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
 
@@ -120,7 +134,7 @@ import numpy as np
 from crafting_system.abstraction import Abstraction, CompressedState, Status, add_bound, declared_add_bound, declared_bounds, reach_bound
 from crafting_system.actions import BLOCKED_TAG, BLOCKING, LOCKED_SIDE, NotApplicableError, OutOfScopeError, build_pool
 from crafting_system.data import GameData
-from crafting_system.items import ExplicitMod, Item, Metamod, Rarity
+from crafting_system.items import ExplicitMod, Item, Metamod, Rarity, Side
 from crafting_system.solver import linear_solve
 
 from ._offer_kinds import ADD, CRAFT, FINISHING, REFUSED, REROLL, RESTART_KIND, _kind_of, finishes
@@ -189,6 +203,7 @@ class OfferTable:
     under: dict  # (side, shape, leaf, held) -> the rerolls ranked at the item under the lock (`under_lock`), read once each
     named_ids: set[str] | frozenset[str] = frozenset()  # the mods an offer names at the start item or gives by a finishing kind at a shape (`item_mod_ids`)
     _item_ids: frozenset[str] | None = None  # `item_mod_ids`, read once
+    _finished: tuple | None = None  # `finished`, read once
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
                  ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None) -> None:  # fmt: skip
@@ -326,11 +341,51 @@ class OfferTable:
         return {each.mod.id for family in build_pool(self.data, bare) if family.side in sides for each in family.mods}
 
     def seed(self, per_role: int = PER_ROLE) -> set[int]:
-        """Round 0: per wanted mod not passing at the start, the `per_role` offers of least cost over chance on it, any kind, any shape."""
+        """Round 0: per wanted mod not passing at the start, the `per_role` offers of least cost over chance on it, any kind, any shape, and
+        the reroll back each addition among them needs on a target that fills the finished item (`rerolls_back`, module text)."""
         chosen: set[int] = set()
         for leaf in self.open:
             chosen.update(self._best(leaf, lambda entry: True, per_role))
-        return chosen
+        return chosen | self.rerolls_back(chosen, per_role)
+
+    def finished(self) -> tuple[Rarity | None, frozenset[str], Entry | None]:
+        """The finished shape (the rarity whose item holds the most mods), the sides of it the wanted mods fill (as many wanted mods of that
+        side as it has room), and the cheapest imprint made at it (the undo of a miss there), read once (module text, the full item)."""
+        if self._finished is None:
+            shape, full, undo = None, frozenset(), None
+            if self.views:
+                shape = max(self.views, key=lambda rarity: sum(self.views[rarity].capacity(self.data).of(side) for side in Side))
+                room = self.views[shape].capacity(self.data)
+                count: dict[str, int] = {}
+                for leaf in range(len(self.goal.leaves)):
+                    side = self.side_of(leaf)
+                    if side is not None:
+                        count[side] = count.get(side, 0) + 1
+                full = frozenset(side for side, n in count.items() if n >= room.of(Side(side)) > 0)
+                imprints = [entry for entry in self.entries if entry.makes_imprint and not entry.draws and shape in entry.leads]
+                undo = min(imprints, key=lambda entry: (entry.cost, entry.position)) if imprints else None
+            self._finished = (shape, full, undo)
+        return self._finished
+
+    def rerolls_back(self, chosen: set[int], per_role: int = PER_ROLE) -> set[int]:
+        """On a target that fills both sides of the finished item: for each addition the seed ranks first on a wanted mod at a shape where no
+        offer of `chosen` rerolls the item back to that shape, the cheapest reroll that does (on the same mod), with the moves to its shape
+        (module text, the full item: alt-aug)."""
+        if self.finished()[1] != _SIDES:
+            return set()
+        def repeats(entry: Entry, shape: Rarity) -> bool:
+            return entry.kinds.get(shape) == REROLL and shape in entry.leads.get(shape, ())
+        extra: set[int] = set()
+        for leaf in self.open:
+            for position in self._best(leaf, lambda entry: True, per_role):
+                at = self.entries[position].ratio(leaf)[1]
+                if at is None or self.entries[position].kinds.get(at) != ADD or any(repeats(self.entries[each], at) for each in chosen | extra):
+                    continue
+                for roll in self._best(leaf, lambda entry, at=at: repeats(entry, at), 1, (at,)):
+                    extra.add(roll)
+                    if at != self.start_rarity:
+                        extra |= self.moves(frozenset({self.start_rarity}), at) - self.held_back
+        return extra
 
     def _best(self, leaf: int, allowed: Callable[[Entry], bool], count: int, shapes: Sequence[Rarity] | None = None, held: frozenset[int] = frozenset()) -> list[int]:
         ranked = sorted(
@@ -418,6 +473,13 @@ class OfferTable:
             imprint = self.cheapest(lambda entry: entry.makes_imprint and not entry.draws and any(shape in entry.leads for shape in shapes))
             if imprint is not None:
                 named.add(imprint)
+        shape, full, undo = self.finished()
+        if undo is not None and full and any(
+            self.entries[position].draws and self.entries[position].kinds.get(shape) == ADD
+            and any(self.side_of(leaf) in full and (shape, leaf) in self.entries[position].chance for leaf in waits)
+            for position in named
+        ):  # fmt: skip
+            named.add(undo.position)  # the undo of a miss on a side the target fills: never held back for the later group (module text)
         if adders or any(self.entries[position].crafted for position in current):
             holding = current | named
             cleaner = self.cheapest(lambda entry: entry.removes and not entry.needs_crafted)

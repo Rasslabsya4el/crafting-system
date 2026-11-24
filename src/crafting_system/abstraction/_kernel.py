@@ -552,6 +552,7 @@ class Abstraction:
         twin._contexts.clear()
         twin._kinds = twin._new_context(frozenset()).kinds
         twin.share_items, twin.project, twin.share_refusals = self.share_items, self.project, self.share_refusals
+        twin.imprints_worth_saving = self.imprints_worth_saving
         return twin
 
     def types_numbered(self) -> int:
@@ -803,6 +804,28 @@ class Abstraction:
         if not self._quality_finish or action.adds(self.data).only_quality:
             return False
         return self.meets_all_but_quality(state) and not self.quality_is_met(state)
+
+    imprints_worth_saving = False  # the planner's rule (#1567): an imprint is made only of an item worth coming back to (`imprint_offer_pruned`)
+
+    def imprint_offer_pruned(self, state: CompressedState, action: Action) -> bool:
+        """Whether an imprint (a new one or one that replaces another; a restore never) is left out at `state` by the planner's rule (#1567).
+
+        A player imprints an item he wants to come back to: one that already holds a wanted mod and nothing he would have to take off
+        again, so that a miss of the next slam or annulment is undone by restoring it. An item that holds no mod, an unwanted mod or a
+        crafted one (a bench mod comes off and goes back on at its price) is not worth a beast. Only with `imprints_worth_saving` set (the
+        planner sets it on the model it plans with): unlike `quality_offer_pruned` this is not exact, it removes options, so the answer
+        names it as a limit (`planner._limits.pruning_limits`, `PRUNED_IMPRINT`). The fractured mods are kept by every action and count as held.
+        The kernel never reads it: a given route that imprints elsewhere is walked as the game plays it; the search leaves the imprint out
+        of such a state (`planner._envelope_plan`) and the bound's build out of such a key (`_pattern.PatternBuilder._move`).
+        """
+        if not self.imprints_worth_saving:
+            return False
+        move = action.imprint_move()
+        if move is None or move.restore:
+            return False
+        if not state.slots and not state.fractured:
+            return True
+        return not all(not slot.crafted and any(each is Status.PASSING for each in slot.contribution) for slot in state.slots)
 
     def quality_offer_pruned(self, state: CompressedState, action: Action) -> bool:
         """Whether an action that only sets the quality (a catalyst: `Adds.only_quality`) is not an action of `state` (ticket #158, ADR-0029).

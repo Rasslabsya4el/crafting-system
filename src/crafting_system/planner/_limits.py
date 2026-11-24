@@ -61,6 +61,7 @@ MODEL_GAP = "model-gap"
 PROVED = "proved-unneeded"
 UNTRIED = "kinds-not-tried"
 ROUNDS = "rounds"
+IMPRINTS = "imprints-worth-saving"  # the planner's rule of the imprints worth making (#1567): not exact, so not PROVED
 START = "start-item"
 SOLVE = "how-solved"
 REACHED = "plan-reached"  # a plan the search walked to when its first plan reached no goal, and a net stopped it there (#1142)
@@ -439,6 +440,17 @@ def pruning_limits(prunings) -> tuple[Limit, ...]:
                 "quality changes no odds, so setting it later costs the same",
                 labels=quality,
                 **claim("the methods offered", "Offering them in the other states would change no cost."),
+            )
+        )
+    imprints = prunings.labels("imprint")
+    if imprints:
+        found.append(
+            Limit(
+                IMPRINTS,
+                "Imprinted only when the item is worth coming back to",
+                "an imprint is made only of an item that holds a wanted mod and no unwanted or crafted one (#1567)",
+                "An imprint made at another state could make the plan cheaper: the plan is the best found, not proved the least dear.",
+                labels=imprints,
             )
         )
     return tuple(found)

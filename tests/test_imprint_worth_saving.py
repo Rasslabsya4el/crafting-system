@@ -1,0 +1,62 @@
+"""The planner imprints only an item worth coming back to (#1567; `Abstraction.imprint_offer_pruned`, `planner._plan.IMPRINTS_WORTH_SAVING`).
+
+A player imprints an item he wants to come back to after a miss: one that holds a wanted mod and nothing he must take off again. On the
+small amulet pool of `test_pattern_imprint.py` (a magic amulet, three wanted mods, the Alteration, Augmentation and Regal orbs, the
+Annulment, the imprint and the restore under the cap of one):
+
+* with the rule off (the abstraction's default) no imprint is left out; with it on, an imprint of an item holding no mod, an unwanted mod
+  or a crafted one is left out, an imprint of an item holding wanted mods alone is not, and a restore never is;
+* the kernel never reads it, so a given route that imprints elsewhere is walked as the game plays it;
+* through the envelope search the rule removes options only: the mean is never below the search without it, the answer names the
+  imprint it left out (`Prunings`, a limit that says the plan is the best found, not proved the cheapest).
+"""
+
+import pytest
+from abstraction_pool import LIFE_2, MANA_1, RESIST_3, SMALL, roll, small_item
+from test_pattern_imprint import START, abstraction, priced_offers
+
+from crafting_system.abstraction import PRUNED_IMPRINT
+from crafting_system.actions import Imprint, Restore, imprint_actions
+from crafting_system.items import Rarity
+from crafting_system.planner._envelope_plan import envelope_result
+from crafting_system.planner._limits import IMPRINTS, pruning_limits
+
+IMPRINT = next(action for action in imprint_actions(SMALL, START, max_imprints=1) if isinstance(action, Imprint))
+RESTORE = Restore(0)
+
+
+def _state(ab, *mods, rarity=Rarity.MAGIC):
+    return ab.compress(small_item(*mods, rarity=rarity))
+
+
+def test_the_rule_is_off_unless_the_planner_sets_it():
+    ab = abstraction(1)
+    assert not ab.imprint_offer_pruned(_state(ab), IMPRINT)
+    assert not ab.imprint_offer_pruned(_state(ab, roll(MANA_1)), IMPRINT)
+
+
+def test_an_imprint_is_left_out_of_an_item_with_no_mod_an_unwanted_mod_or_a_crafted_one_and_a_restore_never():
+    ab = abstraction(1)
+    ab.imprints_worth_saving = True
+    assert ab.imprint_offer_pruned(_state(ab), IMPRINT)  # nothing to come back to
+    assert ab.imprint_offer_pruned(_state(ab, roll(LIFE_2), roll(MANA_1)), IMPRINT)  # an unwanted mod would have to come off again
+    assert not ab.imprint_offer_pruned(_state(ab, roll(LIFE_2)), IMPRINT)
+    assert not ab.imprint_offer_pruned(_state(ab, roll(LIFE_2), roll(RESIST_3)), IMPRINT)
+    assert not ab.imprint_offer_pruned(_state(ab), RESTORE)
+    # the kernel is the game's: the imprint of an unwanted mod is still a move a given route can walk
+    assert ab.kernel(_state(ab, roll(MANA_1)), IMPRINT)
+
+
+def test_through_the_envelope_search_the_rule_only_removes_options_and_the_answer_names_it():
+    free_ab = abstraction(1)
+    free_first = free_ab.compress(START)
+    free = envelope_result(free_ab, free_first, priced_offers(1))
+    assert not free_ab.prunings.labels(PRUNED_IMPRINT)
+    ruled_ab = abstraction(1)
+    ruled_ab.imprints_worth_saving = True
+    first = ruled_ab.compress(START)
+    ruled = envelope_result(ruled_ab, first, priced_offers(1))
+    assert ruled.solution.values[first] >= free.solution.values[free_first] * (1 - 1e-9)
+    assert ruled_ab.prunings.labels(PRUNED_IMPRINT)
+    (limit,) = [limit for limit in pruning_limits(ruled_ab.prunings) if limit.kind == IMPRINTS]
+    assert "not proved" in limit.guarantee

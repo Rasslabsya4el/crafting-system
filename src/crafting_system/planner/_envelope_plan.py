@@ -35,7 +35,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from crafting_system import parallel
-from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
+from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_IMPRINT, PRUNED_QUALITY, Abstraction, CompressedState, integer_weights
 from crafting_system.abstraction._pattern import CHOICE, OUTRUN, PACE, QUARTER, SINK, Pace, Pattern, Room
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import ConvergenceError, solve_packed
@@ -248,6 +248,9 @@ class CraftingProblem:
                 continue
             if not restart and self.ab.quality_offer_pruned(state, action):
                 self.ab.prunings.note(priced.label, PRUNED_QUALITY)
+                continue
+            if not restart and self.ab.imprint_offer_pruned(state, action):
+                self.ab.prunings.note(priced.label, PRUNED_IMPRINT)
                 continue
             if restart:
                 low = priced.cost + self.start_lower

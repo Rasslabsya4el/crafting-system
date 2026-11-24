@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 from crafting_system.actions import ConsumesInputsError, OutOfScopeError
 
-__all__ = ["PRUNED_CORRUPTING", "PRUNED_QUALITY", "Gap", "ModelGaps", "Prunings"]
+__all__ = ["PRUNED_CORRUPTING", "PRUNED_IMPRINT", "PRUNED_QUALITY", "Gap", "ModelGaps", "Prunings"]
 
 
 @dataclass(frozen=True)
@@ -58,6 +58,7 @@ class ModelGaps:
 
 PRUNED_CORRUPTING = "corrupting"
 PRUNED_QUALITY = "quality"
+PRUNED_IMPRINT = "imprint"  # not exact: the planner's rule of the imprints worth making (`Abstraction.imprint_offer_pruned`, #1567)
 
 
 class Prunings:
