@@ -426,3 +426,117 @@ def test_every_offer_the_law_drops_on_r10_is_refused_at_real_states_of_its_shape
     assert {"EldritchExaltedOrb", "BeastSideSwap"} <= names[Rarity.MAGIC]
     assert "BeastSideSwap" not in names[Rarity.RARE]
     assert len(dropped[Rarity.MAGIC]) > 10
+
+
+# --- an unopened listing start (THE LISTING, #1552, H43 of board #1434) -------------------------------------------------------------
+
+
+def listing_plan(kind: str, listing: float | None = None):
+    """(data, target, prices, plan) of a toy boots base bought unopened (`listing_support`): "magic" wants the A prefix and the C suffix with
+    Alteration and Augmentation (the hand-worked mean `mean_after_alteration`), "rare" the P3 prefix and the S3 suffix with Chaos and Exalted Orbs;
+    `listing` the listing's price when given (`listing_support.LISTING` else)."""
+    from listing_support import magic_toy, prices, rare_toy, target
+
+    from crafting_system.cli import make_plan
+    from crafting_system.targets import start_price_key
+
+    if kind == "magic":
+        data = magic_toy()
+        aim = target(data)
+        entries = prices(start_price_key(data, aim))
+    else:
+        data = rare_toy()
+        aim = target(data, rarity="rare", actions="chaos-orb, exalted-orb", wanted=("ToyP3", "ToyS3"))
+        entries = prices(start_price_key(data, aim))
+        entries.prices["Chaos Orb"] = type(entries.prices["Orb of Alteration"])(1.0, "fixture")
+        entries.prices["Exalted Orb"] = type(entries.prices["Orb of Alteration"])(3.0, "fixture")
+    if listing is not None:
+        key = start_price_key(data, aim)
+        entries.prices[key] = type(entries.prices[key])(listing, "trade-api")
+    return data, aim, entries, make_plan(data, aim, entries, solver="object")
+
+
+def magic_hand() -> float:
+    """The least mean cost of the magic toy from its listing, by hand: the draw, then the best of the four rules of `mean_after_alteration`
+    (the listing's own price, the start price, is not in it)."""
+    import itertools
+
+    from listing_support import AUGMENTATION, mean_after_alteration
+
+    from crafting_system.planner._offers import DRAW_COST_SHARE
+
+    hand = min(mean_after_alteration(x, y) for x, y in itertools.product((False, True), repeat=2))
+    return float(hand) + DRAW_COST_SHARE * AUGMENTATION  # the draw costs a tenth of the cheapest offer that costs something
+
+
+@pytest.mark.parametrize("kind", ["magic", "rare"])
+def test_the_table_at_an_unopened_listing_is_its_draw_and_never_above_the_exact_cost(kind):
+    """The listing L is no state of the model; the table gives it h(L) = the draw's price + the mean of h over the draw's outcomes. It is at most
+    the exact mean at L and at every opened state, and on the magic toy (Alteration, an erasing reroll, has its exact law; the Augmentation's
+    chances are exact at each class: one side open, the other side's pool fixed) it is the hand-worked optimum. Before #1552 the table was
+    off for a listing start and the round fell back on the floors, whose figure at L is the draw's price alone."""
+    _data, aim, _entries, plan = listing_plan(kind)
+    assert plan.start.flags.unopened
+    floors = OfferFloors(plan.abstraction, plan.start, plan.offers, aim.start_item)
+    table = missing_mods_table(floors)
+    exact = plan.solution.values
+    assert table.off is None
+    assert table.lower(plan.start) == table.start
+    assert table.start <= exact[plan.start]
+    assert table.start == pytest.approx(exact[plan.start], rel=1e-6)
+    assert table.start > min(offer.cost for offer in plan.offers if offer.offer.action.opens_listing)  # the floors' figure at L: the draw alone
+    assert all(table.lower(state) <= value * (1 + TOLERANCE) for state, value in exact.items())
+    assert sum(1 for state in exact if table.lower(state) > 0) > len(exact) // 3
+    if kind == "magic":
+        hand = magic_hand()
+        assert exact[plan.start] == pytest.approx(hand, rel=1e-9)
+        assert table.start <= hand and table.start == pytest.approx(hand, rel=1e-6)
+
+
+@pytest.mark.parametrize("listing", [0.1, 0.5])
+def test_the_restart_into_a_listing_reads_h_at_the_listing_without_its_draw_twice(listing):
+    """The floors add the draw that follows a restart into a listing to the restart's cost (`through_listing`, `extra`); the table's restart law
+    is the restart's own price plus h(L), which holds that draw already. With a listing this cheap (the mean from it is about 3.55) the restart
+    is the best move at some opened states, where the table is c(restart) + h(L) (to the check's shrink), and at most the exact mean everywhere (#1552 checker:
+    counting the draw twice put 8 states above their exact mean at both prices)."""
+    _data, aim, _entries, plan = listing_plan("magic", listing)
+    floors = OfferFloors(plan.abstraction, plan.start, plan.offers, aim.start_item)
+    restart = next(entry for entry in floors.entries if isinstance(entry.priced.offer.action, BuyStartItem))
+    assert restart.extra > 0 and restart.priced.cost == listing  # the draw that follows it
+    table = missing_mods_table(floors)
+    exact = plan.solution.values
+    assert table.off is None
+    assert all(table.lower(state) <= value * (1 + TOLERANCE) for state, value in exact.items())
+    again = restart.priced.cost + table.start
+    assert any(table.lower(state) == pytest.approx(again, rel=1e-8) for state in exact if state != plan.start)
+    assert all(table.lower(state) <= again * (1 + TOLERANCE) for state in exact)
+
+
+def test_a_listing_with_no_draw_offered_has_its_table_off():
+    _data, aim, _entries, plan = listing_plan("magic")
+    offers = [offer for offer in plan.offers if not offer.offer.action.opens_listing]
+    table = missing_mods_table(OfferFloors(plan.abstraction, plan.start, offers, aim.start_item))
+    assert table.off is not None and "draw" in table.off
+    assert table.lower(plan.start) == 0.0
+
+
+def test_the_planner_reads_the_table_at_a_listing_and_gives_the_exact_plan(monkeypatch, floors_on):
+    """Through the planner's entry: the envelope search of the magic toy builds the table with h(L) at the hand number, and its plan is exact."""
+    from crafting_system.cli import make_plan
+    from crafting_system.planner import _plan
+
+    built = []
+
+    def spy(*args, **kwargs):
+        built.append(missing_mods_table(*args, **kwargs))
+        return built[-1]
+
+    monkeypatch.setattr(_plan, "MIN_OFFERS", 1)
+    monkeypatch.setattr(_pattern_bound, "missing_mods_table", spy)
+    _data, aim, entries, whole = listing_plan("magic")
+    searched = make_plan(_data, aim, entries, solver="envelope")
+    hand = magic_hand()
+    assert built and built[0].off is None and built[0].start == pytest.approx(hand, rel=1e-6) and built[0].start <= hand
+    assert searched.search is not None and searched.search.exact
+    assert searched.solution.values[searched.start] == pytest.approx(whole.solution.values[whole.start], rel=1e-9)
+    assert searched.solution.values[searched.start] == pytest.approx(hand, rel=1e-9)

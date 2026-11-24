@@ -19,6 +19,7 @@ from listing_support import (
     magic_sets,
     magic_toy,
     prices,
+    mean_after_alteration,
     rare_sets,
     rare_toy,
     target,
@@ -209,28 +210,6 @@ def test_the_mean_is_the_hand_solved_one_plus_the_price_of_the_draw():
     data = MAGIC
     aim = target(data)
     plan = make_plan(data, aim, prices(start_price_key(data, aim)))
-    sets = magic_sets()
-    a, g = Fraction(ALTERATION), Fraction(AUGMENTATION)
-    goal = frozenset({"ToyA", "ToyC"})
-
-    def mean_after_alteration(augment_a: bool, augment_c: bool) -> Fraction:
-        # u = sum P(O) f(O); f = 0 at the goal, 1 Alteration + u elsewhere, and where one wanted mod is held and an Augmentation is chosen,
-        # the Augmentation (it adds the other side's mod in proportion to the weights) and then an Alteration + u unless it lands the goal
-        coefficient, constant = Fraction(0), Fraction(0)
-        for held, chance in sets.items():
-            if held == goal:
-                continue
-            if held == frozenset({"ToyA"}) and augment_a:  # adds a suffix: C with 2/6 lands the goal, D with 4/6 gives {A, D}, an Alteration away
-                coefficient += chance * Fraction(4, 6)
-                constant += chance * (g + Fraction(4, 6) * a)
-            elif held == frozenset({"ToyC"}) and augment_c:  # adds a prefix: A with 3/4 lands the goal, B with 1/4 gives {B, C}
-                coefficient += chance * Fraction(1, 4)
-                constant += chance * (g + Fraction(1, 4) * a)
-            else:
-                coefficient += chance
-                constant += chance * a
-        return constant / (1 - coefficient)
-
     hand = min(mean_after_alteration(x, y) for x, y in itertools.product((False, True), repeat=2))
     draw_cost = DRAW_COST_SHARE * AUGMENTATION  # the cheapest offer that costs something
 

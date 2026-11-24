@@ -113,6 +113,8 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_offer_kinds.py", "through_listing", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it never follows a restart"),
     ("planner/_offer_kinds.py", "through_listing", ("OutOfScopeError",), GAP, "no rule for the draw at the listing proves no chance: the restart counts as landing (pbar 1) and the walk writes its gap"),
     ("planner/_offer_floor.py", "OfferFloors._rarities", ("NotApplicableError", "OutOfScopeError", "ItemError", "ValueError"), EITHER, "an offer refused at the shape's item, by the game, a gap or the data, is asked at its bare item; refused at both it leaves no item of another rarity, as `reached_items` reads it (#973)"),
+    ("planner/_missing_mods.py", "_Build._listing_draw", ("NotApplicableError",), GAME, "the game refuses the draw at the listing: it is never used after a restart and puts no term in h(L) (#1552)"),
+    ("planner/_missing_mods.py", "_Build._listing_draw", ("OutOfScopeError",), GAP, "no rule for the draw at the listing: it counts its price alone in h(L), a weaker and sound term (#1552)"),
     ("planner/_missing_mods.py", "_Build._likelihood", ("NotApplicableError",), GAME, "the game refuses the likelihood reforge at the shape's bare item: it puts no term in the table's min there (#1496)"),
     ("planner/_missing_mods.py", "_Build._likelihood", ("OutOfScopeError",), GAP, "no rule at the bare item: the reforge's outcomes may leave the shape, so it is a CUT of the table (#1496)"),
     ("planner/_missing_mods.py", "_Build._prepare_draws", ("OutOfScopeError",), GAP, "a draw's pool the bound cannot range over: the offer is a CUT of the table (#1496)"),
