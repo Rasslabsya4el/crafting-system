@@ -260,7 +260,7 @@ def solve_walked(
     with): the graph is merged and its plan taken from it, not solved again (`solver.packed_of_core`, #1566)."""
     say = progress or PROGRESS or (lambda _text: None)
     if priced is not None:
-        solved = packed_of_core(walked.graph, priced, progress=say)
+        solved = packed_of_core(walked.graph, *priced, progress=say)
     else:
         solved = solve_packed(walked.graph, tolerance=tolerance, progress=say, refuse_above=refuse_above)
     values = solved.value.tolist()

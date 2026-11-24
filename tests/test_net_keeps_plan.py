@@ -13,8 +13,6 @@ spent it.
   "no plan found yet" (OR-33).
 """
 
-import time
-
 import pytest
 from test_planner_blocking_crafts import E, S, _prices, data, target  # noqa: F401  (the belt world and its fixtures)
 
@@ -31,9 +29,10 @@ PAST = 2 * NET  # how far the clock jumps: well past the net and past the share 
 @pytest.fixture
 def clock(monkeypatch):
     """The run's clock, which a test moves forward by setting `clock[0]`; the growth's reading of its next round asks the run's net first."""
-    real = time.perf_counter
+    clock_module = budget.time  # the module every reader of the run's clock reads (no `import time` here: test_no_timing)
+    real = clock_module.perf_counter
     shift = [0.0]
-    monkeypatch.setattr(time, "perf_counter", lambda: real() + shift[0])
+    monkeypatch.setattr(clock_module, "perf_counter", lambda: real() + shift[0])
     monkeypatch.setattr(_offers, "BLOCKING_CRAFTS", True)
     for name in ("next", "stop"):
         inner = getattr(_growth.Grower, name)

@@ -1129,15 +1129,17 @@ def solve_packed(
     return PackedSolution(value, action, certificate.bound, classes.count, reduced, cls, core.action, info)
 
 
-def packed_of_core(graph: PackedGraph, core: Core, *, merge: bool = True, progress: Callable[[str], None] | None = None) -> PackedSolution:
+def packed_of_core(graph: PackedGraph, core: Core, core_info: dict | None = None, *, merge: bool = True, progress: Callable[[str], None] | None = None) -> PackedSolution:
     """`solve_packed`'s answer for a graph its caller has solved already: `core` is `solve_graph`'s on `graph` itself, so its values, its
     policy and its certificate are of the whole graph. The graph is merged into its exact classes (what the lumped chain of the answer and its
-    risk read), and each class takes the distribution its first member's action has in `core`; nothing is solved again (#1566).
+    risk read), and each class takes the distribution its first member's action has in `core`; nothing is solved again (#1566). `core_info` is
+    the `info` that solve filled: the answer keeps what it says of the solve (`linear_limit`, the limit that names costs found by approximation).
 
     The envelope search prices the plan in hand by `solve_graph` (`_envelope.Search._upper`); after a stop at its net, solving the same graph
     again for the answer cost R17 283 s past its net (the merge 6 s, the policy iteration on 152,294 classes 269 s, the certificates 3 s)."""
     say = progress or (lambda _text: None)
     info: dict = {"states": graph.n, "actions": graph.num_actions, "kernels": graph.num_kernels, "edges_stored": graph.num_edges, "priced_before": True}
+    info = {**(core_info or {}), **info}
     began = time.perf_counter()
     classes = exact_classes(graph, say) if merge else identity_classes(graph)
     reduced, kernel_map = quotient(graph, classes)

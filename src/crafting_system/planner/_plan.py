@@ -1326,11 +1326,12 @@ def widened_plan(
             raise PlanError(f"stopped{spent}, {NO_PLAN}: {said}") from widened.error  # as `stopped_refusal` says a stop (OR-33's example)
         raise widened.error if widened.error is not None else PlanError("no round of the offers made a plan")
     plan, records = widened.plan, widened.records
-    if clock is not None and (spent := clock.over(SEARCH_STAGE, SEARCH_KEPT)) is not None:
-        # the run's net ended the rounds with a plan in hand: the answer is that plan, and it says the net stopped the run (OR-13, OR-33, #1566).
-        # Each round's line says how it ended; this is the run's own stop, listed with the stages a limit stopped
-        clock.bind(spent)
     closed = _rounds.all_closed(records)
+    if not closed and clock is not None and (spent := clock.over(SEARCH_STAGE, SEARCH_KEPT)) is not None:
+        # the run's net ended the rounds with a plan in hand: the answer is that plan, and it says the net stopped the run (OR-13, OR-33, #1566).
+        # Each round's line says how it ended; this is the run's own stop, listed with the stages a limit stopped. Rounds that all closed were
+        # not stopped, even when the clock is past the net by the time they are read
+        clock.bind(spent)
     withins = [record.within for record in records if record.within is not None]
     within = max(withins) if withins else None  # a finished round proved within the gap: what the rounds prove is proved only to that gap
     exact = closed and not withins

@@ -1236,7 +1236,8 @@ class Search[S]:
                 raise Late(f"{self._late[2]} (the same graph, not priced again before a later limit)", 0.0, "the pricing")
             graph = self._graph("upper")
             late = None if deadline is None else lambda: time.perf_counter() >= deadline  # the search's clock, the one its net reads
-            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass, refuse_above=self.refuse_above, late=late)
+            solved_info: dict = {}  # what the solve says of itself (`linear_limit` above all), which the answer taken from it keeps (#1566)
+            core = solve_graph(graph, tolerance=self.tolerance, info=solved_info, self_mass=self.self_mass, refuse_above=self.refuse_above, late=late)
         except Late as late:
             self.stats.upper_refused += 1
             self.stats.upper_late += 1
@@ -1254,14 +1255,14 @@ class Search[S]:
             net = self.net
             if net.seconds is not None or net.states is not None or net.memory_mb is not None:
                 self.held = graph, certified  # only a net's stop falls back on it: a search no net can stop does not keep the older arrays alive
-                self._priced = grown, (graph, value, certified), core
+                self._priced = grown, (graph, value, certified), (core, solved_info)
             if self.upper is None or certified < self.upper:
                 self.upper = certified
         return graph, value, certified
 
     def priced(self, graph: PackedGraph):
-        """`solve_graph`'s solution of `graph` when it is the graph this search priced last (the plan it returns after a net's stop), else None:
-        the answer is then taken from it, not solved again (`_packed.solve_walked`, #1566)."""
+        """`solve_graph`'s solution of `graph` and what that solve said of itself (its `info`), when it is the graph this search priced last (the
+        plan it returns after a net's stop), else None: the answer is then taken from it, not solved again (`_packed.solve_walked`, #1566)."""
         return self._priced[2] if self._priced is not None and self._priced[1][0] is graph else None
 
     def _grown(self) -> tuple[int, int, int]:

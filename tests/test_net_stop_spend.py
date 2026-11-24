@@ -107,9 +107,12 @@ def test_the_answer_taken_from_the_search_s_pricing_is_the_answer_solve_packed_g
     search = Search(Chain(40, 3), net=Net(seconds=1e9), gap=0.0, gap_after=None)
     search.run()
     graph = search._upper()[0]
-    core = search.priced(graph)
-    assert core is not None
-    taken, solved = packed_of_core(graph, core), solve_packed(graph)
+    priced = search.priced(graph)
+    assert priced is not None
+    core, core_info = priced
+    taken, solved = packed_of_core(graph, core, core_info), solve_packed(graph)
+    assert core_info and all(key in taken.info for key in core_info)  # what the
+    # search's solve said of itself (`linear_limit` when it approximated, which `_packed.evaluation_limits` names) stays on the answer
     assert taken.value[0] == pytest.approx(solved.value[0], rel=1e-9) and taken.error_bound <= 1e-6
     assert np.array_equal(taken.cls, solved.cls) and np.array_equal(taken.action, solved.action)
     lumped = lump_policy(taken.quotient, taken.class_action, int(taken.cls[0]))
