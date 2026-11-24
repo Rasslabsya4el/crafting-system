@@ -78,6 +78,7 @@ from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 from crafting_system.prices.price_names import canonical_influences
 from crafting_system.targets import Target, plain_base_names
+from crafting_system.planner import PROOF_PROVED, proof_words
 from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
 from ._interval import IntervalAnswer
@@ -213,15 +214,16 @@ class RouteInput:
     reasons: Mapping[CompressedState, str] = field(default_factory=dict)
     interval: IntervalAnswer | None = None  # the plan's interval over a rule axis (ticket #221); only the planner's own policy has one
     chain: Chain | None = None  # the policy on item states as arrays, when `policy` is a lumped view (then the rows are made from this, not from the shown members of blocks)
+    guide: float | None = None  # the guide's route's cost with the start item, when one was given: the proof sentence says the plan's against it (OR-59)
 
 
-def route_input(plan: Plan, interval: IntervalAnswer | None = None) -> RouteInput:
+def route_input(plan: Plan, interval: IntervalAnswer | None = None, guide: float | None = None) -> RouteInput:
     """The planner's own policy, with the interval of the plan when the answer read a rule axis.
 
     A packed plan shown by its lumped chain (`Plan.lumped`) gets the chain of its item states too: the page is made from that.
     """
     chain = chain_of_packed_policy(plan.policy) if plan.lumped else None
-    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval, chain=chain)
+    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval, chain=chain, guide=guide)
 
 
 def given_route_input(plan: Plan, route: Route, result: RouteResult) -> RouteInput:
@@ -1288,6 +1290,14 @@ class _View:
             lines.append(f"{head}: {candidate.label}: {money(row.total)} in all (start {start} + crafting {money(row.mean_remaining or 0.0)}{proved})")
         return _plain("Start", *lines)
 
+    def proof_field(self) -> Field | None:
+        """The goal card's "Proof" field: the planner's one proof sentence (`planner.proof_words`, OR-59), the same as the text report's and the
+        JSON's; None for a given route."""
+        if self.inp.label != PLANNER_LABEL:
+            return None
+        words = proof_words(self.plan, self.inp.guide)
+        return _plain(PROOF, words.sentence, tone="" if words.case == PROOF_PROVED else "warn")
+
     @property
     def proof(self) -> Proof | None:
         """How far the planner proved its own plan (`_route_proof`, #1161); None for a given route, which says its own limits."""
@@ -1324,7 +1334,7 @@ class _View:
         approximate = [plain_base_names(self.data, line) for line in approximate]  # a start item priced under a key with a base id is said by its game name (#553)
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
-            _plain(PROOF, self.proof.field_text(), tone="warn" if self.proof.stopped else "") if self.proof is not None else None,
+            self.proof_field(),
             self.start_field(),
             _plain("Mean", mean),
             _plain("Not shown near the best", NOT_NEAR_BEST, tone="warn") if self.walked() else None,
@@ -1589,9 +1599,10 @@ def write_route_page(
     given: RouteResult | None = None,
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
+    guide: float | None = None,
 ) -> Path:
     """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
-    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir)
+    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8", newline="\n")
     return path
@@ -1605,12 +1616,14 @@ def route_page(
     given: RouteResult | None = None,
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
+    guide: float | None = None,
 ) -> str:
     """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
     `write_route_page` writes and the website serves (#961).
 
     The page makes no request: the trade link is built from `buy_spec` and the stat list in
-    `<cache_dir>/trade/stats.json` when that exists.
+    `<cache_dir>/trade/stats.json` when that exists. `guide` is the guide's route's cost with the start item when no given route is drawn (the
+    benchmark's figure of it): the proof sentence says the plan's cost against it; a given route's own cost takes its place.
     """
     ask(fresh=True)  # the report's memory net, read at the page's start (#1381)
     plan = report.plan
@@ -1621,7 +1634,8 @@ def route_page(
         spec = buy_spec if searched is None else searched_spec(buy_spec, searched)
         buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
-    policy = build_section(route_input(plan, report.interval), data, buy, anchor="policy", route_field=not stacked)
+    guide = given_cost(plan, given) if given is not None else guide
+    policy = build_section(route_input(plan, report.interval, guide), data, buy, anchor="policy", route_field=not stacked)
     sections = (policy,)
     if route is not None and given is not None:
         drawn = build_section(
@@ -1630,6 +1644,13 @@ def route_page(
         sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
     wider = any_base_words(buy) if plan.start_price.searched is not None else None
     return render_page(Page(page_title(data, plan.target, wider), sections))
+
+
+def given_cost(plan: Plan, given: RouteResult | None) -> float | None:
+    """The given route's mean cost with the start item, as the proof sentence compares the plan's with it; None with no route or no finite cost."""
+    if given is None or given.risk is None or not math.isfinite(given.risk.mean.value):
+        return None  # a route with a gap never finishes: it has no cost to compare with
+    return plan.start_price.chaos + given.risk.mean.value
 
 
 def any_base_words(buy: BuyStep | None) -> str | None:

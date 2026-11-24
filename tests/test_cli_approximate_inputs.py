@@ -189,7 +189,7 @@ def test_the_text_report_names_the_input_before_the_note_and_the_requirements():
     assert report.approximate_inputs == (MARKED,)
     at = lines.index("Approximate inputs (claims that no other source settles):")
     assert lines[at + 1] == f"  {MARKED_LINE}"
-    assert lines[at - 1] == "Target: Toy"
+    assert lines[at - 2] == "Target: Toy" and lines[at - 1].startswith("Proof: ")  # the one proof sentence under the target (OR-59, #1576)
     assert lines[at + 2].startswith("Requirements:")
 
 

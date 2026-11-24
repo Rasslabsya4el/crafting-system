@@ -1,6 +1,13 @@
 {
   "format": "crafting-system-policy/3",
   "unit": "chaos",
+  "proof": {
+    "case": "proved",
+    "sentence": "Proved: no cheaper plan exists among all 4 crafts this planner can use on this item, every one checked to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
+    "actions_open": 4,
+    "actions_tried_together": 4,
+    "guide_cost": null
+  },
   "answer": {
     "approximate": false
   },
