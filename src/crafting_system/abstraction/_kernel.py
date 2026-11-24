@@ -805,15 +805,19 @@ class Abstraction:
             return False
         return self.meets_all_but_quality(state) and not self.quality_is_met(state)
 
+    _rarest: frozenset[int] | None = None  # `rarest_leaves`, read once
     imprints_worth_saving = False  # the planner's rule (#1567): an imprint is made only of an item worth coming back to (`imprint_offer_pruned`)
 
     def imprint_offer_pruned(self, state: CompressedState, action: Action) -> bool:
         """Whether an imprint (a new one or one that replaces another; a restore never) is left out at `state` by the planner's rule (#1567).
 
         A player imprints an item he wants to come back to: one that already holds a wanted mod and nothing he would have to take off
-        again, so that a miss of the next slam or annulment is undone by restoring it. An item that holds no mod, a crafted one (a bench
-        mod comes off and goes back on at its price), or more mods than wanted mods pass on it (so at least one is unwanted, a veiled
-        placeholder and a fractured mod counted as held) is not worth a beast. It reads only the statuses, the crafted slots and the count
+        again, so that a miss of the next slam or annulment is undone by restoring it, and one whose progress is dear to make again: it
+        holds the wanted mod hardest to roll (`rarest_leaves`: least weight in the base's pool; R17's +1 to all Skill Gems, 50 against
+        200 to 1,000 for the others). An item that holds no mod, a crafted one (a bench mod comes off and goes back on at its price), more
+        mods than wanted mods pass on it (so at least one is unwanted, a veiled placeholder and a fractured mod counted as held), or not
+        the rarest wanted mod is not worth a beast. Without the last test, on R17 every rare Talisman holding any one of its four common
+        wanted mods was imprinted: the bound of the second round had 118,033 keys against 27,267 and found no plan in its share. It reads only the statuses, the crafted slots and the count
         of the other mods, which a pattern key holds (`_pattern.PatternKey`): every member of a key answers alike, so the bound's build,
         which asks one member, leaves out at a key exactly what the search leaves out at each of its states. Only with `imprints_worth_saving` set (the
         planner sets it on the model it plans with): unlike `quality_offer_pruned` this is not exact, it removes options, so the answer
@@ -829,7 +833,28 @@ class Abstraction:
         if any(slot.crafted for slot in state.slots):
             return True
         held = len(state.slots) + len(state.fractured)
-        return held == 0 or held > sum(1 for each in state.status if each is Status.PASSING)
+        if held == 0 or held > sum(1 for each in state.status if each is Status.PASSING):
+            return True
+        rarest = self.rarest_leaves()
+        return bool(rarest) and not any(state.status[leaf] is Status.PASSING for leaf in rarest)
+
+    def rarest_leaves(self) -> frozenset[int]:
+        """The wanted mods hardest to roll on this base (`imprint_offer_pruned`, #1567): the leaves whose rolled mods (a prefix or a suffix of
+        the item's level or below) weigh least in the base's pool, among the leaves the pool can roll at all. Read once."""
+        if self._rarest is None:
+            base = self.data.base_items.get(self.base_id)
+            weights: dict[int, int] = {}
+            for index, leaf in enumerate(self.goal.leaves):
+                total = 0
+                for mod_id in leaf.mod_ids:
+                    mod = self.data.mods.get(mod_id)
+                    if base is not None and mod is not None and mod.generation_type in ("prefix", "suffix") and mod.required_level <= self.item_level:
+                        total += spawn_weight(mod, base.tags)
+                if total > 0:
+                    weights[index] = total
+            least = min(weights.values(), default=0)
+            self._rarest = frozenset(index for index, weight in weights.items() if weight == least)
+        return self._rarest
 
     def quality_offer_pruned(self, state: CompressedState, action: Action) -> bool:
         """Whether an action that only sets the quality (a catalyst: `Adds.only_quality`) is not an action of `state` (ticket #158, ADR-0029).
