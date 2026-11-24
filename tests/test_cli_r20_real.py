@@ -69,7 +69,10 @@ def test_the_start_helmet_is_made_by_an_awakeners_orb_from_two_priced_helmets(pl
     assert START not in prices
     assert plan.start_price.name == START and plan.start_price.made is not None
     goods = {name: chaos for name, _, chaos, _ in plan.start_price.made.goods}
-    assert goods == {"Eternal Burgonet (ilvl 86, Shaper)": 5.0, "Eternal Burgonet (ilvl 86, Elder)": 5.0, "Awakener's Orb": 171.5}
+    assert goods == {
+        "Eternal Burgonet (ilvl 86, Shaper), Rare with a Shaper mod": 5.0, "Eternal Burgonet (ilvl 86, Elder), Rare with an Elder mod": 5.0,
+        "Awakener's Orb": 171.5,
+    }
     assert prices["Awakener's Orb"].source == "poe.ninja-history"  # the week-one file's (OR-44); the two helmets are hand stand-ins of #150
     assert plan.start_price.chaos == pytest.approx(181.5)  # 5 + 5 + 171.5, the start the plan had before #1523
 

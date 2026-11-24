@@ -1078,15 +1078,15 @@
       },
       "source": "poe.ninja-history"
     },
-    "Eternal Burgonet (ilvl 86, Elder)": {
+    "Eternal Burgonet (ilvl 86, Elder), Rare with an Elder mod": {
       "chaos": 5.0,
       "source": "hand",
-      "note": "hand-set stand-in of reference route R20 (#1523, OR-44, OR-23): one of the two single-influence Normal Eternal Burgonets of item level 86 the guide's step 1 joins with an Awakener's Orb into the Shaper/Elder start helmet; the week-one file has no line for an influenced Eternal Burgonet and Allflame has left the trade site, so it is the stand-in of #150 (PR #816, read on 2026-11-12, about 5 Chaos; no week-one source)"
+      "note": "hand-set stand-in of reference route R20 (#1523, OR-44, OR-23): one of the two single-influence Eternal Burgonets of item level 86 the guide's step 1 joins with an Awakener's Orb into the Shaper/Elder start helmet; the orb takes a Rare item that holds an influenced mod (ADR-0032, awakener.refused_without_influenced_mods), so it is a Rare one with any mod of its influence. The week-one file has no line for an influenced Eternal Burgonet and Allflame has left the trade site: it is the stand-in of #150 (PR #816, read on 2026-11-12, about 5 Chaos; no week-one source)"
     },
-    "Eternal Burgonet (ilvl 86, Shaper)": {
+    "Eternal Burgonet (ilvl 86, Shaper), Rare with a Shaper mod": {
       "chaos": 5.0,
       "source": "hand",
-      "note": "hand-set stand-in of reference route R20 (#1523, OR-44, OR-23): one of the two single-influence Normal Eternal Burgonets of item level 86 the guide's step 1 joins with an Awakener's Orb into the Shaper/Elder start helmet; the week-one file has no line for an influenced Eternal Burgonet and Allflame has left the trade site, so it is the stand-in of #150 (PR #816, read on 2026-11-12, about 5 Chaos; no week-one source)"
+      "note": "hand-set stand-in of reference route R20 (#1523, OR-44, OR-23): one of the two single-influence Eternal Burgonets of item level 86 the guide's step 1 joins with an Awakener's Orb into the Shaper/Elder start helmet; the orb takes a Rare item that holds an influenced mod (ADR-0032, awakener.refused_without_influenced_mods), so it is a Rare one with any mod of its influence. The week-one file has no line for an influenced Eternal Burgonet and Allflame has left the trade site: it is the stand-in of #150 (PR #816, read on 2026-11-12, about 5 Chaos; no week-one source)"
     },
     "Exalted Orb": {
       "chaos": 1.36,

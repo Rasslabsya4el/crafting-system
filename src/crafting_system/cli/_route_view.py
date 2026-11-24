@@ -116,6 +116,7 @@ class PageError(ValueError):
 NEVER_FINISHES = "never finishes from here"
 SURE_NEXT = "Next step, by the item it is used on"  # the field of a sure action's branches, in place of "Chance per use" (#984)
 GAPS = "never finishes: the route has gaps"
+MADE_DRAW_TITLE = "Check the mods the Awakener's Orb gave"  # the same step when row 1 made the item by its recipe (#1523)
 DRAW_TITLE = "Check the mods the bought item came with"  # the step of the draw of a bought listing (`DRAW_LABEL` is the planner's name for it, #1442)
 AGAIN = "not yet, this step again"  # an outcome that leaves the item in the same step: the player uses the action again (#889)
 NEXT = "Next step"  # the field of a restart, in place of "On failure": buying the item again is the step, not a failure of it (#892)
@@ -962,6 +963,8 @@ class _View:
             return [money(self.plan.start_price.chaos), *([mark] if mark else [])]  # OR-8: a thin market's price carries its mark
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price was paid in row 1 and is paid again by every restart
             again = " and again by each restart" if any(step.action is not None and step.action.label == RESTART for step in self.flow.steps) else ""
+            if self.plan.start_price.made is not None:  # the item was made in row 1, not bought (#1523)
+                return [f"{FREE}: the item was paid in step 1{again}"]
             return [f"{FREE}: the listing's price is paid in step 1{again}"]
         priced = self.plan.offer_of(action)
         if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
@@ -985,7 +988,7 @@ class _View:
             name = self.start_name()
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the player reads what the listing came with, he uses nothing
-            return DRAW_TITLE
+            return MADE_DRAW_TITLE if self.plan.start_price.made is not None else DRAW_TITLE
         offer = self.plan.offer_of(action).offer
         action = offer.action
         adds = action.adds(self.data, self.plan.target.start_item)
@@ -1093,14 +1096,17 @@ class _View:
         price = self.plan.start_price
         made = price.made
         assert made is not None
-        buy = tuple(Line(f"{count} × {self.plan_name(name)}, a Normal base {money(chaos)}" if name != made.orb else f"{count} × {name} {money(chaos)}")
-                    for name, count, chaos, _ in made.goods)
-        receiver, donor = self.plan_name(made.receiver), self.plan_name(made.donor)
+        buy = tuple(Line(f"{count} × {self.plan_name(name)} {money(chaos)}") for name, count, chaos, _ in made.goods)
         use = Line(
-            f"{made.orb} on the {receiver} with the {donor} as the second item: the second item is destroyed, the first keeps its base and item "
-            "level and becomes a Rare item with both influences and new random mods (a Normal base has no influenced mod to keep)"
+            f"{made.orb} on the first helmet with the second as the item it destroys: the first keeps its base and item level and becomes a Rare "
+            "item with both influences; it keeps one influenced mod of each helmet (one at random where a helmet holds several) and every other "
+            "mod is rolled anew"
         )
-        fields = _fields(Field("Buy", buy), Field("Use", (use,)), _plain("Cost per use", money(price.chaos)))
+        note = _plain(
+            "Note",
+            "the plan reads the new item's mods as those of a bought Rare (an Orb of Alchemy's roll), without the two kept influenced mods",
+        )
+        fields = _fields(Field("Buy", buy), Field("Use", (use,)), _plain("Cost per use", money(price.chaos)), note)
         target = self.plan.target
         influences = "/".join(canonical_influences(each.value for each in target.influences))
         title = f"Make a {influences} {self.data.base_items[target.base_id].name}, item level {target.item_level}, with an {made.orb}"

@@ -72,7 +72,7 @@ OTHER_ITEM = {
     "r17-lightning-talisman": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
     "r07-minion-wand": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
-    "r20-rf-helmet": "#1523 no file has a line for a dual-influenced helmet: the planner makes it by an Awakener's Orb from two single-influence helmets, each priced on its own line, so no search body is stored",
+    "r20-rf-helmet": "#1548 no file has a line for a dual-influenced helmet: the planner makes it by an Awakener's Orb from two Rare single-influence helmets (#1523), each priced on its own line, so no search body is stored",
     "r24-avoid-shock-boots": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
 }
 
