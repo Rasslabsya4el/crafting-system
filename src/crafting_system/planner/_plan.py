@@ -34,6 +34,7 @@ from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
+from crafting_system.risk._moments import interval as _moments_interval
 from crafting_system.solver import MAIN, Acquisition, Action, ConvergenceError, Outcome, PeekNode, Solution, solve
 from crafting_system.prices.query_compare import other_item
 from crafting_system.targets import KOfN, PlainQualityRequirement, Requirement, StartBuyError, StartKind, Target, buy_spec_of, shared_name_refusal
@@ -1815,7 +1816,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
     try:
         risk = evaluate_risk(
             packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True,
-            coarse_first=resolve, regenerative=resolve,
+            coarse_first=resolve, regenerative=resolve, mean_error=getattr(getattr(packed, "solution", None), "error_bound", None),
         )  # fmt: skip
     finally:
         _regen.TRACE = None
@@ -1876,8 +1877,12 @@ def evaluate_risk(
     packed_moments: bool = False,
     coarse_first: bool = False,
     regenerative: bool = False,
+    mean_error: float | None = None,
 ) -> RiskReport:
     """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
+
+    `mean_error`, when given, is the certified relative error of `mean` as the plan's solve worked it out: a report whose moments the run's time
+    net stopped gives that mean (`risk.evaluate`'s `known_mean`, #1553).
 
     `free_cost` is what `price_offers` charged the actions that consume nothing (`free_action_cost`). Those actions are counted apart from
     the grid (ticket #349, `risk._free`): the step is set by the cheapest action that costs something, so a veil plan's quantiles and
@@ -1900,6 +1905,8 @@ def evaluate_risk(
         extra["coarse_first"] = True
     if regenerative:
         extra["regenerative"] = True
+    if mean_error is not None and math.isfinite(mean):
+        extra["known_mean"] = (mean, *_moments_interval(mean, mean_error))
     if free_cost is None or not any(is_free_cost(action.cost, free_cost) for action in policy.values()):
         return evaluate(policy, start, is_goal, max_bins=bins, max_coarse_bins=COARSE_BINS, **extra)
     paid = min((action.cost for action in policy.values() if not is_free_cost(action.cost, free_cost)), default=0.0)

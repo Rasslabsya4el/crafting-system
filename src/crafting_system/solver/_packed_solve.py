@@ -1075,6 +1075,7 @@ def solve_packed(
     merge: bool = True,
     progress: Callable[[str], None] | None = None,
     refuse_above: float | None = None,
+    late: Callable[[], bool] | None = None,
 ) -> PackedSolution:
     """Minimise the mean cost to a goal from every state of `graph`: merged exactly, solved, certified on the unmerged graph.
 
@@ -1082,6 +1083,7 @@ def solve_packed(
     (as `solve`'s): the evaluation of the policy is refined while it is above it and not at the rounding floor. The certified
     bound of the result (`error_bound`) may exceed `tolerance` by the rounding of the sums, but a bound above `accept_bound`
     (or none) raises `ConvergenceError`; `refuse_above` moves that refusal for a caller that takes the values with `error_bound` (`solve_graph`).
+    `late` is `solve_graph`'s: the solve of the quotient raises `Late` once it says the time is up (#1553).
     """
     refuse_above = accept_bound if refuse_above is None else max(refuse_above, accept_bound)
     say = progress or (lambda _text: None)
@@ -1097,7 +1099,7 @@ def solve_packed(
     mark = time.perf_counter()
     core = solve_graph(
         reduced, tolerance=tolerance, dense_limit=dense_limit, max_rounds=max_rounds, accept_bound=accept_bound, progress=say, info=info,
-        refuse_above=refuse_above,
+        refuse_above=refuse_above, late=late,
     )  # fmt: skip
     info["solve_seconds"] = round(time.perf_counter() - mark, 2)
     cls = classes.cls

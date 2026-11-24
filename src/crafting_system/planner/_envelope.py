@@ -168,7 +168,7 @@ FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (certified to 1e-6; a larger certified error is added, `Search._consistent`)
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
-LAST_PRICING = 0.05  # the share of its time net the pricing of the answer may take past the net, once a net stopped the search (`Search._deadline`, OR-40, #1516): a share of the net, so the same on any machine (OR-39)
+LAST_PRICING = budget.AFTER_NET  # the share of its time net the pricing of the answer may take past the net, once a net stopped the search (`Search._deadline`, OR-40, #1516): a share of the net, so the same on any machine (OR-39)
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
 # how often a round's walk of its tips says where it is (#1076: R12's round 4 walked 20,858 tips for 6 minutes, grew the process from 0.7 to
 # 12.6 GB and was stopped by the memory net with no line said): the pace of the log, never a limit
