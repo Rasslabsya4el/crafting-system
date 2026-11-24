@@ -31,7 +31,7 @@ from crafting_system.planner._plan import add_risk
 from crafting_system.planner._envelope_plan import BoundError, certificate_gap, envelope_result, route_incumbent
 from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, limit_text
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.cli._route import load_route
 from crafting_system.planner._pattern_bound import pattern_lower_bound
 from crafting_system.prices import load_price_file
@@ -126,7 +126,7 @@ def test_the_route_page_of_a_stopped_search_shows_the_same_certificate(stopped, 
     plan = add_risk(stopped_plan)  # the page shows the percentiles, which the fixture left out
     (cut,) = [limit for limit in plan.limits if limit.kind == SOLVE and limit.what.startswith("The search was stopped")]
     page = render_page(Page("x", (build_section(route_input(plan), data),)))
-    assert escape(limit_text(cut, SHOWN_LABELS)) in page
+    assert escape(planner_limit_line(plan, cut).text) in page  # in a player's words (#893, `cli._limit_words`)
 
 
 def test_a_stopped_search_on_a_real_route_certifies_the_exact_cost_between_its_bounds(stopped):

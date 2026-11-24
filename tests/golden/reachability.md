@@ -232,7 +232,7 @@ The fields of the `Target` a YAML file fills in, and the modules outside `target
 | `actions` | cli/_benchmark_outcomes.py, planner/_implicit_finish.py, planner/_plan.py, planner/_quality_finish.py |  |
 | `enchantment` | planner/_plan.py |  |
 | `allow_corrupted` | abstraction/_goal.py |  |
-| `sockets` | planner/_finish.py, planner/_plan.py |  |
+| `sockets` | cli/_limit_words.py, planner/_finish.py, planner/_plan.py |  |
 | `item_level_floor` | **nothing** | TARGETS-3, PLANNING-8 |
 | `start_any_tier` | **nothing** |  |
 
