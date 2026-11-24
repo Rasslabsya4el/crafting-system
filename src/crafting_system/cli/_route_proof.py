@@ -183,7 +183,7 @@ def method_name(label: str) -> str:
     """A method as the game names it: a round's catalog kind (`harvest-reforge-likelihood`) by its title ("Orb of Alchemy" for
     `alchemy-orb`, as the game writes it), a label as it is."""
     if not _CATALOG_ID.match(label):
-        return label
+        return label.removeprefix("Fossils ")  # a fossil set by its fossils' game names (#1514, `_limit_words.fossil_name`)
     if label.endswith("-orb") and label.removesuffix("-orb") in _ORB_OF:
         return f"Orb of {label.removesuffix('-orb').capitalize()}"
     return kind_title(label)

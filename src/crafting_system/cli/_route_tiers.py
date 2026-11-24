@@ -32,7 +32,7 @@ from crafting_system.items import Influence
 from crafting_system.items.words import mod_text
 
 from ._report_net import ask
-from ._route_card import _hashes, page_tiers
+from ._route_card import _FIGURE, _hashes, page_tiers
 
 
 @dataclass(frozen=True)
@@ -103,6 +103,8 @@ def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozense
         best = min(ladder, key=lambda mod_id: (ladder[mod_id], mod_id))
         tiered = not tiers.tierless  # a base jewel has no tiers (#963)
         text = mod_text(data.mods[best])
+        if tiered and len({_FIGURE.sub("#", _hashes(mod_text(data.mods[mod_id]))) for mod_id in ladder}) == 1 and len({_hashes(mod_text(data.mods[mod_id])) for mod_id in ladder}) > 1:
+            text = _FIGURE.sub("#", _hashes(text))  # tiers that differ in a fixed figure too ("Level 20" of T1, "Level 18" of T2, R20): the line names none
         families.append(_Family(_hashes(text) if tiered else text, ladder, frozenset(accepted[key]), tiered))
     return families
 

@@ -84,3 +84,11 @@ def test_the_title_names_the_item_and_its_wanted_mods_in_short(r12):
     assert short_mod("+# to maximum Life") == "maximum Life"
     assert short_mod("#% increased Movement Speed / (13-16)% chance to gain Onslaught for 4 seconds on Kill") == "Movement Speed"
     assert short_mod("Adds # to # Physical Damage to Attacks") == "Adds # to # Physical Damage to Attacks"
+
+
+def test_a_fossil_set_in_a_batch_of_the_search_is_named_by_its_fossils_and_a_reduced_mod_keeps_its_word():
+    from crafting_system.cli._route_proof import method_name
+
+    assert method_name("Fossils Glyphic Fossil") == "Glyphic Fossil"  # the batches' path (checker, #1442)
+    assert short_mod("#% reduced Mana Cost of Skills") == "reduced Mana Cost of Skills"
+    assert short_mod("-#% to Chaos Resistance") == "-#% to Chaos Resistance"

@@ -51,7 +51,7 @@ _PHRASES = (  # (planner's words, page's words), in this order: the longer phras
     ("the model has no rule", "the planner has no rule"),
     ("The model has no rule", "The planner has no rule"),
 )
-_MODEL = re.compile(r"\b([Tt])he model\b")
+_MODEL = re.compile(r"\b(T|t)he model\b")
 _STATES = re.compile(r"\b(in|at) ([\d,]+) states?\b")  # a model gap's label "Chaos Orb in 1,280 states" (`_limits._states`)
 _LOOKED = re.compile(r"it looked at the actions of ([\d,]+) of the ([\d,]+) states it found and built ([\d,]+) of the ([\d,]+) actions offered at them")
 _ROUNDS_LOOKED = re.compile(r", after [\d,]+ rounds? and ([\d,]+) states looked at")  # the SOLVE limit (`_envelope_plan.envelope_limits`)
@@ -100,7 +100,7 @@ def state_line_text(limit: Limit) -> str | None:
             "not by name. The odds and costs count every one of them."
         )
     if limit.what.startswith("A state does not list the other mods"):
-        return "An item card names only the mods the target asks for: no method of the route reads the others, so the odds and costs do not depend on them."
+        return "An item card names only the mods the target asks for. The odds and costs do not depend on the others: no method of the route reads them."
     return None
 
 

@@ -832,7 +832,7 @@ class _View:
             onward = edge.kind not in ("goal", "again") and edge.to is not None and edge.to + 1 != below
             if self.sure(action):  # one place and one outcome: said only when that place is not the row below (a loop back, a jump)
                 return [self.link(f"then {self.next_title(edge)}", edge.to + 1)] if onward else []
-            if action.label == DRAW_LABEL and edge.kind not in ("goal", "again") and edge.to is not None:
+            if action.label == DRAW_LABEL and edge.kind not in ("goal", "again") and edge.to is not None and all(other is edge or other.kind != "failure" for other in step.edges):
                 # every listing goes on the same way, whatever it came with (R20: the essence of the next step rerolls it, #1442)
                 text = f"whatever mods it came with, go on with {self.next_title(edge)}"
                 return [self.link(text, edge.to + 1)] if onward else [Line(text)]
@@ -1028,10 +1028,14 @@ class _View:
             return None
         held = [bool(state.fractured) for state in rare]
         if all(held):
-            return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
-        if any(held):
-            return "reforges a rare item and keeps only a fractured mod, where the item has one: no Scouring first, the item stays rare"
-        return "reforges a rare item with new mods, the essence's mod among them: no Scouring first, the item stays rare"
+            said = "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
+        elif any(held):
+            said = "reforges a rare item and keeps only a fractured mod, where the item has one: no Scouring first, the item stays rare"
+        else:
+            said = "reforges a rare item with new mods, the essence's mod among them: no Scouring first, the item stays rare"
+        if len(rare) < len(step.states):  # the step also takes the bought normal item (R04, R06): the essence makes it rare (crafter, #1442)
+            said += "; on a normal item it makes it rare, with the essence's mod among its new mods"
+        return said
 
     def craft_again_note(self, action: Action, step: Step) -> str | None:
         """For a bench craft an item comes to more than once in a run: it is paid again each time (R24's suffix lock of 2 Divine, ≈3.1
@@ -1044,8 +1048,8 @@ class _View:
         if times < 1.05:
             return None
         return (
-            "each time an item comes back here the craft is gone (a later step or a restart took it off), so it is paid again: the step cost "
-            "counts every one"
+            "each time an item comes back here the craft is gone (the steps under \"Reached from\" that send it back take it off), so it is "
+            "paid again: the step cost counts every one"
         )
 
     def notes(self, action: Action, step: Step, restart: bool) -> list[str]:
@@ -1148,7 +1152,7 @@ class _View:
         goal = self.gains(step, moving)
         if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
-        one_way = action.label == DRAW_LABEL and len(shown) == 1 and not failing
+        one_way = action.label == DRAW_LABEL and len(shown) == 1 and not failing and shown[0].kind not in ("goal", "again")
         if one_way:
             goal = []  # a listing that goes on the same way whatever it came with aims at no mod: the Goal would read as what to look for (#1442)
         never = step.never_finishes
@@ -1169,7 +1173,7 @@ class _View:
             _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
             Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
-            self.tier_field(step, action),
+            None if one_way else self.tier_field(step, action),  # a listing that goes on the same way: its odds change no choice (crafter, #1442)
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
             _plain("Step cost", FREE if self.free(action) else money(step_cost)) if step_cost is not None else None,
@@ -1617,7 +1621,7 @@ def page_title(data: GameData, target: Target, wider: str | None = None) -> str:
     return f"Route to craft: {influences + ' ' if influences else ''}{base}, item level {target.item_level}" + (f", with {wanted}" if wanted else "")
 
 
-_LEAD = re.compile(r"^[+-]?(?:#|\([\d.]+-[\d.]+\)|[\d.]+)%?\s+(?:(?:to|increased|reduced|chance to)\s+)?")
+_LEAD = re.compile(r"^\+?(?:#|\([\d.]+-[\d.]+\)|[\d.]+)%?\s+(?:(?:to|increased|chance to)\s+)?")  # "reduced" and a minus sign stay: they turn the mod
 
 
 def short_mod(text: str) -> str:
@@ -1627,10 +1631,17 @@ def short_mod(text: str) -> str:
     return _LEAD.sub("", first, count=1) or first
 
 
+def _titled(slot) -> str:
+    """A wanted slot in the title: its short name, its tier ("T1", "T2 or better") and whether it is fractured or crafted (crafter, #1442)."""
+    marks = [mark for mark in ("fractured", "crafted") if mark in slot.marks]
+    tier = f" {slot.note}" if re.match(r"^T\d", slot.note or "") else ""
+    return f"{' '.join(marks) + ' ' if marks else ''}{short_mod(slot.text)}{tier}"
+
+
 def wanted_words(data: GameData, target: Target) -> str:
     """The target's wanted mods in short, in the order of its card: each wanted slot, then each group as "1 of A / B / C" (#893)."""
     card = card_of_target(data, target)
-    names = [short_mod(slot.text) for slot in (*card.implicits, *card.prefixes, *card.suffixes) if slot.tone == "wanted"]
+    names = [_titled(slot) for slot in (*card.implicits, *card.prefixes, *card.suffixes) if slot.tone == "wanted"]
     for group in card.groups:
         need = re.match(r"at least (\d+) of", group.heading)
         names.append(f"{need.group(1) if need else 'some'} of {' / '.join(dict.fromkeys(short_mod(member.text) for member in group.members))}")

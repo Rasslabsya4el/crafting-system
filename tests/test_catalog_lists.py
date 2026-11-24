@@ -30,6 +30,7 @@ from crafting_system.actions import ChaosOrb, kinds
 from crafting_system.actions.catalog import Kind, registered
 from crafting_system.budget import Budget
 from crafting_system.cli import build_report, make_plan, policy_document, render_text
+from crafting_system.cli._limit_words import group_words, page_limits, player_words
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_view import Page, build_section, route_input
 from crafting_system.planner._limits import NOT_BUILT, NOT_NAMED, OPT_IN, TITLES, UNPRICED, kind_title, limit_text
@@ -126,7 +127,7 @@ def test_a_new_kind_on_by_default_with_no_price_changes_no_recorded_page_of_the_
 
 def lines_of(page: str, kind: str) -> list[str]:
     """The lines of the group `kind` on `page`, read by the markup of `cli._route_html._leaves_out`."""
-    head = f'<div class="k">{escape(TITLES[kind])}</div><div class="v ml"><div>'
+    head = f'<div class="k">{escape(group_words(TITLES[kind]))}</div><div class="v ml"><div>'
     return page.split(head, 1)[1].split('</div></div><div class="k">', 1)[0].split("</div><div>") if head in page else []
 
 
@@ -134,8 +135,8 @@ def test_a_recorded_line_keeps_what_is_left_out_why_and_the_guarantee(today, pla
     recorded = today["page recorded"]
 
     for kind in CATALOG_LISTS:
-        limits = of_kind(plan.limits, kind)
-        assert lines_of(recorded, kind) == [escape(limit_text(replace(limit, labels=(LIST,)))) for limit in limits]
+        limits = of_kind(page_limits(plan.limits, plan.target), kind)  # the page's limits, in a player's words (#893, #1514)
+        assert lines_of(recorded, kind) == list(dict.fromkeys(escape(player_words(limit_text(replace(limit, labels=(LIST,))))) for limit in limits))
     assert lines_of(recorded, NOT_BUILT) and lines_of(recorded, OPT_IN)
     assert lines_of(recorded, UNPRICED) == lines_of(today["page"], UNPRICED)
     rest = today["page"]
