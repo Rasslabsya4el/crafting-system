@@ -23,7 +23,17 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     keeps none of them): every one that fractures (when the states hold no fractured mod), the cheapest that adds the lock of the mod's side
     (unless every mod of `W` sits on that side: a step that waits for a mod of the other side still gains it under the lock), and the
     cheapest imprint that can be made at `D`'s shape (its outcomes are read there);
-  - **cleaners and narrowers** for the adders: the cheapest craft that adds no mod and needs no crafted one (it removes a mod), the crafts that
+  - **the one-side role** (#1542, hypothesis H40 of #1434): when the mods of `W`, or those of `K`, all sit on one side (`side_of`), the
+    cheapest crafted mod that fills the other side and takes no wanted mod's family (`Entry.fills`: an addition then goes to the one side),
+    and the cheapest offer that takes a mod off the other side alone, one that draws no mod and one that draws one (`Entry.clears`: a
+    removal kept off the one side; a beast side swap, an Eldritch Orb of Annulment after the Ember that makes its side dominant). What an
+    offer clears is read on its own outcomes (`OfferTable._read_sides`): at the item of each shape with one junk mod of each side, it clears
+    a side when its outcomes take mods off that side alone and add none there; one refused there that reads the implicits is read again after
+    each outcome of each offer that changes the implicits alone, which it then needs (`Entry.sets`). The offers of this role that fan out
+    are named all the same, not kept for the later group: the hand tests held them in one group with the plan's methods (on R14 2,579.55 c
+    against main's 3,168.07 c, its group built in 475 s; on R24 the 14 methods of the model's plan, 1,710.64 c against 2,134.44 c).
+  - **cleaners and narrowers** for the adders: the cheapest craft that adds no mod and needs no crafted one (it removes a mod) and the
+    cheapest offer that clears each side (`OfferTable.cleaners`, #1542), the crafts that
     add no mod and need a crafted one when the round holds a crafted mod, and, among the offers that draw no mod, the cheapest that keeps each
     tag out of the draws that no wanted mod the adders must draw carries, and the cheapest of more crafted mods when the round holds two
     crafted mods (#1423). The mods the adders must draw are those of `W`, and the other wanted mods not passing at some state where `D` acts,
@@ -76,7 +86,8 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   step are beaten (about 120 s), nothing more is named, and its lock group comes: 206,331.71 c within the hour.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
-  a restore brings the imprints and an imprint the restores; and an offer that adds the lock of a side and draws nothing (the bench lock)
+  a restore brings the imprints and an imprint the restores; an offer that clears a side only after an offer that sets an implicit brings the
+  cheapest of those when the group holds none (#1542); and an offer that adds the lock of a side and draws nothing (the bench lock)
   brings every offer that may add that lock and keeps the mods (`lockers`, #1513, hypothesis H35 of #1434). The protector rule names the
   lock among the offers that draw no mod, so the Wild Bristle Matron, which draws which metamod it adds, was never named beside the bench
   lock; yet where the item's state leaves it one metamod to add it puts on the same lock, and it may be the cheaper one: on R24's boots,
