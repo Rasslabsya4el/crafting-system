@@ -1343,7 +1343,7 @@ class Search[S]:
             return
         applies = self.gap > 0.0 and self.gap_after is not None and time.perf_counter() - began >= self.gap_after
         within = self.gap if applies else 0.0
-        if self.beaten_at <= (1.0 + within) * (1.0 + ACCEPT_BOUND) * lower:
+        if reaches(self.beaten_at, lower, within):
             self.say(f"stop: no plan of these offers costs less than {lower!r}, and the plan in hand costs at most {self.beaten_at!r}")
             beaten = Beaten(lower, within if within > 0.0 and self.beaten_at > lower else None)
             beaten.states = len(self.states)  # what the search knew when it ended (`_rounds.StatesMeter`)
@@ -1697,6 +1697,14 @@ class MemoryNet(Exception):
     """The kernel arrays' next growth would pass the memory net (`Search._room_check`, #839): the search stops as at any net, with its words."""
 
 
+def reaches(beaten_at: float, lower: float, within: float = 0.0) -> bool:
+    """The search's rule for "beaten" (`Search._beaten`): a certified lower figure `lower` of every plan of some offers reaches the certified
+    upper figure `beaten_at` of a plan in hand, to the solver's certified 1e-6 (OR-32), or within the gap `within` when the stop at the gap applies
+    (OR-39): a plan of those offers can then save nothing the run asks for. `_envelope_plan.closes_at` and `_rounds` (a stopped round read
+    against the final plan, #1559) ask the same rule."""
+    return math.isfinite(lower) and beaten_at <= (1.0 + within) * (1.0 + ACCEPT_BOUND) * lower
+
+
 class Beaten(Exception):
     """The search ended because no plan of its offers can cost less than the plan its caller holds (`Search(beaten_at=...)`): `lower` is the
     certified figure no plan of them costs less than; `within` is the gap setting when that figure reached the held plan only within it, else None."""
@@ -1710,5 +1718,5 @@ class Beaten(Exception):
 
 __all__ = [
     "CONSISTENCY_LIMIT", "FAKE", "FALL_LIMIT", "GAP_SHARE", "Beaten", "MemoryNet", "BoundError", "figure_error", "Net", "NoPolicy", "Problem", "Refused", "Search", "SearchResult", "SearchStats", "Standing",
-    "add_solve_info", "resident_mb", "solve_info_records",
+    "add_solve_info", "reaches", "resident_mb", "solve_info_records",
 ]  # fmt: skip
