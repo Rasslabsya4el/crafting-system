@@ -1127,6 +1127,45 @@ def solve_packed(
     return PackedSolution(value, action, certificate.bound, classes.count, reduced, cls, core.action, info)
 
 
+def packed_of_core(graph: PackedGraph, core: Core, *, merge: bool = True, progress: Callable[[str], None] | None = None) -> PackedSolution:
+    """`solve_packed`'s answer for a graph its caller has solved already: `core` is `solve_graph`'s on `graph` itself, so its values, its
+    policy and its certificate are of the whole graph. The graph is merged into its exact classes (what the lumped chain of the answer and its
+    risk read), and each class takes the distribution its first member's action has in `core`; nothing is solved again (#1566).
+
+    The envelope search prices the plan in hand by `solve_graph` (`_envelope.Search._upper`); after a stop at its net, solving the same graph
+    again for the answer cost R17 283 s past its net (the merge 6 s, the policy iteration on 152,294 classes 269 s, the certificates 3 s)."""
+    say = progress or (lambda _text: None)
+    info: dict = {"states": graph.n, "actions": graph.num_actions, "kernels": graph.num_kernels, "edges_stored": graph.num_edges, "priced_before": True}
+    began = time.perf_counter()
+    classes = exact_classes(graph, say) if merge else identity_classes(graph)
+    reduced, kernel_map = quotient(graph, classes)
+    info.update(
+        classes=classes.count, merge_rounds=classes.rounds, merge_seconds=round(time.perf_counter() - began, 2),
+        quotient_actions=reduced.num_actions, quotient_edges_stored=reduced.num_edges,
+    )
+    cls = classes.cls
+    first = np.unique(cls, return_index=True)[1].astype(np.int64)
+    taken = np.asarray(core.action, dtype=np.int64)[first]
+    wanted = np.where(taken >= 0, kernel_map[graph.act_kernel[np.maximum(taken, 0)]], -1) if graph.num_actions else np.full(len(first), -1, dtype=np.int64)
+    class_action = np.full(reduced.n, -1, dtype=np.int64)
+    has = np.diff(reduced.act_ptr) > 0
+    if reduced.num_actions:
+        owner = np.repeat(np.arange(reduced.n, dtype=np.int64), np.diff(reduced.act_ptr))
+        hit = np.where(reduced.act_kernel == wanted[owner], np.arange(reduced.num_actions), reduced.num_actions)
+        found = np.full(reduced.n, reduced.num_actions, dtype=np.int64)
+        found[has] = np.minimum.reduceat(hit, reduced.act_ptr[:-1][has])
+        class_action = np.where((wanted >= 0) & (found < reduced.num_actions), found, -1)
+    certificate = core.certificate
+    info["own_bound"], info["own_cost"], info["quotient_bound"] = certificate.own_bound, certificate.own_cost, certificate.bound
+    action = lift_policy(graph, reduced, kernel_map, cls, class_action)
+    info["seconds"] = round(time.perf_counter() - began, 2)
+    say(
+        f"merged {graph.n:,} states into {classes.count:,} classes, {reduced.num_actions:,} actions; the plan is the one the search priced, "
+        f"bound {certificate.bound:.3g}, not solved again ({info['seconds']} s)"
+    )
+    return PackedSolution(np.asarray(core.value, dtype=np.float64), action, certificate.bound, classes.count, reduced, cls, class_action, info)
+
+
 def _lumps(graph: PackedGraph, cls: np.ndarray, reduced: PackedGraph, kernel_map: np.ndarray, info: dict) -> bool:
     """`lumps_exactly`, its seconds in `info["lump_check_seconds"]` (it runs only when the whole graph's measure refused)."""
     mark = time.perf_counter()

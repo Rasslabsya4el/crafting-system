@@ -630,8 +630,10 @@ class Search[S]:
         # applies): it cannot improve on it
         self.beaten_at = beaten_at
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
-        self._late: tuple[tuple[int, int], float, str] | None = None  # (states known, pairs realized) of the last pricing its time net stopped, its limit and why (#1516)
+        self._late: tuple[tuple[int, int, int], float, str] | None = None  # the graph (`_grown`) of the last pricing its time net stopped, its limit and why (#1516)
         self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
+        # the last pricing that ended, by its graph (`_grown`): the same graph is not priced again (#1566; kept, like `held`, only when a net has a limit)
+        self._priced: tuple[tuple[int, int, int], tuple[PackedGraph, float, float], object] | None = None  # ... with `solve_graph`'s solution
         self.standing: Standing | None = None
         self.incumbent = incumbent
         self.say = progress or (lambda _text: None)
@@ -1224,9 +1226,11 @@ class Search[S]:
         figure a stop may rest on). With no restart the graph is the realized actions alone (a tip is a dead end). Raises `ConvergenceError`,
         and `Late` when `deadline` (a `time.perf_counter()` instant, `_deadline`) passes before the solve ends (#1516); a graph whose pricing
         was late raises `Late` again at once, until the search has realized more or is given a later limit."""
+        grown = self._grown()
+        if self._priced is not None and self._priced[0] == grown:
+            return self._priced[1]  # the plan in hand, priced already: the same graph has the same price (#1566)
         mark = time.perf_counter()
         self.stats.upper_solves += 1
-        grown = (len(self.states), self.stats.realized)
         try:
             if deadline is not None and self._late is not None and self._late[0] == grown and deadline <= self._late[1]:
                 raise Late(f"{self._late[2]} (the same graph, not priced again before a later limit)", 0.0, "the pricing")
@@ -1250,9 +1254,20 @@ class Search[S]:
             net = self.net
             if net.seconds is not None or net.states is not None or net.memory_mb is not None:
                 self.held = graph, certified  # only a net's stop falls back on it: a search no net can stop does not keep the older arrays alive
+                self._priced = grown, (graph, value, certified), core
             if self.upper is None or certified < self.upper:
                 self.upper = certified
         return graph, value, certified
+
+    def priced(self, graph: PackedGraph):
+        """`solve_graph`'s solution of `graph` when it is the graph this search priced last (the plan it returns after a net's stop), else None:
+        the answer is then taken from it, not solved again (`_packed.solve_walked`, #1566)."""
+        return self._priced[2] if self._priced is not None and self._priced[1][0] is graph else None
+
+    def _grown(self) -> tuple[int, int, int]:
+        """What the upper graph is made of (`_graph`): the states known, those expanded (a tip restarts) and the actions realized. Each only grows,
+        so two equal readings are the same graph."""
+        return len(self.states), self.stats.expanded, self.stats.realized
 
     def _deadline(self, began: float, seconds: float | None = None, final: bool = False) -> float | None:
         """The instant the pricing of the plan in hand must end by (OR-40, #1516), or None for a search with no time net: where the net's
@@ -1580,6 +1595,11 @@ class Search[S]:
         if not self.stats.rounds:
             lower = float(self.lb[0])  # the net ended the first plan's chain before any round: the start's own bound is the lower figure
         try:
+            if self.held is not None and self._late is not None and self._late[0] == self._grown():
+                # this graph's pricing already ran to the time limit, and a plan was priced before it: that plan is the answer, and the stop does
+                # not spend its share past the net on the same graph again (#1566: R17 spent 204 s past its net re-pricing a graph that had taken
+                # 507 s to the net, and kept the plan priced before it anyway)
+                raise Late(f"{self._late[2]} (the same graph, not priced again at the stop)", 0.0, "the pricing")
             plan, _, upper = self._upper(self._deadline(began, final=True))
         except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies, or its pricing met the time net (`Late`, #1516)
             if self.held is not None:  # an earlier plan was certified: it is the answer (OR-33), over the states it knew
