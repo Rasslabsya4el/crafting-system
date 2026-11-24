@@ -33,8 +33,8 @@ landing items differ from the card after the step has its own item card under it
 can add a mod of a family the target wants, one line per family with the chance of each tier and of none (`_route_tiers`),
 mixed the same way. Accepts, on a craft with several outcomes, says how many mods the accepted results may have (when
 every mod is tracked) and that the rest is any. A step that cannot reach the target says "never finishes from here" in
-place of its uses. An essence of level 5 or more has a last field, Note: it reforges a rare and keeps only the fractured
-mod, so no Scouring.
+place of its uses. An essence of level 5 or more has a last field, Note: it reforges a rare, keeping a fractured mod
+only where the item holds one, so no Scouring.
 
 Every mod line has one format, the game's text with its ranges and the tier (`+(100-114) to maximum Life · T1`,
 see `_route_card`). The bought start item shows its known mods that way and the rest of a rare as `any mod or
@@ -57,6 +57,7 @@ what `_route_card` already reads.
 import dataclasses
 import json
 import math
+import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field, replace
@@ -89,6 +90,7 @@ from ._route_chain import chain_of_packed_policy
 from ._route_flow import _blocks as _route_flow_blocks
 from ._route_flow import Chain, Edge, Flow, LossReader, Step, arrived, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
+from ._limit_words import display_text, fossil_name, group_words, page_limits, player_words, state_line_text
 from ._route_proof import PROOF, Proof, group_title, page_line, page_words, proof_of
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
@@ -830,6 +832,10 @@ class _View:
             onward = edge.kind not in ("goal", "again") and edge.to is not None and edge.to + 1 != below
             if self.sure(action):  # one place and one outcome: said only when that place is not the row below (a loop back, a jump)
                 return [self.link(f"then {self.next_title(edge)}", edge.to + 1)] if onward else []
+            if action.label == DRAW_LABEL and edge.kind not in ("goal", "again") and edge.to is not None:
+                # every listing goes on the same way, whatever it came with (R20: the essence of the next step rerolls it, #1442)
+                text = f"whatever mods it came with, go on with {self.next_title(edge)}"
+                return [self.link(text, edge.to + 1)] if onward else [Line(text)]
             text = chance_text(edge.chance)
             return [self.link(f"{text}, then {self.next_title(edge)}", edge.to + 1)] if onward else [Line(text)]
         lines = []
@@ -983,7 +989,7 @@ class _View:
             return f"Benchcraft: {self._mod(next(iter(adds.named)))}"
         if action.reads(self.data).needs_crafted:  # Remove Crafted Mods
             return f"Benchcraft: {offer.label}"
-        return offer.label
+        return fossil_name(offer.label)  # a fossil set by its fossils' game names (#1514)
 
     def trade_field(self) -> Field | None:
         if self.buy is None or self.first is not None:  # the buy spec describes the bought start item, not a recipe-made one
@@ -1012,20 +1018,44 @@ class _View:
         return card_of_item(self.data, item, tiers=True, rolled=False, filler=filler)
 
     def essence_note(self, action: Action, step: Step) -> str | None:
-        """For an essence of level 5 or more used on a rare: it reforges it and keeps only the fractured mod."""
-        if not any(state.flags.rarity is Rarity.RARE for state in step.states):
+        """For an essence of level 5 or more used on a rare: it reforges it, keeping a fractured mod only where the item holds one (R09, R20
+        hold none: #1442, #1514)."""
+        rare = [state for state in step.states if state.flags.rarity is Rarity.RARE]
+        if not rare:
             return None
         label = self.plan.offer_of(action).label
-        for essence in self.data.essences.values():
-            if essence.name == label and essence.level >= 5:
-                return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
-        return None
+        if not any(essence.name == label and essence.level >= 5 for essence in self.data.essences.values()):
+            return None
+        held = [bool(state.fractured) for state in rare]
+        if all(held):
+            return "reforges a rare item and keeps only the fractured mod: no Scouring first, the item stays rare"
+        if any(held):
+            return "reforges a rare item and keeps only a fractured mod, where the item has one: no Scouring first, the item stays rare"
+        return "reforges a rare item with new mods, the essence's mod among them: no Scouring first, the item stays rare"
+
+    def craft_again_note(self, action: Action, step: Step) -> str | None:
+        """For a bench craft an item comes to more than once in a run: it is paid again each time (R24's suffix lock of 2 Divine, ≈3.1
+        times, #1442). A bench craft is refused on an item that already holds its mod, so an item that comes back has lost it."""
+        offer = self.plan.offer_of(action).offer
+        adds = offer.action.adds(self.data, self.plan.target.start_item)
+        if not (adds.crafted and adds.named) or step.uses is None or not step.reached or not math.isfinite(step.uses):
+            return None
+        times = step.uses / step.reached
+        if times < 1.05:
+            return None
+        return (
+            "each time an item comes back here the craft is gone (a later step or a restart took it off), so it is paid again: the step cost "
+            "counts every one"
+        )
 
     def notes(self, action: Action, step: Step, restart: bool) -> list[str]:
-        """The Note lines of a row: the essence's, and, when the visits could not be solved, that this row's chances are a plain mean."""
+        """The Note lines of a row: the essence's, a bench craft's paid again on each return, and, when the visits could not be solved, that
+        this row's chances are a plain mean."""
         found = []
         if not restart and (essence := self.essence_note(action, step)):
             found.append(essence)
+        if not restart and (again := self.craft_again_note(action, step)):
+            found.append(again)
         if not self.flow.measured and len(step.states) > 1:
             found.append(
                 f"the chances of this step are the plain mean of its {len(step.states):,} states: how often a run visits each could not be solved"
@@ -1118,6 +1148,9 @@ class _View:
         goal = self.gains(step, moving)
         if not goal and any(edge.kind == "goal" for edge in moving):
             goal = ["the target"]
+        one_way = action.label == DRAW_LABEL and len(shown) == 1 and not failing
+        if one_way:
+            goal = []  # a listing that goes on the same way whatever it came with aims at no mod: the Goal would read as what to look for (#1442)
         never = step.never_finishes
         step_cost = step.step_cost
         leave = math.fsum(edge.chance for edge in step.edges if edge.to != step.number)  # the chance a use takes the item out of the step
@@ -1135,7 +1168,7 @@ class _View:
             _plain("Goal", *goal),
             _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
-            Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else "Chance per use", tuple(chances)) if chances else None,
+            Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
             self.tier_field(step, action),
             _plain("Cost per use", *self.cost_lines(action)),
             _plain("Uses on average", *uses),
@@ -1226,8 +1259,9 @@ class _View:
         return proof_of(self.plan) if self.inp.label == PLANNER_LABEL else None
 
     def limit_line(self, limit) -> Line:
-        """A limit of the goal card: the planner's in the page's words of its proof (`_route_proof`), a given route's as it is."""
-        return limit_line(limit) if self.proof is None else planner_limit_line(self.plan, limit)
+        """A limit of the goal card: the planner's in the page's words of its proof (`_route_proof`), a given route's as it is; either with the
+        planner's own words said as a player reads them (`_limit_words`, #893, #1514)."""
+        return said_line(limit, limit_line) if self.proof is None else planner_limit_line(self.plan, limit)
 
     def walked(self) -> bool:
         """Whether the planner's own plan is one its search walked to and was stopped on (a `REACHED` limit, #1142); a given route never is."""
@@ -1268,8 +1302,9 @@ class _View:
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
         limits = spent_kinds_named(limits, (use.name for use in uses))  # a kind named by a currency a step pays with is named by its use (#983)
+        limits = page_limits(limits, plan.target)  # fossil sets by their game names; socket methods apart on a target with no sockets (#1514)
         leaves_out = tuple(
-            Field(group_title(group[0].kind, title) if self.proof is not None else title, tuple(self.limit_line(limit) for limit in group))
+            Field(group_words(group_title(group[0].kind, title) if self.proof is not None else title), tuple(self.limit_line(limit) for limit in group))
             for title, group in grouped(limits)
         )
         return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item, self.forced), leaves_out)
@@ -1304,7 +1339,17 @@ def planner_limit_line(plan: Plan, limit, proof: Proof | None = None) -> Line:
     if own is not None:
         return own
     why, guarantee = page_words(limit, proof, plan)
-    return limit_line(limit, why, guarantee)
+    return said_line(limit, lambda limit: limit_line(limit, why, guarantee))
+
+
+def said_line(limit, drawn) -> Line:
+    """A limit's line (`drawn(limit)`) with the planner's own words said as a player reads them (`_limit_words`, #893, #1514): the two notes on
+    what the route draws in the page's sentences, every other sentence and its labels with the planner's words replaced."""
+    said = display_text(limit) or state_line_text(limit)
+    if said is not None:
+        return Line(said)
+    line = drawn(limit)
+    return dataclasses.replace(line, text=player_words(line.text), more=tuple(player_words(entry) for entry in line.more))
 
 
 def build_section(
@@ -1564,7 +1609,29 @@ def any_base_words(buy: BuyStep | None) -> str | None:
 
 def page_title(data: GameData, target: Target, wider: str | None = None) -> str:
     """The page's title: the item the route makes, as a player names it ("Elder Shaper Eternal Burgonet, item level 86"), never the target's
-    file name (#893, #1442). A start bought as any base of its kind is named as the cards name it ("Ring, any base", #937)."""
+    file name (#893, #1442), with its wanted mods in short (`wanted_words`). A start bought as any base of its kind is named as the cards
+    name it ("Ring, any base", #937)."""
     influences = " ".join(influence.value.title() for influence in sorted(target.influences))
     base = wider or data.base_items[target.base_id].name
-    return f"Route to craft: {influences + ' ' if influences else ''}{base}, item level {target.item_level}"
+    wanted = wanted_words(data, target)
+    return f"Route to craft: {influences + ' ' if influences else ''}{base}, item level {target.item_level}" + (f", with {wanted}" if wanted else "")
+
+
+_LEAD = re.compile(r"^[+-]?(?:#|\([\d.]+-[\d.]+\)|[\d.]+)%?\s+(?:(?:to|increased|reduced|chance to)\s+)?")
+
+
+def short_mod(text: str) -> str:
+    """A wanted mod as a title names it: its first line without the figures in front ("+(13-14)% chance to Suppress Spell Damage" is
+    "Suppress Spell Damage", "+# to maximum Life" is "maximum Life"); a text with no figure in front stays as it is."""
+    first = text.split(" / ")[0]
+    return _LEAD.sub("", first, count=1) or first
+
+
+def wanted_words(data: GameData, target: Target) -> str:
+    """The target's wanted mods in short, in the order of its card: each wanted slot, then each group as "1 of A / B / C" (#893)."""
+    card = card_of_target(data, target)
+    names = [short_mod(slot.text) for slot in (*card.implicits, *card.prefixes, *card.suffixes) if slot.tone == "wanted"]
+    for group in card.groups:
+        need = re.match(r"at least (\d+) of", group.heading)
+        names.append(f"{need.group(1) if need else 'some'} of {' / '.join(dict.fromkeys(short_mod(member.text) for member in group.members))}")
+    return ", ".join(dict.fromkeys(names))

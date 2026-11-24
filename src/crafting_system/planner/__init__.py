@@ -26,7 +26,10 @@ from ._entry import NotModelled, PlanSettings, guide_plan, plan_target, progress
 from ._envelope import Standing
 from ._foresight import Status as LockStatus
 from ._limits import PROVED as PROVED_UNNEEDED
+from ._limits import DISPLAY as LIMIT_DISPLAY
+from ._limits import NOT_BUILT as KINDS_NOT_BUILT
 from ._limits import ROUNDS, WITHIN_GAP, kind_title
+from ._limits import SOLVE as LIMIT_SOLVE
 from ._limits import UNTRIED as KINDS_NOT_TRIED
 from ._rounds import BEATEN as ROUND_BEATEN
 from ._rounds import CLOSED as ROUND_CLOSED
@@ -105,7 +108,7 @@ from ._starts import plan_with_starts
 
 __all__ = [
     "KINDS_NOT_TRIED", "PROVED_UNNEEDED", "ROUNDS", "ROUND_BEATEN", "ROUND_CLOSED", "ROUND_GAVE_WAY", "ROUND_NONE", "ROUND_REFUSED", "ROUND_STOPPED",
-    "ROUND_WITHIN", "WITHIN_GAP", "kind_title",
+    "ROUND_WITHIN", "WITHIN_GAP", "kind_title", "KINDS_NOT_BUILT", "LIMIT_DISPLAY", "LIMIT_SOLVE",
     "BUDGET_SECONDS",
     "GIVEN_SOURCE",
     "HEADING",

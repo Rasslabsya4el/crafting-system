@@ -41,6 +41,7 @@ from crafting_system.planner._limits import GROUPS, ROUNDS, SHOWN_LABELS, UNTRIE
 from crafting_system.planner._offers import offer_of
 from crafting_system.planner._plan import add_risk
 from crafting_system.cli._route_html import render_page
+from crafting_system.cli._limit_words import group_words, page_limits, player_words
 from crafting_system.cli._route_proof import group_title, guarantee_words, proof_of
 from crafting_system.cli._route_view import Page, PageError, build_section, planner_limit_line, route_input
 from crafting_system.abstraction import Coarsening, Goal, Wanted
@@ -298,8 +299,9 @@ def test_the_text_report_the_json_and_the_page_show_the_same_records(plan):
     assert [entry["kind"] for entry in document["limits"]] == [limit.kind for limit in sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind))]
     for limit in plan.limits:
         assert limit_text(limit) in text  # the text report names every label
-        assert escape(planner_limit_line(plan, limit).text) in page  # the page says the same record in its words of the proof (#1161)
-        assert all(escape(label) in page for label in limit.labels)  # the page holds every label too
+    for limit in page_limits(plan.limits, plan.target):  # the page's limits: fossil sets by game names, socket methods apart (#1514)
+        assert escape(planner_limit_line(plan, limit).text) in page  # the page says the same record in its words of the proof (#1161) and a player's (#893)
+        assert all(escape(player_words(label)) in page for label in limit.labels)  # the page holds every label too
     assert "What this answer leaves out" in text and "What this answer leaves out" in page
 
 
@@ -307,13 +309,14 @@ def test_the_goal_card_of_the_page_has_the_section_grouped_by_kind(plan):
     card = build_section(route_input(plan), DATA).goal
 
     titles = [field.label for field in card.leaves_out]
-    assert titles == [group_title(group[0].kind, title) for title, group in grouped(plan.limits)]  # the rounds' group by what it tells (#1161)
-    assert "Methods offered only when the run's setting names them" in titles and "Memory Strands" in titles
-    ordered = sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind))
+    limits = page_limits(plan.limits, plan.target)
+    assert titles == [group_words(group_title(group[0].kind, title)) for title, group in grouped(limits)]  # the rounds' group by what it tells (#1161)
+    assert "Methods this run was not set to use" in titles and "Memory Strands" in titles  # a player's words for the opt-in kinds (#893)
+    ordered = sorted(limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind))
     assert [line.text for field in card.leaves_out for line in field.lines] == [planner_limit_line(plan, limit).text for limit in ordered]
-    # every limit the page does not say in its own words (the rounds', #1161) is the planner's sentence
-    own = [limit for limit in ordered if limit.kind not in (ROUNDS, UNTRIED)]
-    assert [planner_limit_line(plan, limit).text for limit in own] == [guarantee_words(text, proof_of(plan)) for text in sentences(own, SHOWN_LABELS)]
+    # every limit the page does not say in its own words (the rounds', #1161; what the route draws, #893) is the planner's sentence in a player's words
+    own = [limit for limit in ordered if limit.kind not in (ROUNDS, UNTRIED, "display", "state-line")]
+    assert [planner_limit_line(plan, limit).text for limit in own] == [player_words(guarantee_words(text, proof_of(plan))) for text in sentences(own, SHOWN_LABELS)]
     assert "leaves_out" not in [field.label for field in card.fields]
 
 
@@ -433,17 +436,22 @@ def test_a_guarantee_that_claims_the_cheapest_plan_must_have_its_form_for_an_app
 
 
 def test_the_text_and_the_json_name_every_withheld_kind_and_the_page_holds_the_rest_in_a_closed_details(plan):
-    opt_in = of_kind(plan.limits, "kinds-not-built")[0]  # a limit with more labels than the page shows: the methods the planner cannot use yet (since #886 no beta kind is opt-in)
-    assert len(opt_in.labels) > SHOWN_LABELS
+    whole = of_kind(plan.limits, "kinds-not-built")[0]  # a limit with more labels than the page shows: the methods the planner cannot use yet (since #886 no beta kind is opt-in)
+    assert len(whole.labels) > SHOWN_LABELS
     report = build_report(plan, DATA)
     text = render_text(report)
     document = policy_document(report)
     page = render_page(Page("x", (build_section(route_input(plan), DATA),)))
 
-    assert ", ".join(opt_in.labels) in text  # every one, in order
-    assert next(entry for entry in document["limits"] if entry["kind"] == "kinds-not-built")["labels"] == list(opt_in.labels)
+    assert ", ".join(whole.labels) in text  # every one, in order
+    assert next(entry for entry in document["limits"] if entry["kind"] == "kinds-not-built")["labels"] == list(whole.labels)
+    # the page says the socket methods apart on a target with no sockets (#1514); each of its two lines names three and holds the rest
+    split = of_kind(page_limits(plan.limits, plan.target), "kinds-not-built")
+    assert sorted(label for limit in split for label in limit.labels) == sorted(whole.labels)
+    opt_in = max(split, key=lambda limit: len(limit.labels))
+    assert len(opt_in.labels) > SHOWN_LABELS
     first = ", ".join(opt_in.labels[:SHOWN_LABELS])
-    assert f"{first} and {len(opt_in.labels) - SHOWN_LABELS} more" in page  # the page names the first three ...
+    assert escape(f"{first} and {len(opt_in.labels) - SHOWN_LABELS} more") in page  # the page names the first three ...
     rest = escape(", ".join(opt_in.labels[SHOWN_LABELS:]))
     assert f"<details><summary>the other {len(opt_in.labels) - SHOWN_LABELS}</summary>{rest}</details>" in page  # ... and holds the others, closed
     assert "<details open" not in page and all(escape(label) in page for label in opt_in.labels)

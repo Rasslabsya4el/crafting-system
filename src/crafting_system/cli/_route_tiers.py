@@ -85,6 +85,17 @@ def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozense
             accepted.setdefault(key, set())
             if ab.passes(mod, index):
                 accepted[key].add(tiers[mod_id])
+    # the lower tiers of a leaf named by its top mod alone (OR-1; R20's Trap and Mine Damage, Uber3 of Uber1 to Uber3, #1442): the mods of the
+    # base's table with the same type, side, domain, families and stats as a leaf's mod are its ladder too, so a draw of them is said by its
+    # tier and not folded into "none"; a mod of the family with other stats (a gem level of another skill) stays out
+    shapes = {key: {_shape(data.mods[mod_id]) for mod_id in ladder} for key, ladder in found.items()}
+    for mod_id, tier in tiers.items():
+        mod = data.mods.get(mod_id)
+        if mod is None or mod.domain == "crafted" or mod.required_level > ab.item_level:
+            continue
+        key = (mod.type, mod.generation_type, mod.domain)
+        if key in found and mod_id not in found[key] and _shape(mod) in shapes[key]:
+            found[key][mod_id] = tier
     families = []
     for key, ladder in found.items():
         if not accepted[key]:
@@ -94,6 +105,11 @@ def wanted_families(ab: Abstraction, influences: frozenset[Influence] = frozense
         text = mod_text(data.mods[best])
         families.append(_Family(_hashes(text) if tiered else text, ladder, frozenset(accepted[key]), tiered))
     return families
+
+
+def _shape(mod) -> tuple:
+    """What makes two mods tiers of one ladder beyond their type: their families and the ids of their stats."""
+    return tuple(mod.families), tuple(stat.id for stat in mod.stats)
 
 
 def _signature(outcomes) -> Hashable | None:

@@ -343,11 +343,11 @@ FAST = ("Fast1", "35% increased Speed", 1, False), ("Fast2", "30% increased Spee
 ESSENCE_FAST = ("FastEssence", "5% increased Speed for each nearby Enemy", None, True)
 
 
-def test_a_fractured_mod_that_stands_for_tiers_with_other_fixed_values_reads_all_of_them():
+def test_a_fractured_mod_that_stands_for_tiers_with_other_fixed_values_reads_them_as_one_text_of_any_tier():
     side, slot = stub_reader(*FAST).fractured("Fast2", ())
 
     assert side is Side.PREFIX
-    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any tier")
+    assert slot == Slot("#% increased Speed", "mod", ("fractured",), "any tier")
 
 
 def test_a_fractured_mod_the_state_names_by_an_essence_only_tier_reads_as_the_tiers_of_its_class():
@@ -355,13 +355,13 @@ def test_a_fractured_mod_the_state_names_by_an_essence_only_tier_reads_as_the_ti
 
     _, slot = reader.fractured("FastEssence", ())
 
-    assert slot == Slot("35% increased Speed or 30% increased Speed", "mod", ("fractured",), "any tier")  # no "essence only"
+    assert slot == Slot("#% increased Speed", "mod", ("fractured",), "any tier")  # no "essence only"
 
 
-def test_a_slot_of_a_family_told_apart_reads_the_texts_of_its_tiers():
+def test_a_slot_of_a_family_told_apart_reads_its_tiers_as_one_text_of_any_tier():
     row = stub_reader(*FAST).family(SimpleNamespace(side=Side.PREFIX, kind="Speed"))
 
-    assert row == Slot("35% increased Speed or 30% increased Speed", "mod", (), "any tier")
+    assert row == Slot("#% increased Speed", "mod", (), "any tier")
 
 
 def test_a_fractured_mod_of_a_class_of_one_tier_keeps_its_text_and_the_state_named_mod_when_it_is_not_in_the_class():
@@ -763,4 +763,17 @@ def test_a_fixed_lowest_tier_beside_ranged_tiers_reads_as_their_one_text_and_onl
     reader.data.mods["FastJun"] = SimpleNamespace(**{**vars(reader.data.mods["Fast1"]), "id": "FastJun", "text": "40% increased Speed / 5% more Fun", "domain": "unveiled"})
     reader.data.mods["FastBench"] = SimpleNamespace(**{**vars(reader.data.mods["Fast1"]), "id": "FastBench", "text": "20% increased Speed / crafted", "domain": "crafted"})
     reader.tiers.update(FastJun=1, FastBench=1)
-    assert reader.family(SimpleNamespace(side=Side.PREFIX, kind="Speed")) == Slot("35% increased Speed or 30% increased Speed", "mod", (), "any tier")
+    # a line of any tier: no figure tells the tiers apart for it, so the fixed tiers are said once (R24's Movement Speed, #1442)
+    assert reader.family(SimpleNamespace(side=Side.PREFIX, kind="Speed")) == Slot("#% increased Speed", "mod", (), "any tier")
+
+
+def test_fixed_tiers_of_a_line_of_any_tier_are_said_once_and_hybrid_mods_are_kept_whole():
+    """#1442 (R24): "35% increased Movement Speed or 30% ... or 10% ..." beside "· any tier" names figures the line does not ask; and a family
+    of hybrid mods read "+# to maximum Energy Shield / +# to maximum Life or +# to maximum Energy Shield / +# to maximum Mana", one list of
+    two separators (OR-15)."""
+    assert _tiers_joined(["35% increased Speed", "30% increased Speed"], every=True) == "#% increased Speed"
+    assert _tiers_joined(["35% increased Speed", "30% increased Speed"]) == "35% increased Speed or 30% increased Speed"
+    hybrids = ["+# to maximum Energy Shield / +# to maximum Life", "+# to maximum Energy Shield / +# to maximum Mana", "+# to Evasion Rating / +# to maximum Life"]
+    assert _tiers_joined(hybrids, every=True) == "one of: " + "; ".join(hybrids)
+    assert _tiers_joined(hybrids[:1] * 2) == hybrids[0]  # one hybrid mod alone stays as it is
+    assert _tiers_joined(["+# to maximum Life", "+# to maximum Mana"]) == "+# to maximum Life or +# to maximum Mana"
