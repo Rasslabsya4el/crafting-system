@@ -11,7 +11,7 @@ from fractions import Fraction
 
 import pytest
 
-from crafting_system.actions import BeastInfluenceRecipe, InfluencedExaltedOrb, OrbOfDominance, influence_pool
+from crafting_system.actions import BeastInfluenceRecipe, ExaltedOrb, InfluencedExaltedOrb, OrbOfDominance, influence_pool
 from crafting_system.data import MissingDataError, PIN, load_game_data
 from crafting_system.data.elevated import is_elevated, load_elevated
 from crafting_system.items import ExplicitMod, Influence, Item, Rarity, Side
@@ -75,11 +75,16 @@ def test_the_pool_of_an_influence_never_holds_an_ordinary_mod_or_an_elevated_one
     assert all(next(w.tag for w in mod.spawn_weights if w.weight > 0) == "helmet_shaper" for mod in mods)
 
 
-def test_a_hunters_exalted_orb_and_the_hunter_recipe_draw_from_the_same_pool(data):
+def test_the_hunter_recipe_draws_from_the_whole_pool_of_a_hunter_belt_as_an_exalted_orb(data):
+    # #1538: the recipe is an Exalted Orb on the influenced item, so the Hunter's Exalted Orb's pool (1,750 + 3,250) is a part of its pool only
     belt = base_named(data, "Heavy Belt")
     orb = InfluencedExaltedOrb(HUNTER).outcomes(data, rare(data, belt, level=75))
-    recipe = BeastInfluenceRecipe(HUNTER).outcomes(data, rare(data, belt, level=75, influences=frozenset({HUNTER})))
-    assert pool_shape(recipe) == pool_shape(orb) == {"prefix": (4, 1750), "suffix": (7, 3250)}
+    hunter = rare(data, belt, level=75, influences=frozenset({HUNTER}))
+    recipe = BeastInfluenceRecipe(HUNTER).outcomes(data, hunter)
+    assert pool_shape(orb) == {"prefix": (4, 1750), "suffix": (7, 3250)}
+    assert recipe.pool == ExaltedOrb().outcomes(data, hunter).pool
+    orb_ids = {entry.mod.id for family in orb.pool for entry in family.mods}
+    assert orb_ids < {entry.mod.id for family in recipe.pool for entry in family.mods}
 
 
 # --- the Orb of Dominance and the committed Elevated mapping ------------------------------------------------------------------

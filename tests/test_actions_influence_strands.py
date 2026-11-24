@@ -30,6 +30,7 @@ from crafting_system.actions import (
     strands_after,
 )
 from crafting_system.actions.cut import Cut
+from crafting_system.actions.pool import build_pool
 from crafting_system.items import Influence, Item
 
 DATA = INFLUENCE_DATA
@@ -191,7 +192,7 @@ def test_the_orb_of_dominance_is_not_cut():
     assert orb.cut_of(DATA, shaper_helmet(roll(P1, 3), roll(S1, 2), strands=100)) is None
 
 
-# --- the beast recipe: neither cuts nor spends, and borrows the pool without the cut --------------------------------------------
+# --- the beast recipe: neither cuts nor spends, and draws the Exalted Orb's pool without the cut (#1538) --------------------------------------------
 
 
 @pytest.mark.parametrize("strands", [1, 100])
@@ -204,9 +205,10 @@ def test_the_beast_recipe_leaves_the_strands_alone_and_draws_from_the_uncut_pool
     assert recipe.cut_of(DATA, stranded) is None
     assert not isinstance(result, Spent) and strands_after(result, strands) == {strands: ONE}
     # the draw equals the 0-strand draw, even at a high count: the pool is not cut
-    assert result.pool == reference.pool == influence_pool(DATA, stranded, SHAPER)
-    assert {entry.mod.id: entry.weight for family in result.pool for entry in family.mods} == {P1: 300, P2: 300, P3: 200, S1: 500, S2: 500}
-    assert result.chance_all([P3]) == reference.chance_all([P3]) == Fraction(200, 1800)
+    assert result.pool == reference.pool == build_pool(DATA, stranded)  # the item's whole pool, uncut (#1538: it draws as an Exalted Orb)
+    shaper = {entry.mod.id: entry.weight for family in result.pool for entry in family.mods if family.family.startswith("ContractHelmetShaper")}
+    assert shaper == {P1: 300, P2: 300, P3: 200, S1: 500, S2: 500}
+    assert result.chance_all([P3]) == reference.chance_all([P3])
     assert result.distribution(BY_FAMILY) == reference.distribution(BY_FAMILY)
     # the finished item is the 0-strand one with the count of the stranded item
     finished, expected = result.sample(random.Random(5)), reference.sample(random.Random(5))
