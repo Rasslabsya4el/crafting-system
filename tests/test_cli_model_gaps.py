@@ -210,6 +210,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("actions/locus.py", "_locus", ("ValueError",), EITHER, "after the clause for a model gap, so no model gap reaches it: a class with no corrupted pool (the game) or a base the data lacks lists no Locus of Corruption, silent"),
     ("actions/recombinator.py", "Recombinator.outcomes", ("TypeError", "ValueError", "OverflowError"), NOT_A_REFUSAL, "the exponent of the reading is no number; no action is called"),
     ("cli/_benchmark.py", "benchmark_main", ("DataError", "ValueError", "OSError"), EITHER, "one `Error:` line with the text of whichever error stopped the command"),
+    ("cli/_benchmark.py", "_guide_own_plan", ("PlanError",), EITHER, "the guide's own plan, read when its walk on the site plan passed the run's memory net (#1600), cannot be made: the entry says so in `guide_not_evaluable` and the plan stands, as for `_guide_plan_of`"),
     ("cli/_benchmark.py", "_guide_plan_of", ("PlanError",), EITHER, "the guide's route of a site plan cannot be priced on its own offers (an action the model does not hold, #1442, or another refusal of its plan): the entry says so by name in `guide_not_evaluable` and the plan stands"),
     ("cli/_page_main.py", "page_main", ("DataError", "PlanFileError", "RouteError", "PlanError", "OSError"), EITHER, "one `Error:` line and exit 1: a saved plan that cannot be read, a route file that cannot be read, or a guide that cannot be priced on its own offers (an action the model does not hold, #1442, #1305)"),
     ("cli/_benchmark.py", "run_route", ("ValueError", "OSError", "DataError", "PriceFileNotFound", "ConvergenceError"), EITHER, "`ROUTE_ERRORS`: ValueError is the parent of both families and of every other error of a route; the entry carries the text of whichever"),
@@ -219,6 +220,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_main.py", "_limit", ("ValueError",), NOT_A_REFUSAL, "a `--time-limit` or `--memory-limit` that is not a number: the command says so (#825)"),
     ("cli/_report.py", "_leaf_chance", ("ValueError",), EITHER, "the chance of one use is left out of the line; display only, no plan is changed"),
     ("cli/_route_view.py", "_View.leaf_text", ("ValueError",), NOT_A_REFUSAL, "the trade site's stat list: no action is called"),
+    ("cli/_route_view.py", "_View._start_over", ("NotApplicableError", "OutOfScopeError", "ValueError"), EITHER, "a step whose action's declarations cannot be read at the start item is not read as starting the item over: its row keeps the action's own title (#1600)"),
     ("cli/_route_view.py", "_trade_stats", ("OSError", "ValueError", "AttributeError"), NOT_A_REFUSAL, "the recorded stat list on disk: no action is called"),
     ("cli/_trade.py", "trade_main", ("TradeError", "TargetError", "DataError", "PriceFileNotFound", "ValueError", "OSError"), NOT_A_REFUSAL, "the trade command: no action is called"),
 ]

@@ -17,6 +17,7 @@ action have moved; the first divergence tells the chance and the cost of one use
 """
 
 import argparse
+import gc
 import os
 import platform
 import subprocess
@@ -38,7 +39,7 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
-from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, default_offers, made_start, plan_target
+from crafting_system.planner import BUDGET_SECONDS, PackedPolicy, Plan, PlanError, PlanSettings, default_offers, guide_plan, made_start, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
@@ -480,6 +481,7 @@ def run_route(
         "timings_seconds": None,
         "record": None,
         "guide_not_evaluable": None,
+        "guide_judged_on": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
     loaded: PriceFile | None = None
@@ -533,7 +535,18 @@ def run_route(
             if bench.route is not None:
                 judged_on = plan if not site else _guide_plan_of(entry, bench, plan, data, target, loaded, root)
                 if judged_on is not None:
-                    _judge_guide(entry, timings, bench, judged_on, data, root, config, site)
+                    stopped = None
+                    try:
+                        _judge_guide(entry, timings, bench, judged_on, data, root, config, site)
+                    except BudgetExceeded as stop:
+                        if not site or judged_on is not plan:
+                            raise
+                        stopped = stop.binding.words()  # read out, so the walk's frames go with the exception before the fallback (#1600)
+                    if stopped is not None:  # the walk on the site plan passed the net: the guide is read on its own plan
+                        own = _guide_own_plan(entry, bench, plan, data, target, loaded, root)
+                        if own is not None:
+                            _judge_guide(entry, timings, bench, own, data, root, config, site)
+                            entry["guide_judged_on"] = f"{GUIDE_OWN_AFTER_NET} ({stopped})"
     except _Skipped:
         pass
     except BudgetExceeded as stop:  # the memory net, met after the plan: the record is kept and the stop is said (#1381)
@@ -555,6 +568,29 @@ def _guide_plan_of(entry: dict, bench: BenchmarkRoute, plan: Plan, data: GameDat
     try:
         return guide_judged_on(plan, labels, data, target, prices)
     except PlanError as refused:  # `NotModelled` names the actions; another refusal (no price for one) says its own problem
+        entry["guide_not_evaluable"] = f"guide not evaluable: {_without_root(str(refused), root)}"
+        return None
+
+
+GUIDE_OWN_AFTER_NET = "the guide's cost is read on its own methods (as for a site plan that lacks one of them): its walk on the site plan stopped at the run's memory net"
+
+
+def _guide_own_plan(entry: dict, bench: BenchmarkRoute, plan: Plan, data: GameData, target: Target, prices: PriceFile, root: Path) -> Plan | None:
+    """The guide's own plan (`guide_plan`, #1442) when the guide's walk on the site plan, which offers every action it names, passed the run's
+    memory net (OR-40, #1600): the site plan's built actions and memos are let go and what was read of the guide is cleared; the caller
+    says in words, once the guide is read on it, which plan the figure is read on (`guide_judged_on`). None, with the reason in
+    `guide_not_evaluable`, when that plan cannot be made."""
+    if isinstance(plan.policy, PackedPolicy):
+        plan.policy.release()  # the actions the walk built of the site plan's own policy (its divergences)
+    abstraction = getattr(plan, "abstraction", None)
+    if abstraction is not None:
+        abstraction.release_memos()
+    gc.collect()
+    for key in ("given_route", "solver_not_dearer", "completed_route", "solver_not_dearer_than_completed"):
+        entry[key] = None
+    try:
+        return guide_plan(data, target, prices, _route_labels(root, bench))
+    except PlanError as refused:
         entry["guide_not_evaluable"] = f"guide not evaluable: {_without_root(str(refused), root)}"
         return None
 
@@ -839,6 +875,8 @@ def render_summary(document: dict) -> str:
             lines.append("  solver not dearer than the guide: " + ("yes" if entry["solver_not_dearer"] else "NO"))
         if entry["solver_not_dearer_than_completed"] is not None:
             lines.append("  solver not dearer than the completed route: " + ("yes" if entry["solver_not_dearer_than_completed"] else "NO"))
+        if entry.get("guide_judged_on") is not None:
+            lines.append(f"  {entry['guide_judged_on']}")
         if entry.get("guide_not_evaluable") is not None:
             lines.append(f"  {entry['guide_not_evaluable']}")
         if entry["error"] is not None:

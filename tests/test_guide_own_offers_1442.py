@@ -15,7 +15,7 @@ from targets_support import DATA
 import crafting_system.cli._benchmark as benchmark_module
 from crafting_system.cli import main
 from crafting_system.cli._route import evaluate_route, load_route
-from crafting_system.planner import NotModelled, guide_plan, make_plan
+from crafting_system.planner import NotModelled, PackedPolicy, guide_plan, make_plan
 from crafting_system.targets import load_target
 
 COMMAND = "bench" + "mark"  # a bare string with the name would trip tests/test_no_timing.py
@@ -109,3 +109,71 @@ def test_a_finish_the_guide_s_route_sets_stays_in_its_model_and_one_it_never_tou
         kept[name] = (plan.target.quality is not None, bool(plan.target.implicits), tuple(step.kind for step in plan.finish_steps))
     # what the guide leaves out it does after its mods as the planner's plan does: R06's finish steps follow its goals (#1234)
     assert kept == {"r05-strength-ring": (True, False, ()), "r06-strength-heavy-belt": (False, False, ("quality", "implicit"))}
+
+
+def test_a_guide_walk_on_the_site_plan_that_passes_the_run_s_memory_net_is_read_on_the_guide_s_own_plan_and_says_so(tmp_path, monkeypatch, capsys):
+    # #1600: R13's site plan came to offer every action its guide names, so the guide was walked on the site plan's model, which passed the
+    # run's memory net (16 GB in 204 s). The walk now stops at the net (OR-40) and the guide is read on `guide_plan`, its figure the same.
+    from crafting_system.budget import MEMORY, Binding, BudgetExceeded
+
+    real = benchmark_module.evaluate_route
+    walked = []
+
+    def net_on_the_site_plan(plan, route, data):
+        walked.append(not isinstance(plan.policy, PackedPolicy))
+        if isinstance(plan.policy, PackedPolicy):  # the site plan (searched); `guide_plan`'s is a fixed policy on its own reach
+            raise BudgetExceeded(Binding("the report and the route page", MEMORY, 12_288, 12_301, "the plan's record is written"))
+        return real(plan, route, data)
+
+    monkeypatch.setattr(benchmark_module, "evaluate_route", net_on_the_site_plan)
+    site = run_benchmark(tmp_path / "site", "--net")
+    assert walked == [False, True]  # the site plan first, then the guide's own
+    assert site["error"] is None and site["guide_not_evaluable"] is None
+    assert site["guide_judged_on"].startswith(benchmark_module.GUIDE_OWN_AFTER_NET + " (")
+    monkeypatch.setattr(benchmark_module, "evaluate_route", real)
+    usual = run_benchmark(tmp_path / "usual", "--net")
+    assert usual["guide_judged_on"] is None  # read on the site plan, as before
+    assert site["given_route"]["mean"] == pytest.approx(usual["given_route"]["mean"], rel=1e-9)  # the same cost on its own methods
+    assert f"  {site['guide_judged_on']}" in capsys.readouterr().out.splitlines()
+
+
+def test_the_object_walk_of_a_given_route_asks_the_report_s_memory_net():
+    from crafting_system.budget import BudgetExceeded
+    from crafting_system.cli._report_net import report_net
+
+    target = load_target(R12, DATA)
+    own = guide_plan(DATA, target, price_file(), (REFORGE,))
+    route = load_route(GUIDE, own, DATA)
+    with report_net(0.001), pytest.raises(BudgetExceeded):  # a net every process passes
+        evaluate_route(own, route, DATA)
+    assert evaluate_route(own, route, DATA).risk.mean.value > 0  # outside the net nothing is asked
+
+
+def test_the_reach_of_a_plan_s_own_policy_asks_the_report_s_memory_net_and_a_packed_policy_lets_its_built_actions_go():
+    # #1600: the divergences are read on the site plan's own policy, whose whole reach `policy_states` lists first, each state building its
+    # action (R13: 12 GB in 156 s); the net now stops it, and the fallback lets the actions built so far go
+    from crafting_system.budget import BudgetExceeded
+    from crafting_system.cli._reach import policy_states
+    from crafting_system.cli._report_net import report_net
+
+    target = load_target(R12, DATA)
+    plan = make_plan(DATA, dataclasses.replace(target, actions=("harvest-reforge",)), price_file())
+    with report_net(0.001), pytest.raises(BudgetExceeded):
+        policy_states(plan.start, plan.policy, plan.is_goal)
+    assert policy_states(plan.start, plan.policy, plan.is_goal)[0] == plan.start
+
+
+def test_when_the_guide_s_own_plan_cannot_be_made_after_the_net_the_entry_says_why_and_not_that_it_was_read_there(tmp_path, monkeypatch):
+    from crafting_system.budget import MEMORY, Binding, BudgetExceeded
+
+    def net(plan, route, data):
+        raise BudgetExceeded(Binding("the report and the route page", MEMORY, 12_288, 12_301, "the plan's record is written"))
+
+    def refused(*_args):
+        raise NotModelled(("Orb of Nonsense",))
+
+    monkeypatch.setattr(benchmark_module, "evaluate_route", net)
+    monkeypatch.setattr(benchmark_module, "guide_plan", refused)
+    entry = run_benchmark(tmp_path / "site", "--net")
+    assert entry["guide_not_evaluable"] == "guide not evaluable: Orb of Nonsense is not modelled"
+    assert entry["guide_judged_on"] is None and entry["given_route"] is None and entry["error"] is None
