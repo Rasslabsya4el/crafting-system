@@ -158,7 +158,7 @@ def finish_limits(plan_finish: PlanFinish, mods_mean: float, *, mods_at_most: bo
         costs = "costs at most" if mods_at_most else "costs"
         why = (
             f"the sockets are finished on their own once the mods are made: {finish.value:,.2f} Chaos on average{bought}{others}, "
-            f"so the whole craft {costs} {total:,.2f} Chaos on average after the start item; every other figure of this answer is of the mods alone (the socket finish is not drawn as a step yet, #233)"
+            f"so the whole craft {costs} {total:,.2f} Chaos on average after the start item; every other figure of this answer is of the mods alone"
         )
     found = (
         Limit(

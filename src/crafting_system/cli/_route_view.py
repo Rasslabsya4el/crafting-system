@@ -982,18 +982,7 @@ class _View:
             if self.plan.start_price.made is not None:  # the item was made in row 1, not bought (#1523)
                 return [f"{FREE}: the item was paid in step 1{again}"]
             return [f"{FREE}: the listing's price is paid in step 1{again}"]
-        return self.priced_lines(self.plan.offer_of(action))
-
-    def priced_lines(self, priced) -> list[str]:
-        """What one use of a priced offer costs, by its parts, with the marks of a thin market's price (OR-8)."""
-        if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
-            return [FREE]
-        stand_ins = priced.offer.action.stand_ins(self.data)  # a resource paid in place of goods no price list holds says what it is (#1518)
-        lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
-        if len(priced.parts) > 1:
-            lines.append(f"total {money(priced.cost)}")
-        lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
-        return lines
+        return priced_lines(self.data, self.plan.offer_of(action))
 
     def plan_name(self, price_name: str | None) -> str | None:
         """A price name as the page shows it: the base by its game name, never its id (#553, #481); words tell it from a base of its name."""
@@ -1278,7 +1267,7 @@ class _View:
                 _plain("Goal", step.goal),
                 chance,
                 onward,
-                _plain("Cost per use", *self.priced_lines(step.priced)),
+                _plain("Cost per use", *priced_lines(self.data, step.priced)),
                 _plain("Uses on average", count(float(step.uses))),
                 _plain("Step cost", money(step.value)),
                 _plain("Note", FINISH_NOTE, step.approximate),
@@ -1423,6 +1412,18 @@ class _View:
         )
         asked = getattr(plan, "asked_target", plan.target)  # the target as asked, its quality and implicit wishes with it (#1234)
         return GoalCard(fields, card_of_target(self.data, asked, self.start_item, self.forced), leaves_out)
+
+
+def priced_lines(data: GameData, priced) -> list[str]:
+    """What one use of a priced offer costs, by its parts, with the marks of a thin market's price (OR-8)."""
+    if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
+        return [FREE]
+    stand_ins = priced.offer.action.stand_ins(data)  # a resource paid in place of goods no price list holds says what it is (#1518)
+    lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
+    if len(priced.parts) > 1:
+        lines.append(f"total {money(priced.cost)}")
+    lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
+    return lines
 
 
 FINISH_UNTIL = " until the "  # what joins a finish step's catalyst or orb to its goal in the row's title (`finish_title`)
@@ -1638,7 +1639,8 @@ def judged_on(plan: Plan, labels: tuple[str, ...], data: GameData, target: Targe
     plain = plan.starts is None or plan.starts.chosen.key == "plain"  # the guide starts from the target's own item, not a vendor recipe's
     if plain and set(labels) <= {priced.label for priced in plan.offers}:
         return plan
-    return guide_plan(data, plan.asked_target if target is None else target, plan.prices if prices is None else prices, labels)
+    asked = getattr(plan, "asked_target", None) or plan.target  # a stand-in plan of a test has none
+    return guide_plan(data, asked if target is None else target, plan.prices if prices is None else prices, labels)
 
 
 def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...]) -> Field | None:

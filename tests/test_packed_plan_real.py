@@ -122,7 +122,7 @@ def test_the_risk_on_the_merged_chain_agrees_with_the_mean(both):
 
     assert packed.risk is not None
     assert packed.risk.success_probability.value == pytest.approx(1.0)
-    assert packed.risk.mean.value == pytest.approx(reference.mean_remaining, rel=1e-6)
+    assert packed.risk.mean.value == pytest.approx(reference.craft_mean, rel=1e-6)  # the mods and the finish steps (#1234)
     assert packed.risk.p50.value <= packed.risk.p90.value
 
 
