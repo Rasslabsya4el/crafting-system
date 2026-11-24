@@ -85,6 +85,18 @@ class ConvergenceError(RuntimeError):
         self.error_bound = error_bound
 
 
+class Late(ConvergenceError):
+    """A solve its caller's deadline stopped before it ended (OR-40, #1516): no figure was worked out, so `error_bound` is infinite. The solve
+    asks the clock between two of its steps (a sweep of the cheapest paths to a goal, a round of policy iteration, a refinement, a correction,
+    the exact solve), so it ends at most one step past the deadline. A caller that reads `ConvergenceError` as "the plan could not be
+    priced" reads this one the same way; `seconds` is how long the solve ran and `step` the step it stopped before."""
+
+    def __init__(self, message: str, seconds: float, step: str) -> None:
+        super().__init__(message, math.inf)
+        self.seconds = seconds
+        self.step = step
+
+
 def rounding_allowance(terms: int) -> float:
     """Relative rounding allowance rho for a Bellman sum of at most `terms` positive terms."""
     return (terms + 2) * EPSILON

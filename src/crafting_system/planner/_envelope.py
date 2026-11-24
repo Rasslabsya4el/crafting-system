@@ -127,7 +127,12 @@ round and inside the first plan's chain (the state net waits for the first round
 in states, where it is the only net and is asked at every state of the chain and of a round, #1101, and inside the making of each kernel, #1105:
 `Search._counted_kernel`, so such a search never knows more states than its net); the answer is then the
 best executable policy and `exact` is False, with `stopped` saying which net. When the plan in hand at the stop cannot be solved to a certified cost
-(#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal. A given start whose plan has not closed has no answer
+(#769), the answer is the last plan that could, from the first plan or an earlier round (`SearchResult.held`): OR-33 asks for a plan, not a refusal.
+The pricing of the plan in hand keeps the time net too (#1516, OR-40): the solve of the upper graph is given the instant the net ends (the first
+plan's at its chain's limit, `Net.first`) and stops there with `Late`, read as a solve that cannot be certified; the pricing of the answer after a
+stop may take `LAST_PRICING` of the net past it, and a graph whose pricing was late is not priced again until the search has realized more. Without
+it a plan whose chain reaches the goal only at its far end cost one sweep of the graph per state of the chain (`solver._packed_solve.proper_states`):
+800 s a round on R17's 210,847 states, past a 1 h net by 25 min. A given start whose plan has not closed has no answer
 (`NoPolicy`). A round whose *lower* solve cannot be certified (a plan of 10^9 steps or more, #867, #948) ends a search that holds such a plan the
 same way, as a stop: the plan in hand, and the lower figure of the last round the solver certified (or the start's bound), which is a lower bound
 because `L` only rises. A search that holds no plan (no net: it keeps none) refuses as before, and so does every search on a refusal with no
@@ -149,7 +154,7 @@ import numpy as np
 
 from crafting_system import budget, parallel
 from ._ahead import Ahead, Round
-from crafting_system.solver import ConvergenceError, PackedGraph, policy_reach
+from crafting_system.solver import ConvergenceError, Late, PackedGraph, policy_reach
 from crafting_system.solver._packed import BIG_TOTAL
 from crafting_system.solver._packed_solve import ACCEPT_BOUND, solve_graph
 
@@ -163,6 +168,7 @@ FALL_LIMIT = 1e-6  # a relative fall of `L(root)` above this is no rounding: the
 CONSISTENCY_LIMIT = 1e-5  # a state's bound above the least `la` of its offers by more than this share is no rounding of the bound's solve (certified to 1e-6; a larger certified error is added, `Search._consistent`)
 PRIME_AHEAD = 32  # the offers of a state that the problem is asked to prime at once (`Problem.prime`) ...
 PRIME_FROM = 16  # ... when at least this many are still to be built: a pool of processes costs more than a route of a dozen offers (R14: twice its time) saves
+LAST_PRICING = 0.05  # the share of its time net the pricing of the answer may take past the net, once a net stopped the search (`Search._deadline`, OR-40, #1516): a share of the net, so the same on any machine (OR-39)
 POLL_SECONDS = 0.5  # how often a round that expands many states, or the first plan's chain, asks the net inside it
 # how often a round's walk of its tips says where it is (#1076: R12's round 4 walked 20,858 tips for 6 minutes, grew the process from 0.7 to
 # 12.6 GB and was stopped by the memory net with no line said): the pace of the log, never a limit
@@ -293,6 +299,7 @@ class SearchStats:
     upper_solves: int = 0  # solves of the upper graph
     upper_refused: int = 0  # of those, the ones the solver could not certify (the stop at a gap waited)
     upper_seconds: float = 0.0
+    upper_late: int = 0  # of the refused ones, those its time net stopped before they ended (`Late`, #1516)
     solve_seconds: float = 0.0
     build_seconds: float = 0.0
     expand_seconds: float = 0.0
@@ -623,6 +630,7 @@ class Search[S]:
         # applies): it cannot improve on it
         self.beaten_at = beaten_at
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
+        self._late: tuple[tuple[int, int], str] | None = None  # (states known, pairs realized) of the last pricing its time net stopped, and why (#1516)
         self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
         self.standing: Standing | None = None
         self.incumbent = incumbent
@@ -1211,14 +1219,25 @@ class Search[S]:
         of the realized actions closes. Raises `ConvergenceError` when the solver cannot certify it."""
         return self._upper()[1]
 
-    def _upper(self) -> tuple[PackedGraph, float, float]:
+    def _upper(self, deadline: float | None = None) -> tuple[PackedGraph, float, float]:
         """The upper graph now, the value of its best policy at the start and that value with the solver's certified error added (the upper
-        figure a stop may rest on). With no restart the graph is the realized actions alone (a tip is a dead end). Raises `ConvergenceError`."""
+        figure a stop may rest on). With no restart the graph is the realized actions alone (a tip is a dead end). Raises `ConvergenceError`,
+        and `Late` when `deadline` (a `time.perf_counter()` instant, `_deadline`) passes before the solve ends (#1516); a graph whose pricing
+        was late once raises `Late` again at once until the search has realized more."""
         mark = time.perf_counter()
         self.stats.upper_solves += 1
+        grown = (len(self.states), self.stats.realized)
         try:
+            if deadline is not None and self._late is not None and self._late[0] == grown:
+                raise Late(f"{self._late[1]} (the same graph, not priced again)", 0.0, "the pricing")
             graph = self._graph("upper")
-            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass, refuse_above=self.refuse_above)
+            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass, refuse_above=self.refuse_above, deadline=deadline)
+        except Late as late:
+            self.stats.upper_refused += 1
+            self.stats.upper_late += 1
+            if self._late is None or self._late[0] != grown:
+                self._late = grown, str(late)
+            raise
         except ConvergenceError:
             self.stats.upper_refused += 1
             raise
@@ -1233,6 +1252,18 @@ class Search[S]:
             if self.upper is None or certified < self.upper:
                 self.upper = certified
         return graph, value, certified
+
+    def _deadline(self, began: float, seconds: float | None = None, final: bool = False) -> float | None:
+        """The instant the pricing of the plan in hand must end by (OR-40, #1516), or None for a search with no time net: where the net's
+        seconds (or `seconds`, the first plan's chain's) end. `final` is the pricing of the answer after a stop: it may take `LAST_PRICING` of
+        the longest time the net gave past the stop, at most, since without it a search stopped at its net would have no plan to give."""
+        limit = self.net.seconds if seconds is None else seconds
+        if limit is None:
+            return None
+        if not final:
+            return began + limit
+        limit = max(limit, self.net.first or 0.0)
+        return max(began + limit, time.perf_counter()) + LAST_PRICING * limit
 
     def plan_now(self) -> SearchResult[S] | None:
         """The best executable plan the search holds now, as a stop would return it, or None while none has closed or the solver cannot certify
@@ -1344,9 +1375,10 @@ class Search[S]:
                     self._round = None
                 self.ahead.making = 0.0
             self.stats.expand_seconds += time.perf_counter() - mark
+            first = self.net.first  # the first plan's chain's own limit (`_seed`, `_net`), and so its pricing's
             try:
-                upper = self._upper()[2]
-            except ConvergenceError:  # the first plan is beyond what the solver certifies (#769): the search goes on without an upper figure
+                upper = self._upper(self._deadline(began, first))[2]
+            except ConvergenceError:  # the first plan is beyond what the solver certifies (#769), or its pricing met the time net (#1516): the search goes on without an upper figure
                 upper = math.inf
             if stopped is None and distance is not None and not reach_first and not math.isfinite(upper) and not any(self.goal):
                 # the chain reaches no goal at all (a blind bound's order, #1142): realize toward the goal until a path to it is realized
@@ -1358,7 +1390,7 @@ class Search[S]:
                     self.kernels.room = None
                 self.stats.expand_seconds += time.perf_counter() - mark
                 try:
-                    upper = self._upper()[2]
+                    upper = self._upper(self._deadline(began, first))[2]
                 except ConvergenceError:
                     upper = math.inf
             self.stats.first_upper = upper if math.isfinite(upper) else None
@@ -1373,6 +1405,7 @@ class Search[S]:
                 f"realized along its chain"
                 + (f" and {self.stats.reached:,} toward the goal" if self.stats.reached else "")
                 + f" over {len(self.states):,} states, costs at most {upper!r} ({time.perf_counter() - began:.0f} s)"
+                + (f"; it was not priced within the time limit: {self._late[1]}" if self._late is not None else "")
                 + (f"; its chain was cut short: {stopped}" if stopped is not None else "")
             )
             self._stand(float(self.lb[0]), began)  # the bound of the start is a lower figure before any round
@@ -1474,7 +1507,10 @@ class Search[S]:
                 return SearchResult(self.states, self.index, self._graph("exact"), lower, True, None, False, self.stats)
             if self.gap > 0.0 and self.gap_after is not None and time.perf_counter() - began >= self.gap_after:
                 try:
-                    plan, _, upper = self._upper()
+                    plan, _, upper = self._upper(self._deadline(began))
+                except Late as late:  # the pricing met the time net (#1516): the net, asked just below, ends the search
+                    plan, upper = None, math.inf
+                    self.say(f"  the plan in hand could not be priced within the time limit this round: {late}")
                 except ConvergenceError:  # the stop waits for an upper figure the solver can certify (#769)
                     plan, upper = None, math.inf
                     self.say("  the plan in hand could not be solved to a certified cost this round: the stop at the gap waits")
@@ -1542,17 +1578,20 @@ class Search[S]:
         if not self.stats.rounds:
             lower = float(self.lb[0])  # the net ended the first plan's chain before any round: the start's own bound is the lower figure
         try:
-            plan, _, upper = self._upper()
-        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies
+            plan, _, upper = self._upper(self._deadline(began, final=True))
+        except ConvergenceError as error:  # the plan of a stopped search over a big, stiff graph can be beyond what the solver certifies, or its pricing met the time net (`Late`, #1516)
             if self.held is not None:  # an earlier plan was certified: it is the answer (OR-33), over the states it knew
                 plan, upper = self.held
-                self.say(f"  the plan in hand at the stop could not be solved to a certified cost ({error}): the last plan that could is kept, at most {upper!r}")
+                how = "priced within the time limit" if isinstance(error, Late) else "solved to a certified cost"
+                self.say(f"  the plan in hand at the stop could not be {how} ({error}): the last plan that could is kept, at most {upper!r}")
                 self._stand(lower, began)
                 known = plan.n
                 index = {state: i for state, i in self.index.items() if i < known}
                 return SearchResult(self.states[:known], index, plan, lower, False, stopped, self.p.restart is not None, self.stats, upper, None, True)
             raise NoPolicy(
-                f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states cannot be solved to a certified cost ({error}); "
+                f"the search stopped ({stopped}) and the plan it had found over {len(self.states):,} states "
+                + ("could not be priced within the time limit" if isinstance(error, Late) else "cannot be solved to a certified cost")
+                + f" ({error}); "
                 f"it had looked at {self.stats.expanded:,} of them and no plan costs less than {lower:,.6g} (the lower bound of the whole graph)",
                 stopped=stopped, lower=lower, states=len(self.states),
             ) from error
