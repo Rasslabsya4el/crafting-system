@@ -590,8 +590,11 @@ def _envelope_run(
     walked = Walked(result.graph, result.states, result.index, tuple(offers), time.perf_counter() - built)
     # the mean shown: of an exact answer to the solver's 1e-6; of a plan proved within a gap, or one a net stopped, to the error the search took its
     # figures at, and the limit says so when it is above 1e-6 (`mean_error_text`, #867): OR-33 asks for a plan with its gap, not a refusal
+    # a plan a net's stop on the clock left is the one the search priced last: it is not solved again, so what the stop spends past the net is
+    # the merge alone (#1566, OR-40). A run counted in states spends no seconds, and its plan is solved here as every other plan is
+    priced = search.priced(result.graph) if result.stopped is not None and net is not None and net.seconds is not None else None
     packed = solve_walked(
-        abstraction, start, walked, tolerance=tolerance, progress=say, refuse_above=None if result.exact else figure_error(gap, gap_after)
+        abstraction, start, walked, tolerance=tolerance, progress=say, refuse_above=None if result.exact else figure_error(gap, gap_after), priced=priced
     )  # fmt: skip
     mean = float(packed.solution.values[start])
     stats = result.stats

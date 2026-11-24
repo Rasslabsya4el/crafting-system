@@ -28,6 +28,7 @@ import gc
 import math
 import time
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import numpy as np
@@ -100,6 +101,31 @@ def ladder_net(seconds: float) -> LadderNet:
     if left is not None and left < seconds:
         return LadderNet(time.monotonic() + left, left, True, memory)
     return LadderNet(time.monotonic() + seconds, seconds, False, memory)
+
+
+def moments_late() -> Callable[[], bool] | None:
+    """Whether the cost figures' linear solves (the moments, the grid chains' means) are past their limit, or None when the run has no time net:
+    the run's net plus `budget.AFTER_NET` of it (#1553, OR-40). Asked by the solver between two of its steps (`solve_graph`'s `late`), so they
+    end at most one step past it. Before #1553 they had no limit: on R17's plan of 94,524 classes they took 850 s past a 1 h net (four solves
+    of about 210 s each, two for the mean and the variance and two for the grid chains), for figures of no finite value."""
+    clock = budget.active()
+    if clock is None or clock.budget.seconds is None:  # (a run counted in states has no time net: nothing here reads the clock)
+        return None
+    limit = clock.budget.seconds * (1.0 + budget.AFTER_NET)
+    return lambda: clock.elapsed() >= limit
+
+
+def moments_stopped() -> str:
+    """Say that the run's time limit stopped the cost figures' moments or grid chains (#1553, OR-13) and record it on the run's clock."""
+    clock = budget.active()
+    kept = "the cost figures were not worked out; the plan and its mean are kept"
+    if clock is not None:
+        clock.bind(budget.Binding(clock.stage, budget.TIME, clock.budget.seconds or 0.0, clock.elapsed(), kept))
+    share = f"{budget.AFTER_NET:.0%}"
+    return (
+        f"the run's time limit was reached, and the work on the cost figures was stopped {share} of that limit past it, before it had worked out "
+        "the figures: the plan's mean is its own, and a figure it had not reached is marked as not computed"
+    )
 
 
 def deadline(net: LadderNet) -> float | None:

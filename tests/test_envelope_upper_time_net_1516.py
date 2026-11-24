@@ -119,6 +119,7 @@ def test_a_late_pricing_runs_again_under_a_later_limit(clock, old_sweeps) -> Non
     again, and with no limit it is priced to its end."""
     search = Search(Chain(300, 1_000_000), net=Net(seconds=1e9), gap=0.01, gap_after=0.0)
     search.run()
+    search._priced = None  # the run priced this graph: a graph priced already is never priced again (#1566), so this test forgets it
     limit = clock.now - 1.0  # already past (each sweep moves the clock on)
     with pytest.raises(Late, match="before a sweep"):
         search._upper(limit)

@@ -25,7 +25,7 @@ from coarse_support import DATA as COARSE
 from crafting_system import budget, parallel
 from crafting_system.budget import Budget
 from crafting_system.planner import PlanSettings, plan_target
-from crafting_system.planner import _plan
+from crafting_system.planner import _limits, _plan
 from crafting_system.planner._limits import RISK, STOPPED_FIGURE, STOPPED_FIGURE_MEMORY, not_shown, risk_limits
 from crafting_system.risk import _budget, _dense, _evaluate, _regen, evaluate
 from crafting_system.risk._chain import Chain
@@ -171,14 +171,16 @@ def test_the_dense_grid_stops_at_a_passed_net(monkeypatch):
     assert len(cut.cdf) == 1 and cut.unresolved == pytest.approx(1.0) and cut.stopped == budget.TIME  # no allowance: stopped at once
 
 
-def through_the_entry(coarse, monkeypatch):  # noqa: F811
+def through_the_entry(coarse, monkeypatch, past: float = 600.0):  # noqa: F811
     target, prices, full = coarse
     clock = Ticking()
     monkeypatch.setattr(budget, "time", clock)
     real = _plan.plan_foresight
 
     def spent_by_the_plan(*args, **kwargs):
-        clock.now += 10_000.0  # the plan took past the whole net before the percentiles began (R17's site plan: 0 s left)
+        # the plan took the whole net before the percentiles began (R17's site plan: 0 s left); the figures' moments still have the share of the
+        # net past it that `budget.AFTER_NET` gives (#1553), and `past` beyond it leaves them none
+        clock.now += past
         return real(*args, **kwargs)
 
     monkeypatch.setattr(_plan, "plan_foresight", spent_by_the_plan)
@@ -205,6 +207,17 @@ def test_through_the_entry_a_dear_plan_whose_run_spent_its_net_keeps_its_plan_an
     assert math.isinf(risk.p90.high) and not_shown(risk, risk.p90) == STOPPED_FIGURE
     (limit,) = [limit for limit in plan.limits if limit.kind == RISK and said in limit.why]
     assert "cheapest step" not in limit.why  # not the words of a grid too small to reach them
+
+
+def test_through_the_entry_a_plan_whose_run_spent_its_net_and_its_share_past_it_gets_no_figures_and_says_so(coarse, monkeypatch):  # noqa: F811
+    """#1553: the moments' solves keep the run's net plus `budget.AFTER_NET` of it (R17's took 850 s past a 1 h net). Past both, the figures are
+    not computed, the mean given is the plan's own, and the run's stop is listed with the stages a limit stopped."""
+    plan, full = through_the_entry(coarse, monkeypatch, past=10_000.0)
+    risk = plan.risk
+    assert risk.grid.stopped is not None and "5% of that limit past it" in risk.grid.stopped
+    assert risk.mean.value == pytest.approx(full.mean_remaining, rel=1e-9) and math.isinf(risk.p50.value) and math.isinf(risk.p90.high)
+    (stop,) = [limit for limit in plan.limits if limit.kind == _limits.BUDGET]
+    assert any("cost figures were not worked out" in name for name in stop.names)
 
 
 def test_a_stopped_plan_that_may_not_finish_says_its_stop_too(spent, monkeypatch):
