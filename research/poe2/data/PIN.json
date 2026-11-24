@@ -1,0 +1,70 @@
+{
+  "source": "repoe-fork/poe2 (GitHub), export of the PoE2 client data by RePoE/PyPoE",
+  "game": "Path of Exile 2",
+  "version": "0.5.5.10",
+  "commit": "1905f2adc28e07848cb925605c24e2c8bbf82197",
+  "exported": "2026-11-19",
+  "pinned_on": "2026-11-24",
+  "files": [
+    {
+      "path": "mods.json",
+      "sha256": "6e720d269d0ca64907400422f0a352795a03def7c1f90838c5d7a1c8a6a8748b",
+      "size": 13579690
+    },
+    {
+      "path": "base_items.json",
+      "sha256": "da8c113624dde7c494e853a8d538a09aab4daa343434829b39f907e14f0d83a8",
+      "size": 8229009
+    },
+    {
+      "path": "item_classes.json",
+      "sha256": "c235f54b1801a84bc03c121072d2003615b8efd40be423cf498c9b6965d35d60",
+      "size": 15998
+    },
+    {
+      "path": "augments.json",
+      "sha256": "0084135db4971e7cca28e52530b60aef5b8f4eb7c87900dcd269092309c41fc0",
+      "size": 335680
+    },
+    {
+      "path": "mods_by_base.json",
+      "sha256": "281b5258206d61aeeedb1f59d760fe5e5ea65587e9fb204dba95fde541c62880",
+      "size": 5615572
+    },
+    {
+      "path": "tags.json",
+      "sha256": "d80ec3e84684f20f02cdf3429a23957580f68064ed90d528c8a254ad143c3cc1",
+      "size": 29102
+    },
+    {
+      "path": "tag_details.json",
+      "sha256": "5c3a4a53a4330d6e3c1a6ad83b685160a8fabf46a87a889e757e96274bf80bb2",
+      "size": 100198
+    },
+    {
+      "path": "uniques.json",
+      "sha256": "5c303e991763d4f89c7e41306561c1eb02bb55d79ebe0c26f43520906f9c059b",
+      "size": 171109
+    },
+    {
+      "path": "stat_translations/stat_descriptions.json",
+      "sha256": "af043ebba365b4cc8b0c814205ff5d4dbf6ac1cb4e1fbe4486ca25e0a5ee500e",
+      "size": 10666743
+    },
+    {
+      "path": "stat_translations/advanced_mod_stat_descriptions.json",
+      "sha256": "88b35ae7bfc856e315f0a89de877cea8a7632d308d9c9b171eff65d86b3808f1",
+      "size": 45592
+    },
+    {
+      "path": "stat_translations/tablet_stat_descriptions.json",
+      "sha256": "f92af07ce5d2f1346d9fc63b5586b20776efe0736a554cc81a3eb0f8375c5df8",
+      "size": 148369
+    },
+    {
+      "path": "stat_translations/map_stat_descriptions.json",
+      "sha256": "c539ff52c832da7828878b74a37ab4937db30af5ad8cd94f6884ac9851da84d7",
+      "size": 45773
+    }
+  ]
+}
