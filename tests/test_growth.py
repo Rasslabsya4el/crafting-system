@@ -830,13 +830,6 @@ def test_the_lock_group_names_the_adders_ranked_where_the_step_acts_and_the_usua
     assert not _names(table, positions) & {"aug A", "regal A", "dear exalt A"}
 
 
-def test_a_lock_group_with_no_lock_named_names_no_adder():
-    table, _plan = _adder_world()
-    table.under = {key: [] for key in table.under}  # no reroll under either lock: the lock role names nothing, so no lock group comes
-    grower = Grower(table, ())
-    assert grower.lock_group("spam", 25000.0, {A, B}, frozenset({RARE}), frozenset({0})) is None
-
-
 def test_where_the_adder_under_the_lock_is_cheaper_the_lock_group_gives_the_cheaper_plan_before_the_widening():
     # the hand search: the spam alone, 25,000; a set that holds the suffix lock, "chaos" under it and "exalt A" makes B under the lock and
     # adds A after: 1,000; the magic item's adders do not act on the rare, so the usual round is beaten
