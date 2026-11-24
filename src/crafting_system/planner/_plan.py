@@ -888,7 +888,8 @@ def _make_plan(
         groups = offer_groups(data, goal, target, grouped, route_actions or ())
         if len(groups) > 1:  # the offers refine the model in more than one way: they are searched in rounds (#1069)
             # the rounds grow from the plan in hand first (`_growth`, #1414): its table reads the offers with their costs, in the rounds' order
-            grower = rounds_grower(data, goal, target, tuple(p for p in priced if id(p.offer) in own), listing, route_actions or ())
+            rebuy = float(price_of_start.chaos) if price_of_start.bought else None  # the reset closure weighs the reset against it (#1600)
+            grower = rounds_grower(data, goal, target, tuple(p for p in priced if id(p.offer) in own), listing, route_actions or (), rebuy)
             return widened_plan(
                 data, target, prices, groups, grouped, limits, aim=aim, rates=rates, strands=strands, price_of_start=price_of_start,
                 price_source=price_source, solver=solver, with_risk=with_risk, clock=clock, watch=watch, foresee=foresee, route_actions=route_actions,
@@ -1236,16 +1237,18 @@ def offer_groups(data: GameData, goal: Goal, target: Target, offers: Sequence[Of
 
 
 def rounds_grower(
-    data: GameData, goal: Goal, target: Target, priced: Sequence[PricedOffer], listing: Item | None, route: Sequence[str] = ()
+    data: GameData, goal: Goal, target: Target, priced: Sequence[PricedOffer], listing: Item | None, route: Sequence[str] = (),
+    rebuy: float | None = None,
 ) -> _growth.Grower | None:
     """The plan-led growth of the rounds (`_growth`, #1414) over `priced` (the rounds' offers with their costs, in their order): the table of
     what each offer declares, and the positions of the run's named offers (the target's actions and a judged route's labels, as
-    `_rounds.round_groups` names them), which every round holds. None when no wanted mod is open at the start (nothing to grow)."""
+    `_rounds.round_groups` names them), which every round holds; `rebuy` what buying the start item again costs (None when it is not bought:
+    the growth's reset closure, #1600). None when no wanted mod is open at the start (nothing to grow)."""
     if not _growth.GROWS:
         return None
     names = {*(target.actions or ()), *route}
     try:
-        table = _growth.growth_table(data, goal, target, priced, listing, ask=checkpoint)
+        table = _growth.growth_table(data, goal, target, priced, listing, ask=checkpoint, rebuy=rebuy)
     except (ValueError, OutOfScopeError, NotApplicableError, BudgetExceeded):
         # the growth only orders what is searched first: a table it cannot read (a model refused, a net spent while reading it) leaves the
         # rounds to main's widening, which says itself what the model makes of the offers, and what a spent net stopped (#1414)

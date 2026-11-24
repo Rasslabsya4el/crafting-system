@@ -65,7 +65,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crafting_system.actions import DRAW_LABEL
+from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.abstraction._kinds import kind_tags
@@ -124,6 +124,7 @@ NEXT = "Next step"  # the field of a restart, in place of "On failure": buying t
 FREE = "free"  # the cost of a use that consumes nothing (an unveil, a pick): the planner's epsilon is no price a player pays (#1442)
 NEVER = "never finishes"
 REACHED_FROM = "Reached from"  # the rows that lead to a row the row above does not lead to (#1442)
+START_OVER = "Start over on the same item"  # a wipe that takes the item back to the start (OR-42; the words of #1595, #1600)
 
 # --- the model of the page -------------------------------------------------------------------------------
 
@@ -709,6 +710,9 @@ class _View:
             lead = f"{words}, " if words else ""
             if there is None:
                 return f"{lead}the route has no step for this item", True
+            over = self.start_over(self.flow.steps[edge.to - 1])
+            if over is not None:  # OR-42: the same item started over, with what its orbs cost
+                return f"{lead}the item is started over: {over[0].removeprefix(START_OVER + ': ')} for {money(over[1])}", True
             if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442), and the item that sends there
                 return f"{lead}the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
         if words:
@@ -888,8 +892,8 @@ class _View:
 
     def next_title(self, edge: Edge) -> str:
         """The action of the step an edge leads to, as its row is titled."""
-        there = self.flow.steps[edge.to - 1].action  # `edge.to` is a step number (from 1)
-        return "no action" if there is None else self.title(there)
+        there = self.flow.steps[edge.to - 1]  # `edge.to` is a step number (from 1)
+        return "no action" if there.action is None else self.title(there.action, there)
 
     def accepts(self, action: Action, forward: list[Edge], after: ItemCard) -> list[str]:
         """What a random craft accepts as a good result: how many mods the item may end up with, and that the rest is any.
@@ -984,7 +988,51 @@ class _View:
         """A price name as the page shows it: the base by its game name, never its id (#553, #481); words tell it from a base of its name."""
         return None if price_name is None else plain_base_names(self.data, price_name)
 
-    def title(self, action: Action) -> str:
+    def start_over(self, step: Step) -> tuple[str, float] | None:
+        """The title and the cost of a step that starts the item over on the same item (OR-42; the words of #1595, #1600), or None: its
+        action wipes the item (it draws no mod and adds none: an Orb of Scouring), and every item it leaves is the start item again, either
+        at once (a start whose rarity a wipe keeps: a Normal one, or one whose fractured mods it keeps), or a Normal item every one of
+        which goes to one step that takes it back to the start's rarity (an Orb of Transmutation, an Orb of Alchemy): the start's own draw.
+        The cost is that of the wipe and of the move. Read once a step."""
+        cache = self.__dict__.setdefault("_start_overs", {})
+        if step.number not in cache:
+            cache[step.number] = self._start_over(step)
+        return cache[step.number]
+
+    def _start_over(self, step: Step) -> tuple[str, float] | None:
+        action = step.action
+        if action is None or action.label in (RESTART, DRAW_LABEL):
+            return None
+        start, offer = self.plan.target.start_item, self.plan.offer_of(action)
+        try:
+            adds = offer.offer.action.adds(self.data, start)
+        except (NotApplicableError, OutOfScopeError, ValueError):
+            return None
+        if adds.named != frozenset() or adds.draws or adds.fractures or offer.offer.action.imprint_move() is not None:
+            return None
+        edges = [edge for edge in step.edges if edge.kind != "again"]
+        if not edges or any(edge.to is None for edge in edges):
+            return None
+        landing = [state for edge in edges for state in edge.states]
+        kept = sorted(entry.mod_id for entry in start.mods if entry.fractured)
+        if self.reader.tracked and all(
+            state.flags.rarity is start.rarity and not state.slots and sorted(entry.mod_id for entry in state.fractured) == kept for state in landing
+        ):  # fmt: skip
+            return f"{START_OVER}: {offer.label}", offer.cost
+        if start.rarity is Rarity.NORMAL or any(state.flags.rarity is not Rarity.NORMAL for state in landing) or len({edge.to for edge in edges}) != 1:
+            return None
+        there = self.flow.steps[edges[0].to - 1]
+        if there.action is None or there.action.label in (RESTART, DRAW_LABEL):
+            return None
+        onward = [state for edge in there.edges if edge.kind != "again" for state in edge.states]
+        if not onward or any(state.flags.rarity is not start.rarity for state in onward) or any(state.flags.rarity is not Rarity.NORMAL for state in there.states):
+            return None
+        return f"{START_OVER}: {offer.label}, then {self.title(there.action)}", offer.cost + self.plan.offer_of(there.action).cost
+
+    def title(self, action: Action, step: Step | None = None) -> str:
+        over = self.start_over(step) if step is not None else None
+        if over is not None:
+            return over[0]
         if action.label == RESTART:
             if self.first is not None:
                 return "Restart: make the start item at the vendor again"
@@ -1238,7 +1286,7 @@ class _View:
             _plain("Note", *self.notes(action, step, restart, goal)),
         )
         final = any(edge.kind == "goal" for edge in step.edges)
-        return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after), step.uses)
+        return StepRow(number, self.title(action, step), fields, after, self.anchor(number), final, step_cost, self.branches(step, after), step.uses)
 
     def removes(self, edge: Edge) -> bool:
         """Whether a failure edge is a use that took wanted mods off the item and goes on to a step that acts (not a restart, not a dead end)."""
@@ -1265,8 +1313,8 @@ class _View:
         return Field(REACHED_FROM, tuple(Line(f"step {row}: {self.title_of(row)}", f"#{self.anchor(row)}") for row in rows))
 
     def title_of(self, row: int) -> str:
-        there = self.flow.steps[row - 2].action
-        return "no action" if there is None else self.title(there)
+        there = self.flow.steps[row - 2]
+        return "no action" if there.action is None else self.title(there.action, there)
 
     def free(self, action: Action) -> bool:
         """Whether a use of the action consumes nothing a player pays for: the draw of a bought listing, an unveil, a pick (#1442)."""

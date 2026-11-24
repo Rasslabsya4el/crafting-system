@@ -120,6 +120,21 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     imprints wait for their later group: the imprint before the slam, restored on a miss (#1567 fault 1: the imprint was named only as the
     protector of a step that can lose a wanted mod).
 
+* **The reset closure** (#1600, hypothesis H57 of #1434; OR-42). Where the start item is bought, the seed and every group the growth names
+  (`OfferTable.closure`, which each of them passes through) also hold what a player uses to start over on the same item and to reroll it,
+  read from the offers' own declarations, rarities and prices (`OfferTable.reset_closure`):
+  - **the reset path** (`reset_path`), when it costs less than buying the start item again: the cheapest offer that wipes the item (a
+    reroll that draws no mod and adds none, `Entry.wipes`: an Orb of Scouring, which leaves the fractured mods alone, so a fractured start
+    stays at its rarity), and the cheapest moves from where it lands back to the start's rarity among the offers that force no mod
+    (`Entry.forces`: an essence puts its own mod on every outcome) and whose outcomes all have that one rarity (an Orb of Transmutation, an
+    Orb of Alchemy);
+  - **the plain reroll** (`plain_reroll`): the cheapest offer that rerolls an item of the start's rarity (it draws, its kind there is a
+    reroll), leaves it at that rarity and forces no mod (the Orb of Alteration for a magic start, the Chaos Orb for a rare one).
+  With the reset alone in a group the cheap reset stood in for the reroll the group lacked: on R13, #1201's wipe was used 675 times and
+  th59's Scouring and Augmentation 762 times where a player alters (0.357 c a try against the Alteration's 0.178 c). With both in every
+  group, R13 gave about 1,450 c after the start at minute 5, against main's 1,842 c (th59's pair, #1434). The search picks between them by
+  price; the closure only makes sure both are there.
+
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
 
@@ -176,6 +191,8 @@ class Entry:
     more_crafted: bool = False  # it may add the metamod of more crafted mods
     fans: str = ""  # why one use fans out over two random choices or copies the item (module text, the later group; #1440), or ""
     need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
+    forces: bool = False  # it puts a mod it names on every use, as a reroll does not (an essence's forced mod): no plain reroll or move (#1600)
+    wipes: bool = False  # a reroll that draws no mod and adds none: it leaves the item bare but for what it keeps (an Orb of Scouring, #1600)
 
     def acts_at(self, shapes) -> bool:
         """Whether it is read as acting at one of `shapes` (its kind there is not a refusal)."""
@@ -205,10 +222,12 @@ class OfferTable:
     named_ids: set[str] | frozenset[str] = frozenset()  # the mods an offer names at the start item or gives by a finishing kind at a shape (`item_mod_ids`)
     _item_ids: frozenset[str] | None = None  # `item_mod_ids`, read once
     _finished: tuple | None = None  # `finished`, read once
+    rebuy: float | None = None  # what buying the start item again costs; None when it is not bought (no reset closure)
+    _reset: dict[frozenset[int], frozenset[int]] | None = None  # `reset_closure`, read once for each set of offers held back
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
-                 ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None) -> None:  # fmt: skip
-        self.data, self.goal = data, abstraction.goal
+                 ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None, rebuy: float | None = None) -> None:  # fmt: skip
+        self.data, self.goal, self.rebuy = data, abstraction.goal, rebuy
         self.views, self.actions, self.locking, self.under = {}, [p.offer.action for p in priced], locking, {}
         self.named_ids = set()
         shape = abstraction.compress(item) if getattr(start.flags, "unopened", False) else start
@@ -316,6 +335,8 @@ class OfferTable:
         entry.locks = frozenset(_LOCKS[family] for family in families if family in _LOCKS)
         entry.keeps_out = frozenset(_TAGS[family] for family in families if family in _TAGS)
         entry.more_crafted = Metamod.MULTIPLE_CRAFTED_MODS.value in families
+        entry.forces = bool(adds.named) and not adds.crafted
+        entry.wipes = adds.named == frozenset() and not adds.draws and not adds.fractures and move is None and REROLL in entry.kinds.values()
 
     def _fans_at(self, action, view: Item) -> str:
         """Why an addition at `view`'s shape fans out over two random choices (module text, the later group), or "": one of its outcomes at
@@ -590,23 +611,74 @@ class OfferTable:
                 named.add(more)
         return named
 
-    def moves(self, shapes: frozenset[Rarity], to: Rarity) -> set[int]:
-        """The cheapest offer of each step on the cheapest way from `shapes` to the shape `to` (the rarities the offers' outcomes have)."""
+    def moves(self, shapes: frozenset[Rarity], to: Rarity, plain: bool = False) -> set[int]:
+        """The cheapest offer of each step on the cheapest way from `shapes` to the shape `to` (the rarities the offers' outcomes have).
+        `plain`: only offers that force no mod, are not held back, and whose outcomes at the step's shape all have the one rarity (the
+        moves of the reset path, module text)."""
+        return set(self._way(shapes, to, plain)[1])
+
+    def _way(self, shapes: frozenset[Rarity], to: Rarity, plain: bool = False) -> tuple[float, tuple[int, ...]]:
+        """The cost and the positions of `moves`; infinity and none when no way is found."""
         best: dict[Rarity, tuple[float, tuple[int, ...]]] = {shape: (0.0, ()) for shape in shapes}
         frontier = list(shapes)
         while frontier:
             shape = frontier.pop(0)
             cost, path = best[shape]
             for entry in self.entries:
-                for lead in entry.leads.get(shape, ()):
+                leads = entry.leads.get(shape, ())
+                if plain and (entry.forces or entry.position in self.held_back or len(leads) != 1):
+                    continue
+                for lead in leads:
                     if lead != shape and (lead not in best or cost + entry.cost < best[lead][0]):
                         best[lead] = (cost + entry.cost, (*path, entry.position))
                         frontier.append(lead)
-        return set(best.get(to, (0.0, ()))[1])
+        return best.get(to, (math.inf, ()))
+
+    def reset_closure(self) -> frozenset[int]:
+        """Where the start item is bought (`rebuy`), the reset path when it costs less than buying the start again, and the plain reroll of
+        the start's rarity (module text, the reset closure); empty when it is not bought. Read once for each set of offers held back."""
+        if self._reset is None:
+            self._reset = {}
+        if self.held_back not in self._reset:
+            self._reset[self.held_back] = frozenset(self.reset_path() | self.plain_reroll()) if self.rebuy is not None else frozenset()
+        return self._reset[self.held_back]
+
+    def reset_path(self) -> set[int]:
+        """The cheapest wipe of the item (`Entry.wipes`) with the cheapest plain moves from where it lands back to the start's rarity, when the
+        whole costs less than buying the start again (`rebuy`); empty otherwise (module text, the reset closure). Where it lands is read from
+        its outcomes at the start's shape, or at the shapes it acts at when the start's refuses it (a Normal start)."""
+        start, best = self.start_rarity, (math.inf, ())
+        for entry in self.entries:
+            if not entry.wipes or entry.position in self.held_back or entry.forces:
+                continue
+            lands = entry.leads.get(start) or frozenset(lead for leads in entry.leads.values() for lead in leads)
+            if not lands:
+                continue
+            cost, path = entry.cost, (entry.position,)
+            for land in sorted(lands - {start}, key=str):
+                more, way = self._way(frozenset({land}), start, plain=True)
+                cost, path = cost + more, (*path, *way)
+            if cost < best[0] or (cost == best[0] and path < best[1]):
+                best = (cost, path)
+        if self.rebuy is None or not best[0] < self.rebuy:
+            return set()
+        return set(best[1])
+
+    def plain_reroll(self) -> set[int]:
+        """The cheapest offer that rerolls an item of the start's rarity (its kind there is a reroll and it draws), leaves it at that rarity,
+        forces no mod and fractures none (module text, the reset closure); empty when none does (a Normal start)."""
+        start = self.start_rarity
+        found = [
+            (entry.cost + entry.need, entry.position) for entry in self.entries
+            if entry.kinds.get(start) == REROLL and entry.leads.get(start) == frozenset({start}) and entry.draws and not entry.forces
+            and not entry.fractures and entry.position not in self.held_back and math.isfinite(entry.need)
+        ]  # fmt: skip
+        return {min(found)[1]} if found else set()
 
     def closure(self, positions: set[int]) -> set[int]:
-        """`positions` with what each needs to act, and the lockers of each side a bench lock among them locks (module text, dependencies)."""
-        found = set(positions)
+        """`positions` with what each needs to act, and the lockers of each side a bench lock among them locks (module text, dependencies);
+        a group that holds anything also holds the reset closure (module text)."""
+        found = set(positions) | (set(self.reset_closure()) if positions else set())
         while True:
             more = set()
             chosen = [self.entries[position] for position in found]
@@ -953,8 +1025,9 @@ class Grower:
         return "; ".join(names)
 
 
-def growth_table(data: GameData, goal, target, priced: Sequence[PricedOffer], listing: Item | None, ask=None) -> OfferTable:
-    """The table of `priced` (the rounds' offers, in their order) on the model of every offer (`OfferTable`)."""
+def growth_table(data: GameData, goal, target, priced: Sequence[PricedOffer], listing: Item | None, ask=None, rebuy: float | None = None) -> OfferTable:
+    """The table of `priced` (the rounds' offers, in their order) on the model of every offer (`OfferTable`); `rebuy` is what buying the start
+    item again costs, None when it is not bought (the reset closure, module text)."""
     enabled = [p.offer.action for p in priced if (reads := p.offer.action.reads(data)).junk or reads.item_state]
     holds = bool(target.start_item.metamods(data) & BLOCKING)
     abstraction = Abstraction(
@@ -970,7 +1043,7 @@ def growth_table(data: GameData, goal, target, priced: Sequence[PricedOffer], li
             ))  # fmt: skip
         return made[0]
 
-    return OfferTable(data, abstraction, start, target.start_item, priced, ask, locking)
+    return OfferTable(data, abstraction, start, target.start_item, priced, ask, locking, rebuy)
 
 
 __all__ = ["Grower", "OfferTable", "PER_ROLE", "growth_table", "pending_at", "read_step", "step_shares"]
