@@ -15,7 +15,7 @@ from targets_support import DATA
 import crafting_system.cli._benchmark as benchmark_module
 from crafting_system.cli import main
 from crafting_system.cli._route import evaluate_route, load_route
-from crafting_system.planner import NotModelled, guide_plan, make_plan
+from crafting_system.planner import NotModelled, PackedPolicy, guide_plan, make_plan
 from crafting_system.targets import load_target
 
 COMMAND = "bench" + "mark"  # a bare string with the name would trip tests/test_no_timing.py
@@ -130,8 +130,8 @@ def test_a_guide_walk_on_the_site_plan_that_passes_the_run_s_memory_net_is_read_
     walked = []
 
     def net_on_the_site_plan(plan, route, data):
-        walked.append(plan.policy == {})
-        if plan.policy != {}:  # the site plan (searched); `guide_plan`'s is a fixed policy on its own reach
+        walked.append(not isinstance(plan.policy, PackedPolicy))
+        if isinstance(plan.policy, PackedPolicy):  # the site plan (searched); `guide_plan`'s is a fixed policy on its own reach
             raise BudgetExceeded(Binding("the report and the route page", MEMORY, 12_288, 12_301, "the plan's record is written"))
         return real(plan, route, data)
 
@@ -171,3 +171,19 @@ def test_the_reach_of_a_plan_s_own_policy_asks_the_report_s_memory_net_and_a_pac
     with report_net(0.001), pytest.raises(BudgetExceeded):
         policy_states(plan.start, plan.policy, plan.is_goal)
     assert policy_states(plan.start, plan.policy, plan.is_goal)[0] == plan.start
+
+
+def test_when_the_guide_s_own_plan_cannot_be_made_after_the_net_the_entry_says_why_and_not_that_it_was_read_there(tmp_path, monkeypatch):
+    from crafting_system.budget import MEMORY, Binding, BudgetExceeded
+
+    def net(plan, route, data):
+        raise BudgetExceeded(Binding("the report and the route page", MEMORY, 12_288, 12_301, "the plan's record is written"))
+
+    def refused(*_args):
+        raise NotModelled(("Orb of Nonsense",))
+
+    monkeypatch.setattr(benchmark_module, "evaluate_route", net)
+    monkeypatch.setattr(benchmark_module, "guide_plan", refused)
+    entry = run_benchmark(tmp_path / "site", "--net")
+    assert entry["guide_not_evaluable"] == "guide not evaluable: Orb of Nonsense is not modelled"
+    assert entry["guide_judged_on"] is None and entry["given_route"] is None and entry["error"] is None
