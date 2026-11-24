@@ -30,7 +30,7 @@ from crafting_system.planner._limits import SHOWN_LABELS, SOLVE, limit_text
 from crafting_system.planner._plan import PlanError
 from crafting_system.cli._route_html import render_page
 from crafting_system.planner._offers import offer_of
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.prices import PriceEntry
 from crafting_system.targets import load_target, parse_target
 
@@ -64,7 +64,7 @@ def test_the_limit_is_in_the_plan_the_text_the_json_and_the_page_and_only_in_an_
     assert limit_text(cut) in render_text(report)
     assert any(entry["what"] == cut.what and entry["guarantee"] == cut.guarantee for entry in policy_document(report)["limits"])
     page = render_page(Page("x", (build_section(route_input(envelope), DATA),)))
-    assert escape(limit_text(cut, SHOWN_LABELS)) in page
+    assert escape(planner_limit_line(envelope, cut).text) in page  # in a player's words (#893)
 
 
 @pytest.fixture(scope="module")

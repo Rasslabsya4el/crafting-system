@@ -26,7 +26,8 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from crafting_system.planner import KINDS_NOT_TRIED, PROVED_UNNEEDED, ROUNDS, SHOWN_LABELS, WITHIN_GAP, Limit, Plan, kind_title, limit_text, more_labels
+from crafting_system.planner import LIMIT_SOLVE as SOLVE
+from crafting_system.planner import KINDS_NOT_TRIED, PROVED_UNNEEDED, REACHED, ROUNDS, SHOWN_LABELS, WITHIN_GAP, Limit, Plan, kind_title, limit_text, more_labels
 from crafting_system.planner import ROUND_BEATEN as BEATEN
 from crafting_system.planner import ROUND_CLOSED as CLOSED
 from crafting_system.planner import ROUND_GAVE_WAY as GAVE_WAY
@@ -133,7 +134,9 @@ def _proof_of_limits(plan: Plan, start: float) -> Proof:
     """The proof of a plan with no search record (`Plan.search` is None: a plan of another path, or one whose solution Hinekora's Lock changed,
     `_plan.py`, which drops the packed result and keeps the limits): read off its limits. Rounds that did not all finish (an untried limit, or
     the rounds' head that says so) are a stopped search; rounds that all finished within a gap are that gap; a claim already said "within
-    the stated gap" with no rounds is an approximate answer; otherwise the answer is exact (checker, #1161)."""
+    the stated gap" with no rounds is an approximate answer; otherwise the answer is exact (checker, #1161). A single search (no rounds)
+    says how it ended in its own limit (`SOLVE`): stopped by a net, or walked to the target (`REACHED`), it is a stopped search; stopped by
+    itself at the run's gap, it is proved within that gap; only an approximate answer reads "within the stated gap" as approximate (#1514)."""
     limits = plan.limits
     rounds = [limit for limit in limits if limit.kind == ROUNDS and not limit.what.startswith("The given route's methods")]
     if any(limit.kind == KINDS_NOT_TRIED for limit in limits) or any("not every round finished" in limit.what for limit in rounds):
@@ -141,9 +144,21 @@ def _proof_of_limits(plan: Plan, start: float) -> Proof:
     for limit in rounds:
         if (found := _AT_MOST.search(limit.guarantee)) is not None:
             return Proof(PROVED_WITHIN, gap=float(found.group(1)) / 100, start=start)
+    if plan.approximation is None and not rounds:  # one search: its own limit says how it ended (`_envelope_plan.envelope_limits`, #1514)
+        solve = [limit for limit in limits if limit.kind == SOLVE]
+        if any(limit.kind == REACHED for limit in limits) or any(limit.what == SOLVE_STOPPED for limit in solve):
+            return Proof(STOPPED_SEARCH, start=start)
+        for limit in solve:
+            if limit.what == SOLVE_WITHIN and (found := _ALLOWS.search(limit.why)) is not None:
+                return Proof(PROVED_WITHIN, gap=float(found.group(1)) / 100, start=start)
     if plan.approximation is not None or any(WITHIN_GAP in limit.guarantee for limit in limits):
         return Proof(APPROXIMATE, start=start)
     return Proof(EXACT, start=start)
+
+
+SOLVE_STOPPED = "The search was stopped"  # `_envelope_plan.envelope_limits`: a single search a net stopped with a plan in hand
+SOLVE_WITHIN = "The search stopped once the plan was proved close to the cheapest"  # the same, stopped by itself at the run's gap
+_ALLOWS = re.compile(r"the gap this run allows is ([0-9.]+)%")
 
 
 _CLAIM = re.compile(rf"The plan is {re.escape(WITHIN_GAP)} among ([^.]+)\.")
@@ -168,7 +183,7 @@ def method_name(label: str) -> str:
     """A method as the game names it: a round's catalog kind (`harvest-reforge-likelihood`) by its title ("Orb of Alchemy" for
     `alchemy-orb`, as the game writes it), a label as it is."""
     if not _CATALOG_ID.match(label):
-        return label
+        return label.removeprefix("Fossils ")  # a fossil set by its fossils' game names (#1514, `_limit_words.fossil_name`)
     if label.endswith("-orb") and label.removesuffix("-orb") in _ORB_OF:
         return f"Orb of {label.removesuffix('-orb').capitalize()}"
     return kind_title(label)

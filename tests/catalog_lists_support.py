@@ -32,6 +32,7 @@ from collections.abc import Collection, Iterable
 from dataclasses import replace
 from html import escape
 
+from crafting_system.cli._limit_words import group_words  # the page's title of a group (#893): the page is read as it is drawn
 from crafting_system.planner._limits import NOT_BUILT, NOT_NAMED, OPT_IN, TITLES, UNPRICED, Limit, limit_text, spent_kinds_named
 
 __all__ = [
@@ -80,7 +81,7 @@ def _line_without(line: str, kind: str) -> str:
 def page_without(html: str, kinds: Collection[str] = CATALOG_LISTS) -> str:
     """The page with each line of the groups `kinds` written without its labels (`LIST`), and a line that then reads as an earlier one of its group left out."""
     for kind in kinds:
-        head = f'<div class="k">{escape(TITLES[kind])}</div><div class="v ml">'
+        head = f'<div class="k">{escape(group_words(TITLES[kind]))}</div><div class="v ml">'
         at = html.find(head)
         while at >= 0:
             start = at + len(head)

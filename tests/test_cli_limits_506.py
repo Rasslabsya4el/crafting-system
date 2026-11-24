@@ -35,7 +35,7 @@ from crafting_system.cli import _reach
 from crafting_system.planner import _decide, _plan
 from crafting_system.planner._limits import GROUPS, SHOWN_LABELS, STATE_LINE, WITHIN_GAP, grouped, limit_text, model_gap_limits, pruning_limits, risk_limits
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, build_section, route_input
+from crafting_system.cli._route_view import Page, build_section, planner_limit_line, route_input
 from crafting_system.solver import ConvergenceError
 
 
@@ -205,7 +205,7 @@ def test_the_new_kinds_have_a_title_and_show_in_the_text_the_json_and_the_page(p
     assert {title for title, _ in grouped(added)} >= {"Actions the model has no rule for in some states", "Actions that consume other items", "What a state line shows"}
     for limit in added:
         assert limit_text(limit) in text
-        assert escape(limit_text(limit, SHOWN_LABELS)) in page
+        assert escape(planner_limit_line(carrying, limit).text) in page  # in a player's words (#893, `_limit_words`)
         assert any(entry["what"] == limit.what and entry["guarantee"] == limit.guarantee for entry in document["limits"])
 
 
