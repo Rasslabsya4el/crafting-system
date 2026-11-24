@@ -119,3 +119,41 @@ def test_the_plan_is_compared_with_its_mods_and_the_finish_the_guide_s_cost_hold
     assert benchmark_module._kept_finishes(site, keeps_quality) == 16.5
     assert benchmark_module._kept_finishes(site, keeps_none) == 0.0
     assert benchmark_module._kept_finishes(site, site) == 0.0  # read on the site plan itself: one model, nothing added
+
+
+def test_a_guide_walk_on_the_site_plan_that_passes_the_run_s_memory_net_is_read_on_the_guide_s_own_plan_and_says_so(tmp_path, monkeypatch, capsys):
+    # #1600: R13's site plan came to offer every action its guide names, so the guide was walked on the site plan's model, which passed the
+    # run's memory net (16 GB in 204 s). The walk now stops at the net (OR-40) and the guide is read on `guide_plan`, its figure the same.
+    from crafting_system.budget import MEMORY, Binding, BudgetExceeded
+
+    real = benchmark_module.evaluate_route
+    walked = []
+
+    def net_on_the_site_plan(plan, route, data):
+        walked.append(plan.policy == {})
+        if plan.policy != {}:  # the site plan (searched); `guide_plan`'s is a fixed policy on its own reach
+            raise BudgetExceeded(Binding("the report and the route page", MEMORY, 12_288, 12_301, "the plan's record is written"))
+        return real(plan, route, data)
+
+    monkeypatch.setattr(benchmark_module, "evaluate_route", net_on_the_site_plan)
+    site = run_benchmark(tmp_path / "site", "--net")
+    assert walked == [False, True]  # the site plan first, then the guide's own
+    assert site["error"] is None and site["guide_not_evaluable"] is None
+    assert site["guide_judged_on"].startswith(benchmark_module.GUIDE_OWN_AFTER_NET + " (")
+    monkeypatch.setattr(benchmark_module, "evaluate_route", real)
+    usual = run_benchmark(tmp_path / "usual", "--net")
+    assert usual["guide_judged_on"] is None  # read on the site plan, as before
+    assert site["given_route"]["mean"] == pytest.approx(usual["given_route"]["mean"], rel=1e-9)  # the same cost on its own methods
+    assert f"  {site['guide_judged_on']}" in capsys.readouterr().out.splitlines()
+
+
+def test_the_object_walk_of_a_given_route_asks_the_report_s_memory_net():
+    from crafting_system.budget import BudgetExceeded
+    from crafting_system.cli._report_net import report_net
+
+    target = load_target(R12, DATA)
+    own = guide_plan(DATA, target, price_file(), (REFORGE,))
+    route = load_route(GUIDE, own, DATA)
+    with report_net(0.001), pytest.raises(BudgetExceeded):  # a net every process passes
+        evaluate_route(own, route, DATA)
+    assert evaluate_route(own, route, DATA).risk.mean.value > 0  # outside the net nothing is asked

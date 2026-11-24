@@ -68,6 +68,7 @@ from crafting_system.targets.resolve import Resolver, Unresolved, close_matches,
 from crafting_system.planner import UNPRICED, PackedPolicy, Plan, evaluate_risk, free_action_cost, offer_action
 
 from ._reach import policy_states
+from ._report_net import ask
 
 RESTART = "restart"
 # A route's reach is walked as objects up to this many transitions, the size the object solver held (`planner._decide.EXACT_TRANSITIONS`); past it
@@ -677,6 +678,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     seen = {plan.start}
     held = 0  # transitions held as objects
     for state in order:  # the list grows while it is walked
+        ask()  # the report's memory net, when a finished plan's given route is read after it (#1381, #1600: R13's guide walked on the site plan)
         if plan.is_goal(state):
             continue
         choice = choices[state] = _decide(plan, route, data, state)
@@ -696,6 +698,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
                 order.append(successor)
     # The risk is read on one state per block of states that behave alike (`risk.lump`, #717): the same cost distribution, and the budget DP runs over
     # the blocks and not over every state (R13's route has 2,887 states; the DP over them took 4 to 18 minutes).
+    ask()
     lumped = lump(policy, plan.start, plan.is_goal)
     risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the plan's mean only sizes the grid: a route may cost less than a plan stopped at a gap (#829)
 
