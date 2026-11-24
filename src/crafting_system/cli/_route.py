@@ -267,6 +267,31 @@ def route_actions(path: Path) -> tuple[str, ...]:
     return tuple(found)
 
 
+def finish_labels(plan: Plan) -> set[str]:
+    """The catalysts and orbs a route's rule may name for the plan's finishes (#1234), read as those finishes after the mods: each finish
+    step's own, and the catalyst of the type asked or the Blessed Orb of a finish the start item already meets (no step then)."""
+    found = {step.label for step in getattr(plan, "finish_steps", ())}
+    quality = getattr(plan, "quality_finish", None)
+    if quality is not None:
+        found.add(f"{quality.wanted.type.value.capitalize()} Catalyst")
+    if getattr(plan, "implicit_finish", None) is not None:
+        found.add(BLESSED_ORB)
+    return found
+
+
+def recorded_cost_of(path: Path) -> float | None:
+    """The guide's cost the route file at `path` records (`recorded_cost`, #1596), read before any plan exists, or None: no such key, or a
+    file that cannot be read. It refuses nothing, as `route_actions`; `load_route` says a wrong figure once a plan is made."""
+    try:
+        root = load_with_lines(_route_text(path), str(path))
+    except (RouteError, TargetError, RecursionError):
+        return None
+    value = root.get("recorded_cost") if isinstance(root, LineMap) else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+        return None  # the reader's rule (`_Reader.cost`)
+    return float(value)
+
+
 def parse_route(text: str, plan: Plan, data: GameData, source: str = "<route>") -> Route:
     """Parse the YAML `text` of a route against `plan` (its requirements, offers and start price) and `data`."""
     try:
@@ -328,7 +353,7 @@ class _Reader:
         )
         # a rule that names the catalyst or the orb of one of the plan's finish steps is read as that finish (#1234): the finish follows every
         # goal of the route's mods, as it follows the plan's, so the rule is no step of the mods and is left out of them (`Route.finished`)
-        finishing = self.finish_labels()
+        finishing = finish_labels(self.plan)
         finished = tuple(dict.fromkeys(rule.do for rule in rules if rule.do in finishing))
         rules = tuple(rule for rule in rules if rule.do not in finishing)
         opening = next((priced.label for priced in self.plan.offers if priced.offer.action.opens_listing), None)
@@ -347,17 +372,6 @@ class _Reader:
 
     # -- `do` ---------------------------------------------------------------------------------------
 
-    def finish_labels(self) -> set[str]:
-        """The catalysts and orbs a route's rule may name for the plan's finishes (#1234): each finish step's own, and the catalyst of the
-        type asked or the Blessed Orb of a finish the start item already meets (no step then, nothing to do)."""
-        found = {step.label for step in self.plan.finish_steps}
-        quality = getattr(self.plan, "quality_finish", None)
-        if quality is not None:
-            found.add(f"{quality.wanted.type.value.capitalize()} Catalyst")
-        if getattr(self.plan, "implicit_finish", None) is not None:
-            found.add(BLESSED_ORB)
-        return found
-
     def read_action(self, rule: LineMap, path: str) -> str:
         label = self.text(rule, "do", path)
         line = rule.key_lines["do"]
@@ -371,7 +385,7 @@ class _Reader:
                 )
             return label
         known = [priced.label for priced in self.plan.offers]
-        if label in known or label in self.finish_labels():  # a finish's catalyst or orb is read as the finish (#1234)
+        if label in known or label in finish_labels(self.plan):  # a finish's catalyst or orb is read as the finish (#1234)
             return label
         for limit in self.plan.limits:
             if limit.kind == UNPRICED and label in limit.labels:

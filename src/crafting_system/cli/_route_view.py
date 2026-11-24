@@ -87,7 +87,7 @@ from ._marking import approximate_inputs, approximate_page_lines, price_inputs
 from ._price_marks import price_uses, use_line
 from ._report import Report
 from ._report_net import ask
-from ._route import RESTART, Route, RouteResult
+from ._route import RESTART, Route, RouteResult, finish_labels
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
 from ._route_card import with_implicits, with_quality
 from ._route_chain import chain_of_packed_policy
@@ -1631,16 +1631,21 @@ SHOWN_DIFFERENCES = 5  # the kinds of step named one by one; the rest is one lin
 SAME_COST = 0.01  # under this share of the given route's cost apart, the two routes cost the same and nothing is named
 
 
-def judged_on(plan: Plan, labels: tuple[str, ...], data: GameData, target: Target | None = None, prices=None) -> Plan:
+def judged_on(plan: Plan, labels: tuple[str, ...], data: GameData, target: Target, prices=None) -> Plan:
     """The plan a given route naming `labels` is evaluated on: `plan` itself when it offers every one and starts from the target's own item,
     else the guide's own plan of those actions (`guide_plan`), as the benchmark judges the guide of a site plan (#1442) and the page command
-    draws it (#1305); `target` and `prices` are the plan's own unless given. Raises `PlanError` (`NotModelled`) when the route names an action
-    the model does not hold."""
+    draws it (#1305); `prices` are the plan's own unless given. Raises `PlanError` (`NotModelled`) when the route names an action the model
+    does not hold.
+
+    `target` is the target as its file states it, never `plan.target`: the plan's own target is the one it searched, with the catalyst quality
+    and the base implicit it leaves to a finish after the mods taken out (`_plan.py`, `_quality_finish`, `_implicit_finish`), so on it the
+    guide's own plan never offers the catalyst or the orb its route names for them, and the route was refused as naming an unknown action
+    (R17's "Intrinsic Catalyst", #1596)."""
     plain = plan.starts is None or plan.starts.chosen.key == "plain"  # the guide starts from the target's own item, not a vendor recipe's
-    if plain and set(labels) <= {priced.label for priced in plan.offers}:
+    # a label that names the catalyst or the orb of one of the plan's finishes is read as that finish on the plan itself (#1234, `finish_labels`)
+    if plain and set(labels) <= {priced.label for priced in plan.offers} | finish_labels(plan):
         return plan
-    asked = getattr(plan, "asked_target", None) or plan.target  # a stand-in plan of a test has none
-    return guide_plan(data, asked if target is None else target, plan.prices if prices is None else prices, labels)
+    return guide_plan(data, target, plan.prices if prices is None else prices, labels)
 
 
 def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...]) -> Field | None:
@@ -1753,9 +1758,10 @@ def write_route_page(
     cache_dir: Path | None = None,
     guide: float | None = None,
     given_on: Plan | None = None,
+    guide_recorded: bool = False,
 ) -> Path:
     """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
-    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide, given_on=given_on)
+    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide, given_on=given_on, guide_recorded=guide_recorded)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8", newline="\n")
     return path
@@ -1771,13 +1777,15 @@ def route_page(
     cache_dir: Path | None = None,
     guide: float | None = None,
     given_on: Plan | None = None,
+    guide_recorded: bool = False,
 ) -> str:
     """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
     `write_route_page` writes and the website serves (#961).
 
     The page makes no request: the trade link is built from `buy_spec` and the stat list in
     `<cache_dir>/trade/stats.json` when that exists. `guide` is the guide's route's cost with the start item when no given route is drawn (the
-    benchmark's figure of it): the proof sentence says the plan's cost against it; a given route's own cost takes its place. `given_on` is the
+    benchmark's figure of it, or the figure a reference craft's route file records, `_reference_guide`): the proof sentence says the plan's cost
+    against it, and `guide_recorded` says it is the recorded figure (#1596); a given route's own cost takes its place. `given_on` is the
     plan the given route was evaluated on when it is not `report.plan` (the guide's own plan of its actions, `guide_plan`, #1305).
     """
     ask(fresh=True)  # the report's memory net, read at the page's start (#1381)
@@ -1790,7 +1798,7 @@ def route_page(
         buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
     judged = plan if given_on is None else given_on
-    recorded = False
+    recorded = guide_recorded
     if given is not None:
         guide, recorded = guide_figure(judged, given, route)
     policy = build_section(route_input(plan, report.interval, guide, recorded), data, buy, anchor="policy", route_field=not stacked)
