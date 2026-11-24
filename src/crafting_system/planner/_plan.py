@@ -28,7 +28,7 @@ from crafting_system.abstraction import _pattern
 from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
-from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, sharing, unopened_listing
+from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, open_listing, sharing, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
@@ -838,7 +838,11 @@ def _make_plan(
     listing = unopened_listing(data, target.start_item) if price_of_start.bought else None
     if listing is not None:  # ADR-0064: the bought item is the one the market sells, so the plan opens with the draw of its mods
         normal_base = searched_rarity(price_of_start) == "normal"  # the price is a Normal base's: the orb that makes it rare is used and paid (#1522)
-        priced = (*priced, listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base))
+        draw = listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base)
+        priced = (*priced, draw)
+        if normal_base and not draw.offer.action.paid:  # the orb that makes the Normal base the rarity has no price: the free draw stands in, said (OR-16, OR-13)
+            orb = open_listing(target.start_item.rarity, paid=True)
+            limits += unpriced_limits(((orb.label(data), tuple(orb.resources(data)), ""),))
     limits += unpriced_limits((drop.label, drop.missing, drop.kind) for drop in dropped)
     usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])
     kept = set(usable)

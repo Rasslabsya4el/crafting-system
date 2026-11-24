@@ -83,6 +83,8 @@ def test_an_unpriced_orb_leaves_the_free_draw():
     plan = make_plan(data, aim, searched_at(prices(key), key, "normal", alchemy=False))
 
     assert plan.policy[plan.start].label == DRAW_LABEL
+    said = [limit for limit in plan.limits if limit.kind == "unpriced"]
+    assert said and "Orb of Alchemy" in " ".join(" ".join(limit.names) for limit in said)  # the free draw stands in for an unpriced orb, and the answer says so
 
 
 def test_a_guide_route_takes_the_paid_alchemy_first_and_needs_no_rule_for_it():
