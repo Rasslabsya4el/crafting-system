@@ -51,7 +51,7 @@ from dataclasses import dataclass, field, replace
 
 import numpy as np
 
-from ._certify import ACCEPT_BOUND, AHEAD_FIRST, AHEAD_LIMIT, AHEAD_WEIGHT, ConvergenceError, lowered, widen  # noqa: F401  (ACCEPT_BOUND, AHEAD_*: read here, by tests, and shared with the object solver, #842)
+from ._certify import ACCEPT_BOUND, AHEAD_FIRST, AHEAD_LIMIT, AHEAD_WEIGHT, ConvergenceError, Late, lowered, widen  # noqa: F401  (ACCEPT_BOUND, AHEAD_*: read here, by tests, and shared with the object solver, #842)
 from ._packed import PackedGraph, expand_ranges, kernel_any, kernel_min, kernel_sums, kernel_sums_rounded_once, rounded_once_allowance
 from . import _packed_linear
 from ._packed_chain import ChainSolver
@@ -438,8 +438,14 @@ def _divided(graph: PackedGraph, work: Work, v: np.ndarray, targets: np.ndarray,
 # ---- proper states and the start policy -----------------------------------------------------------------------------
 
 
-def proper_states(work: Work, alive: np.ndarray, effective: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
-    """`(Y, ok, distance, policy)`: the states with a proper policy, the actions that stay in Y, the luckiest-path costs, a proper policy."""
+def proper_states(
+    work: Work, alive: np.ndarray, effective: np.ndarray, deadline: Callable[[str], None] | None = None
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """`(Y, ok, distance, policy)`: the states with a proper policy, the actions that stay in Y, the luckiest-path costs, a proper policy.
+
+    Each sweep carries the luckiest-path costs one step further from the goals, so a chain of `n` states that reaches a goal only at its far end
+    takes `n` sweeps of the whole graph: about 10 s on a chain of 20,000 states, 700 s on R17's 210,847 (#1516). `deadline`, when given, is
+    asked before every sweep after the first (`_deadline`) and raises `Late` once the caller's time is up."""
     g = work.g
     inside = np.ones(work.n, dtype=bool)
     while True:
@@ -455,6 +461,8 @@ def proper_states(work: Work, alive: np.ndarray, effective: np.ndarray) -> tuple
             if np.array_equal(nearer, distance):
                 break
             distance = nearer
+            if deadline is not None:
+                deadline("a sweep of the cheapest paths to a goal")
         found = np.isfinite(distance) & inside
         if np.array_equal(found, inside):
             break
@@ -498,7 +506,8 @@ def reaches_goal(work: Work, policy: np.ndarray, seeds: np.ndarray | None = None
 
 
 def warm_policy(
-    work: Work, alive: np.ndarray, effective: np.ndarray, start: np.ndarray, info: dict, value: np.ndarray | None = None, leave: np.ndarray | None = None
+    work: Work, alive: np.ndarray, effective: np.ndarray, start: np.ndarray, info: dict, value: np.ndarray | None = None, leave: np.ndarray | None = None,
+    deadline: Callable[[str], None] | None = None,
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
     """`(inside, ok, policy)` from a policy given for the states (an action index of this graph, or -1), proved proper on `inside`.
 
@@ -546,7 +555,7 @@ def warm_policy(
     if reaches_goal(work, policy)[wanted].all():
         info["warm"] = "kept"
         return inside, ok, policy
-    inside, ok, _, cheapest = proper_states(work, alive, effective)
+    inside, ok, _, cheapest = proper_states(work, alive, effective, deadline)
     kept = given(ok, inside)
     policy = np.where(kept >= 0, kept, cheapest)
     stuck = inside & ~g.goal & ~reaches_goal(work, policy)
@@ -839,6 +848,7 @@ def solve_graph(
     start_value: np.ndarray | None = None,
     self_mass: np.ndarray | None = None,
     refuse_above: float | None = None,
+    late: Callable[[], bool] | None = None,
 ) -> Core:
     """Policy iteration on `graph` itself (no merge): see the module docstring, steps 2 to 5.
 
@@ -851,11 +861,18 @@ def solve_graph(
     `refuse_above` (default: `accept_bound`) is the certified bound above which the solve is refused, for a caller that takes every figure with
     its certified error (`value * (1 - bound) <= V* <= value * (1 + bound)`) and so needs the bound only small next to what it compares (#867).
     The work is the same whatever it is: the certificate, its finer measures and the corrections all aim at `accept_bound`.
+
+    `late` (None for none) says whether the caller's time limit has passed (OR-40, #1516), on the caller's own clock: the solve asks it between two
+    of its steps (each sweep of `proper_states` after the first, each round of policy iteration after the first, each refinement and correction,
+    and before the exact solve) and raises `Late`, a `ConvergenceError` with no figure, once it says so. A step that has begun runs to its end (one
+    sweep, one evaluation of the policy and its improvement, one certificate, one correction, never the exact solve once late), so the solve goes
+    past the limit by at most one such step: on R17's 210,847 states a sweep takes about 3 ms, an evaluation about 0.1 s.
     """
     refuse_above = accept_bound if refuse_above is None else max(refuse_above, accept_bound)
     say = progress or (lambda _text: None)
     info = {} if info is None else info
     began = time.perf_counter()
+    on_time = None if late is None else _deadline(late, began)
     clock = _tick()
     work = Work(graph, self_mass)
     n = work.n
@@ -869,10 +886,10 @@ def solve_graph(
         effective = np.where(alive, graph.act_cost / np.where(alive, leave, 1.0), INF)
     mark = _tick()
     if start_policy is None:
-        inside, ok, distance, policy = proper_states(work, alive, effective)
+        inside, ok, distance, policy = proper_states(work, alive, effective, on_time)
         value = np.where(inside, np.where(np.isfinite(distance), distance, 0.0), 0.0)
     else:
-        inside, ok, policy = warm_policy(work, alive, effective, np.asarray(start_policy), info, start_value, leave)
+        inside, ok, policy = warm_policy(work, alive, effective, np.asarray(start_policy), info, start_value, leave, on_time)
         value = np.zeros(n) if start_value is None else np.where(inside & np.isfinite(start_value), start_value, 0.0)
     info["seconds_proper"] = _tick() - mark
     say(f"proper states: {int(inside.sum()):,} of {n:,} ({time.perf_counter() - began:.1f} s)")
@@ -880,6 +897,8 @@ def solve_graph(
     noise = (terms + 2.0) * EPS
     rounds = 0
     while rounds < max_rounds:
+        if rounds and on_time is not None:
+            on_time("a round of policy iteration")
         rounds += 1
         mark = _tick()
         value = evaluate_policy(work, leave, policy, value, dense_limit, 1e-13, info)
@@ -901,12 +920,16 @@ def solve_graph(
     info["seconds_certify"] = _tick() - mark
     refinements = 0
     while not _settled(certificate, tolerance) and refinements < 3:
+        if on_time is not None:
+            on_time("a refinement of the values")
         refinements += 1
         value = evaluate_policy(work, leave, policy, value, dense_limit, 1e-15, info)
         certificate = certify(graph, value, inside, work, accept_bound)
     info["refinements"] = refinements
     corrections = 0
     while not certificate.bound <= accept_bound and corrections < CORRECTIONS:  # only a plan that would be refused: one that certified keeps its numbers to the bit
+        if on_time is not None:
+            on_time("a correction of the values")
         finer = corrected(work, leave, policy, value, dense_limit, info)
         if finer is None:
             break
@@ -916,6 +939,8 @@ def solve_graph(
         value, certificate, corrections = finer, again, corrections + 1
     info["corrections"] = corrections
     if not certificate.bound <= refuse_above:  # also false for an infinite or undefined bound
+        if on_time is not None:
+            on_time("the exact solve in rational numbers")
         exact = _exact(graph, inside, info)  # values float64 cannot certify: the optimum in rational numbers on the quotient, when it is small (#1380)
         if exact is not None and exact.certificate.bound <= refuse_above:  # (its one rounding: a caller that accepts no error at all is refused still)
             say(f"solved exactly in rational numbers on {info['exact_classes']:,} classes: the float64 certificate gave only {certificate.bound:.3g}")
@@ -930,6 +955,20 @@ def solve_graph(
     say(f"certificate on the quotient: bound {certificate.bound:.3g}{_own_text(certificate)} ({time.perf_counter() - began:.1f} s)")
     value = np.where(inside, value, INF)
     return Core(value, inside, np.where(inside & ~graph.goal, policy, -1), certificate)
+
+
+def _deadline(late: Callable[[], bool], began: float) -> Callable[[str], None]:
+    """What `solve_graph` asks between two steps: it raises `Late`, naming the step it stopped before, once `late()` says the time is up."""
+
+    def ask(step: str) -> None:
+        if late():
+            now = time.perf_counter()
+            raise Late(
+                f"the solve stopped at its caller's time limit after {now - began:.1f} s, before {step} (it asks the clock between two steps)",
+                now - began, step,
+            )
+
+    return ask
 
 
 def _exact(graph: PackedGraph, inside: np.ndarray, info: dict) -> Core | None:
