@@ -39,6 +39,7 @@ from crafting_system.solver import (
     Solution,
     lump_policy,
     policy_reach,
+    packed_of_core,
     solve_packed,
 )
 
@@ -252,10 +253,16 @@ def solve_walked(
     tolerance: float = 1e-10,
     progress: Callable[[str], None] | None = None,
     refuse_above: float | None = None,
+    priced=None,
 ) -> PackedResult:
-    """Merge, solve and certify a walked graph; wrap it as the `Solution` of the concrete states. `refuse_above`: `solve_packed`'s (#867)."""
+    """Merge, solve and certify a walked graph; wrap it as the `Solution` of the concrete states. `refuse_above`: `solve_packed`'s (#867).
+    `priced` is `solve_graph`'s solution of this very graph when the caller has one (the envelope search's pricing of the plan it stopped
+    with): the graph is merged and its plan taken from it, not solved again (`solver.packed_of_core`, #1566)."""
     say = progress or PROGRESS or (lambda _text: None)
-    solved = solve_packed(walked.graph, tolerance=tolerance, progress=say, refuse_above=refuse_above)
+    if priced is not None:
+        solved = packed_of_core(walked.graph, *priced, progress=say)
+    else:
+        solved = solve_packed(walked.graph, tolerance=tolerance, progress=say, refuse_above=refuse_above)
     values = solved.value.tolist()
     solution = Solution(
         values=dict(zip(walked.states, values)),

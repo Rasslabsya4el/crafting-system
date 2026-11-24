@@ -102,7 +102,7 @@ from dataclasses import replace
 from numbers import Integral, Real
 
 from .. import budget, parallel
-from ..solver import Action
+from ..solver import Action, Late
 from . import _free, _inputs, _moments, _regen
 from ._budget import BudgetRun, rounding_allowance, run_budget, tail_mean
 from ._chain import UNIT_TOLERANCE, Chain, build_chain, exact_unit
@@ -152,6 +152,7 @@ def evaluate[S](
     packed_moments: bool = False,
     coarse_first: bool = False,
     regenerative: bool = False,
+    known_mean: tuple[float, float, float] | None = None,
 ) -> RiskReport:
     """Risk metrics of the total cost of `policy` from `start`; see the module docstring.
 
@@ -174,6 +175,9 @@ def evaluate[S](
     `free_cost` names the cost of the actions that are free (the planner's epsilon, `_free`): of a proper policy without inputs that holds
     such an action they are counted apart from the grid (see "Free actions" in the module docstring); `free_fallback_bins`, when given,
     is the `max_bins` of the ordinary and coarse grids if that is not possible. Without `free_cost` nothing changes.
+    The linear solves of the moments and of the grid chains' means keep the run's time net plus `budget.AFTER_NET` of it (`_regen.moments_late`,
+    #1553): past it the figures are not computed and `grid.stopped` says so, and `known_mean` (the mean of the policy as its caller certified
+    it, `(value, low, high)`) is the mean such a report gives (not computed when it is None).
     Raises `ValueError` for a bad argument or a
     `resolution` above the smallest cost, a `max_bins` so large that a (bin, state) pair no longer fits
     62 bits, and the solver's `ConvergenceError` if a moment solve
@@ -243,6 +247,8 @@ def evaluate[S](
     if proper:
         try:
             mean, variance, m1 = _mean_and_variance(chain)
+        except Late:  # the run's time net and its share past it ended the moments' solves (#1553): the figures are not computed, said
+            return _moments_stopped_report(chain, cvar_level, levels, known_mean)
         except _inputs.NotSubcritical as stopped:  # every state can finish, but the runs need more than they make, or the arithmetic could not say how much
             if isinstance(stopped, _inputs.Undecided):  # the arithmetic, not the policy: nothing below can rest on a mean that is not certified
                 return _unordered_report(chain, None, cvar_level, levels, UNDECIDED)
@@ -263,6 +269,9 @@ def evaluate[S](
                                    work_budget, horizon, spread, costs, c_min, proper, cause, coarse_first, regenerative, free_fallback_bins)  # fmt: skip
         except parallel.MemoryNetReached:  # a pool of the figures passed the run's memory net and was stopped (#738): nothing slower follows
             return _stopped_report(chain, mean, variance, proper, cause, cvar_level, levels, net, budget.MEMORY)
+        except Late:  # the grid chains' means met the run's time net and its share past it (#1553): the quantiles and the CVaR are not computed
+            report = _unordered_report(chain, (mean, variance), cvar_level, levels) if proper else _unordered_report(chain, None, cvar_level, levels, cause or IMPROPER)
+            return replace(report, grid=replace(report.grid, stopped=_regen.moments_stopped(), stopped_by=budget.TIME))
 
 
 def _figures_within(net, chain, free, free_found, mean, variance, levels, cvar_level, tail_mass, max_bins, max_coarse_bins, resolution, work_budget,
@@ -547,12 +556,13 @@ def _coarse_means(chain: Chain, step: float, low_bins: Sequence[int], high_bins:
 
 
 def _mean_and_variance(chain: Chain):
-    """Solver moments for a chain without inputs, the linear systems of `_inputs` for one with."""
-    return _inputs.mean_and_variance(chain) if chain.has_inputs else _moments.mean_and_variance(chain)
+    """Solver moments for a chain without inputs, the linear systems of `_inputs` for one with. The solves on packed arrays keep the run's
+    time net plus its share past it (`_regen.moments_late`) and raise `Late` past it (#1553)."""
+    return _inputs.mean_and_variance(chain) if chain.has_inputs else _moments.mean_and_variance(chain, _regen.moments_late())
 
 
 def _solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], float]:
-    return _inputs.solve_costs(chain, costs) if chain.has_inputs else _moments.solve_costs(chain, costs)
+    return _inputs.solve_costs(chain, costs) if chain.has_inputs else _moments.solve_costs(chain, costs, _regen.moments_late())
 
 
 def _affordable(chain: Chain, spread: float, work_budget: float) -> float:
@@ -634,6 +644,15 @@ def _unordered_report(chain: Chain, moments, cvar_level: float, levels: Sequence
         unresolved,
         _input_runs(chain) if chain.has_inputs else {},
     )
+
+
+def _moments_stopped_report(chain: Chain, cvar_level: float, levels: Sequence[float], known_mean) -> RiskReport:
+    """The report of a proper policy whose moments the run's time net stopped (#1553, OR-13): the odds (a proper policy finishes), the mean its
+    caller certified (`known_mean`, the plan's own; not computed when none is given), the variance, the quantiles and the CVaR not computed,
+    and `grid.stopped` says so."""
+    mean = known_mean if known_mean is not None else (math.inf, 0.0, math.inf)
+    report = _unordered_report(chain, (mean, (math.inf, 0.0, math.inf)), cvar_level, levels)
+    return replace(report, grid=replace(report.grid, stopped=_regen.moments_stopped(), stopped_by=budget.TIME))
 
 
 def _stopped_report(

@@ -48,6 +48,8 @@ ASK_EVERY = 1024  # a making under a net on the clock (`asking`) looks at the cl
 ASK_SECONDS = 0.25  # ... and asks its net at most this often: a question reads the memory of the process and its workers (`parallel.held_mb`: microseconds under the net, its own pace past it, #1252)
 BUILD_PER_STATE = 100.0  # a run counted in states (`Budget.in_states`): the bound's build of a search may do this many pieces of work per state of that search's net (#1101; `Budget.build_per_state`)
 
+AFTER_NET = 0.05  # the share of its time net the work that prices or refines an answer already in hand may take past the net (the pricing of the answer after a stop, `planner._envelope.LAST_PRICING`, #1516; the cost figures' moments, `risk._regen.moments_late`, #1553): a share of the net, so the same on any machine (OR-39, OR-40)
+
 NO_PLAN = "no plan found yet"  # what a stop leaves when the stage had no plan to keep (OR-33)
 
 TIME = "time"

@@ -15,7 +15,7 @@ from ._packed import PackedBuilder, PackedGraph, PackedModel, pack_model
 from ._packed_lump import LumpedChain, lump_policy
 from . import _packed_linear as linear_solve  # the one linear solve (#841), read by `risk/` through this public name
 from ._packed_model import solve_packed_model
-from ._packed_solve import PackedSolution, certify, policy_reach, solve_packed
+from ._packed_solve import PackedSolution, certify, packed_of_core, policy_reach, solve_packed
 from ._peek import APPLY, GIVE_UP, ExpandedModel, PeekNode, PeekSolution, Reaction, action_value, peek_backup, solve_peek
 from ._solve import Solution, solve
 from ._tail import NoPolicyError, TailCut, solve_tail_cut
@@ -54,6 +54,7 @@ __all__ = [
     "certify",
     "lump_policy",
     "pack_model",
+    "packed_of_core",
     "peek_backup",
     "policy_reach",
     "solve",

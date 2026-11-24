@@ -23,8 +23,8 @@ offered by default (OR-41): a goal names the next tier of an influenced mod by i
 natural tier); the offers' floors class it TERMINAL too (it reads the junk and the influenced mods and adds a mod it does not name), so its
 lower bound is its price. The beast recipes are a planner kind since #1196 (batch B2, OR-37), offered by default (OR-41): they keep every
 mod and add one mod drawn from the item's whole pool (#1538), and their class declares that draw for a shape that holds the influence
-(`added_draw`), so the offers' floors class them ADD there, with the bound of one added mod; a shape without the influence refuses them and
-keeps them TERMINAL (their floor is their price). The answer names their approximate claim (`influence_beast.adds_a_mod_of_that_influence`). The compressed state tells
+(`added_draw`), so the offers' floors class them ADD there, with the bound of one added mod; a shape without the influence refuses them, and
+as additions that keep every mod (`Reads.variants`, #1571) they are set aside on it (`_raised_add`, #973). The answer names their approximate claim (`influence_beast.adds_a_mod_of_that_influence`). The compressed state tells
 the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155 (below). A mod an action puts on the item is
 rolled at its lowest values (`Finite`), as for every action that lists its results.
 
@@ -485,9 +485,11 @@ class BeastInfluenceRecipe(Action):
         return beast_recipe_resources(self.influence, self.rare_creature_price)
 
     def reads(self, data: GameData) -> Reads:
-        # Every family told apart, as the orb of the influence reads (the recipe refuses no Eldritch implicit): finer than an Exalted Orb's
-        # `Reads.adding`, which would also be sound now that it draws as one (#1538), but the state is left as it was.
-        return Reads(junk=True, families=None, pool_weight=False)
+        # As an Exalted Orb reads (#1571): since #1538 the recipe draws one mod of the item's whole pool, less the families held, exactly as
+        # an Exalted Orb does and keeps every mod, so the pure junk on the item matters to it only by the pool weight it takes out. That is the
+        # `EXTREMES` argument of `abstraction._pattern` (one draw by pool weight); reading every family apart (`Mode.ALL`) told apart members
+        # whose outcomes are the same, 520,707 kernels against 9,123 on R14's fourth group (H54).
+        return Reads.adding(variants=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=True)
@@ -496,7 +498,7 @@ class BeastInfluenceRecipe(Action):
         """One mod of the item's whole pool (an Exalted Orb's draw, #1538), less the families held, on the sides with room, drawn over them
         together (`Action.added_draw`, #1074, #1196): every item of the shape of `item` holds the same influences and item level, so its pool is
         the bare item's less the families it holds, and the recipe keeps every mod. None where the shape refuses it (not rare, corrupted, without
-        the influence): the offer is then TERMINAL, as it is for one the shape refuses."""
+        the influence): the offers' floors then refuse it at the bare item and set it aside on the shape, as an Exalted Orb's (#973, #1571)."""
         if item.rarity is not Rarity.RARE or item.corrupted or self.influence not in item.influences:
             return None
         bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))

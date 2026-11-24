@@ -19,7 +19,7 @@ clipped at zero. An infinite error bound gives [0, inf] ends; the value is still
 
 import math
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from ..solver import Action, TabularModel, solve, solve_packed_model
 from ._chain import Chain
@@ -36,8 +36,9 @@ def interval(value: float, error: float) -> tuple[float, float]:
     return max(low, 0.0), high
 
 
-def solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], float]:
-    """Mean remaining cost of every state when state i pays `costs[i]` per step, and its error bound."""
+def solve_costs(chain: Chain, costs: Sequence[float], late: Callable[[], bool] | None = None) -> tuple[list[float], float]:
+    """Mean remaining cost of every state when state i pays `costs[i]` per step, and its error bound. `late`: the solve on packed arrays asks it
+    between two of its steps and raises `Late` once it says the time is up (`solve_graph`, #1553)."""
     table = {
         chain.states[i]: [Action(a.label, costs[i], a.outcomes)]
         for i in chain.finishing_states()
@@ -49,7 +50,7 @@ def solve_costs(chain: Chain, costs: Sequence[float]) -> tuple[list[float], floa
     if chain.packed_moments or edges > PACKED_FROM_EDGES:
         # every caller takes the values with their certified error (`interval`), so no bound is refused (#1467): a chain of 10^11 steps, whose
         # float64 measure stops near 1e-5, is the plan the planner itself certified to its run's allowance, and refusing it here lost that plan
-        solution = solve_packed_model(model, [chain.states[0]], refuse_above=math.inf)
+        solution = solve_packed_model(model, [chain.states[0]], refuse_above=math.inf, late=late)
     else:
         solution = solve(model, [chain.states[0]])
     values = [solution.values.get(state, 0.0) for state in chain.states]
@@ -61,16 +62,16 @@ def real_costs(chain: Chain) -> list[float]:
 
 
 def mean_and_variance(
-    chain: Chain,
+    chain: Chain, late: Callable[[], bool] | None = None
 ) -> tuple[tuple[float, float, float], tuple[float, float, float], list[float]]:
-    """`(mean, variance, m1)`, the first two as `(value, low, high)`, for a proper policy."""
+    """`(mean, variance, m1)`, the first two as `(value, low, high)`, for a proper policy; `late` as `solve_costs`'s."""
     costs = real_costs(chain)
-    m1, e1 = solve_costs(chain, costs)
+    m1, e1 = solve_costs(chain, costs, late)
     second = [0.0] * len(costs)
     for i in chain.finishing_states():
         ahead = math.fsum(p * m1[j] for j, p in chain.succ[i])
         second[i] = costs[i] * costs[i] + 2.0 * costs[i] * ahead
-    m2, e2 = solve_costs(chain, second)
+    m2, e2 = solve_costs(chain, second, late)
 
     degree = max((len(edges) for edges in chain.succ), default=0)
     rho = max(MIN_COST_ROUNDING, (8 + degree) * EPS)
