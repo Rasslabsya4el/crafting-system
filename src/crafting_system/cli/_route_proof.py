@@ -18,6 +18,7 @@ not hold.
 
 from __future__ import annotations
 
+import dataclasses
 import math
 import re
 from collections import Counter
@@ -64,6 +65,7 @@ class Proof:
     start: float = 0.0
     rounds: tuple = ()
     mean: float | None = None  # the plan's mean cost after the start item: what the floor is compared with
+    finish: float = 0.0  # the plan's finish steps after the mods (#1234): the search's figures are of the mods, so each said figure adds them
 
     @property
     def stopped(self) -> bool:
@@ -93,13 +95,15 @@ def proof_of(plan: Plan) -> Proof:
     if info is None:
         return _proof_of_limits(plan, start)
     rounds = tuple(info.widening)
-    lower = info.lower if math.isfinite(info.lower) and info.lower > 0 else None
+    # the search's figures are of the mods; the finish steps follow every goal at one exact mean, so the whole craft's figures add it (#1234)
+    finish = plan.craft_mean - plan.mean_remaining if hasattr(type(plan), "craft_mean") else 0.0  # a stand-in plan of a test has none
+    lower = info.lower + finish if math.isfinite(info.lower) and info.lower > 0 else None
     mean = plan.risk.mean.value if plan.risk is not None and math.isfinite(plan.risk.mean.value) else None
     if info.exact:
-        return Proof(EXACT, lower=lower, start=start, rounds=rounds, mean=mean)
+        return Proof(EXACT, lower=lower, start=start, rounds=rounds, mean=mean, finish=finish)
     if info.within is not None:
-        return Proof(PROVED_WITHIN, gap=info.within, lower=lower, start=start, rounds=rounds, mean=mean)
-    return Proof(STOPPED_SEARCH, lower=lower, start=start, rounds=rounds, mean=mean)
+        return Proof(PROVED_WITHIN, gap=info.within, lower=lower, start=start, rounds=rounds, mean=mean, finish=finish)
+    return Proof(STOPPED_SEARCH, lower=lower, start=start, rounds=rounds, mean=mean, finish=finish)
 
 
 _AT_MOST = re.compile(r"at most ([0-9.]+)% above it")
@@ -192,8 +196,15 @@ def _net(record) -> str:
     return "memory" if "memory" in record.reason else "work" if record.states is not None or "states" in record.reason else "time"
 
 
-def batch_line(n: int, record, grown: bool = False, twin: int = 0) -> str:
-    """One batch of methods as a player reads it: its methods, how much it held, and how it ended (no search word, no seconds of a share)."""
+def batch_line(n: int, record, grown: bool = False, twin: int = 0, finish: float = 0.0) -> str:
+    """One batch of methods as a player reads it: its methods, how much it held, and how it ended (no search word, no seconds of a share).
+    `finish` is what the plan's finish steps add after the mods (#1234): a batch's figures are of its mods, and each is said with them."""
+    if finish:
+        record = dataclasses.replace(
+            record,
+            upper=None if record.upper is None else record.upper + finish,
+            lower=None if record.lower is None else record.lower + finish,
+        )
     held = f"{record.offers:,} action{'' if record.offers == 1 else 's'}"
     # a widening round holds its base too (`_rounds`): after a growth, the plan's own methods; otherwise those of the earlier batches
     joined = "" if record.growth is not None or n == 1 else " with the methods of the plan found so far" if grown else " with the methods kept from the earlier batches"
@@ -272,7 +283,7 @@ def rounds_line(limit: Limit, proof: Proof) -> "Line":
         if record.growth is None and seen[record.kinds] > 1:
             order[record.kinds] += 1
             twin = order[record.kinds]
-        lines.append(batch_line(n, record, grown, twin))
+        lines.append(batch_line(n, record, grown, twin, proof.finish))
     lines = tuple(lines)
     return Line(head + tail, more=lines, more_title="each batch", more_apart=True)
 

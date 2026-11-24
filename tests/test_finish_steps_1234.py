@@ -201,3 +201,14 @@ def test_the_blessed_orbs_are_in_the_price_list_and_a_start_that_needs_no_mod_is
     assert not first.final and last.final and last.title.startswith("Blessed Orb until the implicit")
     prices = next(field for field in section.goal.fields if field.label == "Prices")
     assert any(line.text.startswith("Blessed Orb: 0.25 Chaos") for line in prices.lines)
+
+
+def test_a_batch_of_the_search_says_its_figures_with_the_finish_steps():
+    """Crafter on R05 (#1234): a batch's figures are of the mods, the result's of the whole craft; the page says each with the finish steps,
+    so a batch's 89.4 c reads 106.3 c beside a result of 108.6 c with the 2.2 c start item."""
+    from crafting_system.cli._route_proof import batch_line
+    from crafting_system.planner._rounds import BEATEN, RoundRecord
+
+    record = RoundRecord(("Chaos Orb",), 3, BEATEN, "finished early", 89.4, 95.0, 1.0)  # its figure of the mods
+    assert "less than 89.4 c of crafting" in batch_line(2, record)
+    assert "less than ≈ 106 c of crafting" in batch_line(2, record, finish=16.86)
