@@ -7,7 +7,7 @@ The solver itself is generic: states are any hashable objects and it knows nothi
 
 from ._acquire import MAIN, Acquisition, Need
 from ._bounds import Bounds, solve_bounds
-from ._certify import ConvergenceError
+from ._certify import ConvergenceError, Late
 from ._lazy import LazySolution, Round, solve_lazily
 from ._minmax import solve_variants
 from ._model import Action, Model, Outcome, Peek, TabularModel, VariantAction
@@ -29,6 +29,7 @@ __all__ = [
     "ConvergenceError",
     "ExpandedModel",
     "GIVE_UP",
+    "Late",
     "LazySolution",
     "LumpedChain",
     "MAIN",
