@@ -132,7 +132,7 @@ The pricing of the plan in hand keeps the time net too (#1516, OR-40): the solve
 plan's at its chain's limit, `Net.first`) and stops there with `Late`, read as a solve that cannot be certified; the pricing of the answer after a
 stop may take `LAST_PRICING` of the net past it, and a graph whose pricing was late is not priced again until the search has realized more. Without
 it a plan whose chain reaches the goal only at its far end cost one sweep of the graph per state of the chain (`solver._packed_solve.proper_states`):
-800 s a round on R17's 210,847 states, past a 1 h net by 25 min. A given start whose plan has not closed has no answer
+800 s a round on R17's 210,847 states, past a 1 h net by 25 min (until #1527, which starts those sweeps from one shortest-path pass). A given start whose plan has not closed has no answer
 (`NoPolicy`). A round whose *lower* solve cannot be certified (a plan of 10^9 steps or more, #867, #948) ends a search that holds such a plan the
 same way, as a stop: the plan in hand, and the lower figure of the last round the solver certified (or the start's bound), which is a lower bound
 because `L` only rises. A search that holds no plan (no net: it keeps none) refuses as before, and so does every search on a refusal with no

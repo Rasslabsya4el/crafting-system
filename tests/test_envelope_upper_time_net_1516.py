@@ -5,6 +5,10 @@ The upper side prices the plan in hand by solving the realized actions (`Search.
 takes as many sweeps as the chain has states: on R17 (th27c, 210,847 states) each pricing took about 800 s and a run with a 1 h net ran on to its
 outer kill at 85 min. On main the solve asked no clock.
 
+Since #1527 a long run of sweeps ends in one shortest-path pass, and this chain prices in 65 sweeps, so the tests of a long pricing put the old
+pass back (`old_sweeps`: the sweeps alone, as on #1516's main): a pricing that long stands for any pricing longer than the net, and the solve
+still asks the clock between its sweeps.
+
 The clock here is the test's (`tests/test_no_timing.py`): the search's `time` is a hand clock, and each sweep of the solver moves it by
 `SWEEP` seconds, so where the search stops is the same on every machine. The chain has 3,000 states that move on with chance 1 in 1,000,001:
 its pricing takes 3,000 sweeps, 30 s of the hand clock, against a net of 5 s. On main each of its three pricings runs to its end (90 s and more);
@@ -85,7 +89,13 @@ def clock(monkeypatch) -> _HandClock:
     return hand
 
 
-def test_a_pricing_too_long_for_the_net_ends_within_it(clock) -> None:
+@pytest.fixture
+def old_sweeps(monkeypatch) -> None:
+    """The sweeps of `proper_states` alone, as before #1527: one sweep per state of the chain."""
+    monkeypatch.setattr(_packed_solve, "SWEEPS_BEFORE_PASS", 1 << 62)
+
+
+def test_a_pricing_too_long_for_the_net_ends_within_it(clock, old_sweeps) -> None:
     net = 5.0
     said: list[str] = []
     search = Search(Chain(3_000, 1_000_000), net=Net(seconds=net), progress=said.append, gap=0.01, gap_after=0.0)
@@ -104,7 +114,7 @@ def test_a_pricing_too_long_for_the_net_ends_within_it(clock) -> None:
     assert any("it was not priced within the time limit" in line for line in said), said
 
 
-def test_a_late_pricing_runs_again_under_a_later_limit(clock) -> None:
+def test_a_late_pricing_runs_again_under_a_later_limit(clock, old_sweeps) -> None:
     """A graph whose pricing was late is skipped only under the same limit or an earlier one: a later limit (the answer's after a stop) prices it
     again, and with no limit it is priced to its end."""
     search = Search(Chain(300, 1_000_000), net=Net(seconds=1e9), gap=0.01, gap_after=0.0)

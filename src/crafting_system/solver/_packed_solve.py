@@ -5,7 +5,7 @@
 1. MERGE. The exact classes of the graph (`_packed_merge`) and the quotient, one state per class.
 2. PROPER STATES. A state has a finite value only if some policy reaches the goal with certainty. The set Y of such states
    is the greatest set in which every state has an action whose outcomes all lie in Y and from which the goal is reached:
-   found by shortest-path sweeps over the actions that stay in Y, shrinking Y until it is stable.
+   found by shortest-path sweeps over the actions that stay in Y (a long path by one pass, `_cheapest_paths`), shrinking Y until it is stable.
 3. START POLICY. The sweeps also give each state of Y the cost of its luckiest path to the goal; the action that starts
    the cheapest such path lowers that distance with positive chance in every step, so the policy is proper.
 4. POLICY ITERATION. Each action has its self-loop compiled out (`cost / leave`, outcomes renormalised, as the object
@@ -42,9 +42,11 @@ refused so is solved again in rational numbers when its exact quotient is small 
 Alchemy round, 2.26e16 c) merges into 3 classes, and its optimum is then exact, where float64 certified it only to 0.18.
 """
 
+import heapq
 import math
 import sys
 import time
+from array import array
 from time import perf_counter as _tick  # for the seconds in `info`: the clock the progress lines read is `time.perf_counter`, which a test replaces
 from collections.abc import Callable
 from dataclasses import dataclass, field, replace
@@ -63,6 +65,8 @@ EPS = sys.float_info.epsilon
 INF = math.inf
 CHUNK_EDGES = 4_000_000
 HEAVY_SELF = 0.5  # an action whose kernel puts more than this chance on its own state is summed edge by edge: taking the own term off a shared sum would lose digits
+SWEEPS_BEFORE_PASS = 64  # `proper_states` runs its one shortest-path pass once its sweeps have changed the distances this many times (see there)
+PASS_ASK = 1 << 16  # ... and that pass asks the caller's clock after each this many states it settles
 SHARE_MIN = 64  # a kernel with fewer edges than this is summed edge by edge for the action too (nothing to save), as the own term of its shared sum would be a rounding
 
 
@@ -443,9 +447,24 @@ def proper_states(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """`(Y, ok, distance, policy)`: the states with a proper policy, the actions that stay in Y, the luckiest-path costs, a proper policy.
 
-    Each sweep carries the luckiest-path costs one step further from the goals, so a chain of `n` states that reaches a goal only at its far end
-    takes `n` sweeps of the whole graph: about 10 s on a chain of 20,000 states, 700 s on R17's 210,847 (#1516). `deadline`, when given, is
-    asked before every sweep after the first (`_deadline`) and raises `Late` once the caller's time is up."""
+    The luckiest-path cost is the least fixed point below infinity of `d(s) = min(d(s), min_a (cost_a + min_{t in K(a)} d(t)))`, `d = 0` at the
+    goals, with `cost >= 0`. A sweep of that update over the whole graph (`kernel_min`, `Work.state_min`) carries it one step further from the
+    goals, so from infinity a chain of `n` states that reaches a goal only at its far end takes `n` sweeps: 9.3 s on a chain of 20,000 states,
+    more than 10 minutes on 200,000, about 1,000 s a round on R17's 210,847 (#1516, #1527). So once the sweeps have changed the distances
+    `SWEEPS_BEFORE_PASS` times, one label-setting pass from the goals (`_cheapest_paths`, Dijkstra) gives the fixed point, and the sweeps go on
+    from there: the next one changes nothing, and gives the policy as before. A graph that settles in fewer sweeps (most do: R17's rounds took
+    0.02 to 0.08 s here) never runs the pass, whose cost per edge is Python's, not numpy's; the switch after 64 bounds what a wrong guess
+    costs either way (a pass costs about as much as that many sweeps: see `SWEEPS_BEFORE_PASS` and #1527's measurement).
+
+    The output is the one the sweeps from infinity give, to the bit, whatever the pass returns as long as it is at least that fixed point and 0 at
+    the goals: from infinity the sweeps reach the least float value over all paths to a goal, each path's value taken as the sweeps add it (the
+    cost of the first step plus the value of the rest, rounded once per step; rounding is monotone, so `fl(c + min x) = min fl(c + x)`), and
+    from any start at or above that, they reach the same least value. The distances after a sweep are such a start (each is one path's value),
+    and so is the pass (one path's value for every state it reaches, its sum added in that same order, infinity elsewhere), and so is the lesser of
+    the two. A pass that missed an edge would cost sweeps, never the answer.
+
+    `deadline`, when given, is asked before every sweep after the first, before the pass and inside it (`_cheapest_paths`), and raises `Late`
+    once the caller's time is up."""
     g = work.g
     inside = np.ones(work.n, dtype=bool)
     while True:
@@ -453,6 +472,7 @@ def proper_states(
         ok = alive & ~stray[g.act_kernel]
         cost = np.where(ok, effective, INF)
         distance = np.where(g.goal, 0.0, INF)
+        changed = 0
         while True:
             lowest = kernel_min(g, distance)
             candidate = cost + lowest[g.act_kernel]
@@ -461,6 +481,9 @@ def proper_states(
             if np.array_equal(nearer, distance):
                 break
             distance = nearer
+            changed += 1
+            if changed == SWEEPS_BEFORE_PASS:
+                distance = np.minimum(distance, _cheapest_paths(work, cost, deadline))
             if deadline is not None:
                 deadline("a sweep of the cheapest paths to a goal")
         found = np.isfinite(distance) & inside
@@ -470,6 +493,63 @@ def proper_states(
     policy = work.state_argmin(candidate, best)
     policy[g.goal | ~inside | ~np.isfinite(best)] = -1
     return inside, ok, distance, policy
+
+
+def _cheapest_paths(work: Work, cost: np.ndarray, deadline: Callable[[str], None] | None = None) -> np.ndarray:
+    """For every state, the cost of its cheapest path to a goal (0 at a goal, infinity where none) under the action costs `cost` (infinity: not
+    usable): one label-setting pass (Dijkstra) from the goals backwards over the kernels, a start for the sweeps of `proper_states` (see there).
+
+    A state settled at `d` settles each kernel it is a successor of that is not settled yet, at `d` exactly (the least successor of a kernel is
+    the first one settled), and each usable action of a kernel just settled offers its state `cost[a] + d`, one rounding per step, the sum the
+    sweeps make. So a kernel that many actions share is entered once, and the work is the edges of the kernels the usable actions use, plus a heap
+    push per action that lowers a state: `E + A log A`, in Python. `deadline` is asked before the pass and after every `PASS_ASK` settled states.
+    Its arrays (the reverse edges of the used kernels) are built at once, not in chunks: about 40 bytes an edge at their peak."""
+    g, n = work.g, work.n
+    if deadline is not None:
+        deadline("the shortest-path pass to a goal")
+    distance = np.where(g.goal, 0.0, INF)
+    usable = np.flatnonzero(np.isfinite(cost))
+    goals = np.flatnonzero(g.goal)
+    if not len(goals) or not len(usable):
+        return distance
+    by_kernel = usable[np.argsort(g.act_kernel[usable], kind="stable")]
+    kernel_of_user = g.act_kernel[by_kernel]
+    user_ptr = np.searchsorted(kernel_of_user, np.arange(g.num_kernels + 1))  # the usable actions of kernel k: user_ptr[k]:user_ptr[k + 1]
+    kernels = np.unique(kernel_of_user)
+    sizes = work.ksize[kernels]
+    succ = g.k_succ[expand_ranges(g.k_ptr[kernels], sizes)]
+    by_succ = np.argsort(succ, kind="stable")
+    into = np.repeat(kernels, sizes)[by_succ]  # the used kernels holding state t: into[into_ptr[t]:into_ptr[t + 1]]
+    into_ptr = np.searchsorted(succ[by_succ], np.arange(n + 1))
+    into, into_ptr, user_ptr = (memoryview(np.ascontiguousarray(x, dtype=np.int64)) for x in (into, into_ptr, user_ptr))
+    user_state = memoryview(np.ascontiguousarray(work.act_state[by_kernel], dtype=np.int64))
+    user_cost = memoryview(np.ascontiguousarray(cost[by_kernel], dtype=np.float64))
+    best = array("d", distance.tobytes())
+    settled = bytearray(n)
+    entered = bytearray(g.num_kernels)
+    heap = [(0.0, int(t)) for t in goals]
+    pop, push = heapq.heappop, heapq.heappush
+    count = 0
+    while heap:
+        d, t = pop(heap)
+        if settled[t]:
+            continue
+        settled[t] = 1
+        count += 1
+        if deadline is not None and count % PASS_ASK == 0:
+            deadline("the rest of the shortest-path pass to a goal")
+        for i in range(into_ptr[t], into_ptr[t + 1]):
+            k = into[i]
+            if entered[k]:
+                continue
+            entered[k] = 1
+            for j in range(user_ptr[k], user_ptr[k + 1]):
+                s = user_state[j]
+                offer = user_cost[j] + d
+                if offer < best[s]:
+                    best[s] = offer
+                    push(heap, (offer, s))
+    return np.frombuffer(best, dtype=np.float64).copy()
 
 
 def reaches_goal(work: Work, policy: np.ndarray, seeds: np.ndarray | None = None) -> np.ndarray:
@@ -863,9 +943,10 @@ def solve_graph(
     The work is the same whatever it is: the certificate, its finer measures and the corrections all aim at `accept_bound`.
 
     `late` (None for none) says whether the caller's time limit has passed (OR-40, #1516), on the caller's own clock: the solve asks it between two
-    of its steps (each sweep of `proper_states` after the first, each round of policy iteration after the first, each refinement and correction,
-    and before the exact solve) and raises `Late`, a `ConvergenceError` with no figure, once it says so. A step that has begun runs to its end (one
-    sweep, one evaluation of the policy and its improvement, one certificate, one correction, never the exact solve once late), so the solve goes
+    of its steps (each sweep of `proper_states` after the first and each `PASS_ASK` states of its shortest-path pass, each round of policy
+    iteration after the first, each refinement and correction, and before the exact solve) and raises `Late`, a `ConvergenceError` with no figure,
+    once it says so. A step that has begun runs to its end (one sweep, one evaluation of the policy and its improvement, one certificate, one
+    correction, never the exact solve once late), so the solve goes
     past the limit by at most one such step: on R17's 210,847 states a sweep takes about 3 ms, an evaluation about 0.1 s.
     """
     refuse_above = accept_bound if refuse_above is None else max(refuse_above, accept_bound)
