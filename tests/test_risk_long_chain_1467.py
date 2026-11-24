@@ -47,3 +47,18 @@ def test_the_risk_of_a_long_chain_keeps_its_mean_with_the_certified_error():
     assert mean.low < mean.value < mean.high
     assert (mean.high - mean.low) / mean.value < 1e-2  # the interval is the certified one, not [0, inf]
     assert report.success_probability.value == 1.0
+
+
+def test_the_plan_says_how_far_the_risk_mean_is_worked_out_not_that_it_is_exact():
+    """The planner's packed risk (`_plan.packed_risk`) with the toy's chain: no limit calls the figures exact, one says the mean's error (OR-13)."""
+    from types import SimpleNamespace
+
+    from crafting_system.planner import _limits
+    from crafting_system.planner._plan import packed_risk
+
+    packed = SimpleNamespace(risk_policy=ring(), risk_start=0, risk_is_goal=lambda s: s == GOAL)
+    risk, limits = packed_risk(packed, EXACT, None)
+    assert risk.mean.low <= EXACT <= risk.mean.high
+    guarantees = [limit.guarantee for limit in limits]
+    assert not any(sentence in guarantees for sentence in _limits.EXACT_MEAN_SENTENCES)
+    assert any("worked out only to within" in text for text in guarantees)
