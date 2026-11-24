@@ -67,7 +67,7 @@ from crafting_system.rules import Rule, get_rule
 
 from . import add, metamods, outcomes, pool
 from .add import add_one_mod, refuse_if_nothing_to_draw
-from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
+from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB, RareBeastFee
 from .catalog import kind, listing_gap
 from .contract import Action, AddedDraw, Adds, Reads
 from .cut import Cut
@@ -464,7 +464,7 @@ def beast_recipe_resources(influence: Influence, rare_creature_price: int = ANY_
 
 
 @dataclass(frozen=True)
-class BeastInfluenceRecipe(Action):
+class BeastInfluenceRecipe(RareBeastFee, Action):
     """The beast recipe "Add a Mod to a <influence> Item": one more mod, drawn from the item's whole pool as an Exalted Orb draws (#1538)."""
 
     influence: Influence

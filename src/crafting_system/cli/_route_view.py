@@ -972,7 +972,8 @@ class _View:
         priced = self.plan.offer_of(action)
         if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
             return [FREE]
-        lines = [f"{count_} × {name} {money(chaos)}" for name, count_, chaos, _ in priced.parts]
+        stand_ins = priced.offer.action.stand_ins(self.data)  # a resource paid in place of goods no price list holds says what it is (#1518)
+        lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
         if len(priced.parts) > 1:
             lines.append(f"total {money(priced.cost)}")
         lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
@@ -1062,10 +1063,30 @@ class _View:
             "paid again: the step cost counts every one"
         )
 
-    def notes(self, action: Action, step: Step, restart: bool) -> list[str]:
-        """The Note lines of a row: the essence's, a bench craft's paid again on each return, and, when the visits could not be solved, that
-        this row's chances are a plain mean."""
+    def sure_draw_note(self, action: Action, step: Step, goal: list[str] | tuple[str, ...] = ()) -> str | None:
+        """For a craft that draws its result at random but is sure on every item of the step (the Wild Bristle Matron on a suffix-full item,
+        whose one metamod with room is Suffixes Cannot Be Changed): the craft's rule of choice (`Action.sure_reason`), the one result, and the
+        steps the item comes back from (#1518, crafter on R04, R14, R20, R24)."""
+        if not self.sure(action):
+            return None
+        reason = self.plan.offer_of(action).offer.action.sure_reason(self.data)
+        if reason is None:
+            return None
+        made = [line for line in goal if line.endswith("· crafted")]
+        which = f" ({', '.join(made)})" if made else ""
+        said = f"{reason}; on every item this step is used on only one has room{which}, so it cannot miss here"
+        sources = sorted({other.number + 1 for other in self.flow.steps for edge in other.edges if edge.to == step.number and other.number != step.number})
+        if step.uses is not None and step.reached and math.isfinite(step.uses) and step.uses / step.reached >= 1.05 and sources:
+            names = ", ".join(f"step {row} ({self.title_of(row)})" for row in sources)
+            said += f"; the item comes here again each time {names} sends it"
+        return said
+
+    def notes(self, action: Action, step: Step, restart: bool, goal: list[str] | tuple[str, ...] = ()) -> list[str]:
+        """The Note lines of a row: the essence's, a random craft that is sure here, a bench craft's paid again on each return, and, when the
+        visits could not be solved, that this row's chances are a plain mean."""
         found = []
+        if not restart and (draw := self.sure_draw_note(action, step, goal)):
+            found.append(draw)
         if not restart and (essence := self.essence_note(action, step)):
             found.append(essence)
         if not restart and (again := self.craft_again_note(action, step)):
@@ -1213,7 +1234,7 @@ class _View:
             _plain("Step cost", FREE if self.free(action) else money(step_cost)) if step_cost is not None else None,
             Field(NEXT, tuple(self.restart_lines(step, failing))) if failing and restart else None,
             Field("On failure", tuple(self.failure_lines(step, failing)), "warn") if failing and not restart else None,
-            _plain("Note", *self.notes(action, step, restart)),
+            _plain("Note", *self.notes(action, step, restart, goal)),
         )
         final = any(edge.kind == "goal" for edge in step.edges)
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after), step.uses)
