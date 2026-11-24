@@ -209,7 +209,7 @@ def test_on_the_hand_worked_world_every_action_gets_from_the_members_offered_eve
     nothing, by_weight = (NOTHING, NOTHING), lambda *read: {(read, read)}  # noqa: E731
     assert seen["annul"] == seen["matron"] == seen["bench-lock"] == {nothing}
     assert seen["reforge-fire"] == seen["chaos"] == {(NOTHING, None), (None, NOTHING)}  # under either lock
-    assert seen["exalted"] == seen["regal"] == by_weight((), ())
+    assert "exalted" not in seen and "regal" not in seen  # an addition from the whole pool keeps the extremes in a tagged world (#1311 root 1, #1567)
     assert seen["harvest-add-remove"] == by_weight(("fire",), ()) and seen["beast-prefix"] == by_weight((), (60,))
     assert "fracture" not in seen  # told apart by type
     assert fewer > 1_000
