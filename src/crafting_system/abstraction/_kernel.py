@@ -846,7 +846,8 @@ class Abstraction:
     def rarest_leaves(self) -> tuple[frozenset[int], frozenset[int]]:
         """The wanted mods hardest to roll on this base (`imprint_offer_pruned`, #1567), and the rare ones: the leaves whose rolled mods (a
         prefix or a suffix of the item's level or below) weigh least in the base's pool, among the leaves the pool can roll at all; and
-        those that weigh less than half the commonest wanted mod. Read once."""
+        those that weigh less than half the commonest wanted mod. The half is chosen, not derived: R17 is the only evidence (its wanted mods
+        weigh 50 and 200 against 800 to 1,000, so any factor from 0.2 to 0.8 gives the same set); #1588 derives it. Read once."""
         if self._rarest is None:
             base = self.data.base_items.get(self.base_id)
             weights: dict[int, int] = {}
