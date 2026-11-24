@@ -26,15 +26,19 @@ from collections import Counter
 from collections.abc import Sequence
 from dataclasses import dataclass
 
-from crafting_system.planner import Plan
-from crafting_system.planner import _limits
-from crafting_system.planner._limits import WITHIN_GAP, Limit, kind_title, limit_text, more_labels, SHOWN_LABELS
-from crafting_system.planner._rounds import BEATEN, CLOSED, GAVE_WAY, NONE, REFUSED, STOPPED, UNTRIED, WITHIN
+from crafting_system.planner import KINDS_NOT_TRIED, PROVED_UNNEEDED, ROUNDS, SHOWN_LABELS, WITHIN_GAP, Limit, Plan, kind_title, limit_text, more_labels
+from crafting_system.planner import ROUND_BEATEN as BEATEN
+from crafting_system.planner import ROUND_CLOSED as CLOSED
+from crafting_system.planner import ROUND_GAVE_WAY as GAVE_WAY
+from crafting_system.planner import ROUND_NONE as NONE
+from crafting_system.planner import ROUND_REFUSED as REFUSED
+from crafting_system.planner import ROUND_STOPPED as STOPPED
+from crafting_system.planner import ROUND_WITHIN as WITHIN
 
 EXACT, PROVED_WITHIN, STOPPED_SEARCH, APPROXIMATE = "exact", "within", "stopped", "approximate"
 FINISHED = (CLOSED, WITHIN, BEATEN, NONE)  # a round that ended on its own: what it proves holds
 PROOF = "Proof"  # the goal card's field
-ROUNDS_TITLE = "How the methods were searched"  # the page's title of the group of the rounds' limit (`_limits.ROUNDS`)
+ROUNDS_TITLE = "How the methods were searched"  # the page's title of the group of the rounds' limit (`ROUNDS`)
 _CATALOG_ID = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)+$|^[a-z]+$")  # `fossil-set`, `essence`: a kind of the catalog, not a game name
 
 
@@ -131,8 +135,8 @@ def _proof_of_limits(plan: Plan, start: float) -> Proof:
     the rounds' head that says so) are a stopped search; rounds that all finished within a gap are that gap; a claim already said "within
     the stated gap" with no rounds is an approximate answer; otherwise the answer is exact (checker, #1161)."""
     limits = plan.limits
-    rounds = [limit for limit in limits if limit.kind == _limits.ROUNDS and not limit.what.startswith("The given route's methods")]
-    if any(limit.kind == _limits.UNTRIED for limit in limits) or any("not every round finished" in limit.what for limit in rounds):
+    rounds = [limit for limit in limits if limit.kind == ROUNDS and not limit.what.startswith("The given route's methods")]
+    if any(limit.kind == KINDS_NOT_TRIED for limit in limits) or any("not every round finished" in limit.what for limit in rounds):
         return Proof(STOPPED_SEARCH, start=start)
     for limit in rounds:
         if (found := _AT_MOST.search(limit.guarantee)) is not None:
@@ -229,7 +233,7 @@ def batch_line(n: int, record, grown: bool = False, twin: int = 0) -> str:
 
 
 def rounds_line(limit: Limit, proof: Proof) -> "Line":
-    """The rounds' limit (`_limits.ROUNDS`) as the page says it: one sentence of what the batches prove, each batch in the closed element."""
+    """The rounds' limit (`ROUNDS`) as the page says it: one sentence of what the batches prove, each batch in the closed element."""
     from ._route_view import Line
 
     if limit.what.startswith("The given route's methods"):  # `_rounds.judged_route_limit`: the route against the first round
@@ -290,7 +294,7 @@ def _again(records) -> str:
 
 
 def untried_line(limit: Limit, proof: Proof) -> "Line":
-    """The limit of the methods the rounds did not finish (`_limits.UNTRIED`), by their game names, with no round's words."""
+    """The limit of the methods the rounds did not finish (`KINDS_NOT_TRIED`), by their game names, with no round's words."""
     from ._route_view import Line
 
     searched = {method_name(kind) for record in proof.rounds if record.growth is not None and record.status in FINISHED for kind in record.kinds}
@@ -315,7 +319,7 @@ def price_cut_why(limit: Limit, plan: Plan) -> str | None:
     buying a new start item and following that plan. The plan shown is said in its place only when it is no dearer than that one (on the
     rounds it always is: the plan shown is the cheapest of them; a cut made before the last search, `_plan.py`, need not be); otherwise the
     figure of the plan the cut was made against is said, as "a plan found during the search". None for any other limit."""
-    if limit.kind != _limits.PROVED or limit.what != "Not searched" or not limit.why.startswith("each costs at least "):
+    if limit.kind != PROVED_UNNEEDED or limit.what != "Not searched" or not limit.why.startswith("each costs at least "):
         return None
     found = _FOUND.search(limit.why)
     start = plan.start_price.chaos
@@ -333,9 +337,9 @@ def price_cut_why(limit: Limit, plan: Plan) -> str | None:
 def page_line(limit: Limit, proof: Proof, plan: Plan) -> "Line | None":
     """The page's line of one of the planner's limits when the page says it in its own words; None to draw it as the planner wrote it, its
     claim of cheapness said as the proof stands (`guarantee_words`)."""
-    if limit.kind == _limits.ROUNDS:
+    if limit.kind == ROUNDS:
         return rounds_line(limit, proof)
-    if limit.kind == _limits.UNTRIED:
+    if limit.kind == KINDS_NOT_TRIED:
         return untried_line(limit, proof)
     return None
 
@@ -353,7 +357,7 @@ UNTRIED_TITLE = "Methods not searched to the end"
 def group_title(kind: str, title: str) -> str:
     """The page's title of a group of limits: the rounds' group is about how the methods were searched, the untried one about the methods
     whose batches did not finish (some were tried and cut short, so not "not tried")."""
-    return ROUNDS_TITLE if kind == _limits.ROUNDS else UNTRIED_TITLE if kind == _limits.UNTRIED else title
+    return ROUNDS_TITLE if kind == ROUNDS else UNTRIED_TITLE if kind == KINDS_NOT_TRIED else title
 
 
 __all__ = ["PROOF", "Proof", "ROUNDS_TITLE", "UNTRIED_TITLE", "batch_line", "group_title", "guarantee_words", "method_name", "page_line", "page_words", "proof_of"]
