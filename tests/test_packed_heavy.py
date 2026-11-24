@@ -26,12 +26,13 @@ from abstraction_support import real_game_data
 from test_strand_routes import without_strand_words
 from test_strand_routes_load import FILES, flat_price_file
 
-from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import make_plan
 from crafting_system.planner._packed import PackedPolicy
 from crafting_system.cli._reach import policy_states
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target, parse_target
+
+R14_OPENING = "Orb of Scouring and Orb of Transmutation on the bought item (any rarity)"  # R14's start is priced by a search of any rarity (#1537)
 
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "packed_values.json"
@@ -105,7 +106,7 @@ def test_r14_does_not_open_with_a_transmutation_on_its_magic_bow_and_offers_none
 
     assert plan.target.start_item.rarity.value == "magic"
     first = plan.policy[plan.start]
-    assert first.label == DRAW_LABEL  # the bought bow is the item the market sells (ADR-0064): the draw comes first, then the decision on each outcome of it
+    assert first.label == R14_OPENING  # the bought bow, priced at any rarity (#1537): its Scouring and Transmutation come first, then the decision on each outcome
     chosen = {plan.policy[state].label for state, _ in first.outcomes if state in plan.policy}
     assert {"Orb of Alteration", "Orb of Augmentation"} <= chosen  # an Augmentation where the bow holds 1 mod, an Alteration where it holds 2
     assert "Orb of Transmutation" not in chosen

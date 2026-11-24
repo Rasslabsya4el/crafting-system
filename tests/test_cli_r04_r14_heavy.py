@@ -35,12 +35,13 @@ import pytest
 from abstraction_support import real_game_data
 from cli_support import read_json
 
-from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import main
 from crafting_system.planner import _packed
 from crafting_system.cli._benchmark import BENCHMARKS, run_route
 from crafting_system.config import find_project_root, load_config
 from crafting_system.prices import load_price_file
+
+R14_OPENING = "Orb of Scouring and Orb of Transmutation on the bought item (any rarity)"  # R14's start is priced by a search of any rarity (#1537)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
@@ -103,7 +104,7 @@ def test_the_plan_of_r14_does_not_open_with_a_transmutation_and_has_no_such_step
     _, document, _ = cli
     first = next(state for state in document["states"] if state["id"] == document["start"]["state"])
 
-    assert first["action"] == DRAW_LABEL  # the bought bow is the item the market sells (ADR-0064): the draw comes first
+    assert first["action"] == R14_OPENING  # the bought bow is the item the market sells (ADR-0064), priced at any rarity: its orbs come first (#1537)
     after = {state["action"] for state in document["states"] if state["id"] != first["id"]}
     assert "Orb of Alteration" in after
     assert "Orb of Transmutation" not in {state["action"] for state in document["states"]}
