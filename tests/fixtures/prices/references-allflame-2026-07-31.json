@@ -1078,10 +1078,15 @@
       },
       "source": "poe.ninja-history"
     },
-    "Eternal Burgonet, item level 86-100, Shaper/Elder influence": {
-      "chaos": 181.5,
+    "Eternal Burgonet (ilvl 86, Elder)": {
+      "chaos": 5.0,
       "source": "hand",
-      "note": "hand-set start price of reference route R20 (#901, OR-44): the week-one file has no line for a dual-influenced helmet and Allflame has left the trade site; the guide's step 1 makes it with an Awakener's Orb (171.5 Chaos in the week-one file) from two single-influence Eternal Burgonets, about 5 Chaos each (the stand-in of #150, PR #816, read on 2026-11-12: no week-one source). The plan and the guide's route pay the same start, so the comparison does not depend on it"
+      "note": "hand-set stand-in of reference route R20 (#1523, OR-44, OR-23): one of the two single-influence Normal Eternal Burgonets of item level 86 the guide's step 1 joins with an Awakener's Orb into the Shaper/Elder start helmet; the week-one file has no line for an influenced Eternal Burgonet and Allflame has left the trade site, so it is the stand-in of #150 (PR #816, read on 2026-11-12, about 5 Chaos; no week-one source)"
+    },
+    "Eternal Burgonet (ilvl 86, Shaper)": {
+      "chaos": 5.0,
+      "source": "hand",
+      "note": "hand-set stand-in of reference route R20 (#1523, OR-44, OR-23): one of the two single-influence Normal Eternal Burgonets of item level 86 the guide's step 1 joins with an Awakener's Orb into the Shaper/Elder start helmet; the week-one file has no line for an influenced Eternal Burgonet and Allflame has left the trade site, so it is the stand-in of #150 (PR #816, read on 2026-11-12, about 5 Chaos; no week-one source)"
     },
     "Exalted Orb": {
       "chaos": 1.36,

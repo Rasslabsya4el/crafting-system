@@ -72,7 +72,7 @@ OTHER_ITEM = {
     "r17-lightning-talisman": "#426 the stored price is a poe.ninja row, not a trade search: it has no body",
     "v01-minion-helmet": "#426 the stored price is a hand price, not a trade search: it has no body",
     "r07-minion-wand": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
-    "r20-rf-helmet": "#1046 the stored price is hand-set at the week-one prices (the Awakener's Orb and two helmets): it has no body",
+    "r20-rf-helmet": "#1523 no file has a line for a dual-influenced helmet: the planner makes it by an Awakener's Orb from two single-influence helmets, each priced on its own line, so no search body is stored",
     "r24-avoid-shock-boots": "#758 the stored price is a hand stand-in (Allflame has left the trade site, 2026-11-12): it has no body",
 }
 
@@ -175,6 +175,7 @@ def test_a_poe_ninja_price_prices_r04s_quiver_and_does_not_price_r09s_boots(data
 
 NO_PRICE = {
     "r03-avoid-shock-boots": OTHER_ITEM["r03-avoid-shock-boots"],
+    "r20-rf-helmet": OTHER_ITEM["r20-rf-helmet"],  # made by its recipe, not priced under its own key (#1523)
 }  # bought, and the market holds fewer listings than the rail: kept bought, no price written (#505, #483)
 
 

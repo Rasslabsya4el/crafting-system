@@ -63,11 +63,15 @@ def test_the_target_reads_its_committed_price_file_and_asks_the_four_mods(target
     assert asked == {frozenset({mod}) for mod in (ESSENCE, TRAP_MINE, BURNING, CONCENTRATED)}
 
 
-def test_the_start_helmet_costs_its_hand_set_week_one_price(plan):
-    entry = load_price_file(PRICES).prices[START]
-    assert plan.start_price.name == START
-    assert plan.start_price.chaos == pytest.approx(entry.chaos) == pytest.approx(181.5)  # the Awakener's Orb (171.5) and two helmets (#1046)
-    assert entry.source == "hand"
+def test_the_start_helmet_is_made_by_an_awakeners_orb_from_two_priced_helmets(plan):
+    # no line prices the dual-influenced helmet: the guide's step 1 makes it from two single-influence helmets (#1523)
+    prices = load_price_file(PRICES).prices
+    assert START not in prices
+    assert plan.start_price.name == START and plan.start_price.made is not None
+    goods = {name: chaos for name, _, chaos, _ in plan.start_price.made.goods}
+    assert goods == {"Eternal Burgonet (ilvl 86, Shaper)": 5.0, "Eternal Burgonet (ilvl 86, Elder)": 5.0, "Awakener's Orb": 171.5}
+    assert prices["Awakener's Orb"].source == "poe.ninja-history"  # the week-one file's (OR-44); the two helmets are hand stand-ins of #150
+    assert plan.start_price.chaos == pytest.approx(181.5)  # 5 + 5 + 171.5, the start the plan had before #1523
 
 
 def test_the_plan_offers_the_route_actions_all_priced(plan):

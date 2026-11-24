@@ -76,6 +76,7 @@ from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
 from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
+from crafting_system.prices.price_names import canonical_influences
 from crafting_system.targets import Target, plain_base_names
 from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
@@ -685,7 +686,8 @@ class _View:
         if edge.kind == "goal" or edge.to is None:
             return "the target", False
         if edge.kind == "failure" and step.action is not None and step.action.label == RESTART:
-            return f"the start item {'made again at the vendor' if self.first is not None else 'bought again'}", False
+            again = "made again at the vendor" if self.first is not None else "made again" if self.plan.start_price.made is not None else "bought again"
+            return f"the start item {again}", False
         if edge.kind == "again":  # the item a use leaves in the step, told from those it sends on to another step (R14 step 9's Exalted Orb)
             onward = any(other.kind != "goal" and other.to != edge.to for other in step.edges)  # beside the target alone, "not yet" says it
             tell = self.item_words(step, edge) if onward else ""
@@ -978,6 +980,8 @@ class _View:
         if action.label == RESTART:
             if self.first is not None:
                 return "Restart: make the start item at the vendor again"
+            if self.plan.start_price.made is not None:
+                return f"Restart: make the start item again with an {self.plan.start_price.made.orb}"
             name = self.start_name()
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the player reads what the listing came with, he uses nothing
@@ -992,7 +996,7 @@ class _View:
         return fossil_name(offer.label)  # a fossil set by its fossils' game names (#1514)
 
     def trade_field(self) -> Field | None:
-        if self.buy is None or self.first is not None:  # the buy spec describes the bought start item, not a recipe-made one
+        if self.buy is None or self.first is not None or self.plan.start_price.made is not None:  # the buy spec describes the bought start item, not a recipe-made one
             return None
         lines = [Line("Search on the trade site", self.buy.url)]
         lines += [Line(f"not in the link: {mod}") for mod in self.buy.unresolved]
@@ -1083,9 +1087,30 @@ class _View:
         )
         return StepRow(1, step.title, fields, self.start_card(), self.anchor(1), final, step.price)
 
+    def made_row(self, final: bool) -> StepRow:
+        """Row 1 of a plan whose start item has no market line and is made by its recipe (#1523): an Awakener's Orb on two single-influence
+        Normal bases, each good with its own price; the item card is the Rare the orb gives, whose mods the next row draws."""
+        price = self.plan.start_price
+        made = price.made
+        assert made is not None
+        buy = tuple(Line(f"{count} × {self.plan_name(name)}, a Normal base {money(chaos)}" if name != made.orb else f"{count} × {name} {money(chaos)}")
+                    for name, count, chaos, _ in made.goods)
+        receiver, donor = self.plan_name(made.receiver), self.plan_name(made.donor)
+        use = Line(
+            f"{made.orb} on the {receiver} with the {donor} as the second item: the second item is destroyed, the first keeps its base and item "
+            "level and becomes a Rare item with both influences and new random mods (a Normal base has no influenced mod to keep)"
+        )
+        fields = _fields(Field("Buy", buy), Field("Use", (use,)), _plain("Cost per use", money(price.chaos)))
+        target = self.plan.target
+        influences = "/".join(canonical_influences(each.value for each in target.influences))
+        title = f"Make a {influences} {self.data.base_items[target.base_id].name}, item level {target.item_level}, with an {made.orb}"
+        return StepRow(1, title, fields, self.start_card(), self.anchor(1), final, price.chaos)
+
     def buy_row(self, final: bool) -> StepRow:
         if self.first is not None:
             return self.vendor_row(self.first, final)
+        if self.plan.start_price.made is not None:
+            return self.made_row(final)
         price = self.plan.start_price
         if price.given:  # OR-6: the player already holds it; nothing is bought, so there is no trade field and no price
             fields = _fields(_plain("Start item", *self.start_accepts()), _plain("Cost per use", GIVEN_SOURCE))

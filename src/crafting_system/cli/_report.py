@@ -572,6 +572,8 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
         lines.append(f"Start item: {plan.start_price.source}")
     else:
         lines.append(f"Start item{name}: {money(shift)} Chaos [{plan.start_price.source}]")
+        if plan.start_price.made is not None:  # no market line: made by its recipe from the goods priced here (#1523)
+            lines.extend(f"  {count} {good}: {money(chaos)} Chaos [{source}]" for good, count, chaos, source in plan.start_price.made.goods)
         if plan.start_price.mark:  # OR-8: a thin market's price never stands unmarked
             lines.append(f"  {plan.start_price.mark}")
     if plan.start_price.taken_for:

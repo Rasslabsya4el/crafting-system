@@ -89,8 +89,12 @@ def price_uses(
     counts = _counts(plan, labels) if labels else {}
     names = [name for name in dict.fromkeys(counts) if name in prices.prices or name in (CHAOS_ORB, DIVINE_ORB)]
     start_name = plan.start_price.name if plan.start_price.bought else None
-    if start_name is not None and start_name in prices.prices and start_name not in names:
-        names.insert(0, start_name)
+    made = getattr(plan.start_price, "made", None) if plan.start_price.bought else None
+    # what the first start item is bought as: the item itself, or the goods of the recipe that makes it (an Awakener's Orb's, #1523)
+    first: dict[str, int] = {name: count for name, count, _, _ in made.goods} if made is not None else {start_name: 1} if start_name else {}
+    for name in reversed(list(first)):
+        if name in prices.prices and name not in names:
+            names.insert(0, name)
     # the most a plan can buy of a resource is its whole expected cost over the resource's price: a price deeper than that needs no solve
     try:
         spent = plan.mean_remaining if mean is None else mean
@@ -112,8 +116,7 @@ def price_uses(
         per_label = expected_uses(chain if chain is not None else chain_of_policy(plan.start, policy, plan.is_goal), labels)
         for name in need:
             total = math.fsum(per_label[label] * count for label, count in counts.get(name, {}).items())
-            if name == start_name:
-                total += 1.0  # the first purchase of the start item, before any restart
+            total += first.get(name, 0)  # the first purchase of the start item (or of its recipe's goods), before any restart
             solved[name] = total
     found = []
     for name in names:
