@@ -190,11 +190,8 @@ def reads(both, data):
     from crafting_system.cli import evaluate_route, load_route
 
     route_id, reference, packed = both
-    if route_id == "R05":
-        # Since #1289 R05's route ends with the Intrinsic Catalysts of the guide's step 3. These two plans hold the quality as a finish outside
-        # their graphs (`planner/_quality_finish`, #159), so no state of theirs offers a catalyst and the route cannot be read on them; the
-        # packed walk is retired (CLAUDE.md, "Direction since 2026-11-13") and is not extended to it. The product reads the route on a judged plan.
-        pytest.skip("R05's route applies catalysts, which the object and packed plans hold as a finish outside their graphs (#1289)")
+    # R05's route ends with the Intrinsic Catalysts of the guide's step 3 (#1289): both plans hold the quality as a finish step after the mods,
+    # and the route's catalyst rule is read as that step (#1234), so the route is read on both as on any plan
     route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
     return (
         route_id,
