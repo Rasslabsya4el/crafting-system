@@ -264,6 +264,19 @@ def route_actions(path: Path) -> tuple[str, ...]:
     return tuple(found)
 
 
+def recorded_cost_of(path: Path) -> float | None:
+    """The guide's cost the route file at `path` records (`recorded_cost`, #1596), read before any plan exists, or None: no such key, or a
+    file that cannot be read. It refuses nothing, as `route_actions`; `load_route` says a wrong figure once a plan is made."""
+    try:
+        root = load_with_lines(_route_text(path), str(path))
+    except (RouteError, TargetError, RecursionError):
+        return None
+    value = root.get("recorded_cost") if isinstance(root, LineMap) else None
+    if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+        return None  # the reader's rule (`_Reader.cost`)
+    return float(value)
+
+
 def parse_route(text: str, plan: Plan, data: GameData, source: str = "<route>") -> Route:
     """Parse the YAML `text` of a route against `plan` (its requirements, offers and start price) and `data`."""
     try:
