@@ -11,7 +11,7 @@ from listing_support import LISTING, magic_toy, prices, rare_toy, target
 
 from crafting_system.actions import DRAW_LABEL
 from crafting_system.cli import build_report, evaluate_route, make_plan, parse_route
-from crafting_system.cli._report import listing_lines
+from crafting_system.cli._report import listing_lines, state_parts
 from crafting_system.planner._offers import RESTART
 from crafting_system.prices import PriceEntry, PriceFile
 from crafting_system.targets import start_price_key
@@ -55,6 +55,7 @@ def test_a_rare_start_priced_as_a_normal_base_uses_and_pays_an_orb_of_alchemy():
     restart = next(p for p in bought.offers if p.label == RESTART)
     assert restart.cost == LISTING and restart.offer.action.sample(None).unopened  # a restart buys the Normal base again and pays the orb again
     assert "Orb of Alchemy" in listing_lines(bought, data)[0] and "Normal base" in listing_lines(bought, data)[0]
+    assert state_parts(bought, data, bought.start) == ["the bought normal base, no mods yet"]  # the item the orb is used on, in the plan text
 
 
 def test_a_magic_start_priced_as_a_normal_base_pays_an_orb_of_transmutation():

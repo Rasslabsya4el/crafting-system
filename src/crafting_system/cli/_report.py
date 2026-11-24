@@ -223,6 +223,9 @@ def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]
     "has ..." or "too weak: ..." part of the same line already names is not counted again (ticket #613).
     """
     if state.flags.unopened:  # the bought listing before its draw (ADR-0064): the rarity it will have, not the normal item the model holds
+        opening = next((entry.offer.action for entry in plan.offers if entry.offer.action.opens_listing), None)
+        if opening is not None and opening.resources(data):  # the draw is an orb paid on the Normal base bought (#1522)
+            return ["the bought normal base, no mods yet"]
         return [f"the bought {plan.target.start_item.rarity.value} item, its mods not drawn yet"]
     parts = [state.flags.rarity.value]
     for entry in state.fractured:
