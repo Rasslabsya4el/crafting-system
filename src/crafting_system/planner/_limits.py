@@ -61,6 +61,7 @@ MODEL_GAP = "model-gap"
 PROVED = "proved-unneeded"
 UNTRIED = "kinds-not-tried"
 ROUNDS = "rounds"
+IMPRINTS = "imprints-worth-saving"  # the planner's rule of the imprints worth making (#1567): not exact, so not PROVED
 START = "start-item"
 SOLVE = "how-solved"
 REACHED = "plan-reached"  # a plan the search walked to when its first plan reached no goal, and a net stopped it there (#1142)
@@ -94,6 +95,7 @@ GROUPS: tuple[tuple[str, str], ...] = (
     (PROVED, "Actions proved not needed"),
     (UNTRIED, "Actions not tried before a time or memory limit"),
     (ROUNDS, "Methods searched in rounds"),
+    (IMPRINTS, "Imprints made only of an item worth coming back to"),
     (START, "The start item"),
     (FINISH, "The sockets"),
     (QUALITY_FINISH, "The quality"),
@@ -417,7 +419,8 @@ def model_gap_limits(gaps: Iterable) -> tuple[Limit, ...]:
 
 
 def pruning_limits(prunings) -> tuple[Limit, ...]:
-    """The limits of the offers left out of the states that cannot use them (K13): exact, so each says that nothing is lost."""
+    """The limits of the offers left out of the states that cannot use them (K13). The corrupting and the quality ones are exact, so each says
+    that nothing is lost; the imprints worth saving (#1567) are the planner's rule, not exact, and the limit says the plan is the best found."""
     found: list[Limit] = []
     corrupting = prunings.labels("corrupting")
     if corrupting:
@@ -439,6 +442,17 @@ def pruning_limits(prunings) -> tuple[Limit, ...]:
                 "quality changes no odds, so setting it later costs the same",
                 labels=quality,
                 **claim("the methods offered", "Offering them in the other states would change no cost."),
+            )
+        )
+    imprints = prunings.labels("imprint")
+    if imprints:
+        found.append(
+            Limit(
+                IMPRINTS,
+                "Imprinted only when the item is worth coming back to",
+                "an imprint is made only of an item that holds the wanted mod hardest to roll, alone or with every rare wanted mod, and no unwanted, crafted or veiled one",
+                "An imprint made at another state could make the plan cheaper: the plan is the best found, not proved the least dear.",
+                labels=imprints,
             )
         )
     return tuple(found)

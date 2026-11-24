@@ -554,7 +554,9 @@ def limit_lines(plan: Plan, spent: Iterable[str] = ()) -> list[str]:
     return [f"{HEADING}:", *(f"  {limit_text(limit)}" for limit in ordered(spent_kinds_named(plan.limits, spent)))]
 
 
-def render_text(report: Report, verification: Verification | None = None, *, target_name: str = "", guide: float | None = None) -> str:
+def render_text(
+    report: Report, verification: Verification | None = None, *, target_name: str = "", guide: float | None = None, guide_recorded: bool = False
+) -> str:
     """The terminal report: inputs, the policy as a tree, the totals and, with `--verify`, the check."""
     plan = report.plan
     divine = plan.prices.chaos_per_divine
@@ -564,7 +566,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     if target_name:
         lines.append(f"Target: {target_name}")
     lines.extend(marking_lines(plan.approximation, shift, divine))
-    lines.append(f"Proof: {proof_words(plan, guide).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-59, #1576)
+    lines.append(f"Proof: {proof_words(plan, guide, recorded=guide_recorded).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-59, #1576)
     if report.interval is not None:
         lines.extend(report.interval.text_lines(divine))
     lines.extend(approximate_lines(report.approximate_inputs))
@@ -797,7 +799,9 @@ def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None
     }
 
 
-def policy_document(report: Report, verification: Verification | None = None, *, target_name: str = "", guide: float | None = None) -> dict:
+def policy_document(
+    report: Report, verification: Verification | None = None, *, target_name: str = "", guide: float | None = None, guide_recorded: bool = False
+) -> dict:
     """The JSON policy: what to do in each reachable state, the transitions, and the totals.
 
     Every cost is in Chaos Orbs. `null` stands for infinity (JSON has none).
@@ -809,7 +813,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
     document: dict = {
         "format": FORMAT,
         "unit": "chaos",
-        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-59, #1576)
+        "proof": proof_words(plan, guide, recorded=guide_recorded).document(),  # the one proof sentence, as the page and the text say it (OR-59, #1576)
         "answer": marking_document(plan.approximation, shift),
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         **({"interval": report.interval.document()} if report.interval is not None else {}),

@@ -6,6 +6,8 @@ evaluating it with `risk.evaluate` at the same prices as the solver's policy (AD
     name: R12, PoE Vault guide        # optional
     skip_refused: true                # optional (default false): a rule whose action the game refuses at a state is passed over
                                       # to the next rule that matches, instead of leaving a gap (for a route completed by a last `restart`)
+    recorded_cost: 33140.41           # optional: the guide's cost in Chaos with the start item, as recorded once its route priced; the
+                                      # proof sentence compares the plan's with it only when these rules do not finish (#1596)
     rules:                            # required, non-empty; in every state the FIRST rule that matches is followed
       - when:                         # optional; no `when` matches every state
           rarity: rare                # normal, magic or rare, or a list of them
@@ -46,6 +48,7 @@ runs it on every state the route reaches (R04 and R14, a heavy run). A guide rul
 prefix, or craft and remove would repeat for ever) is named in the file's header with the guide's own words.
 """
 
+import math
 import time
 from collections.abc import Iterable
 from dataclasses import dataclass
@@ -70,7 +73,7 @@ RESTART = "restart"
 # A route's reach is walked as objects up to this many transitions, the size the object solver held (`planner._decide.EXACT_TRANSITIONS`); past it
 # the reach is walked on packed arrays (`_route_packed.evaluate_route_reach`, #986). A test lowers it to read a small route both ways.
 OBJECT_ROUTE_EDGES = 2_000_000
-TOP_KEYS = ("name", "skip_refused", "rules")
+TOP_KEYS = ("name", "skip_refused", "recorded_cost", "rules")
 RULE_KEYS = ("when", "do")
 WHEN_KEYS = ("rarity", "corrupted", "fractured", "crafted_mods", "open_prefixes", "open_suffixes", "imprints", "veil", "offer", "requirements", "making")
 VEIL_SIDES = {"prefix": "VeiledPrefix", "suffix": "VeiledSuffix"}  # the slot kind of the generic placeholder of each side (ADR-0026)
@@ -176,12 +179,14 @@ class Rule:
 
 @dataclass(frozen=True)
 class Route:
-    """`skip_refused`: a rule whose action the game refuses at a state is passed over to the next rule that matches (the route's own key)."""
+    """`skip_refused`: a rule whose action the game refuses at a state is passed over to the next rule that matches (the route's own key).
+    `recorded_cost`: the guide's cost with the start item as recorded when its route priced (the file's key), or None (#1596)."""
 
     name: str | None
     source: str
     rules: tuple[Rule, ...]
     skip_refused: bool = False
+    recorded_cost: float | None = None
 
 
 @dataclass(frozen=True)
@@ -307,6 +312,7 @@ class _Reader:
             self.fail(root.line, "rules", "this key is required but missing")
         name = self.text(root, "name", "name") if "name" in root else None
         skip_refused = self.flag(root, "skip_refused", "skip_refused") if "skip_refused" in root else False
+        recorded = self.cost(root, "recorded_cost", "recorded_cost") if "recorded_cost" in root else None
         entries = root["rules"]
         line = root.key_lines["rules"]
         if not isinstance(entries, LineList):
@@ -319,7 +325,7 @@ class _Reader:
         opening = next((priced.label for priced in self.plan.offers if priced.offer.action.opens_listing), None)
         if opening is not None:  # ADR-0064: the draw of a bought item's mods is the market's, not the guide's; every route takes it first
             rules = (Rule(root.line, When(unopened=True), opening), *rules)
-        return Route(name, self.source, rules, skip_refused)
+        return Route(name, self.source, rules, skip_refused, recorded)
 
     def read_rule(self, entry: object, path: str, line: int) -> Rule:
         if not isinstance(entry, LineMap):
@@ -603,6 +609,12 @@ class _Reader:
         if not isinstance(value, bool):
             self.fail(mapping.key_lines[key], path, f"must be true or false, got {describe(value)}")
         return value
+
+    def cost(self, mapping: LineMap, key: str, path: str) -> float:
+        value = mapping[key]
+        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value) or value <= 0:
+            self.fail(mapping.key_lines[key], path, f"must be a positive number of Chaos, got {describe(value)}")
+        return float(value)
 
     def check_keys(self, mapping: LineMap, path: str, allowed: Iterable[str]) -> None:
         allowed = tuple(allowed)

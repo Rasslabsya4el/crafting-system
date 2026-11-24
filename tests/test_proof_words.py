@@ -54,7 +54,7 @@ def test_a_group_stopped_is_best_found_not_proved_with_what_was_tried_and_the_gu
         "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 1 of the 5 crafts this planner "
         "can use on this item fully checked in combination with this plan (the groups are under \"How the methods were searched\"), so a "
         "cheaper plan that uses the other crafts may exist. "
-        f"It costs {cost:,.2f} Chaos in all, against 500.00 Chaos for the guide's route."
+        f"It costs {cost:,.2f} Chaos in all, less than the guide's route at 500.00 Chaos: this plan is cheaper than the guide's."
     )
     assert "Proved" not in words.sentence and not SEARCH_WORDS.search(words.sentence)
     assert words.document() == {"case": PROOF_BEST_FOUND, "sentence": words.sentence, "actions_open": 5, "actions_tried_together": 1, "guide_cost": 500.0}
@@ -105,3 +105,18 @@ def test_a_round_after_a_stopped_plan_s_round_did_not_hold_its_actions():
 
     assert tried(_rounds.STOPPED) == 0
     assert tried(_rounds.CLOSED) == 5
+
+
+def test_a_plan_whose_search_left_imprints_out_is_never_said_proved(tmp_path, data, rounds):
+    # #1580: the imprint rule of #1567 is not exact; its limit turns a plan proved over every method into best found
+    import dataclasses
+
+    from crafting_system.planner._limits import IMPRINTS, Limit
+
+    plan = plan_target(data, _target(tmp_path, data), _prices(), _settings(None))
+    assert proof_words(plan).case == PROOF_PROVED
+    limit = Limit(IMPRINTS, "Imprinted only when the item is worth coming back to", "why", "The plan is the best found.", labels=("Imprint",))
+    words = proof_words(dataclasses.replace(plan, limits=(*plan.limits, limit)))
+    assert words.case == PROOF_BEST_FOUND and words.tried_together == words.open == 5
+    assert words.sentence.startswith("Best plan found, not proved to be the cheapest:") and "imprint" in words.sentence
+    assert "Proved" not in words.sentence and not SEARCH_WORDS.search(words.sentence)

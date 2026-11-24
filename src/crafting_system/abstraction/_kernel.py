@@ -552,6 +552,7 @@ class Abstraction:
         twin._contexts.clear()
         twin._kinds = twin._new_context(frozenset()).kinds
         twin.share_items, twin.project, twin.share_refusals = self.share_items, self.project, self.share_refusals
+        twin.imprints_worth_saving = self.imprints_worth_saving
         return twin
 
     def types_numbered(self) -> int:
@@ -803,6 +804,67 @@ class Abstraction:
         if not self._quality_finish or action.adds(self.data).only_quality:
             return False
         return self.meets_all_but_quality(state) and not self.quality_is_met(state)
+
+    _rarest: tuple[frozenset[int], frozenset[int]] | None = None  # `rarest_leaves`, read once
+    imprints_worth_saving = False  # the planner's rule (#1567): an imprint is made only of an item worth coming back to (`imprint_offer_pruned`)
+
+    def imprint_offer_pruned(self, state: CompressedState, action: Action) -> bool:
+        """Whether an imprint (a new one or one that replaces another; a restore never) is left out at `state` by the planner's rule (#1567).
+
+        A player imprints an item he wants to come back to: one that already holds a wanted mod and nothing he would have to take off
+        again, so that a miss of the next slam or annulment is undone by restoring it, and one whose progress is dear to make again: it
+        holds the wanted mod hardest to roll (`rarest_leaves`: least weight in the base's pool; R17's +1 to all Skill Gems, 50 against
+        200 to 1,000 for the others). An item that holds no mod, a crafted one (a bench mod comes off and goes back on at its price), more
+        mods than wanted mods pass on it (so at least one is unwanted, a veiled placeholder and a fractured mod counted as held), or not
+        the rarest wanted mod is not worth a beast; and an item of more than one mod is worth one only once it holds every rare wanted mod
+        (one that weighs less than half the commonest wanted mod: R17's +1 to all Skill Gems and +1 to Lightning Skill Gems): the
+        rarest alone is the item a player annuls down to, the rare ones together the base he slams the common ones on. Without the
+        last two tests, on R17 every rare Talisman holding any of its wanted mods was imprinted: the bound of the second round had
+        118,033 keys, with the rarest alone 54,495, against 27,267 with both, and neither found a plan in its share. It reads only the statuses, the crafted slots and the count
+        of the other mods, which a pattern key holds (`_pattern.PatternKey`): every member of a key answers alike, so the bound's build,
+        which asks one member, leaves out at a key exactly what the search leaves out at each of its states. Only with `imprints_worth_saving` set (the
+        planner sets it on the model it plans with): unlike `quality_offer_pruned` this is not exact, it removes options, so the answer
+        names it as a limit (`planner._limits.pruning_limits`, `PRUNED_IMPRINT`). The fractured mods are kept by every action and count as held.
+        The kernel never reads it: a given route that imprints elsewhere is walked as the game plays it; the search leaves the imprint out
+        of such a state (`planner._envelope_plan`) and the bound's build out of such a key (`_pattern.PatternBuilder._move`).
+        """
+        if not self.imprints_worth_saving:
+            return False
+        move = action.imprint_move()
+        if move is None or move.restore:
+            return False
+        if any(slot.crafted for slot in state.slots):
+            return True
+        held = len(state.slots) + len(state.fractured)
+        if held == 0 or held > sum(1 for each in state.status if each is Status.PASSING):
+            return True
+        rarest, rare = self.rarest_leaves()
+        if rarest and not any(state.status[leaf] is Status.PASSING for leaf in rarest):
+            return True
+        return held > 1 and not all(state.status[leaf] is Status.PASSING for leaf in rare)
+
+    def rarest_leaves(self) -> tuple[frozenset[int], frozenset[int]]:
+        """The wanted mods hardest to roll on this base (`imprint_offer_pruned`, #1567), and the rare ones: the leaves whose rolled mods (a
+        prefix or a suffix of the item's level or below) weigh least in the base's pool, among the leaves the pool can roll at all; and
+        those that weigh less than half the commonest wanted mod. The half is chosen, not derived: R17 is the only evidence (its wanted mods
+        weigh 50 and 200 against 800 to 1,000, so any factor from 0.2 to 0.8 gives the same set); #1588 derives it. Read once."""
+        if self._rarest is None:
+            base = self.data.base_items.get(self.base_id)
+            weights: dict[int, int] = {}
+            for index, leaf in enumerate(self.goal.leaves):
+                total = 0
+                for mod_id in leaf.mod_ids:
+                    mod = self.data.mods.get(mod_id)
+                    if base is not None and mod is not None and mod.generation_type in ("prefix", "suffix") and mod.required_level <= self.item_level:
+                        total += spawn_weight(mod, base.tags)
+                if total > 0:
+                    weights[index] = total
+            least, most = min(weights.values(), default=0), max(weights.values(), default=0)
+            self._rarest = (
+                frozenset(index for index, weight in weights.items() if weight == least),
+                frozenset(index for index, weight in weights.items() if 2 * weight < most),
+            )
+        return self._rarest
 
     def quality_offer_pruned(self, state: CompressedState, action: Action) -> bool:
         """Whether an action that only sets the quality (a catalyst: `Adds.only_quality`) is not an action of `state` (ticket #158, ADR-0029).

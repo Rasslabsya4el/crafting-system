@@ -856,3 +856,52 @@ def test_where_the_adder_under_the_lock_is_cheaper_the_lock_group_gives_the_chea
     made = next(record for record in widened.records if record.growth is not None and record.growth.startswith("the lock group"))
     assert "exalt A" in made.growth and made.upper == 1000.0  # the lock group's own round made the cheaper plan
     assert all(record.growth is not None for record in widened.records[: widened.records.index(made) + 1])  # before any widening round
+
+
+def _full_table(*entries: Entry, room: dict[Rarity, tuple[int, int]], held_back=()) -> OfferTable:
+    """`_table` with the item of each shape (`views`) holding `room` (prefixes, suffixes): the wanted mods A (a prefix) and B (a suffix) fill a
+    side whose room is one (#1567, the full item)."""
+    from crafting_system.items.model import Capacity
+
+    table = _table(*entries)
+    table.views = {shape: SimpleNamespace(capacity=lambda _data, n=n: Capacity(*n)) for shape, n in room.items()}
+    table._item_ids = frozenset({"A1", "B1"})
+    table.held_back = frozenset(held_back)
+    return table
+
+
+def test_on_a_target_that_fills_the_finished_item_the_seed_s_augmentation_brings_the_alteration_back_to_a_fresh_magic_item():
+    # #1567 fault 2 (R17): the seed ranks Augmentation first on A (2 per A) and a craft second; neither rerolls the magic item back. A miss of
+    # the Augmentation leaves an unwanted mod in a slot the target needs, so the player alterates and augments again (alt-aug): the cheapest
+    # reroll that keeps the magic shape, on the same mod, comes with it, though its own figure (5 per A) ranks it third.
+    entries = (
+        _entry("augment", 1.0, chance={A: Fraction(1, 2), B: Fraction(1, 2)}),
+        _entry("craft A", 2.5, kind="craft", chance={A: 1}),
+        _entry("craft B", 2.5, kind="craft", chance={B: 1}),
+        _entry("alteration", 0.5, kind="reroll", chance={A: Fraction(1, 10)}, leads={MAGIC: frozenset({MAGIC})}),
+        _entry("dear alteration", 5.0, kind="reroll", chance={A: Fraction(1, 10)}, leads={MAGIC: frozenset({MAGIC})}),
+        _entry("scour", 1.0, kind="reroll", chance={A: Fraction(1, 10)}, leads={MAGIC: frozenset({Rarity.NORMAL})}),  # leaves the shape
+    )
+    full = _full_table(*entries, room={MAGIC: (1, 1)})
+    assert full.finished()[1] == {"prefix", "suffix"}
+    assert _names(full, full.seed()) == {"augment", "craft A", "craft B", "alteration"}
+    # with room for more than the target's mods a miss can stay on the item: the seed is the ranking alone
+    roomy = _full_table(*entries, room={MAGIC: (2, 2)})
+    assert roomy.finished()[1] == frozenset()
+    assert _names(roomy, roomy.seed()) == {"augment", "craft A", "craft B"}
+
+
+def test_on_a_side_the_target_fills_an_exalted_orb_s_miss_is_undone_by_the_imprint_named_with_it_even_while_imprints_wait():
+    # #1567 fault 1 (R17): a drawing addition at the finished shape that waits for A, on the prefix side the target fills, misses into the slot
+    # A needs; the cheapest imprint made there is named with it as the undo of the miss, though nothing is at risk yet and the imprints wait
+    # for their later group (`held_back`).
+    entries = (
+        _entry("exalt", 1.0, at=RARE, chance={A: Fraction(1, 4)}),
+        _entry("imprint", 3.0, kind="terminal", makes_imprint=True, draws=False, leads={RARE: frozenset({RARE})}),
+        _entry("dear imprint", 9.0, kind="terminal", makes_imprint=True, draws=False, leads={RARE: frozenset({RARE})}),
+    )
+    full = _full_table(*entries, room={RARE: (1, 1)}, held_back=(1, 2))
+    named = full.roles({A}, set(), frozenset({RARE}), False, frozenset(), frozenset())
+    assert _names(full, named) == {"exalt", "imprint"}
+    roomy = _full_table(*entries, room={RARE: (3, 3)}, held_back=(1, 2))
+    assert _names(roomy, roomy.roles({A}, set(), frozenset({RARE}), False, frozenset(), frozenset())) == {"exalt"}

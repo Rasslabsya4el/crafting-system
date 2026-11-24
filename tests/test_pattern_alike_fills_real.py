@@ -35,7 +35,7 @@ CLASSIC_OFFERS = True  # the plans of real routes below are made with the classi
 ROOT = Path(__file__).resolve().parents[1]
 WORLDS = {
     # the item, the requirements kept, the methods (each world's key holds the tags: a metamod is among them), the build's count of pairs
-    "r17": ("r17-lightning-talisman.yaml", slice(0, 2), ("Harvest Add Remove Lightning", "annulment-orb", "regal-orb", "alchemy-orb", "chaos-orb", "transmutation-orb", "Bench craft Prefixes Cannot Be Changed"), 1_500),
+    "r17": ("r17-lightning-talisman.yaml", slice(0, 2), ("Harvest Add Remove Lightning", "annulment-orb", "regal-orb", "alchemy-orb", "chaos-orb", "transmutation-orb", "Bench craft Prefixes Cannot Be Changed"), 500),  # 1,500 until #1567: the Regal Orb is asked at the extremes since, so the same pairs expand 15 times the keys and the build at every fill ran past the suite's 300 s
     "r20": ("r20-rf-helmet.yaml", slice(1, 3), ("Harvest Reforge Fire", "annulment-orb", "exalted-orb", "Bench craft Prefixes Cannot Be Changed"), 400),
 }  # fmt: skip
 WIDER = 30  # every fill looks at this many times more pairs, at most, for the rows the build at one fill makes
@@ -209,7 +209,7 @@ def test_on_the_hand_worked_world_every_action_gets_from_the_members_offered_eve
     nothing, by_weight = (NOTHING, NOTHING), lambda *read: {(read, read)}  # noqa: E731
     assert seen["annul"] == seen["matron"] == seen["bench-lock"] == {nothing}
     assert seen["reforge-fire"] == seen["chaos"] == {(NOTHING, None), (None, NOTHING)}  # under either lock
-    assert seen["exalted"] == seen["regal"] == by_weight((), ())
+    assert "exalted" not in seen and "regal" not in seen  # an addition from the whole pool keeps the extremes in a tagged world (#1311 root 1, #1567)
     assert seen["harvest-add-remove"] == by_weight(("fire",), ()) and seen["beast-prefix"] == by_weight((), (60,))
     assert "fracture" not in seen  # told apart by type
     assert fewer > 1_000

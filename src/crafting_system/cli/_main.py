@@ -56,7 +56,7 @@ from ._report import build_report, plan_record, policy_document, render_text
 from ._report_net import report_net
 from ._route import evaluate_route, load_route, route_actions
 from ._route_report import render_route_text, route_document
-from ._route_view import given_cost, write_route_page
+from ._route_view import guide_figure, write_route_page
 from ._page_main import page_main
 from ._plan_file import save_plan
 from ._trade import trade_main
@@ -253,11 +253,11 @@ def main(
                 if check is not None:
                     stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
 
-                guide = given_cost(plan, given)  # the guide's route's cost with the start item: the proof sentence says the plan's against it (OR-59)
-                print(render_text(report, check, target_name=name, guide=guide), end="")
+                guide, recorded = guide_figure(plan, given, route)  # the guide's cost with the start item, or its file's recorded figure (OR-59, #1596)
+                print(render_text(report, check, target_name=name, guide=guide, guide_recorded=recorded), end="")
                 printed = True
                 stage("text written")
-                document = policy_document(report, check, target_name=name, guide=guide)
+                document = policy_document(report, check, target_name=name, guide=guide, guide_recorded=recorded)
                 if route_path is not None and route is not None and given is not None:
                     print()
                     print(render_route_text(report, route, given, game, file_name=route_path.name), end="")

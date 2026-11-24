@@ -1214,7 +1214,9 @@ class Pattern:
             # `ONE` members, every member under a lock or with a family on both sides (see "RELAXED" in the module text)
             return Mode.ALL if self.holds_lock(key) or self._has_partners(key.flags.influences) else Mode.RELAXED
         if reads.variants and reads.junk and reads.pool_weight and not reads.fractures:
-            if kinds._tagged or kinds._levels:
+            if (kinds._tagged or kinds._levels) and (reads.draw_tags or reads.draw_levels):
+                # it draws by tag or level itself: the finer family types tell its members apart. One that draws from the whole pool (a Regal
+                # Orb, an Exalted Orb) reads only the weight a held family takes out, whatever tags another action draws by (#1311 root 1)
                 return Mode.ALL
             # an addition that reads the implicits draws from the dominant side alone (an Eldritch Exalted Orb): a family on both sides breaks
             # the corners (module docstring, "The Eldritch implicits", #835)
@@ -2649,6 +2651,8 @@ class PatternBuilder:
         pattern, ab, stats = self.pattern, self.ab, self.stats
         firsts = pattern.members(key, Mode.ANY)  # the caller checked that the key has a member
         member = firsts[0]
+        if ab.imprint_offer_pruned(member, offer.action):  # the planner's rule (#1567): the crafted mods and the statuses are the key's
+            return None
         stats.pairs += 1
         try:
             exact = ab.kernel(member, offer.action)
