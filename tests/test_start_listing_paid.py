@@ -10,7 +10,7 @@ import pytest
 from listing_support import LISTING, magic_toy, prices, rare_toy, target
 
 from crafting_system.actions import DRAW_LABEL
-from crafting_system.cli import build_report, evaluate_route, make_plan, parse_route
+from crafting_system.cli import PlanError, build_report, evaluate_route, make_plan, parse_route
 from crafting_system.cli._report import listing_lines, state_parts
 from crafting_system.planner._offers import RESTART
 from crafting_system.prices import PriceEntry, PriceFile
@@ -170,3 +170,11 @@ def test_a_guide_route_takes_the_paid_alchemy_first_and_needs_no_rule_for_it():
     assert plan.solution.values[plan.start] <= result.risk.mean.value + 1e-9
     report = build_report(plan, data)
     assert any(state.action == PAID_RARE for state in report.states)
+
+
+def test_a_hand_price_of_a_rarity_that_is_none_is_refused():
+    data = rare_toy()
+    aim = target(data, rarity="rare", actions="alchemy-orb, chaos-orb", wanted=("ToyP1", "ToyS1"))
+    key = start_price_key(data, aim)
+    with pytest.raises(PlanError, match="rarity 'Normal'"):
+        make_plan(data, aim, stated(prices(key), key, "Normal"))

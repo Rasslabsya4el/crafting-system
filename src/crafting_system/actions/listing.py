@@ -42,6 +42,7 @@ __all__ = [
     "DRAW_LABEL",
     "OpenListing",
     "open_listing",
+    "scoured_from",
     "unopened_listing",
 ]
 
@@ -70,6 +71,11 @@ def open_listing(rarity: Rarity, paid: bool = False, scoured_from: str | None = 
     it that rarity, used and paid (#1522); `scoured_from` (with `paid`) when the item bought is of another rarity or any, in words, so an Orb of
     Scouring comes first (#1537). The planner asks for it here and names no concrete class."""
     return OpenListing(rarity, paid, scoured_from if paid else None)
+
+
+def scoured_from(action: Action) -> str | None:
+    """The bought item's rarity in words ("any rarity", "Rare") when `action` is an opening that scours the bought item first (#1537), else None."""
+    return action.scoured_from if isinstance(action, OpenListing) else None
 
 
 @dataclass(frozen=True)

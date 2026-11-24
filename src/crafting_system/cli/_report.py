@@ -14,7 +14,7 @@ from fractions import Fraction
 
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.data import GameData
-from crafting_system.actions import DRAW_LABEL, unopened_listing
+from crafting_system.actions import DRAW_LABEL, scoured_from, unopened_listing
 from crafting_system.items import Rarity, Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN, plain_base_names
@@ -226,7 +226,7 @@ def state_parts(plan: Plan, data: GameData, state: CompressedState) -> list[str]
     if state.flags.unopened:  # the bought listing before its draw (ADR-0064): the rarity it will have, not the normal item the model holds
         opening = next((entry.offer.action for entry in plan.offers if entry.offer.action.opens_listing), None)
         if opening is not None and opening.resources(data):  # the draw is an orb paid on the Normal base bought (#1522), after a Scouring (#1537)
-            bought = _scoured_from(opening, data)
+            bought = scoured_from(opening) if opening.resources(data) else None
             return [f"the bought item ({bought}), before the Orb of Scouring" if bought else "the bought normal base, no mods yet"]
         return [f"the bought {plan.target.start_item.rarity.value} item, its mods not drawn yet"]
     parts = [state.flags.rarity.value]
@@ -523,7 +523,7 @@ def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
     orb = "an Orb of Alteration" if plan.target.start_item.rarity is Rarity.MAGIC else "an Orb of Alchemy"
     counts = [f"{number} {'mod' if number == 1 else 'mods'} ({percent(float(share))})" for number, share in sorted(totals.items())]
     held = ', '.join(counts[:-1]) + ' or ' + counts[-1] if len(counts) > 1 else counts[0]
-    bought = _scoured_from(action, data)
+    bought = scoured_from(action) if action.resources(data) else None
     if bought:  # the price buys an item of another rarity or of any: an Orb of Scouring, then the orb that makes it the rarity, both paid (#1537)
         orb = action.label(data).split(" on the bought item (")[0].removeprefix("Orb of Scouring and ")
         item = "an item of any rarity" if bought == "any rarity" else f"a {bought} item"
@@ -544,15 +544,6 @@ def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
         f"{', '.join(counts[:-1]) + ' or ' + counts[-1] if len(counts) > 1 else counts[0]}, drawn the way {orb} draws them: from the mods its base can carry, "
         "those of its influence included, at their game weights. The price above is the listing's; the plan picks its first move on each outcome."
     ]
-
-
-def _scoured_from(action, data: GameData | None) -> str | None:
-    """The bought item's rarity in words ("any rarity", "Rare") when the opening scours it first (#1537), read through the action contract (its
-    resources and label), else None."""
-    if "Orb of Scouring" not in action.resources(data):
-        return None
-    label = action.label(data)
-    return label.split(" on the bought item (", 1)[1].removesuffix(")") if " on the bought item (" in label else None
 
 
 def free_action_price(plan: Plan) -> float:

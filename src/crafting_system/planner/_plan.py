@@ -445,6 +445,7 @@ def searched_rarity(price: StartPrice) -> str | None:
 
 
 ANY_RARITY = "nonunique"  # the trade search's word for an item of any rarity but unique
+RARITY_WORDS = (Rarity.NORMAL.value, Rarity.MAGIC.value, Rarity.RARE.value, ANY_RARITY)  # what a start's price may buy (#1537)
 
 
 def bought_rarity(price: StartPrice) -> str | None:
@@ -461,6 +462,11 @@ def opening_orbs(price: StartPrice, start: Rarity) -> tuple[bool, str | None]:
     pays, since a Normal one he buys skips the Scouring and one of the start's rarity both (#1537).
     """
     bought = bought_rarity(price)
+    if bought is not None and bought not in RARITY_WORDS:
+        raise PlanError(
+            f"the start price of {price.name!r} says it buys an item of rarity {bought!r}; the rarities a start can be bought at are "
+            f"{', '.join(RARITY_WORDS)} (a trade search's words)"
+        )
     if bought is None or bought == start.value:
         return False, None
     if bought == Rarity.NORMAL.value:

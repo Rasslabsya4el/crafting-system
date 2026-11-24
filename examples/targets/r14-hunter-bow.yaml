@@ -60,9 +60,7 @@ requirements:
 # Magic item only, and the post names no Transmutation Orb (a Normal start plus one would be a step the guide does not give, OR-16), so the
 # start is a Magic Hunter Thicket Bow of the base, level and influence above. It is bought, and the post names none of its mods: it is the
 # item the market sells (ADR-0064, OR-17), so it holds what an Orb of Alteration leaves on this base, 1 or 2 mods at their game weights (the
-# Hunter mods included), and the plan's first decision is made on each outcome of that draw. Its price is a trade search of a Hunter Thicket
-# Bow of ANY rarity (the exact Magic item had no listing, #483), so the bow bought may be Rare: the draw is an Orb of Scouring and an Orb of
-# Transmutation, both paid, the most a player pays for the Magic bow (OR-43, #1537).
+# Hunter mods included), and the plan's first decision is made on each outcome of that draw.
 start_item:
   rarity: magic
 
