@@ -144,6 +144,12 @@ def proof_words(plan, guide: float | None = None) -> ProofWords:
     cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.mean_remaining)
     against = _guide_words(cost, guide)
     gap = _proved_gap(plan)
+    if gap is not None and any(limit.kind == _limits.IMPRINTS for limit in plan.limits):  # the search left imprints out by its rule (#1567, #1580)
+        said = (
+            f"Best plan found, not proved to be the cheapest: the search checked {_all(total)} together to the end, but it made an imprint "
+            "only of an item worth coming back to, so a plan that imprints the item elsewhere may be cheaper."
+        )
+        return ProofWords(BEST_FOUND, said + against, total, total, guide)
     if gap is not None and gap <= PROOF_GAP + 1e-12:
         within = "" if gap == 0.0 else f", to within {PROOF_GAP * 100:g}% of the crafting cost,"
         return ProofWords(
