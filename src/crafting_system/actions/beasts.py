@@ -69,6 +69,22 @@ def recipe_resources(recipe: str, rare_creature_price: int = ANY_RARE_CREATURE_P
     return resources
 
 
+class RareBeastFee:
+    """A beast recipe whose rare beasts of any kind are paid as Chaos Orbs (`recipe_resources`): its `stand_ins` says so (#1518)."""
+
+    rare_creature_price: int
+
+    def stand_ins(self, data: GameData | None = None) -> Mapping[str, str]:
+        chaos = self.resources(data).get(CHAOS_ORB, 0)  # type: ignore[attr-defined]  (the recipe is an Action)
+        if not chaos or self.rare_creature_price <= 0:
+            return {}
+        beasts = chaos // self.rare_creature_price
+        return {
+            CHAOS_ORB: f"the recipe's {beasts} rare beast{'' if beasts == 1 else 's'} of any kind, at {self.rare_creature_price} Chaos each "
+            "(a fixed price: no price list holds them)"
+        }
+
+
 def aspect_mod_id(aspect: str, level: int) -> str:
     """The id of the suffix that grants the aspect at the level, read from `beastcraft.aspect_mods`."""
     word = ASPECT_WORDS[aspect]
@@ -105,7 +121,7 @@ class TalismanFractureOutcomes(FractureOutcomes):
 
 
 @dataclass(frozen=True)
-class TalismanFracture(Action):
+class TalismanFracture(RareBeastFee, Action):
     """The beast recipe that fractures one (`count` 1) or two (`count` 2) modifiers of a rare Talisman."""
 
     count: int
@@ -177,7 +193,7 @@ def _talisman_fractures(data: GameData, item: Item):
 
 
 @dataclass(frozen=True)
-class AspectBeast(Action):
+class AspectBeast(RareBeastFee, Action):
     """The beast recipe that adds the suffix granting an aspect skill, at level 20 or (with The Black Mórrígan) 30."""
 
     aspect: str
