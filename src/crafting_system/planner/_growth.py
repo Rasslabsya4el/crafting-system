@@ -95,8 +95,9 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   such method stopped before a first bound). The class is read from the offer (`Entry.fans`), never from a list of names: it makes,
   replaces or restores an imprint (`Action.imprint_move`); or it is an addition one of whose outcomes at a shape's item lacks a mod the item
   held that was not fractured (it removes a random mod as it adds one: the Beastcraft side swaps, Harvest's add-remove crafts); or the draw
-  it declares there (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own: the beast recipe
-  that adds an influence's mod, the side swaps' draw at the beast's level). The roles are read as before with these offers held out (the
+  it declares there (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own: the side swaps'
+  draw at the beast's level; the beast recipe that adds a mod to an influenced item drew the influence's mods alone until #1538 and now
+  draws the item's own pool, as an Exalted Orb). The roles are read as before with these offers held out (the
   next cheapest takes their place), and what they would have named of them is kept. When nothing new is named without them, or a round
   does not finish within its share, one later group runs with a plan in hand: the plan's support, the named offers and the methods of the
   class the roles named, its words naming them (the page shows them). After it nothing is held back; with no plan in hand when nothing new is

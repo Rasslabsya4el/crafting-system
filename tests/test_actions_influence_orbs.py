@@ -33,6 +33,7 @@ from item_state_support import AVOID_SHOCK
 
 from crafting_system.actions import (
     BeastInfluenceRecipe,
+    ExaltedOrb,
     InfluencedExaltedOrb,
     NotApplicableError,
     OutOfScopeError,
@@ -191,23 +192,41 @@ def test_an_item_class_without_an_influence_key_is_out_of_scope():
 # --- the beast recipes --------------------------------------------------------------------------------------------------
 
 
-def test_a_beast_recipe_draws_from_the_pool_of_its_influence_on_an_item_that_has_it():
+# The recipe draws as a plain Exalted Orb on the influenced item (#1538, Maxroll's guide: "It does not guarantee an influenced modifier"). The
+# whole pool of the Shaper helmet of level 84 with the Plain prefix held, by hand from the fixture excerpt and the table of `influence_support`:
+#   prefixes  IncreasedLife 1-3 (3 x 1000) + ItemFoundRarityIncreasePrefix 1-3 (3 x 1000)                        = 6,000
+#   suffixes  LifeRegeneration1 1000 + FireResist1 1000 + ColdResist1 1000 + LightningResist 1-8 (8 x 1000)
+#             + ChaosResist 1-6 (6 x 250)                                                                         = 12,500
+#   Shaper    P1 300 + P2 300 + P3 200 = 800 (prefix), S1 500 + S2 500 = 1,000 (suffix)                          = 1,800
+#   total                                                                                                         = 20,300
+# so the top Shaper prefix P3 comes with 200/20,300 = 2/203, not the 200/1,800 = 1/9 of the Shaper's Exalted Orb's pool, and some Shaper mod
+# at all with 1,800/20,300 = 18/203.
+WHOLE = 20300
+
+
+def test_a_beast_recipe_draws_from_the_whole_pool_of_an_item_that_has_its_influence():
     item = plain(influences=frozenset({SHAPER}))
     result = BeastInfluenceRecipe(SHAPER).outcomes(DATA, item)
 
-    assert chance(result, P3) == Fraction(200, 1800) and chance(result, S2) == Fraction(500, 1800)
-    assert result.retained.influences == {SHAPER}  # only the pool is borrowed: the influences are not added to
-    # it uses the item's own level, like its orb
+    assert chance(result, P3) == Fraction(200, WHOLE) == Fraction(2, 203)
+    assert chance(result, S2) == Fraction(500, WHOLE)
+    assert chance(result, "LightningResist1") == Fraction(1000, WHOLE) and chance(result, "ChaosResist1") == Fraction(250, WHOLE)
+    shaper = sum(chance(result, mod_id) for mod_id in (P1, P2, P3, S1, S2))  # one mod is added, so these are exclusive
+    assert shaper == Fraction(1800, WHOLE) == Fraction(18, 203)  # it does not guarantee a mod of the influence
+    assert result.pool == ExaltedOrb().outcomes(DATA, item).pool  # the Exalted Orb's draw on the same item
+    assert result.retained.influences == {SHAPER}  # nothing is added to the influences
+    # it uses the item's own level: at 68 the Shaper mods of level 75 and 80 are out
     low = BeastInfluenceRecipe(SHAPER).outcomes(DATA, plain(level=68, influences=frozenset({SHAPER})))
-    assert chance(low, P1) == Fraction(300, 800)
+    assert chance(low, P2) == chance(low, P3) == chance(low, S2) == 0 and chance(low, P1) > 0
 
 
-def test_a_beast_recipe_borrows_the_pool_of_its_influence_alone_on_a_dual_influenced_item():
+def test_a_beast_recipe_draws_the_mods_of_both_influences_on_a_dual_influenced_item():
+    # the pool above plus ElderS1 400 and ElderP1 100: 20,800, and the Shaper and the Elder recipes draw alike
     item = plain(influences=frozenset({SHAPER, ELDER}))
-    shaper = BeastInfluenceRecipe(SHAPER).outcomes(DATA, item)
-    assert chance(shaper, ELDER_S) == 0 and chance(shaper, ELDER_P) == 0 and chance(shaper, S2) == Fraction(500, 1800)
-    elder = BeastInfluenceRecipe(ELDER).outcomes(DATA, item)
-    assert chance(elder, ELDER_S) == Fraction(400, 500) and chance(elder, S2) == 0
+    shaper, elder = BeastInfluenceRecipe(SHAPER).outcomes(DATA, item), BeastInfluenceRecipe(ELDER).outcomes(DATA, item)
+    assert chance(shaper, ELDER_S) == chance(elder, ELDER_S) == Fraction(400, 20800)
+    assert chance(shaper, S2) == chance(elder, S2) == Fraction(500, 20800)
+    assert chance(shaper, HUNTER_S) == 0  # an influence the item does not have
 
 
 def test_a_beast_recipe_needs_a_rare_uncorrupted_item_with_the_influence_and_a_legal_mod():
@@ -220,8 +239,10 @@ def test_a_beast_recipe_needs_a_rare_uncorrupted_item_with_the_influence_and_a_l
         recipe.outcomes(DATA, helmet(roll(PLAIN, 1), rarity=Rarity.MAGIC, influences=frozenset({SHAPER})))
     with pytest.raises(NotApplicableError, match="corrupted"):
         recipe.outcomes(DATA, plain(corrupted=True, influences=frozenset({SHAPER})))
-    with pytest.raises(NotApplicableError, match="no mod of the pool"):
-        BeastInfluenceRecipe(WARLORD).outcomes(DATA, plain(influences=frozenset({WARLORD})))
+    full = helmet(*(roll(mod_id, 1) for mod_id in (PLAIN, "IncreasedLife1", "ItemFoundRarityIncreasePrefix1", "FireResist1", "ColdResist1",
+                                                   "LightningResist1")), influences=frozenset({WARLORD}))
+    with pytest.raises(NotApplicableError):  # no open slot
+        BeastInfluenceRecipe(WARLORD).outcomes(DATA, full)
 
 
 # --- names, prices, claims and the catalog ---------------------------------------------------------------------------------
