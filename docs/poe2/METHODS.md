@@ -49,7 +49,7 @@ Columns: **ID**; **Method**; **Preconditions**; **Outcome** (as far as known; "u
 | P2-25 | Catalysts (13 ring/amulet + 13 Refined for jewels) | ring, amulet (jewel for Refined) | adds catalyst quality of one tag; feeds Catalysing Exaltation | catalysts | no | P2 |
 | P2-26 | Quality currency: Armourer's Scrap, Blacksmith's Whetstone, Arcanist's Etcher, Glassblower's Bauble | its item kind, quality < 20% | + quality (amount by item level or rarity: open) | 1 item | no | P2 |
 | P2-27 | Liquid Emotions on jewels (0.5) | rare basic jewel (Ancient emotions: Time-Lost jewels) | removes 1 random mod, adds a guaranteed crafted mod (one crafted mod per item) | 1 emotion | no | P2 |
-| P2-28 | Fluxes (Blazing, Chilling, Crackling, Void; Thaumaturgic Flux levels; Perfect Flux) | item with resistance mods | converts resistance mods to one element (Void: chaos) | 1 flux | no | P2 † |
+| P2-28 | Fluxes (Blazing, Chilling, Crackling, Void) | item with resistance mods | converts resistance mods to one element (Void: chaos). Thaumaturgic Flux (levels 2–20) levels Kalguuran gems and Perfect Flux sets an item's skills to level 20: not mod crafts | 1 flux | no | P2 † |
 | P2-29 | Reforging bench, equipment recipes | 3 items of one base and rarity | 1 item of that base at the lowest item level among them (details open) | 3 items | yes | P3 (multi-input) † |
 | P2-30 | Reforging bench, 3-to-1 of a kind | 3 essences / runes / emotions / waystones of one tier | 1 of the next tier | 3 inputs | no | input source (like a vendor recipe) |
 | P2-31 | Verisium runeforging (Verisium Anvil) | an armour base | a "Runeforged" base with Runic Ward and lower defences; mods kept? (open) | Verisium ×N | no | P2 † |

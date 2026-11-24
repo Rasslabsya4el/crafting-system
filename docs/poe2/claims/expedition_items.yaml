@@ -1,0 +1,62 @@
+# Mechanic family: expedition_items (the Verisium kinds, Crests, Starlit Ores, Thaumaturgic and Perfect
+# Flux, the Sagas) and the Cryptic Key, which the completeness pass of 2026-11-24 found named by no other
+# claim (docs/poe2/COMPLETENESS.md). Text from the pinned base_items.json of PoE2 0.5.5.10; extract in
+# research/poe2/data/derived-crafting-items.md. The alloys are alloy.yaml, the runeforging rules verisium.yaml.
+rules:
+  - id: expedition_items.verisium_kinds
+    statement: Verisium, Exceptional Verisium, Mutated Verisium, Corrupted Verisium and Founders Verisium are spent at the Verisium Anvil to transform equipment (runeforging, verisium.yaml). Mutated, Corrupted and Founders Verisium are in the game files and on the trade list but cannot be obtained in 0.5 (poe2db "Acquisition - Not in game"), so a route uses only Verisium and Exceptional Verisium.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyVerisiumMetal1 "Verisium": "Can be used at the Verisium Anvil to transform Equipment."'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Verisium: obtainable, Exceptional Verisium: obtainable, Mutated Verisium: not in game, Corrupted Verisium: not in game, Founders Verisium: not in game}
+
+  - id: expedition_items.crests_transform_uniques
+    statement: The four Crests (Medved's Crest of the Circle, Vorana's Crest of the Scythe, Uhtred's Crest of the Chalice, Olroth's Crest of the Sun) are spent at the Verisium Anvil to transform unique items (Runeforged and Runemastered uniques); they change uniques only, which the planner leaves out.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyVerisiumMetalUnique1 "Medved''s Crest of the Circle": "Can be used at the Verisium Anvil to transform [Rarity|Unique] items."'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: expedition_items.starlit_ores_forge_uniques
+    statement: Each Starlit Ore forges one named unique at the Verisium Anvil (Starlit Ore Serle's Grit, Revered Starlit Ore The Unleashed, Venerable Starlit Ore Eyes of the Runefather, Veridical Starlit Ore Eventide Petals, Warding Starlit Ore the Stolvarheim unique); `value` maps the ore to the unique its metadata id names. Uniques only, out of the planner.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyVerisiumOreUniqueSerlesGrit "Starlit Ore": "Can be used at the Verisium Anvil to forge a new [Rarity|Unique] item."'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Starlit Ore: SerlesGrit, Revered Starlit Ore: TheUnleashed, Venerable Starlit Ore: EyesOfTheRunefather, Veridical Starlit Ore: EventidePetals, Warding Starlit Ore: Stolvarheim}
+
+  - id: expedition_items.thaumaturgic_flux_levels_kalguuran_gems
+    statement: Thaumaturgic Flux (Level 2) to Thaumaturgic Flux (Level 20), nineteen items, each upgrade a Kalguuran Skill Gem to the level in its name. They change gems, not equipment mods, so no item route uses them. (They are not the resistance Fluxes, which are Blazing, Chilling, Crackling and Void Flux are verisium.yaml.)
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencySetKalguuranSkillGemLevel2 "Thaumaturgic Flux (Level 2)": "Upgrades a Kalguuran Skill Gem to level 2"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: expedition_items.perfect_flux_skills_to_20
+    statement: Perfect Flux upgrades the skills granted by an item to level 20; it changes no explicit mod.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/CurrencyUpgradeInherentTo20 "Perfect Flux": "Upgrades the Skills on an item to Level 20"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: expedition_items.sagas_are_logbook_omens
+    statement: Aldur's Saga, Medved's Saga, Vorana's Saga, Uhtred's Saga and Olroth's Saga are items of class Omen that change the next Expedition Logbook (special modifiers, or a guaranteed encounter with that faction's leader); they do not act on equipment.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Expedition/Expedition2LogbookMedved "Medved''s Saga": "While this item is active in your inventory your next Logbook guarantees a Medved encounter in the revealed Biome"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: expedition_items.cryptic_key_not_crafting
+    statement: The Cryptic Key, listed in the trade site's Currency group, opens a strongbox an additional time; it does not act on equipment.
+    source_kind: datamined
+    url: https://repoe-fork.github.io/poe2/base_items.json
+    quote: 'Metadata/Items/Currency/StrongboxKey "Cryptic Key": "Opens an unopened [Strongbox] allowing it to be opened an additional time"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
