@@ -630,7 +630,7 @@ class Search[S]:
         # applies): it cannot improve on it
         self.beaten_at = beaten_at
         self.upper: float | None = None  # the least certified upper figure so far (the upper graph only gains actions, so a later plan costs no more)
-        self._late: tuple[tuple[int, int], str] | None = None  # (states known, pairs realized) of the last pricing its time net stopped, and why (#1516)
+        self._late: tuple[tuple[int, int], float, str] | None = None  # (states known, pairs realized) of the last pricing its time net stopped, its limit and why (#1516)
         self.held: tuple[PackedGraph, float] | None = None  # the last upper graph the solver certified with a finite cost, and that cost: what a net's stop falls back on (kept only when a net has a limit)
         self.standing: Standing | None = None
         self.incumbent = incumbent
@@ -1058,9 +1058,9 @@ class Search[S]:
             if met or (tried and popped >= 2 * tried):
                 tried = popped
                 try:
-                    if math.isfinite(self._upper()[2]):
+                    if math.isfinite(self._upper(self._deadline(began))[2]):  # the walk's net is the net's own seconds (its `_net` below)
                         return None
-                except ConvergenceError:
+                except ConvergenceError:  # not certified, or not priced within the chain's limit (`Late`, #1516): the walk's own net, asked below, ends it
                     pass
         return None
 
@@ -1223,20 +1223,21 @@ class Search[S]:
         """The upper graph now, the value of its best policy at the start and that value with the solver's certified error added (the upper
         figure a stop may rest on). With no restart the graph is the realized actions alone (a tip is a dead end). Raises `ConvergenceError`,
         and `Late` when `deadline` (a `time.perf_counter()` instant, `_deadline`) passes before the solve ends (#1516); a graph whose pricing
-        was late once raises `Late` again at once until the search has realized more."""
+        was late raises `Late` again at once, until the search has realized more or is given a later limit."""
         mark = time.perf_counter()
         self.stats.upper_solves += 1
         grown = (len(self.states), self.stats.realized)
         try:
-            if deadline is not None and self._late is not None and self._late[0] == grown:
-                raise Late(f"{self._late[1]} (the same graph, not priced again)", 0.0, "the pricing")
+            if deadline is not None and self._late is not None and self._late[0] == grown and deadline <= self._late[1]:
+                raise Late(f"{self._late[2]} (the same graph, not priced again before a later limit)", 0.0, "the pricing")
             graph = self._graph("upper")
-            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass, refuse_above=self.refuse_above, deadline=deadline)
+            late = None if deadline is None else lambda: time.perf_counter() >= deadline  # the search's clock, the one its net reads
+            core = solve_graph(graph, tolerance=self.tolerance, info={}, self_mass=self.self_mass, refuse_above=self.refuse_above, late=late)
         except Late as late:
             self.stats.upper_refused += 1
             self.stats.upper_late += 1
-            if self._late is None or self._late[0] != grown:
-                self._late = grown, str(late)
+            if self._late is None or self._late[0] != grown or deadline > self._late[1]:
+                self._late = grown, deadline, str(late).removesuffix(" (the same graph, not priced again before a later limit)")
             raise
         except ConvergenceError:
             self.stats.upper_refused += 1
@@ -1405,7 +1406,7 @@ class Search[S]:
                 f"realized along its chain"
                 + (f" and {self.stats.reached:,} toward the goal" if self.stats.reached else "")
                 + f" over {len(self.states):,} states, costs at most {upper!r} ({time.perf_counter() - began:.0f} s)"
-                + (f"; it was not priced within the time limit: {self._late[1]}" if self._late is not None else "")
+                + (f"; it was not priced within the time limit: {self._late[2]}" if self._late is not None else "")
                 + (f"; its chain was cut short: {stopped}" if stopped is not None else "")
             )
             self._stand(float(self.lb[0]), began)  # the bound of the start is a lower figure before any round

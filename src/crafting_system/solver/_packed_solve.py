@@ -848,7 +848,7 @@ def solve_graph(
     start_value: np.ndarray | None = None,
     self_mass: np.ndarray | None = None,
     refuse_above: float | None = None,
-    deadline: float | None = None,
+    late: Callable[[], bool] | None = None,
 ) -> Core:
     """Policy iteration on `graph` itself (no merge): see the module docstring, steps 2 to 5.
 
@@ -862,16 +862,17 @@ def solve_graph(
     its certified error (`value * (1 - bound) <= V* <= value * (1 + bound)`) and so needs the bound only small next to what it compares (#867).
     The work is the same whatever it is: the certificate, its finer measures and the corrections all aim at `accept_bound`.
 
-    `deadline` (a `time.perf_counter()` instant, None for none) is the caller's time limit (OR-40, #1516): the solve asks the clock between two of
-    its steps (each sweep of `proper_states`, each round of policy iteration, each refinement and correction, and before the exact solve) and
-    raises `Late`, a `ConvergenceError` with no figure, once it has passed, so it ends at most one step past it. The first sweep and the
-    first round always run.
+    `late` (None for none) says whether the caller's time limit has passed (OR-40, #1516), on the caller's own clock: the solve asks it between two
+    of its steps (each sweep of `proper_states` after the first, each round of policy iteration after the first, each refinement and correction,
+    and before the exact solve) and raises `Late`, a `ConvergenceError` with no figure, once it says so. A step that has begun runs to its end (one
+    sweep, one evaluation of the policy and its improvement, one certificate, one correction, never the exact solve once late), so the solve goes
+    past the limit by at most one such step: on R17's 210,847 states a sweep takes about 3 ms, an evaluation about 0.1 s.
     """
     refuse_above = accept_bound if refuse_above is None else max(refuse_above, accept_bound)
     say = progress or (lambda _text: None)
     info = {} if info is None else info
     began = time.perf_counter()
-    on_time = None if deadline is None else _deadline(deadline, began)
+    on_time = None if late is None else _deadline(late, began)
     clock = _tick()
     work = Work(graph, self_mass)
     n = work.n
@@ -956,12 +957,12 @@ def solve_graph(
     return Core(value, inside, np.where(inside & ~graph.goal, policy, -1), certificate)
 
 
-def _deadline(deadline: float, began: float) -> Callable[[str], None]:
-    """The clock `solve_graph` asks between two steps: it raises `Late`, naming the step it stopped before, once `deadline` has passed."""
+def _deadline(late: Callable[[], bool], began: float) -> Callable[[str], None]:
+    """What `solve_graph` asks between two steps: it raises `Late`, naming the step it stopped before, once `late()` says the time is up."""
 
     def ask(step: str) -> None:
-        now = time.perf_counter()
-        if now >= deadline:
+        if late():
+            now = time.perf_counter()
             raise Late(
                 f"the solve stopped at its caller's time limit after {now - began:.1f} s, before {step} (it asks the clock between two steps)",
                 now - began, step,
