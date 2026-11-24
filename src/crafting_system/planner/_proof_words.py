@@ -69,7 +69,7 @@ def _guide_words(cost: float, guide: float | None, recorded: bool = False) -> st
         return ""
     where = f"the guide's route at {_chaos(guide)}{RECORDED if recorded else ''}"
     if _chaos(cost) == _chaos(guide):
-        return f" It costs {_chaos(cost)} in all, the same as {where}."
+        return f" It costs {_chaos(cost)} in all, the same as the guide's route{RECORDED if recorded else ''}."
     if cost > guide:
         return f" It costs {_chaos(cost)} in all, {cost / guide:,.2f} times {where}: this plan is dearer than the guide's."
     return f" It costs {_chaos(cost)} in all, less than {where}: this plan is cheaper than the guide's."

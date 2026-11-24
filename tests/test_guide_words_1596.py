@@ -33,7 +33,7 @@ def test_a_dearer_plan_says_so_and_how_many_times():
 
 def test_a_cheaper_plan_and_an_equal_one():
     assert _guide_words(4_000.0, 5_000.0) == " It costs 4,000.00 Chaos in all, less than the guide's route at 5,000.00 Chaos: this plan is cheaper than the guide's."
-    assert _guide_words(38.801, 38.799) == " It costs 38.80 Chaos in all, the same as the guide's route at 38.80 Chaos."
+    assert _guide_words(38.801, 38.799) == " It costs 38.80 Chaos in all, the same as the guide's route."  # as the goldens say it
     assert _guide_words(10.0, None) == "" and _guide_words(10.0, math.inf) == "" and _guide_words(math.inf, 10.0) == ""
 
 
