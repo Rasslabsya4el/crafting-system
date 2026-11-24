@@ -518,7 +518,7 @@ def listing_lines(plan: Plan, data: GameData | None) -> list[str]:
     orb = "an Orb of Alteration" if plan.target.start_item.rarity is Rarity.MAGIC else "an Orb of Alchemy"
     counts = [f"{number} {'mod' if number == 1 else 'mods'} ({percent(float(share))})" for number, share in sorted(totals.items())]
     held = ', '.join(counts[:-1]) + ' or ' + counts[-1] if len(counts) > 1 else counts[0]
-    if getattr(action, "paid", False):  # the price is a Normal base's: the orb that makes it the rarity is the first step, used and paid (#1522)
+    if action.resources(data):  # an opening that consumes an orb: the price is a Normal base's: the orb that makes it the rarity is the first step, used and paid (#1522)
         made = action.label(data).removesuffix(" on the bought Normal base")
         return [
             f"First step: the price above is a Normal base's, so the plan makes it {rarity} with {made} (its price is in the list). "

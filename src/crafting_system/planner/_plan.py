@@ -840,7 +840,7 @@ def _make_plan(
         normal_base = searched_rarity(price_of_start) == "normal"  # the price is a Normal base's: the orb that makes it rare is used and paid (#1522)
         draw = listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base)
         priced = (*priced, draw)
-        if normal_base and not draw.offer.action.paid:  # the orb that makes the Normal base the rarity has no price: the free draw stands in, said (OR-16, OR-13)
+        if normal_base and not draw.offer.resources:  # the orb that makes the Normal base the rarity has no price: the free draw stands in, said (OR-16, OR-13)
             orb = open_listing(target.start_item.rarity, paid=True)
             limits += unpriced_limits(((orb.label(data), tuple(orb.resources(data)), ""),))
     limits += unpriced_limits((drop.label, drop.missing, drop.kind) for drop in dropped)
