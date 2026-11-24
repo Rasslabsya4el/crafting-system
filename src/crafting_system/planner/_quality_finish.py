@@ -217,7 +217,7 @@ def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_mo
         why = (
             f"a last step, once the mods are made: {finish.catalyst.label} until the item has {what}{held}, {float(finish.uses):,.2f} on "
             f"average at {finish.catalyst.cost:,.2f} Chaos each, {finish.value:,.2f} Chaos on average; so the whole craft {costs} "
-            f"{total:,.2f} Chaos on average after the start item, the figure of the result, which holds this step"
+            f"{total:,.2f} Chaos on average after the start item, the mean the result gives"
         )
         labels = (finish.catalyst.label,)
     found = [

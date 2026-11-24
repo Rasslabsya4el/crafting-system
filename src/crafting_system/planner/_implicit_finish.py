@@ -225,8 +225,8 @@ def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: boo
         why = (
             f"a last step, once the mods are made: {finish.orb.label} until the implicit {finish.words} (a chance of "
             f"{float(finish.chance):.2%} each), {float(finish.uses):,.2f} on average at {finish.orb.cost:,.2f} Chaos each, {finish.value:,.2f} "
-            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos on average after the start item, the figure of the result, which holds "
-            "this step"
+            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos on average after the start item, the mean the result "
+            "gives"
         )
         labels = (finish.orb.label,)
     found = Limit(
