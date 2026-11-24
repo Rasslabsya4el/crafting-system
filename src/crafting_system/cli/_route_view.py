@@ -971,7 +971,8 @@ class _View:
         priced = self.plan.offer_of(action)
         if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
             return [FREE]
-        lines = [f"{count_} × {name} {money(chaos)}" for name, count_, chaos, _ in priced.parts]
+        stand_ins = priced.offer.action.stand_ins(self.data)  # a resource paid in place of goods no price list holds says what it is (#1518)
+        lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
         if len(priced.parts) > 1:
             lines.append(f"total {money(priced.cost)}")
         lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
@@ -1061,10 +1062,29 @@ class _View:
             "paid again: the step cost counts every one"
         )
 
+    def sure_draw_note(self, action: Action, step: Step) -> str | None:
+        """For a craft that draws its result at random but is sure on every item of the step (the Wild Bristle Matron on a suffix-full item,
+        whose one metamod with room is Suffixes Cannot Be Changed): why a random craft is drawn with no chance (#1518, crafter on R04, R14, R20,
+        R24). A sure step's repeats come from the steps that send the item back, which "Reached from" names."""
+        if not self.sure(action):
+            return None
+        offer = self.plan.offer_of(action).offer
+        if not offer.action.adds(self.data, self.plan.target.start_item).draws:
+            return None
+        said = (
+            "this craft picks its result at random among those the item allows, but on every item this step is used on only one is "
+            "allowed, so each use gives the item below: it cannot miss here"
+        )
+        if step.uses is not None and step.reached and math.isfinite(step.uses) and step.uses / step.reached >= 1.05:
+            said += "; it is used again each time a later miss sends the item back here"
+        return said
+
     def notes(self, action: Action, step: Step, restart: bool) -> list[str]:
-        """The Note lines of a row: the essence's, a bench craft's paid again on each return, and, when the visits could not be solved, that
-        this row's chances are a plain mean."""
+        """The Note lines of a row: the essence's, a random craft that is sure here, a bench craft's paid again on each return, and, when the
+        visits could not be solved, that this row's chances are a plain mean."""
         found = []
+        if not restart and (draw := self.sure_draw_note(action, step)):
+            found.append(draw)
         if not restart and (essence := self.essence_note(action, step)):
             found.append(essence)
         if not restart and (again := self.craft_again_note(action, step)):

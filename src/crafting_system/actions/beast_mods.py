@@ -20,7 +20,7 @@ from crafting_system.items import ExplicitMod, Item, Rarity, Side
 from crafting_system.items.model import MAX_ITEM_LEVEL, MIN_ITEM_LEVEL
 from crafting_system.rules import get_rule
 
-from .beasts import ANY_RARE_CREATURE_PRICE, DEFAULT_BEAST_LEVEL, recipe_resources
+from .beasts import ANY_RARE_CREATURE_PRICE, DEFAULT_BEAST_LEVEL, RareBeastFee, recipe_resources
 from .catalog import kind
 from .contract import Action, AddedDraw, Adds, Reads
 from .errors import NotApplicableError, OutOfScopeError
@@ -110,7 +110,7 @@ def wild_bristle_metamods(data: GameData) -> tuple[Mod, ...]:
 
 
 @dataclass(frozen=True)
-class WildBristleMatron(Action):
+class WildBristleMatron(RareBeastFee, Action):
     """The beast recipe that adds one of the five metamods, uniformly among those the item allows."""
 
     rare_creature_price: int = ANY_RARE_CREATURE_PRICE.value
@@ -180,7 +180,7 @@ def _wild_bristle_matron(data: GameData, item: Item):
 
 
 @dataclass(frozen=True)
-class BeastSideSwap(Action):
+class BeastSideSwap(RareBeastFee, Action):
     """The beast recipe that adds a mod on `add_side` and removes one from the other side (Farric Wolf / Lynx Alpha)."""
 
     add_side: Side
