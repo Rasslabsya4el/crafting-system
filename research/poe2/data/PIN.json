@@ -65,6 +65,265 @@
       "path": "stat_translations/map_stat_descriptions.json",
       "sha256": "c539ff52c832da7828878b74a37ab4937db30af5ad8cd94f6884ac9851da84d7",
       "size": 45773
+    },
+    {
+      "path": "dat/BaseItemTypes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/BaseItemTypes.csv",
+      "sha256": "e09a6130090a0d42be7fe6bf8bd32acf6892ac6a47f2ebcb3c965685d0834714",
+      "size": 2729063
+    },
+    {
+      "path": "dat/ItemClasses.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/ItemClasses.csv",
+      "sha256": "65d5b9c2046df57893aefffd3c4f0817aea9cae0ac8a51d9e153f7390b8a3a6d",
+      "size": 31023
+    },
+    {
+      "path": "dat/ItemClassCategories.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/ItemClassCategories.csv",
+      "sha256": "6cbc645b9415006929538e4548187add1b44b8e71ea94b6ca1ae539bf0650b1c",
+      "size": 16516
+    },
+    {
+      "path": "dat/Tags.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Tags.csv",
+      "sha256": "fbf80051b4a8ef88a07977a2d2f87e24d4ff6985b1e76e5adfc843fb7599cc0e",
+      "size": 139170
+    },
+    {
+      "path": "dat/Stats.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Stats.csv",
+      "sha256": "e83cdf12b7ce362ea06f4dd93ef21c881d4f0d8ace3eaa2723cc70611c94b85d",
+      "size": 2965220
+    },
+    {
+      "path": "dat/Mods.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Mods.csv",
+      "sha256": "856e498ab78fbd0c5cf2510b83c609f685e6f56c98ea5299237f0282697cb423",
+      "size": 7434393
+    },
+    {
+      "path": "dat/ModFamily.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/ModFamily.csv",
+      "sha256": "bc82502f1bd3eebf78f394c4a49fdff990c16050bae45431eb0b473e379d2739",
+      "size": 216101
+    },
+    {
+      "path": "dat/ModType.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/ModType.csv",
+      "sha256": "dcfb2b12f734865f3cc6851b8aaf9c4afc1ce3000b563f93935a0928b8d027f4",
+      "size": 682949
+    },
+    {
+      "path": "dat/TieredCurrency.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/TieredCurrency.csv",
+      "sha256": "e3bbdbc31acae12dadbaeaf9a85a7b87674cf1039afe4cbd85ec0c55eb5a55ff",
+      "size": 199
+    },
+    {
+      "path": "dat/CurrencyItems.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CurrencyItems.csv",
+      "sha256": "3029795ed2f6adc9d6c3cdeb2758c1f417f5b1b9a3bf0b3fa1e165f66b91bdf2",
+      "size": 3583883
+    },
+    {
+      "path": "dat/CurrencyUseEffects.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CurrencyUseEffects.csv",
+      "sha256": "1782bf25defa3d637fe90ab1e27b6cd6da9a40c29f37a11c58d4bca92b32fe27",
+      "size": 540
+    },
+    {
+      "path": "dat/CurrencyPerItemClassConditions.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CurrencyPerItemClassConditions.csv",
+      "sha256": "465bf5b66ddd16294d309eaec0e45af3d8a6e4cfabe587d7410cf2c329edb64a",
+      "size": 237
+    },
+    {
+      "path": "dat/CurrencyExchange.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CurrencyExchange.csv",
+      "sha256": "49e296d4a07cbfaa5c2078db32afd623b5960e315052fe36d89d076bd5fa96a9",
+      "size": 19053
+    },
+    {
+      "path": "dat/CurrencyExchangeCategories.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CurrencyExchangeCategories.csv",
+      "sha256": "9608b93bf7cea530b9eb2374d68c86a53f010bb9be463eafefc19eca29f2acc8",
+      "size": 14507
+    },
+    {
+      "path": "dat/Essences.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Essences.csv",
+      "sha256": "9793745e88c060dc16949b04a08a603639287d4b27f6b93f24fdb97b04ed73cb",
+      "size": 6155
+    },
+    {
+      "path": "dat/EssenceMods.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceMods.csv",
+      "sha256": "3a0ac85572cdb5c97a2e2e03f4e7bd59bbd4eb78adaa1e97d419764ff80cce44",
+      "size": 10888
+    },
+    {
+      "path": "dat/EssenceType.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceType.csv",
+      "sha256": "a220f90bbe9ea7a37bc933faf9af3700a879d3ec04189c65df5282014ef2f73f",
+      "size": 597
+    },
+    {
+      "path": "dat/EssenceReplacementType.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceReplacementType.csv",
+      "sha256": "948165feca883021ec81948a63523c90852bbc6b8ee9abfadbdefd2ba4aca096",
+      "size": 25
+    },
+    {
+      "path": "dat/EssenceTargetItemCategories.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/EssenceTargetItemCategories.csv",
+      "sha256": "50fa865c7d2b0fcf0a2321ab69119d7f8ed365bdf2526efee47bc7501e7436b8",
+      "size": 19803
+    },
+    {
+      "path": "dat/SoulCores.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCores.csv",
+      "sha256": "25e74ff9f489f3b12f94d28d2c0e888524d0e9ea416b7c4cdf188fe1fb34872e",
+      "size": 12102
+    },
+    {
+      "path": "dat/SoulCoreStats.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStats.csv",
+      "sha256": "b9dde6259b5d45cb66fee746e7de36449b0477c7569df1f471631ebe4d0b63e6",
+      "size": 18607
+    },
+    {
+      "path": "dat/SoulCoreLimits.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreLimits.csv",
+      "sha256": "949f2fa03436c05d1cf4e009a10e7367e93e286298579068cf64e9519376a64e",
+      "size": 1186
+    },
+    {
+      "path": "dat/SoulCoreTypes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreTypes.csv",
+      "sha256": "f625e2f78c2884deff0c8e30441e3641293c693e53c6159d9de05d5ae331287f",
+      "size": 1638
+    },
+    {
+      "path": "dat/SoulCoreStatCategories.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SoulCoreStatCategories.csv",
+      "sha256": "56b65635dffc2239aceb8f304648ed5b957b87beba4745d62314cfa58cd8bded",
+      "size": 5903
+    },
+    {
+      "path": "dat/Expedition2VerisiumCrafts.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2VerisiumCrafts.csv",
+      "sha256": "bf70fe03d02a0d7f486a6315e63a75c4410e75a472fd946df4243c2769b9ce60",
+      "size": 36175
+    },
+    {
+      "path": "dat/Expedition2Recipes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2Recipes.csv",
+      "sha256": "1900d0f91f1d077cde93c349026504347dcef529d9dc56795b4b7a5ec560f499",
+      "size": 53679
+    },
+    {
+      "path": "dat/Expedition2Runes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2Runes.csv",
+      "sha256": "2ef8da6767950157f382c420ad95cd22d9d045a5283395f11e55d048dc40f292",
+      "size": 9749
+    },
+    {
+      "path": "dat/Expedition2RunesWeights.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2RunesWeights.csv",
+      "sha256": "01ca21e22f920534c4cb262262274bb559421d972a961f51f22da2b6de3d8372",
+      "size": 6359
+    },
+    {
+      "path": "dat/Expedition2WarpingRuneStatToTag.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2WarpingRuneStatToTag.csv",
+      "sha256": "d21911bf3ac67bd87cfc49e1fa104c55553da3374af4094c2912f4e78a7bcfdf",
+      "size": 100
+    },
+    {
+      "path": "dat/Expedition2ElementalModConversions.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2ElementalModConversions.csv",
+      "sha256": "1336386bfd01d5631a7327504f266893f6f208aa48bd266a37c878da4a5370c9",
+      "size": 4295
+    },
+    {
+      "path": "dat/Expedition2OlrothsLegacyRuneClient.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Expedition2OlrothsLegacyRuneClient.csv",
+      "sha256": "fc811e324378f6a234a330e7334f8e51e804649a23e1fa8959223be80518d670",
+      "size": 663
+    },
+    {
+      "path": "dat/Incursion2Crafting.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Incursion2Crafting.csv",
+      "sha256": "a5dab89a0555d0a13a250f03541c32a0183ecadc25c17722f98747872caa5237",
+      "size": 43251
+    },
+    {
+      "path": "dat/Incursion2CorruptionCurrencies.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Incursion2CorruptionCurrencies.csv",
+      "sha256": "fa95a270d3363af62b1a3d632e89b13b6d8670b321e1bdec475b8c6b2fdd2957",
+      "size": 178
+    },
+    {
+      "path": "dat/Incursion2MutatedUniqueModsClient.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/Incursion2MutatedUniqueModsClient.csv",
+      "sha256": "3d1e9b4d251efbb4c8399a490c80ba81523395f2ff044ac2c59b79836bbb6f3c",
+      "size": 1269
+    },
+    {
+      "path": "dat/RecombinableClasses.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/RecombinableClasses.csv",
+      "sha256": "9f9bd5b15c02d0375d24278141a9b3fa1bf335ae5fb842a2396baac7b9fb8f5d",
+      "size": 409
+    },
+    {
+      "path": "dat/CraftableModTypes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CraftableModTypes.csv",
+      "sha256": "6f571a134ca627731828da8bd5240afc14373faccc75f00ca92fb6c7ba42c4ab",
+      "size": 2723
+    },
+    {
+      "path": "dat/SalvageBoxes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/SalvageBoxes.csv",
+      "sha256": "53250ae9cc9895a59cb75de00e9133a39a9fec387eba2ba0c3a7289a93353838",
+      "size": 70
+    },
+    {
+      "path": "dat/AbyssBenchTicketTypes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/AbyssBenchTicketTypes.csv",
+      "sha256": "bb10294e1edb6299bfc4a5eebe2403e18f69ca6203211e98f003f2262b6f9c25",
+      "size": 735
+    },
+    {
+      "path": "dat/GoldModPrices.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/GoldModPrices.csv",
+      "sha256": "04165427d71be5cc0620e477b90ba9e510163124455a779a0a0532e3580175a0",
+      "size": 104923
+    },
+    {
+      "path": "dat/ModEquivalencies.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/ModEquivalencies.csv",
+      "sha256": "67b8818da357afa5e7b8c07fc8db39728b28a26f1749b71d8faecf08b98c6b4b",
+      "size": 241
+    },
+    {
+      "path": "dat/RitualRuneTypes.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/RitualRuneTypes.csv",
+      "sha256": "36b1776df5be8fe4f195a5c0de0842a9128dc16b05468a85e59cdb938ccc66b4",
+      "size": 11227
+    },
+    {
+      "path": "dat/UncutGemTiers.csv",
+      "url": "https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/UncutGemTiers.csv",
+      "sha256": "a5177a6b49dd084fd9cbca1b49150eba64cb3e4d64dcf172490919b897b11e73",
+      "size": 644
     }
-  ]
+  ],
+  "tables_source": {
+    "repo": "repoe-fork/dat-export",
+    "commit": "85174b650e4ed46d672745e280f5a0e5827cad80",
+    "commit_date": "2026-11-23",
+    "game_version": "0.5.5.10",
+    "note": "current/poe2/heuristics/csv: every client .datc64 table of PoE2 as CSV; column names come from poe-tool-dev/dat-schema where known, else guessed (heuristics)"
+  }
 }
