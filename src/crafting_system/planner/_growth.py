@@ -335,7 +335,7 @@ class OfferTable:
         entry.locks = frozenset(_LOCKS[family] for family in families if family in _LOCKS)
         entry.keeps_out = frozenset(_TAGS[family] for family in families if family in _TAGS)
         entry.more_crafted = Metamod.MULTIPLE_CRAFTED_MODS.value in families
-        entry.forces = (bool(adds.named) and not adds.crafted) or getattr(adds, "tag", None) is not None  # a named mod, or a tag the draw guarantees (a Harvest reforge)
+        entry.forces = (bool(adds.named) and not adds.crafted) or adds.tag is not None  # a named mod, or a tag the draw guarantees (a Harvest reforge)
         entry.wipes = adds.named == frozenset() and not adds.draws and not adds.fractures and move is None and REROLL in entry.kinds.values()
 
     def _fans_at(self, action, view: Item) -> str:

@@ -487,7 +487,7 @@ def test_an_addition_fans_out_when_an_outcome_loses_a_mod_the_item_held_or_its_d
 
 def test_an_offer_that_makes_replaces_or_restores_an_imprint_copies_the_item():
     table = _table(_entry("imprint", 1.0, kind="terminal"), _entry("restore", 1.0, kind="refused"), _entry("regal", 1.0))
-    adds = SimpleNamespace(fractures=False, draws=False, veils=False, crafted=False, named=frozenset())
+    adds = SimpleNamespace(fractures=False, draws=False, veils=False, crafted=False, named=frozenset(), tag=None)
     reads = SimpleNamespace(needs_veiled=False, needs_crafted=False, families=None)
     for entry, move in zip(table.entries, (SimpleNamespace(restore=False), SimpleNamespace(restore=True), None)):
         action = SimpleNamespace(adds=lambda data, item: adds, reads=lambda data: reads, imprint_move=lambda move=move: move)
