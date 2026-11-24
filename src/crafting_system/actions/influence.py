@@ -10,8 +10,10 @@
   influenced mod and upgrades another by one tier (a top-tier mod becomes its Elevated version, `data/elevated.json`; an Elevated
   mod is rerolled). Both picks are uniform, the removal first, so each ordered pair has chance 1/(n(n-1)). A side that
   `Prefixes` / `Suffixes Cannot Be Changed` locks is left out of both picks; the Attack and Caster metamods are ignored.
-* `BeastInfluenceRecipe(influence)`: the six beast recipes "Add a Mod to a <influence> Item". No source says which mod they add; the
-  model borrows the pool of the influence's Exalted Orb (the item already has the influence), and the claim is marked approximate.
+* `BeastInfluenceRecipe(influence)`: the six beast recipes "Add a Mod to a <influence> Item", on a rare item that has the influence. They
+  add one mod as a plain Exalted Orb does on that item: from its whole pool (its base's mods and the mods of its influences, each at its
+  weight), not from the influence's mods only (Maxroll's Beastcrafting Guide, 2025-06-13: "It is functionally the same as an Exalted Orb.
+  It does not guarantee an influenced modifier", #1538); one secondary source, so the claim keeps its approximate mark.
 
 Each answers with an exact list or pool draw. The influenced Exalted Orbs are a planner kind since #818 (a beta method, batch B2, OR-37): a
 goal built from a target names an influenced mod by its family and tier, as any mod, and the plan offers the six orbs by default (OR-41). The
@@ -20,24 +22,24 @@ shape), so its lower bound in the envelope search is its price. The Orb of Domin
 offered by default (OR-41): a goal names the next tier of an influenced mod by its family and tier, and an Elevated mod by `mod:` (it has no
 natural tier); the offers' floors class it TERMINAL too (it reads the junk and the influenced mods and adds a mod it does not name), so its
 lower bound is its price. The beast recipes are a planner kind since #1196 (batch B2, OR-37), offered by default (OR-41): they keep every
-mod and add one drawn mod of the influence, and their class declares that draw for a shape that holds the influence (`added_draw`), so the
-offers' floors class them ADD there, with the bound of one added mod; a shape without the influence refuses them and keeps them TERMINAL (their
-floor is their price). The answer names their approximate claim (`influence_beast.adds_a_mod_of_that_influence`). The compressed state tells
+mod and add one mod drawn from the item's whole pool (#1538), and their class declares that draw for a shape that holds the influence
+(`added_draw`), so the offers' floors class them ADD there, with the bound of one added mod; a shape without the influence refuses them and
+keeps them TERMINAL (their floor is their price). The answer names their approximate claim (`influence_beast.adds_a_mod_of_that_influence`). The compressed state tells
 the influenced mods apart where Dominance reads them and keeps the Elevated tier since ticket #155 (below). A mod an action puts on the item is
 rolled at its lowest values (`Finite`), as for every action that lists its results.
 
 The influence crafts (`influence.py`, ticket #154, ADR-0030): `InfluencedExaltedOrb(Influence.SHAPER)` and its five siblings add the influence and one mod of
 that influence (an `Outcomes` over the pool `influence_pool(data, item, influence)`; refused on an influenced, fractured or Eldritch-implicit item, below item level
 68, and when no mod is legal); `OrbOfDominance()` removes one influenced mod and upgrades another (a `Finite`, each ordered pair of the n influenced mods on
-unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` borrows the pool of the
-influence's orb for an item that has it (unverified, approximate). The orbs are a planner kind since #818, Dominance since #1195, the recipes since #1196.
+unlocked sides 1/(n(n-1)); a top-tier mod becomes its Elevated version from `data/elevated.json`); `BeastInfluenceRecipe(Influence.SHAPER)` adds one mod of the item's whole
+pool, as an Exalted Orb, to an item that has the influence (one secondary source, approximate, #1538). The orbs are a planner kind since #818, Dominance since #1195, the recipes since #1196.
 
 The compressed state (ticket #155, ADR-0030 amendment). `OrbOfDominance` declares `Reads.influenced` (an Awakener's Orb does too): the state then tells
 each influence mod of the item's influences apart by MOD (the kind `$<mod id>`), because the families of the data hold ordinary and influence mods
 together and the result depends on which mod it is (its next tier, its Elevated version, whether it is one at all); the other mods stay as the
 actions that read them ask (by side for Dominance alone). An Elevated mod is an influence mod (weight 0 on the influence tag) and has no natural tier (the item stores none, #484): the judgement of a requirement
 reads the data, and an Elevated mod is in no tier table. The
-influenced Exalted Orb and the beast recipe only put influence mods on the item and declare nothing new; layer 1 passes for them, for the orb
+influenced Exalted Orb only puts influence mods on the item and the beast recipe a mod of the item's pool; they declare nothing new; layer 1 passes for them, for the orb
 and for the Awakener's Orb on every item they reach together (`tests/test_abstraction_dominance.py`).
 
 Memory Strands (ticket #286, ADR-0041 and its amendments; the declarations are `strand_use`, their claims `strand_claims`, and neither is among `claims()`):
@@ -49,7 +51,7 @@ Memory Strands (ticket #286, ADR-0041 and its amendments; the declarations are `
   Dominance and strands: the evidence is that the wiki's spend list is closed and does not name it, and that the emulator's spend table has no row
   for it, which is where it cuts. It also draws nothing from a tier table: it removes one influenced mod and moves another to the next tier or to Elevated.
 * `BeastInfluenceRecipe` declares no cut and no spend (claims `memory_strands.not_spent_by`, `memory_strands.cut_follows_spend_table`): the wiki says
-  Beastcrafting does not consume strands. It borrows the pool of the influence's Exalted Orb, but not its cut: the pool is built without one.
+  Beastcrafting does not consume strands. It draws as an Exalted Orb, but without its cut: the pool is built without one.
 """
 
 from collections.abc import Iterable, Mapping
@@ -64,7 +66,7 @@ from crafting_system.items.words import mod_words
 from crafting_system.rules import Rule, get_rule
 
 from . import add, metamods, outcomes, pool
-from .add import refuse_if_nothing_to_draw
+from .add import add_one_mod, refuse_if_nothing_to_draw
 from .beasts import ANY_RARE_CREATURE, ANY_RARE_CREATURE_PRICE, CHAOS_ORB
 from .catalog import kind, listing_gap
 from .contract import Action, AddedDraw, Adds, Reads
@@ -119,6 +121,7 @@ BEAST_RECIPES = get_rule("influence_beast.recipes")
 BEAST_USES_ITEM_LEVEL = get_rule("influence_beast.uses_item_level")
 BEAST_ADDS_A_MOD_OF_THAT_INFLUENCE = get_rule("influence_beast.adds_a_mod_of_that_influence")
 BEAST_REFUSED_ON_CORRUPTED = get_rule("influence_beast.refused_on_corrupted")
+EXALTED_ADDS_ONE_MOD = get_rule("exalted_orb.adds_one_mod")  # the recipe draws as an Exalted Orb (#1538)
 
 ONE, ZERO = Fraction(1), Fraction(0)
 MIN_INFLUENCED_MODS = 2  # the Orb of Dominance removes one influenced mod and upgrades another
@@ -462,7 +465,7 @@ def beast_recipe_resources(influence: Influence, rare_creature_price: int = ANY_
 
 @dataclass(frozen=True)
 class BeastInfluenceRecipe(Action):
-    """The beast recipe "Add a Mod to a <influence> Item": one more mod, drawn from the pool of that influence (unverified)."""
+    """The beast recipe "Add a Mod to a <influence> Item": one more mod, drawn from the item's whole pool as an Exalted Orb draws (#1538)."""
 
     influence: Influence
     rare_creature_price: int = ANY_RARE_CREATURE_PRICE.value
@@ -482,36 +485,37 @@ class BeastInfluenceRecipe(Action):
         return beast_recipe_resources(self.influence, self.rare_creature_price)
 
     def reads(self, data: GameData) -> Reads:
-        # As the orb of the influence reads, except that the item has the influence already and the recipe refuses no Eldritch implicit.
+        # Every family told apart, as the orb of the influence reads (the recipe refuses no Eldritch implicit): finer than an Exalted Orb's
+        # `Reads.adding`, which would also be sound now that it draws as one (#1538), but the state is left as it was.
         return Reads(junk=True, families=None, pool_weight=False)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=True)
 
     def added_draw(self, data: GameData, item: Item) -> AddedDraw | None:
-        """One mod of the influence's pool, less the families held, on the sides with room, drawn over them together (`Action.added_draw`, #1074,
-        #1196): every item of the shape of `item` holds the same influences and item level, so its pool is the bare item's less the families it
-        holds, and the recipe keeps every mod. None where the shape refuses it (not rare, corrupted, without the influence): the offer is then
-        TERMINAL, as it is for one the shape refuses."""
+        """One mod of the item's whole pool (an Exalted Orb's draw, #1538), less the families held, on the sides with room, drawn over them
+        together (`Action.added_draw`, #1074, #1196): every item of the shape of `item` holds the same influences and item level, so its pool is
+        the bare item's less the families it holds, and the recipe keeps every mod. None where the shape refuses it (not rare, corrupted, without
+        the influence): the offer is then TERMINAL, as it is for one the shape refuses."""
         if item.rarity is not Rarity.RARE or item.corrupted or self.influence not in item.influences:
             return None
         bare = item.changed(data, mods=tuple(entry for entry in item.mods if entry.fractured))
         try:
-            pool_ = influence_pool(data, bare, self.influence)
+            pool_ = build_pool(data, bare)
         except OutOfScopeError:
             return None  # no pool is modelled for the item: nothing is declared, the offer stays terminal
         return AddedDraw(pool_, {side: bare.free_slots(data, side) for side in Side}, together=True)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
-        own = (BEAST_RECIPES, BEAST_USES_ITEM_LEVEL, BEAST_ADDS_A_MOD_OF_THAT_INFLUENCE, BEAST_REFUSED_ON_CORRUPTED, EXALT_DRAWS_FROM_THAT_INFLUENCE,
-               EXALT_RESPECTS_METAMODS, ANY_RARE_CREATURE_PRICE)
+        own = (BEAST_RECIPES, BEAST_USES_ITEM_LEVEL, BEAST_ADDS_A_MOD_OF_THAT_INFLUENCE, BEAST_REFUSED_ON_CORRUPTED, EXALTED_ADDS_ONE_MOD,
+               ANY_RARE_CREATURE_PRICE)
         return _claims_of(own, add, pool, outcomes, metamods)
 
     def outcomes(self, data: GameData, item: Item) -> Outcomes:
-        """The outcomes of the recipe on `item`: one more mod of the recipe's influence, drawn as its Exalted Orb would draw it.
+        """The outcomes of the recipe on `item`: one more mod of the item's whole pool, drawn as an Exalted Orb draws it (#1538).
 
         Raises `NotApplicableError` for an item that is not rare, is corrupted, does not have the influence, has no open slot or has
-        no legal mod of the influence.
+        no legal mod.
         """
         what = self.label()
         if item.rarity is not Rarity.RARE:
@@ -520,9 +524,9 @@ class BeastInfluenceRecipe(Action):
             raise NotApplicableError("the item is corrupted, and a corrupted item takes no beast craft")
         if self.influence not in item.influences:
             raise NotApplicableError(f"{what} needs an item with {WORDS[self.influence]} influence")
-        # It borrows the pool of the influence's Exalted Orb but NOT its cut: a beast craft is never cut (`strand_use`), so no cut is passed
-        # and the pool is the ordinary one whatever count the item has.
-        return _draw_one(data, item, self.influence, what)
+        # It draws as an Exalted Orb but WITHOUT its cut: a beast craft is never cut (`strand_use`), so no cut is passed and the pool is the
+        # ordinary one whatever count the item has.
+        return add_one_mod(data, item, what)
 
 
 @kind("beast-influence-recipe", order=88)
