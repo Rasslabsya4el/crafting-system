@@ -13,6 +13,9 @@ again). It is offered at no other state, and no other action works on the unopen
 Augmentation only where the item holds 1 mod, and an Alteration (or whatever is cheapest) where it holds 2. It is not an orb the player uses:
 the cost is the listing's, and the orb it copies is only the law of the draw. The result is exactly that orb's result on the opened item, so no
 solver or abstraction learns a new kind of step.
+
+The draw stands for a listing of that rarity only: a start whose price was searched as a lower rarity (a Normal base priced for a Rare start) is
+that item, planned from as bought, with no draw (`planner._plan.bought_rarity`, OR-43, #1522).
 """
 
 from collections.abc import Mapping

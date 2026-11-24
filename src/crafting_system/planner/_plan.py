@@ -30,7 +30,7 @@ from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, sharing, unopened_listing
 from crafting_system.data import GameData
-from crafting_system.items import Item, eldritch_side
+from crafting_system.items import Item, Rarity, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
@@ -115,7 +115,8 @@ class StartPrice:
     taken_for: str | None = None  # "price taken for a wider item (...)": the stored search is not the item the key names (#474, OR-7)
     given: bool = False
     mark: str | None = None  # a thin market's price is marked (OR-8): "old price, read on <date>, ..." or "few offers: ..."; None for an unmarked price
-    searched: Mapping[str, Any] | None = field(default=None, compare=False)  # the stored search body when `taken_for` is set: the page names and links it (#937)
+    searched: Mapping[str, Any] | None = field(default=None, compare=False)  # the stored search body when `taken_for` or `rarity` is set: the page names and links it (#937)
+    rarity: Rarity | None = None  # the rarity the price's search asked for, where it is lower than the start item's: the start is bought so (OR-43, #1522)
 
     def __post_init__(self) -> None:
         if self.given and self.chaos != 0:
@@ -418,8 +419,40 @@ def resolve_start_price(
     if refusal is not None:  # a poe.ninja line has no base id: for a name that several bases share it prices none of them (#471)
         raise PlanError(refusal)
     stored = (entry.detail or {}).get("query")
+    rarity = bought_rarity(data, target, stored) if isinstance(stored, dict) else None
+    if rarity is not None:  # the item bought is the one the search asked for (OR-43): the price is compared with that item, not the start item
+        spec = buy_spec_of(data, replace(target, start_item=target.start_item.changed(data, rarity=rarity)))
     taken_for = other_item(spec, stored) if isinstance(stored, dict) else None
-    return StartPrice(name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=stored if taken_for else None)
+    searched = stored if taken_for or rarity is not None else None
+    return StartPrice(name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=searched, rarity=rarity)
+
+
+_RARITY_RANK = {Rarity.NORMAL: 0, Rarity.MAGIC: 1, Rarity.RARE: 2}
+
+
+def bought_rarity(data: GameData, target: Target, stored: Mapping[str, Any]) -> Rarity | None:
+    """The rarity the stored search of the start's price asked for, where it is lower than the start item's; else None (OR-43, #1522).
+
+    A bought start item that lists no mod is the item the market sells (ADR-0064), and its price is a listing's. When that listing was searched
+    at a lower rarity (a Normal base priced for a Rare start), the item a player buys at that price is the lower one: the plan starts from it,
+    and the steps that make it the needed rarity (an Orb of Alchemy, an essence, a fossil) are the planner's own, shown and paid. A search of
+    any rarity ("nonunique") or of the start's own rarity, and a start that names its mods, keep the start item as it is.
+    """
+    query = stored.get("query") if isinstance(stored.get("query"), Mapping) else stored
+    option = (((query.get("filters") or {}).get("type_filters") or {}).get("filters") or {}).get("rarity") or {}
+    rarity = next((each for each in _RARITY_RANK if each.value == option.get("option")), None)
+    start = target.start_item
+    if rarity is None or unopened_listing(data, start) is None or _RARITY_RANK[rarity] >= _RARITY_RANK[start.rarity]:
+        return None
+    return rarity
+
+
+def start_as_bought(data: GameData, target: Target, price: StartPrice) -> Target:
+    """`target` with its start item at the rarity its price was read for (`StartPrice.rarity`, OR-43): the plan starts from what is bought."""
+    rarity = price.rarity
+    if rarity is None or price.given or _RARITY_RANK[rarity] >= _RARITY_RANK[target.start_item.rarity]:
+        return target
+    return replace(target, start_item=target.start_item.changed(data, rarity=rarity))
 
 
 def _override(override: float) -> float:
@@ -806,6 +839,7 @@ def _make_plan(
         )
     priced_start = target if priced_as is None else priced_as
     price_of_start = start_price_of if start_price_of is not None else resolve_start_price(data, priced_start, prices, start_price, price_source)
+    target = start_as_bought(data, target, price_of_start)  # a start priced as a lower rarity is that item (OR-43): its own steps make it the rarity
     goal = Goal.from_target(target)
     limits: tuple[Limit, ...] = (strands_limit(),)
     if target.quality is not None and lock_wanted(target.actions):  # the run names the Lock, and a burn keeps no quality yet (#159)

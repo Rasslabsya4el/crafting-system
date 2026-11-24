@@ -48,3 +48,14 @@ The sentences above that "a restart pays it again" and that "the restart returns
 - **OR-43.** Where the guide names no rarity, the start is the cheapest rarity the market sells, and the steps that make it the needed rarity are shown and paid. A bought fractured item is a Rare with random other mods, marked approximate.
 
 Neither is built: the cases on record are [#687](https://github.com/Rasslabsya4el/crafting-system/issues/687), [#656](https://github.com/Rasslabsya4el/crafting-system/issues/656) and [#515](https://github.com/Rasslabsya4el/crafting-system/issues/515), and [#914](https://github.com/Rasslabsya4el/crafting-system/issues/914) lists the rules that still need a ticket. The listing draw of this ADR stands.
+
+## Amendment: the draw stands for a listing of that rarity only ([#1522](https://github.com/Rasslabsya4el/crafting-system/issues/1522), OR-43, OR-16)
+
+R08 and R09 drew a Rare listing for free at the price of a trade search of a **Normal** base (the price row's search asks `rarity: normal`,
+and its note adds an Orb of Alchemy of another day's price): the plan acted on a Rare item a player does not get for that price, and the step
+that makes the base rare was neither shown nor paid. The rule now: **the start is the item its price was searched for.** When the stored
+search of the start's price asked for a lower rarity than the start item, and the start lists no mod (the case of this ADR), the plan starts
+from that rarity (`planner._plan.bought_rarity`, `StartPrice.rarity`, `start_as_bought`): a Normal base with no draw, or a Magic listing with
+the Alteration's draw; the planner's own offers (an Orb of Alchemy, an Orb of Transmutation, an essence, a fossil) make it the rarity, each a
+step with its price, and a restart buys that item again. A search of the start's own rarity, of any rarity (`nonunique`, R14: a wider item,
+marked), a hand price with no stored search (R07, R20), and a start that names its mods are as before.

@@ -37,15 +37,16 @@ item_level: 86
 influence: []
 
 # The start: the rare boots the market sells (ADR-0064). The target names none of their mods, and the guide fossils a rare pair of boots, so the
-# item is a bought Normal base made rare with an Orb of Alchemy, priced as that base plus the Alchemy (OR-16). It holds what an Orb of Alchemy
-# leaves on the base: 4, 5 or 6 mods at their game weights. The plan opens with that draw and decides on each outcome of it; mods that no
-# requirement asks for are junk, counted and not told apart (OR-10), and the first fossil erases whatever the rare holds.
+# item is a bought Normal base made rare. Since #1522 the plan starts from the item its price was searched for (OR-43): the committed price is
+# a Normal base's trade search, so the plan buys that Normal base and its own steps make it rare (an Orb of Alchemy, an essence or a fossil),
+# each shown and paid (OR-16). Where the price is a Rare listing's, the plan opens instead with the draw of what an Orb of Alchemy leaves on the
+# base (4, 5 or 6 mods at their game weights, ADR-0064); mods that no requirement asks for are junk, counted and not told apart (OR-10).
 start_item:
   rarity: rare
   mods: []
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
-# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
+# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base, the item the plan starts from (OR-43, #1522); its row still adds an Alchemy that is a data fix of its own.
 start: bought
 
 requirements:
