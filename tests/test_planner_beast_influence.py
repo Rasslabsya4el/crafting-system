@@ -24,8 +24,8 @@ bought again). The goal is P3, and P is lost before P3 with chance 3/4 whatever 
 
 The lower bound of the method: on a start shape that holds the influence, the recipe keeps every mod and adds one drawn mod, and its class
 declares the draw of the shape (`added_draw`, together over the open sides as an Exalted Orb draws), so the offers' floors class it ADD with
-the bound of one added mod (`declared_add_bound`); on a shape without the influence it is refused everywhere and stays TERMINAL (its floor is
-its price). The search proves each plan exact: its last standing has its lower figure at the plan's cost, and no standing is above it.
+the bound of one added mod (`declared_add_bound`); on a shape without the influence it is refused at the bare item and
+so, as an addition that keeps every mod, set aside on the whole shape (#973, #1571). The search proves each plan exact: its last standing has its lower figure at the plan's cost, and no standing is above it.
 """
 
 import dataclasses
@@ -39,7 +39,7 @@ from crafting_system.actions import NotApplicableError, catalog, kinds
 from crafting_system.items import Influence
 from crafting_system.planner import PlanSettings, plan_target
 from crafting_system.planner import _envelope
-from crafting_system.planner._offer_kinds import ADD, TERMINAL, _kind_of
+from crafting_system.planner._offer_kinds import ADD, _kind_of
 from crafting_system.planner._offers import Offer, PricedOffer
 from crafting_system.prices import PriceFile
 from crafting_system.prices.price_file import PriceEntry
@@ -174,7 +174,12 @@ def test_the_recipe_is_an_addition_on_a_shape_with_its_influence_and_terminal_wi
     (shaper,) = [action for action in catalog(DATA, start, planner_only=True, names=RECIPES) if action.influence is Influence.SHAPER]
     priced = PricedOffer(Offer(shaper.label(), shaper, {}), B, ())
     assert _kind_of(DATA, start, priced)[0] == ADD
-    assert _kind_of(DATA, dataclasses.replace(start, influences=frozenset()), priced)[0] == TERMINAL  # refused on the whole shape
+    # Without the influence it is an addition that keeps every mod (`Reads.variants`, #1571), as an Exalted Orb is: refused at the bare item, so
+    # refused at every state of the shape when raised (`_raised_add`, #973), where it stayed terminal before
+    bare = dataclasses.replace(start, influences=frozenset(), mods=())
+    assert _kind_of(DATA, bare, priced)[0] == ADD
+    with pytest.raises(NotApplicableError):
+        shaper.outcomes(DATA, bare)
     draw = shaper.added_draw(DATA, start)
     assert draw is not None and draw.together
     weights = {entry.mod.id: entry.weight for family in draw.pool for entry in family.mods}

@@ -485,9 +485,11 @@ class BeastInfluenceRecipe(Action):
         return beast_recipe_resources(self.influence, self.rare_creature_price)
 
     def reads(self, data: GameData) -> Reads:
-        # Every family told apart, as the orb of the influence reads (the recipe refuses no Eldritch implicit): finer than an Exalted Orb's
-        # `Reads.adding`, which would also be sound now that it draws as one (#1538), but the state is left as it was.
-        return Reads(junk=True, families=None, pool_weight=False)
+        # As an Exalted Orb reads (#1571): since #1538 the recipe draws one mod of the item's whole pool, less the families held, exactly as
+        # an Exalted Orb does and keeps every mod, so the pure junk on the item matters to it only by the pool weight it takes out. That is the
+        # `EXTREMES` argument of `abstraction._pattern` (one draw by pool weight); reading every family apart (`Mode.ALL`) told apart members
+        # whose outcomes are the same, 520,707 kernels against 9,123 on R14's fourth group (H54).
+        return Reads.adding(variants=True)
 
     def adds(self, data: GameData | None = None, item: Item | None = None) -> Adds:
         return Adds(named=None, draws=True)
