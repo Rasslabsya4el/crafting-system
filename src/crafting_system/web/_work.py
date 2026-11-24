@@ -17,7 +17,7 @@ from crafting_system.prices import PriceFileNotFound
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import StartKind, TargetError, buy_spec_of
 from crafting_system.budget import BudgetExceeded
-from crafting_system.cli import build_report, plan_record, policy_document, report_net, route_page
+from crafting_system.cli import build_report, plan_record, policy_document, reference_guide, report_net, route_page
 from crafting_system.planner import PlanError, PlanSettings, Standing, plan_target
 
 from ._request import parse_request
@@ -77,10 +77,11 @@ def plan_request(world: World, request: dict, game: str, watch: Watch) -> dict:
         try:
             with report_net(None if world.budget is None else world.budget.memory_mb):  # the outputs ask the run's memory net (#1381)
                 report = build_report(plan, world.data)
-                policy = policy_document(report, None, target_name=name)
+                guide = reference_guide(world.data, checked.target)  # a reference craft's guide, as recorded: the plan's cost is said against it (#1596)
+                policy = policy_document(report, None, target_name=name, guide=guide, guide_recorded=guide is not None)
                 if plan.approximation is None:  # the page is not built for an approximate answer yet, as on the command line
                     spec = buy_spec_of(world.data, checked.target) if checked.target.start is StartKind.BOUGHT else None
-                    page = route_page(report, world.data, buy_spec=spec, cache_dir=world.config.cache_dir)
+                    page = route_page(report, world.data, buy_spec=spec, cache_dir=world.config.cache_dir, guide=guide, guide_recorded=guide is not None)
         except BudgetExceeded as stop:  # past the net after the plan: the plan's record, its stop said, and no page (#1381, OR-13)
             policy, page = plan_record(plan, target_name=name, stopped=stop.binding.words()), None
     summary = {
