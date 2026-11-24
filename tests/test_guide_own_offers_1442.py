@@ -106,16 +106,6 @@ def test_a_finish_the_guide_s_route_sets_stays_in_its_model_and_one_it_never_tou
         target = load_target(root / "examples" / "targets" / f"{name}.yaml", data)
         prices = load_price_file(target.price_file or root / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json")
         plan = guide_plan(data, target, prices, route_actions(root / "examples" / "routes" / f"{name}.yaml"))
-        kept[name] = (plan.target.quality is not None, bool(plan.target.implicits))
-    assert kept == {"r05-strength-ring": (True, False), "r06-strength-heavy-belt": (False, False)}
-
-
-def test_the_plan_is_compared_with_its_mods_and_the_finish_the_guide_s_cost_holds():
-    from types import SimpleNamespace
-
-    site = SimpleNamespace(quality_finish_value=16.5, implicit_finish_value=4.0)
-    keeps_quality = SimpleNamespace(target=SimpleNamespace(quality=object(), implicits=()))
-    keeps_none = SimpleNamespace(target=SimpleNamespace(quality=None, implicits=()))
-    assert benchmark_module._kept_finishes(site, keeps_quality) == 16.5
-    assert benchmark_module._kept_finishes(site, keeps_none) == 0.0
-    assert benchmark_module._kept_finishes(site, site) == 0.0  # read on the site plan itself: one model, nothing added
+        kept[name] = (plan.target.quality is not None, bool(plan.target.implicits), tuple(step.kind for step in plan.finish_steps))
+    # what the guide leaves out it does after its mods as the planner's plan does: R06's finish steps follow its goals (#1234)
+    assert kept == {"r05-strength-ring": (True, False, ()), "r06-strength-heavy-belt": (False, False, ("quality", "implicit"))}

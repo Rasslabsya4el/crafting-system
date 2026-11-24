@@ -122,7 +122,7 @@ def test_the_risk_on_the_merged_chain_agrees_with_the_mean(both):
 
     assert packed.risk is not None
     assert packed.risk.success_probability.value == pytest.approx(1.0)
-    assert packed.risk.mean.value == pytest.approx(reference.mean_remaining, rel=1e-6)
+    assert packed.risk.mean.value == pytest.approx(reference.craft_mean, rel=1e-6)  # the mods and the finish steps (#1234)
     assert packed.risk.p50.value <= packed.risk.p90.value
 
 
@@ -190,11 +190,8 @@ def reads(both, data):
     from crafting_system.cli import evaluate_route, load_route
 
     route_id, reference, packed = both
-    if route_id == "R05":
-        # Since #1289 R05's route ends with the Intrinsic Catalysts of the guide's step 3. These two plans hold the quality as a finish outside
-        # their graphs (`planner/_quality_finish`, #159), so no state of theirs offers a catalyst and the route cannot be read on them; the
-        # packed walk is retired (CLAUDE.md, "Direction since 2026-11-13") and is not extended to it. The product reads the route on a judged plan.
-        pytest.skip("R05's route applies catalysts, which the object and packed plans hold as a finish outside their graphs (#1289)")
+    # R05's route ends with the Intrinsic Catalysts of the guide's step 3 (#1289): both plans hold the quality as a finish step after the mods,
+    # and the route's catalyst rule is read as that step (#1234), so the route is read on both as on any plan
     route_path = ROOT / "examples" / "routes" / f"{ROUTES[route_id]}.yaml"
     return (
         route_id,

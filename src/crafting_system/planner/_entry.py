@@ -11,6 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, replace
 from datetime import date
 
+from crafting_system.actions import OutOfScopeError
 from crafting_system.budget import Budget
 from crafting_system.data import GameData
 from crafting_system.prices import PriceFile
@@ -20,7 +21,7 @@ from crafting_system.targets import Target
 from . import _implicit_finish, _packed, _quality_finish
 from ._envelope import Standing
 from ._offers import unmodelled_labels
-from ._plan import Plan, PlanError, StartPrice, make_plan
+from ._plan import Plan, PlanError, StartPrice, make_plan, with_finishes
 from ._starts import plan_with_starts
 
 
@@ -120,9 +121,9 @@ def guide_plan(data: GameData, target: Target, prices: PriceFile, labels: tuple[
     planner's own search happened to run (the groups of `_rounds`). The plan is made as one a route is judged against (`judges_route`): the
     quality and the implicit stay in the model, since a guide may name the catalyst or the orb that sets them. A catalyst quality or a base
     implicit that NO action of the route changes is left out of the model instead, as the planner's own plan leaves it to a finish after
-    the mods (`_quality_finish`, `_implicit_finish`): the route could never reach it, and the plan's cost it is compared with holds the mods
-    alone; a finish the route keeps in its model is in its cost, and the caller compares it with the plan's mods and that finish
-    (`Plan.quality_finish_value`, `Plan.implicit_finish_value`). Raises `NotModelled` naming each label no action of the catalog bears on this item, and `PlanError` as `make_plan` does (a label
+    the mods (`_quality_finish`, `_implicit_finish`): the route could never reach it, so the plan gets those finishes as its last steps
+    (`Plan.finish_steps`), which follow the route's goals when it is evaluated, and the route's cost is of the whole craft as the planner's
+    plan's is (#1234); a finish the route keeps in its model is in its own steps. Raises `NotModelled` naming each label no action of the catalog bears on this item, and `PlanError` as `make_plan` does (a label
     the catalog bears but the item never takes, no price for the start item)."""
     if not labels:
         raise PlanError("the guide's route names no action (only `restart`, or a file that cannot be read): there is nothing to price")
@@ -149,7 +150,15 @@ def guide_plan(data: GameData, target: Target, prices: PriceFile, labels: tuple[
         return plan
     # the start item is the one the target describes, priced as it (OR-3): its key is computed from the whole target (`make_plan`'s `priced_as`)
     mods = replace(target, quality=None if quality_left else target.quality, implicits=() if implicit_left else target.implicits)
-    return made(mods, plan.start_price)
+    plan = made(mods, plan.start_price)
+    # what the route leaves out it does after its mods as the planner's plan does: the finish steps follow its goals, so its cost is of the
+    # whole craft as the plan's is (#1234; the catalysts and orbs of every type, as the planner's own finish takes them)
+    try:
+        quality = _quality_finish.plan_quality_finish(data, target, prices, settings.price_source) if quality_left else None
+        implicit = _implicit_finish.plan_implicit_finish(data, target, prices, settings.price_source) if implicit_left else None
+    except (_quality_finish.QualityFinishRefused, _implicit_finish.ImplicitFinishRefused, OutOfScopeError) as error:
+        raise PlanError(str(error)) from error
+    return with_finishes(plan, quality, implicit)
 
 
 def progress() -> Callable[[str], None] | None:

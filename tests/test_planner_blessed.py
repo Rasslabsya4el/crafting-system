@@ -139,7 +139,7 @@ def test_the_quality_and_the_implicit_are_both_finished_and_each_line_gives_the_
     catalysts = float(expected_catalysts(84, 20, 0)) * K
     assert plan.quality_finish is not None and plan.implicit_finish is not None
     assert plan.total_mean == pytest.approx(6 * A + 11 * B + catalysts, rel=1e-9)  # 3 + 2.75 + 26.69
-    total = f"{6 * A + 11 * B + catalysts:,.2f} Chaos on average after the start item"
+    total = f"{6 * A + 11 * B + catalysts:,.2f} Chaos after the start item"
     assert all(total in limit.why for limit in plan.limits if limit.kind in ("implicit-finish", "quality-finish"))
 
 

@@ -619,7 +619,8 @@ def render_text(
     lines.append("")
     lines.append("Result")
     if risk is None:
-        mean = Estimate(plan.mean_remaining + shift, plan.approximation.lower + shift, plan.approximation.upper + shift)
+        finishes = plan.craft_mean - plan.mean_remaining  # the finish steps after the mods (#1234)
+        mean = Estimate(plan.craft_mean + shift, plan.approximation.lower + finishes + shift, plan.approximation.upper + finishes + shift)
         lines.append(_row("mean", f"{interval(mean, divine)} (the policy's certified cost; see Answer)"))
         lines.extend(risk_lines())
         lines.append(f"  (the start item, {money(shift)} Chaos, is included)")
@@ -631,7 +632,7 @@ def render_text(
         lines.extend(free_action_lines(plan, risk))
         got = "making it at the vendor" if report.first_step is not None else "buying it"
         lines.append(f"  (the start item, {money(shift)} Chaos, is included; the cost left to pay after {got} is")
-        lines.append(f"   {money(plan.mean_remaining)} Chaos as the plan counts it and {money(risk.mean.value)} as the risk figures count it)")
+        lines.append(f"   {money(plan.craft_mean)} Chaos as the plan counts it and {money(risk.mean.value)} as the risk figures count it)")
     if report.shares:
         lines.append("")
         lines.append("Single-draw weight shares on the start item, next to the chance of one use")
@@ -733,11 +734,12 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
     """The totals of the JSON: the odds and percentiles of an exact answer, only the certified interval of an approximate one."""
     risk = plan.risk
     if risk is None:
-        mean = Estimate(plan.mean_remaining, plan.approximation.lower, plan.approximation.upper)
+        finishes = plan.craft_mean - plan.mean_remaining  # the finish steps after the mods (#1234)
+        mean = Estimate(plan.craft_mean, plan.approximation.lower + finishes, plan.approximation.upper + finishes)
         return {
             "mean_cost": _estimate(mean, shift),
-            "mean_cost_divine": _number((plan.mean_remaining + shift) / divine),
-            "mean_cost_without_start": _number(plan.mean_remaining),
+            "mean_cost_divine": _number((plan.craft_mean + shift) / divine),
+            "mean_cost_without_start": _number(plan.craft_mean),
             "solver_error_bound": _number(plan.solution.error_bound),
         }
     return {
@@ -750,7 +752,7 @@ def _totals(plan: Plan, shift: float, divine: float) -> dict:
         "cvar": _estimate(risk.cvar, shift),
         "mean_cost_divine": _number((risk.mean.value + shift) / divine),
         "p90_divine": _number((risk.p90.value + shift) / divine),
-        "mean_cost_without_start": _number(plan.mean_remaining),
+        "mean_cost_without_start": _number(plan.craft_mean),  # the mods and the finish steps (#1234), as the risk's mean
         "solver_error_bound": _number(plan.solution.error_bound),
         **_free_totals(plan, risk),
     }

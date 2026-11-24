@@ -18,8 +18,9 @@ which would reroll the implicit inside the mods), and no offered action changes 
 the implicit is planned inside the one search, the Blessed Orb an offer of it (the key of the bound's model holds the implicit's roll status,
 ticket #158); `FINISH` off sends every target there (the tests of that search).
 
-Until the page draws the finish as a step of its own (#1234), the answer says it in one line (`implicit_finish_limits`): the Blessed Orb, its
-mean number of uses and cost, and the total with the mods and the other finishes.
+The page and the text draw the finish as the last step of the route (#1234, `ImplicitFinish.step`, `_finish_steps`), and the plan's risk is
+that of the whole craft (`_plan.add_risk`); the answer also says it in one line (`implicit_finish_limits`): the Blessed Orb, its mean number of
+uses and cost, and the total with the mods and the other finishes.
 """
 
 from __future__ import annotations
@@ -37,6 +38,7 @@ from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.targets import ImplicitRequirement, Target
 
 from . import _limits
+from ._finish_steps import IMPLICIT, FinishStep
 from ._foresight import lock_wanted
 from ._limits import Limit, unpriced_limits
 from ._offers import DroppedOffer, PricedOffer, offer_of, price_offers
@@ -67,6 +69,14 @@ class ImplicitFinish:
         """The mean cost of the finish in Chaos: the mean number of Blessed Orbs times the price of one."""
         return 0.0 if self.orb is None else float(self.uses) * self.orb.cost
 
+    def step(self) -> FinishStep | None:
+        """The finish as the last step of the route (#1234): one state that each use leaves with the chance of meeting every wish; None when
+        the start item already meets them."""
+        if self.orb is None:
+            return None
+        law = ((0, ((self.chance, None), (1 - self.chance, 0))),) if self.chance < 1 else ((0, ((self.chance, None),)),)
+        return FinishStep(IMPLICIT, self.orb, f"the implicit {self.words}", self.uses, self.chance, law, ROLL_APPROXIMATE)
+
 
 def _base_implicits(data: GameData, item: Item) -> frozenset[str]:
     return frozenset(entry.mod_id for entry in item.implicits if entry.mod_id in data.mods and eldritch_side(data.mods[entry.mod_id]) is None)
@@ -75,8 +85,8 @@ def _base_implicits(data: GameData, item: Item) -> frozenset[str]:
 def applies(data: GameData, target: Target, offers: Iterable | None = None, *, judged: bool = False) -> bool:
     """Whether the implicit wishes of `target` are planned as a finish (module text); `offers` are a caller's own offers, None for the planner's.
 
-    A plan a given route is judged against (`judged`) keeps the implicit in the search: the route may name a Blessed Orb as one of its steps, so
-    the plan's offers and model must hold it (as for the quality, #159)."""
+    The guide's own plan of its actions (`judged`, `_entry.guide_plan`) keeps the implicit in its model: its route may name a Blessed Orb as
+    one of its steps. A solved plan a route is judged against finishes it, and reads the route's Blessed Orb rule as the finish (#1234)."""
     if not FINISH or judged or offers is not None or not target.implicits or lock_wanted(target.actions):
         return False
     start = target.start_item
@@ -198,19 +208,25 @@ def plan_implicit_finish(
     return ImplicitFinish(wanted, words, best, chance, 1 / chance, dropped)
 
 
+ROLL_APPROXIMATE = (
+    "the chance per use is read from the roll law of the Blessed Orb (an approximate input: each value uniform over its range, the value it "
+    "had can come again)"
+)
+
+
 def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: bool = False) -> tuple[Limit, ...]:
-    """What the answer says of the implicit finish until the page draws it as a step (#1234): the last step, its mean and the total of the craft
+    """What the answer says of the implicit finish, which the page and the text also draw as the last step (#1234): the last step, its mean and the total of the craft
     (`total`: the mods and every finish, after the start item); the Blessed Orbs left out for lack of a price. `at_most`: the total is an upper end."""
     if finish.orb is None:
         why = f"the start item's implicit {finish.words} already, which no step of the mods changes, so nothing is added to the cost of the mods"
         labels: tuple[str, ...] = ()
     else:
-        costs = "costs at most" if at_most else "costs"
+        costs = "has a mean cost of at most" if at_most else "costs on average"
         why = (
             f"a last step, once the mods are made: {finish.orb.label} until the implicit {finish.words} (a chance of "
             f"{float(finish.chance):.2%} each), {float(finish.uses):,.2f} on average at {finish.orb.cost:,.2f} Chaos each, {finish.value:,.2f} "
-            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos on average after the start item; every other figure of this answer "
-            "is of the mods alone"
+            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos after the start item, the mean the result "
+            "gives"
         )
         labels = (finish.orb.label,)
     found = Limit(
@@ -218,7 +234,7 @@ def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: boo
         "Implicit finished after the mods",
         why,
         "No step of the mods changes the implicit, so rolling it last changes no step of the mods; the mean number of Blessed Orbs is exact at "
-        "the roll law read for the Blessed Orb (an approximate input: each value uniform over its range, the value it had able to come again).",
+        "the roll law read for the Blessed Orb (an approximate input: each value uniform over its range, the value it had can come again).",
         labels,
     )
     return (found, *unpriced_limits((drop.label, drop.missing, drop.kind) for drop in finish.dropped))

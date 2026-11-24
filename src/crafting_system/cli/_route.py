@@ -65,7 +65,7 @@ from crafting_system.targets import KOfN, Requirement, TargetError
 from crafting_system.targets.lines import LineList, LineMap, load_with_lines
 from crafting_system.targets.parse import describe
 from crafting_system.targets.resolve import Resolver, Unresolved, close_matches, quoted
-from crafting_system.planner import UNPRICED, PackedPolicy, Plan, evaluate_risk, free_action_cost, offer_action
+from crafting_system.planner import UNPRICED, PackedPolicy, Plan, donor_main_goal, evaluate_risk, free_action_cost, offer_action
 
 from ._reach import policy_states
 
@@ -90,6 +90,9 @@ REFUSED_KEYS = (
     "prefixes", "suffixes", "free_prefixes", "free_suffixes", "free_slots", "metamods", "mods_per_side",
     "prefix_count", "suffix_count", "crafted_prefixes", "crafted_suffixes",
 )  # fmt: skip
+
+
+BLESSED_ORB = "Blessed Orb"  # the label of the orb of the implicit finish (`actions.blessed`)
 
 
 class RouteError(ValueError):
@@ -187,6 +190,7 @@ class Route:
     rules: tuple[Rule, ...]
     skip_refused: bool = False
     recorded_cost: float | None = None
+    finished: tuple[str, ...] = ()  # the labels its rules name that are the plan's finish steps, read as those steps after the mods (#1234)
 
 
 @dataclass(frozen=True)
@@ -263,6 +267,18 @@ def route_actions(path: Path) -> tuple[str, ...]:
     return tuple(found)
 
 
+def finish_labels(plan: Plan) -> set[str]:
+    """The catalysts and orbs a route's rule may name for the plan's finishes (#1234), read as those finishes after the mods: each finish
+    step's own, and the catalyst of the type asked or the Blessed Orb of a finish the start item already meets (no step then)."""
+    found = {step.label for step in getattr(plan, "finish_steps", ())}
+    quality = getattr(plan, "quality_finish", None)
+    if quality is not None:
+        found.add(f"{quality.wanted.type.value.capitalize()} Catalyst")
+    if getattr(plan, "implicit_finish", None) is not None:
+        found.add(BLESSED_ORB)
+    return found
+
+
 def recorded_cost_of(path: Path) -> float | None:
     """The guide's cost the route file at `path` records (`recorded_cost`, #1596), read before any plan exists, or None: no such key, or a
     file that cannot be read. It refuses nothing, as `route_actions`; `load_route` says a wrong figure once a plan is made."""
@@ -335,10 +351,15 @@ class _Reader:
         rules = tuple(
             self.read_rule(entry, f"rules[{index}]", entries.item_lines[index]) for index, entry in enumerate(entries)
         )
+        # a rule that names the catalyst or the orb of one of the plan's finish steps is read as that finish (#1234): the finish follows every
+        # goal of the route's mods, as it follows the plan's, so the rule is no step of the mods and is left out of them (`Route.finished`)
+        finishing = finish_labels(self.plan)
+        finished = tuple(dict.fromkeys(rule.do for rule in rules if rule.do in finishing))
+        rules = tuple(rule for rule in rules if rule.do not in finishing)
         opening = next((priced.label for priced in self.plan.offers if priced.offer.action.opens_listing), None)
         if opening is not None:  # ADR-0064: the draw of a bought item's mods is the market's, not the guide's; every route takes it first
             rules = (Rule(root.line, When(unopened=True), opening), *rules)
-        return Route(name, self.source, rules, skip_refused, recorded)
+        return Route(name, self.source, rules, skip_refused, recorded, finished)
 
     def read_rule(self, entry: object, path: str, line: int) -> Rule:
         if not isinstance(entry, LineMap):
@@ -364,7 +385,7 @@ class _Reader:
                 )
             return label
         known = [priced.label for priced in self.plan.offers]
-        if label in known:
+        if label in known or label in finish_labels(self.plan):  # a finish's catalyst or orb is read as the finish (#1234)
             return label
         for limit in self.plan.limits:
             if limit.kind == UNPRICED and label in limit.labels:
@@ -710,7 +731,9 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     # The risk is read on one state per block of states that behave alike (`risk.lump`, #717): the same cost distribution, and the budget DP runs over
     # the blocks and not over every state (R13's route has 2,887 states; the DP over them took 4 to 18 minutes).
     lumped = lump(policy, plan.start, plan.is_goal)
-    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))  # the plan's mean only sizes the grid: a route may cost less than a plan stopped at a gap (#829)
+    # the plan's mean only sizes the grid: a route may cost less than a plan stopped at a gap (#829); the plan's finish steps follow the route's
+    # mods as they follow the plan's (#1234): a rule that names the finish's catalyst or orb is never followed, since a goal is never acted on
+    risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.craft_mean, free_cost=free_action_cost(plan.offers), steps=plan.finish_steps)
 
     divergences: list[Divergence] = []
     for state in policy_states(plan.start, plan.policy, plan.is_goal):
@@ -776,7 +799,10 @@ def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> Rou
             if successor not in seen:
                 seen.add(successor)
                 order.append(successor)
-    risk = evaluate_risk(policy, donors.start, donors.acquisition.is_goal, plan.mean_remaining, free_cost=free_action_cost(plan.offers))
+    risk = evaluate_risk(
+        policy, donors.start, donors.acquisition.is_goal, plan.craft_mean, free_cost=free_action_cost(plan.offers), steps=plan.finish_steps,
+        main_goal=donor_main_goal(donors),
+    )  # fmt: skip
     values = {product: 0.0 for product in policy}
     own = main_view(Solution(values, policy, 0.0)).policy
 
