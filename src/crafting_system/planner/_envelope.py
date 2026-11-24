@@ -1378,7 +1378,8 @@ class Search[S]:
             self.stats.expand_seconds += time.perf_counter() - mark
             first = self.net.first  # the first plan's chain's own limit (`_seed`, `_net`), and so its pricing's
             try:
-                upper = self._upper(self._deadline(began, first))[2]
+                # a chain its net cut short is priced as the answer after a stop is (`final`): its plan is the one this search gives (R12, #1516)
+                upper = self._upper(self._deadline(began, first, final=stopped is not None))[2]
             except ConvergenceError:  # the first plan is beyond what the solver certifies (#769), or its pricing met the time net (#1516): the search goes on without an upper figure
                 upper = math.inf
             if stopped is None and distance is not None and not reach_first and not math.isfinite(upper) and not any(self.goal):
@@ -1391,7 +1392,7 @@ class Search[S]:
                     self.kernels.room = None
                 self.stats.expand_seconds += time.perf_counter() - mark
                 try:
-                    upper = self._upper(self._deadline(began, first))[2]
+                    upper = self._upper(self._deadline(began, first, final=stopped is not None))[2]
                 except ConvergenceError:
                     upper = math.inf
             self.stats.first_upper = upper if math.isfinite(upper) else None

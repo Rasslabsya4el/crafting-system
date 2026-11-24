@@ -20,7 +20,8 @@ from crafting_system.solver import Late, PackedGraph
 from crafting_system.solver import _packed_solve
 from crafting_system.solver._packed_solve import solve_graph
 
-SWEEP = 0.01  # seconds of the hand clock one sweep of `proper_states` takes
+SWEEP = 0.01  # seconds of the hand clock one pass of the solver over the kernels takes (`kernel_min`: a sweep of `proper_states`, of the certificate)
+KERNEL = 0.1  # seconds of the hand clock the making of one kernel takes (`_Leaky`)
 
 GOAL = -1
 
@@ -117,6 +118,37 @@ def test_a_late_pricing_runs_again_under_a_later_limit(clock) -> None:
         search._upper(limit + 0.5)
     _, value, certified = search._upper(clock.now + 1e9)
     assert value == pytest.approx(300 * 1_000_001, rel=1e-6) and certified >= value
+
+
+class _Leaky(Chain):
+    """`Chain` whose every step also reaches the goal with weight 1 (a plan in a few sweeps), with a restart, and whose kernels take `KERNEL` of
+    the clock each."""
+
+    restart = 0  # the start item is bought (offer 0, 1 c): a tip of the chain restarts, so a chain cut short is a plan
+
+    def __init__(self, n: int, stay: int, clock: _HandClock) -> None:
+        super().__init__(n, stay)
+        self.clock = clock
+
+    def cost(self, position: int) -> float:
+        return 1.0 if position in (0, 1) else 1e9
+
+    def kernel(self, state: int, position: int) -> dict[int, int]:
+        self.clock.now += KERNEL
+        if position == 0:
+            return {0: 1}
+        made = super().kernel(state, position)
+        return made if position == 2 else {**made, GOAL: made.get(GOAL, 0) + 1}
+
+
+def test_a_chain_its_net_cut_short_is_still_priced(clock) -> None:
+    """R12 on the first commit of #1516: a round's first plan whose chain the net cut short was priced against the net's end, already past, and
+    lost its plan (254.32 c on main). The pricing of such a chain is the answer's, with its `LAST_PRICING` of the net."""
+    search = Search(_Leaky(3_000, 1_000, clock), net=Net(seconds=50.0), gap=0.01, gap_after=None)  # the chain is cut after about 500 states
+    result = search.run()
+    assert result.stopped is not None and "time limit" in result.stopped
+    assert search.stats.first_upper is not None and result.upper is not None
+    assert search.stats.upper_late == 0
 
 
 def test_a_short_chain_is_still_priced(clock) -> None:
