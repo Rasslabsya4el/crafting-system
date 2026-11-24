@@ -59,12 +59,20 @@ def _chaos(value: float) -> str:
     return f"{value:,.2f} Chaos"
 
 
-def _guide_words(cost: float, guide: float | None) -> str:
+RECORDED = " (the figure recorded for it: its steps as written do not finish on this item)"
+
+
+def _guide_words(cost: float, guide: float | None, recorded: bool = False) -> str:
+    """The plan's cost against the guide's, said in plain words: dearer or cheaper, and how many times when dearer (#1596, OR-59).
+    `recorded`: the guide's figure is the one its route file records, since its rules do not finish here."""
     if guide is None or not math.isfinite(guide) or not math.isfinite(cost):
         return ""
+    where = f"the guide's route at {_chaos(guide)}{RECORDED if recorded else ''}"
     if _chaos(cost) == _chaos(guide):
-        return f" It costs {_chaos(cost)} in all, the same as the guide's route."
-    return f" It costs {_chaos(cost)} in all, against {_chaos(guide)} for the guide's route."
+        return f" It costs {_chaos(cost)} in all, the same as {where}."
+    if cost > guide:
+        return f" It costs {_chaos(cost)} in all, {cost / guide:,.2f} times {where}: this plan is dearer than the guide's."
+    return f" It costs {_chaos(cost)} in all, less than {where}: this plan is cheaper than the guide's."
 
 
 def _proved_gap(plan) -> float | None:
@@ -138,11 +146,12 @@ def _tried_together(plan, total: int) -> int:
     return min(most, total) if total else most
 
 
-def proof_words(plan, guide: float | None = None) -> ProofWords:
-    """The proof sentence of `plan` (a `Plan`); `guide` is the cost of the guide's route with the start item, when one was given."""
+def proof_words(plan, guide: float | None = None, *, recorded: bool = False) -> ProofWords:
+    """The proof sentence of `plan` (a `Plan`); `guide` is the cost of the guide's route with the start item, when one was given, and
+    `recorded` says it is the figure its route file records, since the route's rules do not finish (#1596)."""
     total = _open(plan)
     cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.mean_remaining)
-    against = _guide_words(cost, guide)
+    against = _guide_words(cost, guide, recorded)
     gap = _proved_gap(plan)
     if gap is not None and any(limit.kind == _limits.IMPRINTS for limit in plan.limits):  # the search left imprints out by its rule (#1567, #1580)
         said = (

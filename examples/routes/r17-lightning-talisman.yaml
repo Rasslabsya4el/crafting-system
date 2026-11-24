@@ -47,6 +47,10 @@
 name: R17, Reddit guide
 skip_refused: true  # step 10: a rule whose action the game refuses falls through to the next that matches (an imprint of a state already held is refused, so the Exalted Orb follows it)
 
+# The guide's cost with the start item, recorded on 2026-11-24 (#1567, #1596): these rules have gaps on today's target (#1503), so they never
+# finish and price nothing; the same rules with a last `restart` (used 0.001 times per craft) cost 33,140.41 Chaos at the week-one prices,
+# success 1 (an Orb of Annulment there instead: 33,139.61). The proof sentence compares the plan's cost with this figure, said as recorded.
+recorded_cost: 33140.41
 rules:
   # Step 4: the Normal Talisman is made Magic, then Alterations until the +1.
   - when:

@@ -216,15 +216,16 @@ class RouteInput:
     interval: IntervalAnswer | None = None  # the plan's interval over a rule axis (ticket #221); only the planner's own policy has one
     chain: Chain | None = None  # the policy on item states as arrays, when `policy` is a lumped view (then the rows are made from this, not from the shown members of blocks)
     guide: float | None = None  # the guide's route's cost with the start item, when one was given: the proof sentence says the plan's against it (OR-59)
+    guide_recorded: bool = False  # `guide` is the figure the route file records, since its rules do not finish (#1596)
 
 
-def route_input(plan: Plan, interval: IntervalAnswer | None = None, guide: float | None = None) -> RouteInput:
+def route_input(plan: Plan, interval: IntervalAnswer | None = None, guide: float | None = None, guide_recorded: bool = False) -> RouteInput:
     """The planner's own policy, with the interval of the plan when the answer read a rule axis.
 
     A packed plan shown by its lumped chain (`Plan.lumped`) gets the chain of its item states too: the page is made from that.
     """
     chain = chain_of_packed_policy(plan.policy) if plan.lumped else None
-    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval, chain=chain, guide=guide)
+    return RouteInput(PLANNER_LABEL, plan, plan.view_policy, plan.risk, interval=interval, chain=chain, guide=guide, guide_recorded=guide_recorded)
 
 
 def given_route_input(plan: Plan, route: Route, result: RouteResult) -> RouteInput:
@@ -1317,7 +1318,7 @@ class _View:
         JSON's; None for a given route."""
         if self.inp.label != PLANNER_LABEL:
             return None
-        words = proof_words(self.plan, self.inp.guide)
+        words = proof_words(self.plan, self.inp.guide, recorded=self.inp.guide_recorded)
         return _plain(PROOF, words.sentence, tone="" if words.case == PROOF_PROVED else "warn")
 
     @property
@@ -1743,8 +1744,10 @@ def route_page(
         buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
     judged = plan if given_on is None else given_on
-    guide = given_cost(judged, given) if given is not None else guide
-    policy = build_section(route_input(plan, report.interval, guide), data, buy, anchor="policy", route_field=not stacked)
+    recorded = False
+    if given is not None:
+        guide, recorded = guide_figure(judged, given, route)
+    policy = build_section(route_input(plan, report.interval, guide, recorded), data, buy, anchor="policy", route_field=not stacked)
     sections = (policy,)
     if route is not None and given is not None:
         drawn = build_section(
@@ -1760,6 +1763,15 @@ def given_cost(plan: Plan, given: RouteResult | None) -> float | None:
     if given is None or given.risk is None or not math.isfinite(given.risk.mean.value):
         return None  # a route with a gap never finishes: it has no cost to compare with
     return plan.start_price.chaos + given.risk.mean.value
+
+
+def guide_figure(plan: Plan, given: RouteResult | None, route: Route | None) -> tuple[float | None, bool]:
+    """The guide's cost the proof sentence compares the plan's with, and whether it is the route file's recorded figure: the given route's own
+    cost when its rules finish (`given_cost`), else the figure its file records (`recorded_cost`, #1596), else none."""
+    walked = given_cost(plan, given)
+    if walked is not None or route is None or route.recorded_cost is None:
+        return walked, False
+    return route.recorded_cost, True
 
 
 def any_base_words(buy: BuyStep | None) -> str | None:

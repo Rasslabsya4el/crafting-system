@@ -54,7 +54,7 @@ def test_a_group_stopped_is_best_found_not_proved_with_what_was_tried_and_the_gu
         "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 1 of the 5 crafts this planner "
         "can use on this item fully checked in combination with this plan (the groups are under \"How the methods were searched\"), so a "
         "cheaper plan that uses the other crafts may exist. "
-        f"It costs {cost:,.2f} Chaos in all, against 500.00 Chaos for the guide's route."
+        f"It costs {cost:,.2f} Chaos in all, less than the guide's route at 500.00 Chaos: this plan is cheaper than the guide's."
     )
     assert "Proved" not in words.sentence and not SEARCH_WORDS.search(words.sentence)
     assert words.document() == {"case": PROOF_BEST_FOUND, "sentence": words.sentence, "actions_open": 5, "actions_tried_together": 1, "guide_cost": 500.0}
