@@ -14,7 +14,7 @@ from crafting_system.simulator import SimulationReport, Step, simulate
 from crafting_system.planner import Plan
 
 from ._route import Route
-from ._verify import Memoized
+from ._verify import Memoized, with_finish_steps
 
 DEFAULT_MAX_STEPS = 200_000
 
@@ -65,9 +65,10 @@ def simulate_route(
     max_steps: int = DEFAULT_MAX_STEPS,
     skip_refused: bool = False,
 ) -> SimulationReport:
-    """`runs` crafts of the route from the target's start item, with what the start item cost added to each."""
-    target = plan.target
+    """`runs` crafts of the route from the target's start item, with what the start item cost added to each; the plan's finish steps follow
+    the route's mods, as its risk holds them (#1234, `_verify.with_finish_steps`)."""
+    policy = with_finish_steps(plan, route_policy(plan, route, data, skip_refused=skip_refused))
     return simulate(
-        data, route_policy(plan, route, data, skip_refused=skip_refused), plan.simulated_start, target.is_met_by,
+        data, policy, plan.simulated_start, plan.asked_target.is_met_by,
         runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=max_steps,
     )  # fmt: skip

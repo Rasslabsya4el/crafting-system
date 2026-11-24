@@ -30,7 +30,7 @@ from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, open_listing, sharing, unopened_listing
 from crafting_system.data import GameData
-from crafting_system.items import Item, eldritch_side
+from crafting_system.items import Item, Rarity, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
@@ -46,6 +46,7 @@ from ._offer_kinds import merge_twins
 from ._decide import Rates, decide
 from ._finish import FinishRefused, PlanFinish, finish_limits, plan_finish, split_names, without_finish_kinds
 from . import _implicit_finish, _quality_finish
+from ._finish_steps import FinishStep, with_finish_chain
 from ._implicit_finish import ImplicitFinish, ImplicitFinishRefused, implicit_finish_limits, plan_implicit_finish
 from ._quality_finish import QualityFinish, QualityFinishRefused, plan_quality_finish, quality_finish_limits
 from ._foresight import CoarseLockError, Foresight, PlanSites, Status as LockStatus, cheapest_cost, coarse_check, foresee, lock_wanted, plan_burn
@@ -121,6 +122,7 @@ class StartPrice:
     mark: str | None = None  # a thin market's price is marked (OR-8): "old price, read on <date>, ..." or "few offers: ..."; None for an unmarked price
     searched: Mapping[str, Any] | None = field(default=None, compare=False)  # the stored search body when `taken_for` is set: the page names and links it (#937)
     made: MadeStart | None = field(default=None, compare=False)  # the item is made by its recipe, not bought as one (#1523): the goods priced
+    rarity: str | None = field(default=None, compare=False)  # the rarity a hand price says it prices (`detail.rarity`, #1537); None when it says none
 
     def __post_init__(self) -> None:
         if self.given and self.chaos != 0:
@@ -262,6 +264,26 @@ class Plan:
         action changes the quality or the implicit where it is a finish), so the plan of the mods is the cheapest with the finishes too and only
         its mean grows (`_finish.py`, `_quality_finish.py`, `_implicit_finish.py`)."""
         return (0.0 if self.finish is None else self.finish.value) + self.quality_finish_value + self.implicit_finish_value
+
+    @property
+    def finish_steps(self) -> tuple[FinishStep, ...]:
+        """The finishes drawn as the last steps of the route (#1234): the quality's catalysts, then the implicit's Blessed Orbs, each that
+        has something to do. The plan's risk is of the mods and these steps (`add_risk`); the socket finish is not one yet (#233)."""
+        found = (None if self.quality_finish is None else self.quality_finish.step(), None if self.implicit_finish is None else self.implicit_finish.step())
+        return tuple(step for step in found if step is not None)
+
+    @property
+    def asked_target(self) -> Target:
+        """The target as it was asked: `target` with the quality and the implicit wishes its finishes took out of the search (#1234)."""
+        quality = self.target.quality if self.quality_finish is None else self.quality_finish.wanted
+        implicits = self.target.implicits if self.implicit_finish is None else self.implicit_finish.wanted
+        return replace(self.target, quality=quality, implicits=implicits)
+
+    @property
+    def craft_mean(self) -> float:
+        """The expected cost of the craft the route draws, without the price of the start item: the mods and the finish steps (#1234), the
+        mean of `risk` when it is measured. The socket finish is not in it (`total_mean` holds it too, #233)."""
+        return self.mean_remaining + self.quality_finish_value + self.implicit_finish_value
 
     @property
     def quality_finish_value(self) -> float:
@@ -428,7 +450,10 @@ def resolve_start_price(
         raise PlanError(refusal)
     stored = (entry.detail or {}).get("query")
     taken_for = other_item(spec, stored) if isinstance(stored, dict) else None
-    return StartPrice(name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=stored if taken_for else None)
+    stated = (entry.detail or {}).get("rarity")  # a hand price that says which rarity it prices (#1537: R07's Normal wand)
+    return StartPrice(
+        name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=stored if taken_for else None, rarity=stated if isinstance(stated, str) else None
+    )
 
 
 def searched_rarity(price: StartPrice) -> str | None:
@@ -438,6 +463,36 @@ def searched_rarity(price: StartPrice) -> str | None:
         return None
     query = stored.get("query") if isinstance(stored.get("query"), Mapping) else stored
     return ((((query.get("filters") or {}).get("type_filters") or {}).get("filters") or {}).get("rarity") or {}).get("option")
+
+
+ANY_RARITY = "nonunique"  # the trade search's word for an item of any rarity but unique
+RARITY_WORDS = (Rarity.NORMAL.value, Rarity.MAGIC.value, Rarity.RARE.value, ANY_RARITY)  # what a start's price may buy (#1537)
+
+
+def bought_rarity(price: StartPrice) -> str | None:
+    """The rarity of the item the start's price buys (OR-43, #1537): the stored trade search's, else the one a hand price states, else None (the
+    start's own rarity: a price that says none prices the item its key names)."""
+    return searched_rarity(price) or price.rarity
+
+
+def opening_orbs(price: StartPrice, start: Rarity) -> tuple[bool, str | None]:
+    """What makes the item the start's price buys the start's rarity `start` (OR-43): (paid, scoured_from) for `open_listing`.
+
+    The item of the start's own rarity, or of a price that states none, is the market's item: the free draw. A Normal base takes the orb that makes
+    it the rarity (#1522). An item of another rarity, or of any (`nonunique`), takes an Orb of Scouring first and then that orb: the most a player
+    pays, since a Normal one he buys skips the Scouring and one of the start's rarity both (#1537).
+    """
+    bought = bought_rarity(price)
+    if bought is not None and bought not in RARITY_WORDS:
+        raise PlanError(
+            f"the start price of {price.name!r} says it buys an item of rarity {bought!r}; the rarities a start can be bought at are "
+            f"{', '.join(RARITY_WORDS)} (a trade search's words)"
+        )
+    if bought is None or bought == start.value:
+        return False, None
+    if bought == Rarity.NORMAL.value:
+        return True, None
+    return True, "any rarity" if bought == ANY_RARITY else bought.capitalize()
 
 
 def _override(override: float) -> float:
@@ -498,8 +553,13 @@ def make_plan(
     plan_budget: Budget | None = as_budget(budget, net)
     owns = budget_active() is None and plan_budget is not None
     judged = judges_route or incumbent is not None or route_actions is not None
-    finished_last = _quality_finish.applies(target, offers, judged=judged)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
-    implicit_last = _implicit_finish.applies(data, target, offers, judged=judged)  # so is a base implicit's roll (#1231)
+    # a solved plan a route is judged against finishes them too, and the route's rule that names the catalyst or the orb is read as that finish
+    # (`cli._route`, #1234); only the guide's own plan of its actions (unsolved, `guide_plan`) keeps them in its model when the route names them
+    own_actions = judged and not solve_it
+    finished_last = _quality_finish.applies(target, offers, judged=own_actions)  # the catalyst quality is a finish (#159): the mods are planned without it, then it is added
+    implicit_last = _implicit_finish.applies(data, target, offers, judged=own_actions)  # so is a base implicit's roll (#1231)
+
+    finishing = finished_last or implicit_last  # the risk is then measured once the finishes are known, on the whole craft (#1234, `add_risk`)
 
     def mods_target() -> Target:
         return replace(target, quality=None if finished_last else target.quality, implicits=() if implicit_last else target.implicits)
@@ -510,7 +570,7 @@ def make_plan(
             plan = _make_plan(
                 data, mods_target(), prices, start_price=start_price, offers=offers,
                 aim=None if plan_budget is None else plan_budget.aim_seconds, rates=rates,
-                strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk,
+                strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver, with_risk=with_risk and not finishing,
                 incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions, priced_as=target,
             )  # fmt: skip
             offered = [p.offer.action for p in plan.offers if not isinstance(p.offer.action, BuyStartItem)]
@@ -525,20 +585,22 @@ def make_plan(
                 plan = _make_plan(
                     data, mods_target(), prices, start_price=start_price, offers=offers, aim=None if plan_budget is None else plan_budget.aim_seconds,
                     rates=rates, strands=strands, solve_it=solve_it, start_price_of=start_price_of, price_source=price_source, solver=solver,
-                    with_risk=with_risk, incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route, route_actions=route_actions,
-                    priced_as=target,
+                    with_risk=with_risk and not finishing, incumbent=incumbent, clock=clock, watch=watch, judges_route=judges_route,
+                    route_actions=route_actions, priced_as=target,
                 )  # fmt: skip
         except BudgetExceeded as stop:  # a stage met the net before any plan closed (a stage that has one keeps it and does not raise): OR-33
             if clock is not None:
                 clock.bind(stop.binding)  # a stop a forked worker met was bound on its own copy of the clock
             raise PlanError(stopped_refusal(clock, stop.binding)) from None
-    # after the mods, so that a refusal of the target itself is said first
-    try:
-        quality = plan_quality_finish(data, target, prices, price_source, names=target.actions) if finished_last else None
-        implicit = plan_implicit_finish(data, target, prices, price_source, names=target.actions) if implicit_last else None
-    except (QualityFinishRefused, ImplicitFinishRefused, OutOfScopeError) as error:
-        raise PlanError(str(error)) from error
-    plan = with_finishes(plan, quality, implicit)
+        # after the mods, so that a refusal of the target itself is said first
+        try:
+            quality = plan_quality_finish(data, target, prices, price_source, names=target.actions) if finished_last else None
+            implicit = plan_implicit_finish(data, target, prices, price_source, names=target.actions) if implicit_last else None
+        except (QualityFinishRefused, ImplicitFinishRefused, OutOfScopeError) as error:
+            raise PlanError(str(error)) from error
+        plan = with_finishes(plan, quality, implicit)
+        if finishing and with_risk and solve_it:  # the risk of the whole craft, the finish steps hung after the mods' goals (#1234, `add_risk`)
+            plan = add_risk(plan)
     return with_bindings(plan, clock) if owns else plan
 
 
@@ -853,11 +915,12 @@ def _make_plan(
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
     listing = unopened_listing(data, target.start_item) if price_of_start.bought else None
     if listing is not None:  # ADR-0064: the bought item is the one the market sells, so the plan opens with the draw of its mods
-        normal_base = searched_rarity(price_of_start) == "normal"  # the price is a Normal base's: the orb that makes it rare is used and paid (#1522)
-        draw = listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base)
+        # the price is a Normal base's: the orb that makes it the rarity is used and paid (#1522); of another rarity or of any: an Orb of Scouring first (#1537)
+        normal_base, scoured_from = opening_orbs(price_of_start, target.start_item.rarity)
+        draw = listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base, scoured_from=scoured_from)
         priced = (*priced, draw)
-        if normal_base and not draw.offer.resources:  # the orb that makes the Normal base the rarity has no price: the free draw stands in, said (OR-16, OR-13)
-            orb = open_listing(target.start_item.rarity, paid=True)
+        if normal_base and not draw.offer.resources:  # the orbs that make the bought item the rarity have no price: the free draw stands in, said (OR-16, OR-13)
+            orb = open_listing(target.start_item.rarity, paid=True, scoured_from=scoured_from)
             limits += unpriced_limits(((orb.label(data), tuple(orb.resources(data)), ""),))
     limits += unpriced_limits((drop.label, drop.missing, drop.kind) for drop in dropped)
     usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])
@@ -1807,8 +1870,16 @@ def _packed_note(decision: Decision) -> str:
 RISK_QUANTILE_TRANSITIONS = 2_000_000  # a merged chain with more transitions gets no quantile DP (ticket #374): the DP's entries outgrew 16 GB on R04's 4.7 M
 
 
-def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> tuple[RiskReport, tuple[Limit, ...]]:
-    """The risk of a packed plan's policy, evaluated on its merged chain (same mean, odds and quantiles), and the limits of that risk.
+def donor_main_goal(donors: DonorPlan) -> Callable[[tuple], bool]:
+    """The goals of the target's own item in a product with donors (`("in", MAIN, state)`), the ones a finish step follows (#1234)."""
+    return lambda state: isinstance(state, tuple) and len(state) == 3 and state[1] is MAIN and donors.acquisition.is_goal(state)
+
+
+def packed_risk(
+    packed: PackedResult, mean: float, free_cost: float | None, steps: tuple[FinishStep, ...] = ()
+) -> tuple[RiskReport, tuple[Limit, ...]]:
+    """The risk of a packed plan's policy, evaluated on its merged chain (same mean, odds and quantiles), and the limits of that risk; with
+    the finish `steps` hung after its goals (`with_finish_chain`, #1234), and `mean` then the mods' and theirs.
 
     A merged chain of more than `RISK_QUANTILE_TRANSITIONS` transitions gets its exact odds, mean and variance and no quantile grid,
     and the limit says so.
@@ -1823,7 +1894,7 @@ def packed_risk(packed: PackedResult, mean: float, free_cost: float | None) -> t
     _regen.TRACE = _packed.PROGRESS
     try:
         risk = evaluate_risk(
-            packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True,
+            packed.risk_policy, packed.risk_start, packed.risk_is_goal, mean, free_cost=free_cost, resolve_quantiles=resolve, packed_moments=True, steps=steps,
             coarse_first=resolve, regenerative=resolve, mean_error=getattr(getattr(packed, "solution", None), "error_bound", None),
         )  # fmt: skip
     finally:
@@ -1856,15 +1927,19 @@ def add_risk(plan: Plan) -> Plan:
         return plan
     began = time.perf_counter()
     free = free_action_cost(plan.offers)
+    steps = plan.finish_steps  # the finishes drawn as steps: the risk is of the whole craft, their chains hung after the mods' goals (#1234)
+    mean = plan.craft_mean
     with stage(RISK_STAGE, RISK_KEPT, stops=False):  # the risk's ladder stops itself at the run's net and keeps its coarser step (#745)
         if plan.packed is not None:
-            risk, found = packed_risk(plan.packed, plan.solution.values[plan.start], free)
+            risk, found = packed_risk(plan.packed, mean, free, steps)
         elif plan.donors is not None:  # the whole product: `solution` is the target's own process, whose actions leave their donors out (#225)
             donors = plan.donors
-            risk = evaluate_risk(donors.solution.policy, donors.start, donors.acquisition.is_goal, plan.solution.values[plan.start], free_cost=free)
+            risk = evaluate_risk(
+                donors.solution.policy, donors.start, donors.acquisition.is_goal, mean, free_cost=free, steps=steps, main_goal=donor_main_goal(donors)
+            )
             found = risk_limits(risk)
         else:
-            risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, plan.solution.values[plan.start], free_cost=free)
+            risk = evaluate_risk(plan.solution.policy, plan.start, plan.is_goal, mean, free_cost=free, steps=steps)
             found = risk_limits(risk)
     return replace(plan, risk=risk, limits=with_limits(plan.limits, found, _limits.RISK), risk_seconds=time.perf_counter() - began)
 
@@ -1886,8 +1961,11 @@ def evaluate_risk(
     coarse_first: bool = False,
     regenerative: bool = False,
     mean_error: float | None = None,
+    steps: tuple[FinishStep, ...] = (),
+    main_goal: Callable | None = None,
 ) -> RiskReport:
-    """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`.
+    """The risk metrics of a fixed policy whose mean cost from `start` is about `mean`; with the finish `steps` (`Plan.finish_steps`) hung
+    after the goals of the target's own item (`main_goal`, every goal by default), the risk of the whole craft (`with_finish_chain`, #1234).
 
     `mean_error`, when given, is the certified relative error of `mean` as the plan's solve worked it out: a report whose moments the run's time
     net stopped gives that mean (`risk.evaluate`'s `known_mean`, #1553).
@@ -1904,6 +1982,7 @@ def evaluate_risk(
     and the odds stay exact and the quantiles and CVaR come back unresolved (infinite) at once instead of after
     minutes. No route of R10, R11, R05 or R12 is near the cut.
     """
+    policy, is_goal = with_finish_chain(policy, is_goal, steps, main_goal)
     cheapest = min((action.cost for action in policy.values()), default=0.0)
     bins = UNRESOLVED_BINS if 2 * RISK_BINS * cheapest < mean else RISK_BINS
     extra: dict = {} if resolve_quantiles else {"resolve_quantiles": False}

@@ -49,7 +49,6 @@ from ._report import interval_answer_of, money, name_states, number_states, perc
 from ._report_net import ask, report_net
 from ._route import RouteError, RouteResult, evaluate_route, load_route, route_actions
 from ._route_view import judged_on as guide_judged_on
-from ._route_view import kept_finishes
 from ._shares import weight_share
 from ._start_report import first_step_document
 from ._start_step import first_step
@@ -483,7 +482,6 @@ def run_route(
         "record": None,
         "guide_not_evaluable": None,
         "guide_judged_on": None,
-        "solver_compared": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
     loaded: PriceFile | None = None
@@ -539,7 +537,7 @@ def run_route(
                 if judged_on is not None:
                     stopped = None
                     try:
-                        _judge_guide(entry, timings, bench, judged_on, data, root, config, site, _kept_finishes(plan, judged_on))
+                        _judge_guide(entry, timings, bench, judged_on, data, root, config, site)
                     except BudgetExceeded as stop:
                         if not site or judged_on is not plan:
                             raise
@@ -547,7 +545,7 @@ def run_route(
                     if stopped is not None:  # the walk on the site plan passed the net: the guide is read on its own plan
                         own = _guide_own_plan(entry, bench, plan, data, target, loaded, root)
                         if own is not None:
-                            _judge_guide(entry, timings, bench, own, data, root, config, site, _kept_finishes(plan, own))
+                            _judge_guide(entry, timings, bench, own, data, root, config, site)
                             entry["guide_judged_on"] = f"{GUIDE_OWN_AFTER_NET} ({stopped})"
     except _Skipped:
         pass
@@ -588,7 +586,7 @@ def _guide_own_plan(entry: dict, bench: BenchmarkRoute, plan: Plan, data: GameDa
     if abstraction is not None:
         abstraction.release_memos()
     gc.collect()
-    for key in ("given_route", "solver_not_dearer", "completed_route", "solver_not_dearer_than_completed", "solver_compared"):
+    for key in ("given_route", "solver_not_dearer", "completed_route", "solver_not_dearer_than_completed"):
         entry[key] = None
     try:
         return guide_plan(data, target, prices, _route_labels(root, bench))
@@ -597,16 +595,12 @@ def _guide_own_plan(entry: dict, bench: BenchmarkRoute, plan: Plan, data: GameDa
         return None
 
 
-def _kept_finishes(plan: Plan, judged: Plan) -> float:
-    """The site plan's finish that the guide's own plan keeps in its model: `_route_view.kept_finishes`, which the route page shares (#1305)."""
-    return kept_finishes(plan, judged)
-
-
 def _judge_guide(
-    entry: dict, timings: dict, bench: BenchmarkRoute, plan: Plan, data: GameData, root: Path, config: Config, site: bool, finishes: float = 0.0
+    entry: dict, timings: dict, bench: BenchmarkRoute, plan: Plan, data: GameData, root: Path, config: Config, site: bool
 ) -> None:
     """The guide's route, and its completed one, evaluated on `plan` into `entry` (`_given_route`): the site plan's or the guide's own
-    (`_guide_plan_of`). The solver's side of the comparison is its mean plus `finishes` (`_kept_finishes`), said in `solver_compared`. Of a site plan a route that cannot be read is said in `entry["guide_not_evaluable"]`, since the plan itself stands
+    (`_guide_plan_of`). Both sides are of the whole craft: the plan's mean holds its finish steps, and the guide's cost holds the catalysts or
+    orbs it names in its own steps, or the finish steps of the plan it is read on (#1234). Of a site plan a route that cannot be read is said in `entry["guide_not_evaluable"]`, since the plan itself stands
     (#1442); without the net it is the entry's error, as before."""
     try:
         route = load_route(root / bench.route, plan, data)
@@ -618,9 +612,6 @@ def _judge_guide(
         return
     own = plan.start_price.chaos  # the guide's route starts from the target's own item, the start of `plan`
     solver = entry["solver"]["mean"]
-    if finishes and solver is not None:
-        solver = solver + finishes
-        entry["solver_compared"] = {"mean": solver, "finishes": finishes}  # the plan's mods and the finish the guide's cost holds
     result = evaluate_route(plan, route, data)
     ask(fresh=True)
     entry["given_route"] = _given_route(plan, result, data, own, solver, config.benchmark_review_ratio, _reviewing(bench, bench.route, GUIDE, root, config))
@@ -646,7 +637,8 @@ def _record(plan: Plan, mean: float | None, shift: float) -> dict:
         stop = f"proved within {search.within:.2%} of the cheapest"
     else:
         stop = f"stopped: {search.stopped}"
-    return record_of_plan(mean, _number(search.lower + shift), plan.solve_seconds, search.peak_mb, stop)
+    finishes = plan.craft_mean - plan.mean_remaining  # the finish steps are exact and follow every goal: the bound of the mods plus them (#1234)
+    return record_of_plan(mean, _number(search.lower + finishes + shift), plan.solve_seconds, search.peak_mb, stop)
 
 
 def _reviewing(bench: BenchmarkRoute, route_file: str, side: str, root: Path, config: Config) -> Reviewing | None:
@@ -883,9 +875,6 @@ def render_summary(document: dict) -> str:
             lines.append("  solver not dearer than the guide: " + ("yes" if entry["solver_not_dearer"] else "NO"))
         if entry["solver_not_dearer_than_completed"] is not None:
             lines.append("  solver not dearer than the completed route: " + ("yes" if entry["solver_not_dearer_than_completed"] else "NO"))
-        if entry.get("solver_compared") is not None:
-            compared = entry["solver_compared"]
-            lines.append(f"  solver compared with the guide at {money(compared['mean'])} Chaos: its mods and the {money(compared['finishes'])} Chaos of the finish the guide's route holds")
         if entry.get("guide_judged_on") is not None:
             lines.append(f"  {entry['guide_judged_on']}")
         if entry.get("guide_not_evaluable") is not None:

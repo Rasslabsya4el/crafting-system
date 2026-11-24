@@ -15,7 +15,7 @@ from crafting_system.planner import Plan
 
 from ._report import ReportStep, StepOutcome, state_parts
 from ._report_net import ask
-from ._route_view import _View, route_input
+from ._route_view import _View, finish_title, route_input
 
 NO_ACTION = "no action"
 
@@ -24,7 +24,28 @@ def report_steps(plan: Plan, data: GameData) -> tuple[tuple[ReportStep, ...], di
     """One `ReportStep` for each step of the plan's policy, in the page's order (none when the start item already meets the target), and the
     page's row of every item state the policy reaches."""
     view = _View(route_input(plan), data, None, "", False)
-    return tuple(_step(view, step) for step in view.flow.steps), {state: number + 1 for state, number in view.flow.step_of.items()}
+    steps = (*(_step(view, step) for step in view.flow.steps), *_finish_steps(view))
+    return steps, {state: number + 1 for state, number in view.flow.step_of.items()}
+
+
+def _finish_steps(view: _View) -> tuple[ReportStep, ...]:
+    """The finish steps as the last blocks, numbered and titled as the page's last rows (#1234): the item every mod asked is on, what one use
+    costs, the mean uses and their cost, and for a Blessed Orb the chance one use meets the roll."""
+    found = []
+    for at, step in enumerate(view.finishing):
+        number = view.finish_row + at
+        after = "" if at + 1 == len(view.finishing) else f"; next step {number + 1}: {finish_title(view.finishing[at + 1])}"
+        outcomes = () if step.chance is None else (
+            StepOutcome(float(step.chance), f"{step.goal}{after}"),
+            *((StepOutcome(1 - float(step.chance), "not yet, this step again"),) if step.chance < 1 else ()),
+        )  # fmt: skip
+        found.append(
+            ReportStep(
+                number, _ascii(finish_title(step)), 1, "every mod asked is made", cost_parts=step.priced.parts, cost_marks=step.priced.marks,
+                cost=step.priced.cost, uses=float(step.uses), step_cost=step.value, outcomes=outcomes,
+            )  # fmt: skip
+        )
+    return tuple(found)
 
 
 def _title(view: _View, number: int) -> str:
@@ -68,6 +89,8 @@ def _ascii(text: str) -> str:
 def _outcome(view: _View, step, edge) -> str:
     """What one branch of the step does, in the page's words, and the step it leads on to."""
     what, names_row = view.edge_phrase(step, edge)
+    if edge.kind == "goal" and view.finish_row is not None:  # the mods are made: the finish steps follow (#1234)
+        return _ascii(f"every mod asked; next step {view.finish_row}: {finish_title(view.finishing[0])}")
     if edge.to is None or edge.kind == "again":
         return _ascii(what)
     there = f"step {edge.to + 1}: {_title(view, edge.to)}"

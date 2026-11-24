@@ -210,8 +210,9 @@ def played(request) -> Played:
 
 
 def is_opening(label: str) -> bool:
-    """The label of the step that opens a bought listing: the free draw (ADR-0064), or the orb paid on a Normal base (#1522)."""
-    return label == DRAW_LABEL or label.endswith(" on the bought Normal base")
+    """The label of the step that opens a bought listing: the free draw (ADR-0064), the orb paid on a Normal base (#1522), or the Scouring and
+    the orb paid on an item of another rarity (#1537)."""
+    return label == DRAW_LABEL or label.endswith(" on the bought Normal base") or " on the bought item (" in label
 
 
 def recorded_for(route_id: str) -> dict:

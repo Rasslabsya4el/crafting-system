@@ -14,8 +14,9 @@ action other than one that only sets the quality changes or reads it, nor corrup
 would have to come before the corruption). Where they fail, the quality is planned inside the one search, as before (the bound's key holds the
 quality and a catalyst is offered last, `Abstraction.quality_offer_pruned`); `FINISH` off sends every target there (the tests of that search).
 
-Until the page draws the finish as a step of its own (#1234), the answer says it in one line (`quality_finish_limits`): the catalyst, its
-mean number of uses and cost, and the total with the mods; the figures of the mods (mean, percentiles, steps) stay those of the mods.
+The page and the text draw the finish as the last step of the route (#1234, `QualityFinish.step`, `_finish_steps`), and the plan's risk is
+that of the whole craft, the mods and the catalysts (`_plan.add_risk`); the answer also says it in one line (`quality_finish_limits`): the
+catalyst, its mean number of uses and cost, and the total with the mods.
 """
 
 from __future__ import annotations
@@ -32,6 +33,7 @@ from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.targets import QualityRequirement, Target
 
 from . import _limits
+from ._finish_steps import QUALITY, FinishStep
 from ._foresight import lock_wanted
 from ._limits import Limit, unpriced_limits
 from ._offers import DroppedOffer, PricedOffer, _gives_quality_wanted, offer_of, price_offers
@@ -55,18 +57,30 @@ class QualityFinish:
     uses: Fraction
     other_types: tuple[str, ...]
     dropped: tuple[DroppedOffer, ...]
+    law: tuple = ()  # the chain of the catalyst's uses from the start item's quality (`quality_law`); empty when nothing is to do
 
     @property
     def value(self) -> float:
         """The mean cost of the finish in Chaos: the mean number of catalysts times the price of one."""
         return 0.0 if self.catalyst is None else float(self.uses) * self.catalyst.cost
 
+    @property
+    def words(self) -> str:
+        """The quality asked, as a player reads it: "20% Intrinsic quality"."""
+        return f"{self.wanted.min_percent}% {self.wanted.type.value.capitalize()} quality"
+
+    def step(self) -> FinishStep | None:
+        """The finish as the last step of the route (#1234); None when the start item already holds the quality."""
+        if self.catalyst is None:
+            return None
+        return FinishStep(QUALITY, self.catalyst, self.words, self.uses, None, self.law, GAIN_APPROXIMATE)
+
 
 def applies(target: Target, offers: Iterable | None = None, *, judged: bool = False) -> bool:
     """Whether the quality of `target` is planned as a finish (module text); `offers` are a caller's own offers, None for the planner's.
 
-    A plan a given route is judged against (`judged`) keeps the quality in the search: the route may name a catalyst as one of its steps, so the
-    plan's offers and model must hold it (#159; reading a route's catalyst rule as the finish is #1234's)."""
+    The guide's own plan of its actions (`judged`, `_entry.guide_plan`) keeps the quality in its model: its route may name a catalyst as one of
+    its steps. A solved plan a route is judged against finishes it, and reads the route's catalyst rule as the finish (#1234, `cli._route`)."""
     if not FINISH or judged or not isinstance(target.quality, QualityRequirement) or lock_wanted(target.actions):
         return False
     return offers is None
@@ -117,6 +131,43 @@ def mean_uses(data: GameData, action, item, wanted: QualityRequirement) -> Fract
     return mean(item)
 
 
+GAIN_APPROXIMATE = (
+    "the number of catalysts is the mean at the gain law read for them (an approximate input: the wiki's formula for the gain of one "
+    "catalyst at the item level; no player sample confirms its random rounding)"
+)
+
+
+NO_QUALITY = "no quality"  # the key of an item that holds no quality in `quality_law`'s chain
+
+
+def quality_law(data: GameData, action, item, wanted: QualityRequirement) -> tuple:
+    """The chain of the uses of `action` that take `item` to the quality `wanted` (`_finish_steps.FinishStep.law`): each quality the uses
+    pass through, the start item's first, with the chance of each quality one use leads to (None once the quality asked is reached)."""
+    found: dict = {}
+    queue = [item]
+
+    def key_of(made):  # None means "done" in the law: an item with no quality is keyed apart from it
+        return NO_QUALITY if made.quality is None else made.quality
+
+    while queue:
+        current = queue.pop(0)
+        key = key_of(current)
+        if key in found or wanted.is_met_by(current):
+            continue
+        try:
+            results = action.outcomes(data, current).results
+        except NotApplicableError as error:
+            raise QualityFinishRefused(f"{action.label(data)} cannot finish the quality: {error}") from None
+        onward: dict = {}
+        for chance, made in results:
+            onto = None if wanted.is_met_by(made) else key_of(made)
+            onward[onto] = onward.get(onto, Fraction(0)) + Fraction(chance)
+            if onto is not None and onto not in found:
+                queue.append(made)
+        found[key] = tuple((chance, onto) for onto, chance in onward.items())
+    return tuple(found.items())
+
+
 def plan_quality_finish(
     data: GameData, target: Target, prices: PriceFile, price_source: str = DEFAULT_PRICE_SOURCE, *, names: Collection[str] | None = None
 ) -> QualityFinish:
@@ -148,11 +199,11 @@ def plan_quality_finish(
         raise QualityFinishRefused(f"the target asks for {what}, and no catalyst of that type is among the methods offered{unpriced}")
     worked = [(mean_uses(data, entry.offer.action, start, wanted), entry) for entry in priced]
     uses, best = min(worked, key=lambda pair: float(pair[0]) * pair[1].cost)
-    return QualityFinish(wanted, percent, best, uses, tuple(other), dropped)
+    return QualityFinish(wanted, percent, best, uses, tuple(other), dropped, quality_law(data, best.offer.action, start, wanted))
 
 
 def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_most: bool = False) -> tuple[Limit, ...]:
-    """What the answer says of the quality finish until the page draws it as a step (#1234): the last step, its mean beside the mods' and the
+    """What the answer says of the quality finish, which the page and the text also draw as the last step (#1234): the last step, its mean beside the mods' and the
     total; the catalysts of another type left out; the catalysts left out for lack of a price. `mods_at_most`: the mods' mean is an upper end."""
     wanted = finish.wanted
     what = f"{wanted.min_percent}% {wanted.type.value.capitalize()} quality"
@@ -161,12 +212,12 @@ def quality_finish_limits(finish: QualityFinish, mods_mean: float, *, mods_at_mo
         labels: tuple[str, ...] = ()
     else:
         total = mods_mean + finish.value
-        costs = "costs at most" if mods_at_most else "costs"
+        costs = "has a mean cost of at most" if mods_at_most else "costs on average"
         held = f" from the start item's {finish.start_percent}%" if finish.start_percent else ""
         why = (
             f"a last step, once the mods are made: {finish.catalyst.label} until the item has {what}{held}, {float(finish.uses):,.2f} on "
             f"average at {finish.catalyst.cost:,.2f} Chaos each, {finish.value:,.2f} Chaos on average; so the whole craft {costs} "
-            f"{total:,.2f} Chaos on average after the start item; every other figure of this answer is of the mods alone"
+            f"{total:,.2f} Chaos after the start item, the mean the result gives"
         )
         labels = (finish.catalyst.label,)
     found = [

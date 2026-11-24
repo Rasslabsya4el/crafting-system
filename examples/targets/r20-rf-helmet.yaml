@@ -14,7 +14,9 @@
 # How the words are read (OR-1 to OR-4):
 #   * Step 1 is the Awakener's Orb (batch B3, in the beta by OR-37): the dual-influenced helmet is bought, a rare whose mods are whatever
 #     the market sells (OR-6, OR-17), at a hand-set price of the Awakener's Orb plus two single-influence helmets (#1046). No item level
-#     is stated; 86 is the highest an influenced helmet drops at and holds every top tier below.
+#     is stated; 86 is the highest an influenced helmet drops at and holds every top tier below. The price's rows name both helmets Rare,
+#     so the price buys a Rare and the plan pays no orb to make it one (OR-43, #1537); the plan reads the made helmet as a Rare listing
+#     without the two influenced mods the orb keeps (`planner/_made_start.py`).
 #   * "30% more Elemental Damage": what the Essence of Horror forces on a helmet, SocketedGemsDealMoreElementalDamageEssence1, exactly (OR-2).
 #   * "Trap and Mine suffix": the Shaper suffix "Socketed Gems are Supported by Level X Trap And Mine Damage"; no tier is stated, so the
 #     top tier the item level allows, MineDamageTrapUber3 (Level 20, item level 80), rolled (OR-1).

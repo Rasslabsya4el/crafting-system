@@ -24,6 +24,8 @@ from ._bought_starts import bought_base_starts
 from ._decide import BUDGET_SECONDS
 from ._entry import NotModelled, PlanSettings, guide_plan, plan_target, progress, request_budget, say_progress_to
 from ._envelope import Standing
+from ._finish_steps import QUALITY as FINISH_QUALITY
+from ._finish_steps import FinishStep
 from ._foresight import Status as LockStatus
 from ._limits import PROVED as PROVED_UNNEEDED
 from ._limits import DISPLAY as LIMIT_DISPLAY
@@ -84,6 +86,7 @@ from ._plan import (
     StartPrice,
     StrandSetting,
     chance,
+    donor_main_goal,
     evaluate_risk,
     main_view,
     make_plan,
@@ -174,6 +177,9 @@ __all__ = [
     "chance",
     "claim",
     "default_offers",
+    "donor_main_goal",
+    "FINISH_QUALITY",
+    "FinishStep",
     "evaluate_risk",
     "figures",
     "free_action_cost",

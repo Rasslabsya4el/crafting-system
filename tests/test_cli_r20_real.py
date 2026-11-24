@@ -13,6 +13,7 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 
+from crafting_system.actions import DRAW_LABEL
 from crafting_system.actions.harvest import HarvestReforge
 from crafting_system.actions.harvest_influence import HarvestReforgeInfluence
 from crafting_system.cli import load_route, make_plan
@@ -75,6 +76,9 @@ def test_the_start_helmet_is_made_by_an_awakeners_orb_from_two_priced_helmets(pl
     }
     assert prices["Awakener's Orb"].source == "poe.ninja-history"  # the week-one file's (OR-44); the two helmets are hand stand-ins of #150
     assert plan.start_price.chaos == pytest.approx(181.5)  # 5 + 5 + 171.5, the start the plan had before #1523
+    # the two helmets are priced as Rare, so the made helmet is a Rare and no orb makes it one (OR-43, #1537): the free draw, nothing paid
+    opening = next(p for p in plan.offers if p.offer.action.opens_listing)
+    assert opening.label == DRAW_LABEL and opening.offer.resources == {}
 
 
 def test_the_plan_offers_the_route_actions_all_priced(plan):
