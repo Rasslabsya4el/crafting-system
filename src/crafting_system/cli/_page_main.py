@@ -17,6 +17,7 @@ from crafting_system.targets import StartKind, buy_spec_of
 
 from ._plan_file import PlanFileError, load_plan
 from ._report import build_report
+from ._route import evaluate_route, load_route
 from ._route_view import write_route_page
 
 COMMAND = "python -m crafting_system.cli page"
@@ -26,6 +27,7 @@ def page_main(argv: Sequence[str], *, env: Mapping[str, str] | None = None, data
     """Run `page` and return the exit code; `env` and `data` are for tests."""
     parser = argparse.ArgumentParser(prog=COMMAND, description="Write the route view of a plan saved with --save-plan, without planning again.")
     parser.add_argument("plan", help="the file --save-plan wrote")
+    parser.add_argument("--route", metavar="ROUTE.yaml", help="also draw this given route (the guide's) below the plan, as the plain command's --route does; the proof sentence then gives the plan's cost against it")
     parser.add_argument("--out", metavar="PAGE.html", help="where to write the page (default: beside the plan, named after the target)")
     args = parser.parse_args(list(argv))
     try:
@@ -39,7 +41,9 @@ def page_main(argv: Sequence[str], *, env: Mapping[str, str] | None = None, data
         out = Path(args.out) if args.out else Path(args.plan).with_name(f"{stem}.route.html")
         spec = buy_spec_of(game, saved.target) if saved.target.start is StartKind.BOUGHT else None
         report = build_report(saved.plan, game)
-        page = write_route_page(out, report, game, buy_spec=spec, cache_dir=config.cache_dir)
+        route = load_route(Path(args.route), saved.plan, game) if args.route else None
+        given = evaluate_route(saved.plan, route, game) if route is not None else None
+        page = write_route_page(out, report, game, route=route, given=given, buy_spec=spec, cache_dir=config.cache_dir)
     except (DataError, PlanFileError, OSError) as error:
         print(f"Error: {error}", file=sys.stderr)
         return 1

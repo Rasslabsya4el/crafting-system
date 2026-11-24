@@ -5,17 +5,15 @@ The planner's records say how its search ended (`Plan.search`, `_envelope_plan.E
 0 seconds", "within the stated gap of the cheapest", catalog ids such as `harvest-reforge-likelihood`). The page reads the same records and
 says three things a player can act on:
 
-* **How sure the plan is** (`Proof`, the goal card's "Proof" field). Searched to the end: the cheapest of the methods searched. Proved within
-  the run's gap: within that share of the cheapest, with the figure no plan costs less than, in the same terms as the header's mean (the start
-  item's price added, #1508). Stopped by time or memory with a plan in hand: the best plan found in the time given, never "cheapest", and how
-  far the search got (the batches of methods it finished, or the figure its proof reached).
+* **How sure the plan is** (`Proof`): read by the batches' sentences below. The goal card's "Proof" field is the planner's one proof
+  sentence (`planner.proof_words`, OR-58, #1576), the same as the text report's "Proof:" line and the JSON's `proof`.
 * **The sentences of the limits that claim cheapness** say the same: "within 1% of the cheapest" for a proved plan, "the best the search
   found before it stopped, not proved the cheapest" for a stopped one (`guarantee_words`); never "the stated gap".
 * **The rounds** are told as batches of methods, each by its methods' game names and how it ended, with no search word (`rounds_line`,
   `untried_line`); an action ruled out by price is said against the plan shown, not against the plan in hand of an early round (#1512).
 
-Only the page's words change: the planner's records, the text report and the JSON are as they were, and no figure is worked out here that the
-records do not hold.
+Only the page's words of the limits change here: the planner's records are as they were, and no figure is worked out here that the records do
+not hold.
 """
 
 from __future__ import annotations
@@ -71,20 +69,6 @@ class Proof:
     def stopped(self) -> bool:
         return self.how == STOPPED_SEARCH
 
-    def field_text(self) -> str:
-        """The goal card's "Proof" line."""
-        if self.how == EXACT:
-            return "Proved the cheapest of the methods searched; the methods left out are listed below the prices."
-        if self.how == PROVED_WITHIN:
-            return f"Proved within {gap_text(self.gap or 0.0)} of the cheapest of the methods searched: {self.floor_words()}."
-        if self.how == APPROXIMATE:
-            return "Proved only to within the gap stated below the prices of the cheapest of the methods searched."
-        reach = self.reach_words()
-        return (
-            "Not proved the cheapest: this is the best plan the search found in the time and memory it was given, and a cheaper one may exist."
-            + (f" {reach}" if reach else "")
-        )
-
     def floor_words(self) -> str:
         """The figure no plan costs less than, in the header's terms (start item added) and the crafting part the gap is a share of (#1508)."""
         lower = self.lower or 0.0
@@ -100,15 +84,6 @@ class Proof:
         dearer = self.mean - lower
         # the proof may get closer than the gap it was allowed: the floor beside the mean says by how much this plan can be beaten (crafter, #1161)
         return said + (", so no plan of them is cheaper by even 0.01 c" if dearer < 0.005 else f", so this plan is at most {_money(dearer)} dearer than the cheapest")
-
-    def reach_words(self) -> str:
-        """How far a stopped search got: the batches of methods it finished, or the figure its proof reached."""
-        if self.rounds:
-            done = sum(1 for record in self.rounds if record.status in FINISHED)
-            return f"It searched the methods in {len(self.rounds):,} batches and finished {done:,} of them (under \"{ROUNDS_TITLE}\")."
-        if self.lower is not None and self.lower > 0:
-            return f"Its proof got as far as this: no plan of the methods searched costs less than {_money(self.lower + self.start)} in all."
-        return ""
 
 
 def proof_of(plan: Plan) -> Proof:

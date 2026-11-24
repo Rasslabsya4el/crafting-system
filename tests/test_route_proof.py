@@ -82,8 +82,11 @@ def test_a_plan_whose_search_was_stopped_is_the_best_found_never_the_cheapest(r1
     assert fields["Route"].lines[0].text == "The planner's plan" and section.title == "The planner's plan"
     proof = fields["Proof"]
     assert proof.tone == "warn"
-    assert proof.lines[0].text.startswith("Not proved the cheapest: this is the best plan the search found in the time and memory it was given, and a cheaper one may exist.")
-    assert "5 batches and finished 2 of them" in proof.lines[0].text  # how far it got: the closed and the beaten batch
+    # the one proof sentence (OR-58, #1576): best found, and how many actions were searched to the end with the plan (the closed and the beaten batch)
+    assert proof.lines[0].text == (
+        f"Best plan found, not proved the cheapest: 3 of the {len(plan.offers):,} actions open to this craft were searched to the end together "
+        "with this plan before the search ran out of time or memory, so a cheaper plan that uses the others may exist."
+    )
     words = every_word(fields, leaves)
     assert "Cheapest" not in words and "within the stated gap" not in words and "1%" not in proof.lines[0].text
     for label, line in leaves:
@@ -113,9 +116,10 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
 
     proof = fields["Proof"].lines[0].text
     assert fields["Proof"].tone == ""
-    assert proof.startswith("Proved within 1% of the cheapest of the methods searched: no plan of them costs less than ")
-    assert money(lower + start) in proof and money(lower) in proof and money(start) in proof
-    assert proof.endswith(f", so this plan is at most {money(r12.risk.mean.value - lower)} dearer than the cheapest.")
+    assert proof == f"Proved: no cheaper way exists, to within 1%. The search held all {len(plan.offers):,} actions open to this craft together and finished."
+    floor = next(line for label, line in leaves if label == "How the methods were searched").text  # the figure is said with the batches
+    assert money(lower + start) in floor and money(lower) in floor and money(start) in floor
+    assert floor.endswith(f", so this plan is at most {money(r12.risk.mean.value - lower)} dearer than the cheapest.")
     words = every_word(fields, leaves)
     assert "stated gap" not in words and "Cheapest" not in words
     for label, line in leaves:
@@ -131,7 +135,7 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
 def test_an_exact_plan_is_the_cheapest_of_the_methods_searched(r12):
     plan = searched(r12, (), exact=True, within=None, stopped=None)
     _, fields, _ = goal(plan)
-    assert fields["Proof"].lines[0].text.startswith("Proved the cheapest of the methods searched")
+    assert fields["Proof"].lines[0].text == f"Proved: no cheaper way exists. The search held all {len(plan.offers):,} actions open to this craft together and finished."
 
 
 def test_actions_ruled_out_by_price_are_said_against_the_plan_shown(r12):
@@ -156,7 +160,7 @@ def test_a_stopped_plan_with_no_search_record_is_read_off_its_limits(r12):
     plan = dataclasses.replace(plan, packed=None)
     assert plan.search is None
     _, fields, leaves = goal(plan)
-    assert fields["Proof"].lines[0].text.startswith("Not proved the cheapest") and fields["Proof"].tone == "warn"
+    assert fields["Proof"].lines[0].text.startswith("Best plan found, not proved the cheapest") and fields["Proof"].tone == "warn"
     rounds = next(line for label, line in leaves if label == "How the methods were searched")
     assert "not proved the cheapest" in rounds.text and not SEARCH_WORDS.search(rounds.text)
 
@@ -180,8 +184,9 @@ def test_a_run_counted_in_states_says_its_work_ran_out_not_its_time(r12):
 
 def test_a_floor_at_the_plan_s_own_cost_says_no_plan_is_cheaper_by_a_hundredth(r12):
     plan = searched(r12, CLOSED_ROUNDS, exact=False, within=0.01, stopped=None, lower=r12.risk.mean.value)
-    _, fields, _ = goal(plan)
-    assert fields["Proof"].lines[0].text.endswith(", so no plan of them is cheaper by even 0.01 c.")
+    _, _, leaves = goal(plan)
+    rounds = next(line for label, line in leaves if label == "How the methods were searched")
+    assert rounds.text.endswith(", so no plan of them is cheaper by even 0.01 c.")
 
 
 def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_figure(r12):
@@ -197,9 +202,9 @@ def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_fig
 @pytest.mark.parametrize(
     "search, said",
     [
-        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Not proved the cheapest"),
-        (dict(exact=False, within=0.01), "Proved within 1% of the cheapest"),
-        (dict(exact=True, within=None), "Proved the cheapest of the methods searched"),
+        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Best plan found, not proved the cheapest"),
+        (dict(exact=False, within=0.01), "Proved: no cheaper way exists, to within 1%."),
+        (dict(exact=True, within=None), "Proved: no cheaper way exists."),
     ],
     ids=["stopped-by-a-net", "within-the-gap", "exact"],
 )

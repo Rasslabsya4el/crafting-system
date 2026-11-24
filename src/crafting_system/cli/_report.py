@@ -18,6 +18,7 @@ from crafting_system.actions import DRAW_LABEL, unopened_listing
 from crafting_system.items import Rarity, Side
 from crafting_system.risk import Estimate
 from crafting_system.targets import KOfN, plain_base_names
+from crafting_system.planner import proof_words
 from crafting_system.planner import (
     HEADING,
     NOT_COMPUTED,
@@ -553,7 +554,7 @@ def limit_lines(plan: Plan, spent: Iterable[str] = ()) -> list[str]:
     return [f"{HEADING}:", *(f"  {limit_text(limit)}" for limit in ordered(spent_kinds_named(plan.limits, spent)))]
 
 
-def render_text(report: Report, verification: Verification | None = None, *, target_name: str = "") -> str:
+def render_text(report: Report, verification: Verification | None = None, *, target_name: str = "", guide: float | None = None) -> str:
     """The terminal report: inputs, the policy as a tree, the totals and, with `--verify`, the check."""
     plan = report.plan
     divine = plan.prices.chaos_per_divine
@@ -562,6 +563,7 @@ def render_text(report: Report, verification: Verification | None = None, *, tar
     lines = []
     if target_name:
         lines.append(f"Target: {target_name}")
+    lines.append(f"Proof: {proof_words(plan, guide).sentence}")  # the one proof sentence, as the page and the JSON say it (OR-58, #1576)
     lines.extend(marking_lines(plan.approximation, shift, divine))
     if report.interval is not None:
         lines.extend(report.interval.text_lines(divine))
@@ -756,7 +758,7 @@ def _free_totals(plan: Plan, risk) -> dict:
 RECORD = "plan_record"  # the key of the record written before the report (#1381): what the plan is, from the plan alone
 
 
-def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None) -> dict:
+def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None, guide: float | None = None) -> dict:
     """The plan's record, made from the plan alone and written before anything else is built (#1381): the totals, the start, the
     requirements, the prices and the limits of the JSON policy, without the states, the shares or the steps, which need the report.
 
@@ -770,6 +772,7 @@ def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None
         "format": FORMAT,
         "unit": "chaos",
         RECORD: {"report_built": False, "stopped": stopped},
+        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-58, #1576)
         "answer": marking_document(plan.approximation, shift),
         "target": target_name,
         "requirements": requirements_document(plan),
@@ -794,7 +797,7 @@ def plan_record(plan: Plan, *, target_name: str = "", stopped: str | None = None
     }
 
 
-def policy_document(report: Report, verification: Verification | None = None, *, target_name: str = "") -> dict:
+def policy_document(report: Report, verification: Verification | None = None, *, target_name: str = "", guide: float | None = None) -> dict:
     """The JSON policy: what to do in each reachable state, the transitions, and the totals.
 
     Every cost is in Chaos Orbs. `null` stands for infinity (JSON has none).
@@ -806,6 +809,7 @@ def policy_document(report: Report, verification: Verification | None = None, *,
     document: dict = {
         "format": FORMAT,
         "unit": "chaos",
+        "proof": proof_words(plan, guide).document(),  # the one proof sentence, as the page and the text say it (OR-58, #1576)
         "answer": marking_document(plan.approximation, shift),
         "approximate_inputs": approximate_inputs_document(report.approximate_inputs),
         **({"interval": report.interval.document()} if report.interval is not None else {}),

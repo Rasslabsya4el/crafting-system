@@ -487,6 +487,7 @@ class EnvelopeInfo:
     proved_upper: float | None = None  # the search's own certified upper figure of the plan returned (its solve's value with its error added), when it is not exact: what its stop compared
     bound_rounds: int = 1  # models the bound's build solved (more than one when offers joined the model, `_pattern_bound`, #988)
     widening: tuple = ()  # the rounds the offers were searched in (`_rounds.RoundRecord`, #1069); empty for one search over every offer
+    offered: int = 0  # the actions offered over every round (#1576: "N of the M actions open to this craft"); 0 for one search, whose plan's offers are all of them
     bound_pieces: int = 0  # a run counted in states (#1101): the pieces of work the bound's build did (`_pattern_bound.PatternBound.pieces`)
     bound_share: int | None = None  # and the pieces it was given; None for a build on the clock
     reached: int = 0  # actions built walking toward the goal because the first plan's chain reached none (`Search._reach`, #1142)
