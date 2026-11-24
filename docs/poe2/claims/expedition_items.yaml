@@ -36,6 +36,7 @@ rules:
     quote: 'Metadata/Items/Currency/CurrencySetKalguuranSkillGemLevel2 "Thaumaturgic Flux (Level 2)": "Upgrades a Kalguuran Skill Gem to level 2"'
     patch_verified: "0.5.5.10"
     date_checked: 2026-11-24
+    value: {"Thaumaturgic Flux (Level 2)": 2, "Thaumaturgic Flux (Level 3)": 3, "Thaumaturgic Flux (Level 4)": 4, "Thaumaturgic Flux (Level 5)": 5, "Thaumaturgic Flux (Level 6)": 6, "Thaumaturgic Flux (Level 7)": 7, "Thaumaturgic Flux (Level 8)": 8, "Thaumaturgic Flux (Level 9)": 9, "Thaumaturgic Flux (Level 10)": 10, "Thaumaturgic Flux (Level 11)": 11, "Thaumaturgic Flux (Level 12)": 12, "Thaumaturgic Flux (Level 13)": 13, "Thaumaturgic Flux (Level 14)": 14, "Thaumaturgic Flux (Level 15)": 15, "Thaumaturgic Flux (Level 16)": 16, "Thaumaturgic Flux (Level 17)": 17, "Thaumaturgic Flux (Level 18)": 18, "Thaumaturgic Flux (Level 19)": 19, "Thaumaturgic Flux (Level 20)": 20}
 
   - id: expedition_items.perfect_flux_skills_to_20
     statement: Perfect Flux upgrades the skills granted by an item to level 20; it changes no explicit mod.
