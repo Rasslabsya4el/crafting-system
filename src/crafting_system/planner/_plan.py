@@ -1349,7 +1349,8 @@ def widened_plan(
         upper = certified_upper(info)
         lower = min(last.lower if last.lower is not None else 0.0, upper) if closed else 0.0  # the last round held every offer when all closed
         plan.packed.info["envelope"] = replace(
-            info, exact=exact, within=proved_within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records
+            info, exact=exact, within=proved_within, stopped=None if closed else "not every round of the methods finished", lower=lower, widening=records,
+            offered=len(grouped),
         )  # fmt: skip
     judged = () if route_actions is None else (_rounds.judged_route_limit(sorted({o.label for o in grouped} & set(route_actions)), records[0]),)
     plan = replace(plan, limits=(*own, *_rounds.rounds_limits(records, exact, within), *judged))

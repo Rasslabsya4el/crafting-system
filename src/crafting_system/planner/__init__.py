@@ -92,6 +92,10 @@ from ._plan import (
     strand_setting,
 )
 from ._presenter import present_with
+from ._proof_words import BEST_FOUND as PROOF_BEST_FOUND
+from ._proof_words import NO_PLAN as PROOF_NO_PLAN
+from ._proof_words import PROVED as PROOF_PROVED
+from ._proof_words import ProofWords, no_plan_words, proof_words
 from ._made_start import AWAKENERS_ORB, made_start
 from ._start_options import ORB_OF_AUGMENTATION, StartContext, StartList, StartSource, base_kind, good_name, vendor_recipe_starts
 from ._start_types import (
@@ -109,6 +113,7 @@ from ._start_types import Reading as StartReading
 from ._starts import plan_with_starts
 
 __all__ = [
+    "PROOF_BEST_FOUND", "PROOF_NO_PLAN", "PROOF_PROVED", "ProofWords", "no_plan_words", "proof_words",
     "KINDS_NOT_TRIED", "PROVED_UNNEEDED", "ROUNDS", "ROUND_BEATEN", "ROUND_CLOSED", "ROUND_GAVE_WAY", "ROUND_NONE", "ROUND_REFUSED", "ROUND_STOPPED",
     "ROUND_WITHIN", "WITHIN_GAP", "kind_title", "KINDS_NOT_BUILT", "LIMIT_DISPLAY", "LIMIT_SOLVE",
     "BUDGET_SECONDS",

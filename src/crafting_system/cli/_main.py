@@ -46,6 +46,8 @@ from crafting_system.data import DataError, GameData, load_game_data
 from crafting_system.prices import PriceFile, PriceFileNotFound, stale_warning
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
+from crafting_system.budget import NO_PLAN
+from crafting_system.planner import no_plan_words
 from crafting_system.planner import BUDGET_SECONDS, SOLVERS, PlanError, PlanSettings, plan_target, progress, say_progress_to
 
 from ._benchmark import benchmark_main
@@ -54,7 +56,7 @@ from ._report import build_report, plan_record, policy_document, render_text
 from ._report_net import report_net
 from ._route import evaluate_route, load_route, route_actions
 from ._route_report import render_route_text, route_document
-from ._route_view import write_route_page
+from ._route_view import given_cost, write_route_page
 from ._page_main import page_main
 from ._plan_file import save_plan
 from ._trade import trade_main
@@ -251,10 +253,11 @@ def main(
                 if check is not None:
                     stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
 
-                print(render_text(report, check, target_name=name), end="")
+                guide = given_cost(plan, given)  # the guide's route's cost with the start item: the proof sentence says the plan's against it (OR-59)
+                print(render_text(report, check, target_name=name, guide=guide), end="")
                 printed = True
                 stage("text written")
-                document = policy_document(report, check, target_name=name)
+                document = policy_document(report, check, target_name=name, guide=guide)
                 if route_path is not None and route is not None and given is not None:
                     print()
                     print(render_route_text(report, route, given, game, file_name=route_path.name), end="")
@@ -282,6 +285,8 @@ def main(
                 print(f"The plan's record (its cost, odds, start and limits) is written to {out}")
             return 2 if check is not None and not check.agrees else 0
     except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
+        if isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-59, #1576)
+            print(f"Proof: {no_plan_words().sentence}")
         print(f"Error: {error}", file=sys.stderr)
         return 1
     finally:

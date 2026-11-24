@@ -20,8 +20,8 @@ What a plan can reach today, read from the planner's own code (ticket #414, audi
 | - the planner entry plans them | 16 |
 | - the planner entry refuses them | 2 |
 | - not measured, too slow | 0 |
-| Settings and flags the planner accepts | 38 |
-| - read by some code | 38 |
+| Settings and flags the planner accepts | 39 |
+| - read by some code | 39 |
 | - never read | 0 |
 | - read, and turned on they make `make_plan` refuse every plan | 2 |
 
@@ -173,7 +173,8 @@ Every key `crafting.toml` accepts and every flag of the plan and `benchmark` com
 | `--price-source` | command `plan` |  | read | planner/_plan.py: widened_plan (read from `**kwargs`; on the planning path); planner/_starts.py: plan_with_starts (an attribute or method of it is used; on the planning path); and 2 more |
 | `--progress` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path) |
 | `--refresh-stats` | command `trade` |  | read | prices/trade_pricing.py: _stats (decides a branch; on the planning path) |
-| `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 2 more |
+| `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 4 more |
+| `--route` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path); and 4 more |
 | `--runs` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 9 more |
 | `--save-plan` | command `plan` |  | read | cli/_main.py: main (decides a branch; on the planning path); cli/_main.py: main (passed to `Path` (outside src); on the planning path) |
 | `--seed` | command `plan` |  | read | cli/_marking.py: verification_lines (formatted into text; on the planning path); cli/_report.py: _verification_lines (formatted into text; on the planning path); and 4 more |

@@ -20,7 +20,7 @@ from crafting_system.cli import make_plan
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_proof import UNTRIED_TITLE
 from crafting_system.cli._route_view import Page, build_section, money, route_input
-from crafting_system.planner import _limits
+from crafting_system.planner import _limits, proof_words
 from crafting_system.planner._price_cut import price_cut_limit
 from crafting_system.planner._rounds import BEATEN, CLOSED, STOPPED, UNTRIED, RoundRecord, rounds_limits
 from crafting_system.targets import load_target
@@ -76,14 +76,19 @@ def every_word(fields, leaves) -> str:
 
 def test_a_plan_whose_search_was_stopped_is_the_best_found_never_the_cheapest(r12):
     # #1161: R20's page on a808862e said "Cheapest policy of the planner" and "within the stated gap of the cheapest" over a search stopped by time
-    plan = searched(r12, STOPPED_ROUNDS, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0)
+    plan = searched(r12, STOPPED_ROUNDS, exact=False, within=None, stopped="not every round of the methods finished", lower=0.0, offered=12)
     section, fields, leaves = goal(plan)
 
     assert fields["Route"].lines[0].text == "The planner's plan" and section.title == "The planner's plan"
     proof = fields["Proof"]
     assert proof.tone == "warn"
-    assert proof.lines[0].text.startswith("Not proved the cheapest: this is the best plan the search found in the time and memory it was given, and a cheaper one may exist.")
-    assert "5 batches and finished 2 of them" in proof.lines[0].text  # how far it got: the closed and the beaten batch
+    # the one proof sentence (OR-59, #1576): best found, and how many actions were searched to the end with the plan (the closed and the beaten
+    # batch), of the actions offered over every batch (`EnvelopeInfo.offered`)
+    assert proof.lines[0].text == (
+        "Best plan found, not proved to be the cheapest: the search ran out of time or memory after checking only 3 of the 12 crafts this "
+        "planner can use on this item fully checked in combination with this plan (the groups are under \"How the methods were searched\"), so "
+        "a cheaper plan that uses the other crafts may exist."
+    )
     words = every_word(fields, leaves)
     assert "Cheapest" not in words and "within the stated gap" not in words and "1%" not in proof.lines[0].text
     for label, line in leaves:
@@ -113,9 +118,15 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
 
     proof = fields["Proof"].lines[0].text
     assert fields["Proof"].tone == ""
-    assert proof.startswith("Proved within 1% of the cheapest of the methods searched: no plan of them costs less than ")
-    assert money(lower + start) in proof and money(lower) in proof and money(start) in proof
-    assert proof.endswith(f", so this plan is at most {money(r12.risk.mean.value - lower)} dearer than the cheapest.")
+    assert proof in (
+        f"Proved: no cheaper plan exists, to within 1% of the crafting cost, among all {proof_words(plan).open:,} crafts this planner can use on this "
+        "item, every one checked to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
+        "Proved: no cheaper plan exists, to within 1% of the crafting cost, among every craft this planner can use on this item, searched together "
+        "to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.",
+    )
+    floor = next(line for label, line in leaves if label == "How the methods were searched").text  # the figure is said with the batches
+    assert money(lower + start) in floor and money(lower) in floor and money(start) in floor
+    assert floor.endswith(f", so this plan is at most {money(r12.risk.mean.value - lower)} dearer than the cheapest.")
     words = every_word(fields, leaves)
     assert "stated gap" not in words and "Cheapest" not in words
     for label, line in leaves:
@@ -131,7 +142,9 @@ def test_a_plan_proved_within_the_gap_says_the_gap_and_the_figure_in_the_terms_o
 def test_an_exact_plan_is_the_cheapest_of_the_methods_searched(r12):
     plan = searched(r12, (), exact=True, within=None, stopped=None)
     _, fields, _ = goal(plan)
-    assert fields["Proof"].lines[0].text.startswith("Proved the cheapest of the methods searched")
+    assert fields["Proof"].lines[0].text == (
+        f"Proved: no cheaper plan exists among all {len(plan.offers):,} crafts this planner can use on this item, every one checked to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper."
+    )
 
 
 def test_actions_ruled_out_by_price_are_said_against_the_plan_shown(r12):
@@ -156,7 +169,7 @@ def test_a_stopped_plan_with_no_search_record_is_read_off_its_limits(r12):
     plan = dataclasses.replace(plan, packed=None)
     assert plan.search is None
     _, fields, leaves = goal(plan)
-    assert fields["Proof"].lines[0].text.startswith("Not proved the cheapest") and fields["Proof"].tone == "warn"
+    assert fields["Proof"].lines[0].text.startswith("Best plan found, not proved to be the cheapest") and fields["Proof"].tone == "warn"
     rounds = next(line for label, line in leaves if label == "How the methods were searched")
     assert "not proved the cheapest" in rounds.text and not SEARCH_WORDS.search(rounds.text)
 
@@ -180,8 +193,9 @@ def test_a_run_counted_in_states_says_its_work_ran_out_not_its_time(r12):
 
 def test_a_floor_at_the_plan_s_own_cost_says_no_plan_is_cheaper_by_a_hundredth(r12):
     plan = searched(r12, CLOSED_ROUNDS, exact=False, within=0.01, stopped=None, lower=r12.risk.mean.value)
-    _, fields, _ = goal(plan)
-    assert fields["Proof"].lines[0].text.endswith(", so no plan of them is cheaper by even 0.01 c.")
+    _, _, leaves = goal(plan)
+    rounds = next(line for label, line in leaves if label == "How the methods were searched")
+    assert rounds.text.endswith(", so no plan of them is cheaper by even 0.01 c.")
 
 
 def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_figure(r12):
@@ -197,9 +211,9 @@ def test_a_price_cut_against_a_cheaper_plan_than_the_one_shown_keeps_its_own_fig
 @pytest.mark.parametrize(
     "search, said",
     [
-        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Not proved the cheapest"),
-        (dict(exact=False, within=0.01), "Proved within 1% of the cheapest"),
-        (dict(exact=True, within=None), "Proved the cheapest of the methods searched"),
+        (dict(exact=False, within=None, stopped="the time limit of 600 seconds was reached"), "Best plan found, not proved to be the cheapest"),
+        (dict(exact=False, within=0.01), "Proved: no cheaper plan exists, to within 1% of the crafting cost,"),
+        (dict(exact=True, within=None), "Proved: no cheaper plan exists among"),
     ],
     ids=["stopped-by-a-net", "within-the-gap", "exact"],
 )
