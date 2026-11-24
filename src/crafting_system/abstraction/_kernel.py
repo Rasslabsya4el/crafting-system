@@ -805,7 +805,7 @@ class Abstraction:
             return False
         return self.meets_all_but_quality(state) and not self.quality_is_met(state)
 
-    _rarest: frozenset[int] | None = None  # `rarest_leaves`, read once
+    _rarest: tuple[frozenset[int], frozenset[int]] | None = None  # `rarest_leaves`, read once
     imprints_worth_saving = False  # the planner's rule (#1567): an imprint is made only of an item worth coming back to (`imprint_offer_pruned`)
 
     def imprint_offer_pruned(self, state: CompressedState, action: Action) -> bool:
@@ -816,8 +816,11 @@ class Abstraction:
         holds the wanted mod hardest to roll (`rarest_leaves`: least weight in the base's pool; R17's +1 to all Skill Gems, 50 against
         200 to 1,000 for the others). An item that holds no mod, a crafted one (a bench mod comes off and goes back on at its price), more
         mods than wanted mods pass on it (so at least one is unwanted, a veiled placeholder and a fractured mod counted as held), or not
-        the rarest wanted mod is not worth a beast. Without the last test, on R17 every rare Talisman holding any one of its four common
-        wanted mods was imprinted: the bound of the second round had 118,033 keys against 27,267 and found no plan in its share. It reads only the statuses, the crafted slots and the count
+        the rarest wanted mod is not worth a beast; and an item of more than one mod is worth one only once it holds every rare wanted mod
+        (one that weighs less than half the commonest wanted mod: R17's +1 to all Skill Gems and +1 to Lightning Skill Gems): the
+        rarest alone is the item a player annuls down to, the rare ones together the base he slams the common ones on. Without the
+        last two tests, on R17 every rare Talisman holding any of its wanted mods was imprinted: the bound of the second round had
+        118,033 keys, with the rarest alone 54,495, against 27,267 with both, and neither found a plan in its share. It reads only the statuses, the crafted slots and the count
         of the other mods, which a pattern key holds (`_pattern.PatternKey`): every member of a key answers alike, so the bound's build,
         which asks one member, leaves out at a key exactly what the search leaves out at each of its states. Only with `imprints_worth_saving` set (the
         planner sets it on the model it plans with): unlike `quality_offer_pruned` this is not exact, it removes options, so the answer
@@ -835,12 +838,15 @@ class Abstraction:
         held = len(state.slots) + len(state.fractured)
         if held == 0 or held > sum(1 for each in state.status if each is Status.PASSING):
             return True
-        rarest = self.rarest_leaves()
-        return bool(rarest) and not any(state.status[leaf] is Status.PASSING for leaf in rarest)
+        rarest, rare = self.rarest_leaves()
+        if rarest and not any(state.status[leaf] is Status.PASSING for leaf in rarest):
+            return True
+        return held > 1 and not all(state.status[leaf] is Status.PASSING for leaf in rare)
 
-    def rarest_leaves(self) -> frozenset[int]:
-        """The wanted mods hardest to roll on this base (`imprint_offer_pruned`, #1567): the leaves whose rolled mods (a prefix or a suffix of
-        the item's level or below) weigh least in the base's pool, among the leaves the pool can roll at all. Read once."""
+    def rarest_leaves(self) -> tuple[frozenset[int], frozenset[int]]:
+        """The wanted mods hardest to roll on this base (`imprint_offer_pruned`, #1567), and the rare ones: the leaves whose rolled mods (a
+        prefix or a suffix of the item's level or below) weigh least in the base's pool, among the leaves the pool can roll at all; and
+        those that weigh less than half the commonest wanted mod. Read once."""
         if self._rarest is None:
             base = self.data.base_items.get(self.base_id)
             weights: dict[int, int] = {}
@@ -852,8 +858,11 @@ class Abstraction:
                         total += spawn_weight(mod, base.tags)
                 if total > 0:
                     weights[index] = total
-            least = min(weights.values(), default=0)
-            self._rarest = frozenset(index for index, weight in weights.items() if weight == least)
+            least, most = min(weights.values(), default=0), max(weights.values(), default=0)
+            self._rarest = (
+                frozenset(index for index, weight in weights.items() if weight == least),
+                frozenset(index for index, weight in weights.items() if 2 * weight < most),
+            )
         return self._rarest
 
     def quality_offer_pruned(self, state: CompressedState, action: Action) -> bool:

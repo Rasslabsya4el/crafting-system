@@ -38,7 +38,7 @@ def test_the_rule_is_off_unless_the_planner_sets_it():
 def test_an_imprint_is_left_out_of_an_item_with_no_mod_an_unwanted_mod_a_crafted_one_or_not_the_rarest_wanted_mod_and_a_restore_never():
     ab = abstraction(1)
     ab.imprints_worth_saving = True
-    assert ab.rarest_leaves() == {2}  # Added Lightning Damage weighs least of the three wanted mods in the amulet's pool
+    assert ab.rarest_leaves() == ({2}, frozenset())  # Added Lightning Damage weighs least (500 against 1,000): not less than half the commonest
     rare = Rarity.RARE
     assert ab.imprint_offer_pruned(_state(ab), IMPRINT)  # nothing to come back to
     assert ab.imprint_offer_pruned(_state(ab, roll(DAMAGE_2), roll(MANA_1), rarity=rare), IMPRINT)  # an unwanted mod would have to come off
@@ -66,6 +66,20 @@ def test_through_the_envelope_search_the_rule_only_removes_options_and_the_answe
     from crafting_system.planner._limits import TITLES
 
     assert IMPRINTS in TITLES  # the page has a title for its group
+
+
+def test_an_item_of_more_than_one_mod_is_imprinted_only_once_it_holds_every_rare_wanted_mod():
+    # R17's shape (#1567): +1 to all Skill Gems (50) and +1 to Lightning Skill Gems (200) are rare against the commonest wanted mod (1,000);
+    # the player imprints the item holding the rarest alone (to annul down to it), then only once every rare one is on it. Here, by hand:
+    # Added Lightning Damage the rarest, it and Life the rare ones.
+    ab = abstraction(1)
+    ab.imprints_worth_saving = True
+    ab._rarest = (frozenset({2}), frozenset({0, 2}))
+    rare = Rarity.RARE
+    assert not ab.imprint_offer_pruned(_state(ab, roll(DAMAGE_2)), IMPRINT)  # the rarest alone
+    assert ab.imprint_offer_pruned(_state(ab, roll(DAMAGE_2), roll(RESIST_3), rarity=rare), IMPRINT)  # a common one before Life
+    assert not ab.imprint_offer_pruned(_state(ab, roll(DAMAGE_2), roll(LIFE_2), rarity=rare), IMPRINT)
+    assert not ab.imprint_offer_pruned(_state(ab, roll(DAMAGE_2), roll(LIFE_2), roll(RESIST_3), rarity=rare), IMPRINT)
 
 
 def test_the_rule_reads_only_what_a_pattern_key_holds_so_every_member_of_a_key_answers_alike():

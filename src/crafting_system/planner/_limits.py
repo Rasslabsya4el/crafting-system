@@ -450,7 +450,7 @@ def pruning_limits(prunings) -> tuple[Limit, ...]:
             Limit(
                 IMPRINTS,
                 "Imprinted only when the item is worth coming back to",
-                "an imprint is made only of an item that holds the wanted mod hardest to roll and no unwanted, crafted or veiled one",
+                "an imprint is made only of an item that holds the wanted mod hardest to roll, alone or with every rare wanted mod, and no unwanted, crafted or veiled one",
                 "An imprint made at another state could make the plan cheaper: the plan is the best found, not proved the least dear.",
                 labels=imprints,
             )
