@@ -89,11 +89,14 @@ from ._route_chain import chain_of_packed_policy
 from ._route_flow import _blocks as _route_flow_blocks
 from ._route_flow import Chain, Edge, Flow, LossReader, Step, arrived, chain_of_policy, flow_limits, flow_of
 from ._route_html import render_page
+from ._route_proof import PROOF, Proof, group_title, page_line, page_words, proof_of
 from ._route_tiers import TierLine, tier_lines
 from ._route_trade import BuyStep, buy_step
 from ._start_step import ROLE_GEMS, FirstStep, first_step
 
-PLANNER_LABEL = "Cheapest policy of the planner"
+# the planner's route, by what it is; how far it is proved the cheapest is the "Proof" field beside it (`_route_proof`, #1161): a plan whose
+# search a net stopped is never called the cheapest
+PLANNER_LABEL = "The planner's plan"
 # beside the mean when the plan began as a walk toward the target and a net stopped its search (#1142, OR-33, OR-40): the reader sees at the top
 # that this is a plan that works, not one shown near the best, before he reads the label above or the limit at the end of the card
 NOT_NEAR_BEST = (
@@ -130,6 +133,7 @@ class Line:
     anchor: str = ""
     more: tuple[str, ...] = ()  # entries the text does not name: the page holds them in a "details" element, closed by default
     more_title: str = ""  # the summary of that element; "" for "the other N"
+    more_apart: bool = False  # the entries are sentences, each on a line of its own (the batches of the search, `_route_proof`), not a list joined by commas
 
 
 @dataclass(frozen=True)
@@ -1216,6 +1220,15 @@ class _View:
             lines.append(f"{head}: {candidate.label}: {money(row.total)} in all (start {start} + crafting {money(row.mean_remaining or 0.0)}{proved})")
         return _plain("Start", *lines)
 
+    @property
+    def proof(self) -> Proof | None:
+        """How far the planner proved its own plan (`_route_proof`, #1161); None for a given route, which says its own limits."""
+        return proof_of(self.plan) if self.inp.label == PLANNER_LABEL else None
+
+    def limit_line(self, limit) -> Line:
+        """A limit of the goal card: the planner's in the page's words of its proof (`_route_proof`), a given route's as it is."""
+        return limit_line(limit) if self.proof is None else planner_limit_line(self.plan, limit)
+
     def walked(self) -> bool:
         """Whether the planner's own plan is one its search walked to and was stopped on (a `REACHED` limit, #1142); a given route never is."""
         return self.inp.label == PLANNER_LABEL and any(limit.kind == REACHED for limit in self.plan.limits)
@@ -1242,6 +1255,7 @@ class _View:
         approximate = [plain_base_names(self.data, line) for line in approximate]  # a start item priced under a key with a base id is said by its game name (#553)
         fields = _fields(
             _plain("Route", self.inp.label) if self.route_field else None,
+            _plain(PROOF, self.proof.field_text(), tone="warn" if self.proof.stopped else "") if self.proof is not None else None,
             self.start_field(),
             _plain("Mean", mean),
             _plain("Not shown near the best", NOT_NEAR_BEST, tone="warn") if self.walked() else None,
@@ -1254,25 +1268,43 @@ class _View:
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)
         limits = spent_kinds_named(limits, (use.name for use in uses))  # a kind named by a currency a step pays with is named by its use (#983)
-        leaves_out = tuple(Field(title, tuple(limit_line(limit) for limit in group)) for title, group in grouped(limits))
+        leaves_out = tuple(
+            Field(group_title(group[0].kind, title) if self.proof is not None else title, tuple(self.limit_line(limit) for limit in group))
+            for title, group in grouped(limits)
+        )
         return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item, self.forced), leaves_out)
 
 
 BENCH_LABEL = "Bench craft "  # how an action label names a bench craft (`actions.bench`)
 
 
-def limit_line(limit) -> Line:
+def limit_line(limit, why: str | None = None, guarantee: str | None = None) -> Line:
     """A limit as one line of the page: its first `SHOWN_LABELS` labels named, the rest in a closed "details" element (OR-13).
 
     A limit that leaves out more bench crafts than that is said as one short statement, `Not offered: 146 bench crafts, each because its mod
     counts toward no requirement, ...`, and every craft is in the closed element, by its mod (#991): the first three of 146 crafts tell a player nothing
-    the count and the cause do not.
+    the count and the cause do not. `why` and `guarantee` replace the limit's cause and guarantee as the page says them (`_route_proof.page_words`).
     """
     labels = limit.labels
+    reason = limit.reason() if why is None else why
+    guarantee = limit.guarantee if guarantee is None else guarantee
     if len(labels) > SHOWN_LABELS and all(label.startswith(BENCH_LABEL) for label in labels):
-        text = f"{limit.what}: {len(labels):,} bench crafts" + (f", each because {limit.reason()}" if limit.why else "") + f". {limit.guarantee}"
+        text = f"{limit.what}: {len(labels):,} bench crafts" + (f", each because {reason}" if reason else "") + f". {guarantee}"
         return Line(text, more=tuple(label.removeprefix(BENCH_LABEL) for label in labels), more_title="which crafts")
-    return Line(limit_text(limit, SHOWN_LABELS), more=more_labels(limit))
+    # the planner's one sentence of a limit (`limit_text`), with the page's cause and guarantee: a stand-in guarantee is cut off and replaced
+    text = limit_text(dataclasses.replace(limit, why=reason, names=(), guarantee=".", approximate=""), SHOWN_LABELS)
+    return Line(text[: -len(".")] + guarantee, more=more_labels(limit))
+
+
+def planner_limit_line(plan: Plan, limit, proof: Proof | None = None) -> Line:
+    """One of the planner's limits as its route's goal card says it (#1161): the rounds and the methods they did not finish in the page's own
+    words, every other limit in the planner's sentence with its claim of cheapness said as the plan is proved (`_route_proof`)."""
+    proof = proof_of(plan) if proof is None else proof
+    own = page_line(limit, proof, plan)
+    if own is not None:
+        return own
+    why, guarantee = page_words(limit, proof, plan)
+    return limit_line(limit, why, guarantee)
 
 
 def build_section(

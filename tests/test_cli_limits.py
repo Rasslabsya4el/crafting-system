@@ -37,11 +37,12 @@ from test_cli_approximate import TARGET as APPROX_TARGET
 
 from crafting_system.cli import Limit, build_report, make_plan, offers_for, policy_document, render_text
 from crafting_system.planner import _plan
-from crafting_system.planner._limits import GROUPS, SHOWN_LABELS, WITHIN_GAP, approximate_limits, claim, grouped, kind_title, limit_document, limit_text, risk_limits
+from crafting_system.planner._limits import GROUPS, ROUNDS, SHOWN_LABELS, UNTRIED, WITHIN_GAP, approximate_limits, claim, grouped, kind_title, limit_document, limit_text, risk_limits
 from crafting_system.planner._offers import offer_of
 from crafting_system.planner._plan import add_risk
 from crafting_system.cli._route_html import render_page
-from crafting_system.cli._route_view import Page, PageError, build_section, route_input
+from crafting_system.cli._route_proof import group_title, guarantee_words, proof_of
+from crafting_system.cli._route_view import Page, PageError, build_section, planner_limit_line, route_input
 from crafting_system.abstraction import Coarsening, Goal, Wanted
 from crafting_system.prices import PriceEntry
 from crafting_system.risk import Estimate
@@ -297,7 +298,7 @@ def test_the_text_report_the_json_and_the_page_show_the_same_records(plan):
     assert [entry["kind"] for entry in document["limits"]] == [limit.kind for limit in sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind))]
     for limit in plan.limits:
         assert limit_text(limit) in text  # the text report names every label
-        assert escape(limit_text(limit, SHOWN_LABELS)) in page
+        assert escape(planner_limit_line(plan, limit).text) in page  # the page says the same record in its words of the proof (#1161)
         assert all(escape(label) in page for label in limit.labels)  # the page holds every label too
     assert "What this answer leaves out" in text and "What this answer leaves out" in page
 
@@ -306,9 +307,13 @@ def test_the_goal_card_of_the_page_has_the_section_grouped_by_kind(plan):
     card = build_section(route_input(plan), DATA).goal
 
     titles = [field.label for field in card.leaves_out]
-    assert titles == [title for title, _ in grouped(plan.limits)]
+    assert titles == [group_title(group[0].kind, title) for title, group in grouped(plan.limits)]  # the rounds' group by what it tells (#1161)
     assert "Methods offered only when the run's setting names them" in titles and "Memory Strands" in titles
-    assert [line.text for field in card.leaves_out for line in field.lines] == sentences(sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind)), SHOWN_LABELS)
+    ordered = sorted(plan.limits, key=lambda l: [k for k, _ in GROUPS].index(l.kind))
+    assert [line.text for field in card.leaves_out for line in field.lines] == [planner_limit_line(plan, limit).text for limit in ordered]
+    # every limit the page does not say in its own words (the rounds', #1161) is the planner's sentence
+    own = [limit for limit in ordered if limit.kind not in (ROUNDS, UNTRIED)]
+    assert [planner_limit_line(plan, limit).text for limit in own] == [guarantee_words(text, proof_of(plan)) for text in sentences(own, SHOWN_LABELS)]
     assert "leaves_out" not in [field.label for field in card.fields]
 
 
