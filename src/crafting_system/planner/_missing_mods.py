@@ -18,8 +18,9 @@ holds no imprint, no Memory Strands and no lock (Prefixes / Suffixes Cannot Be C
 of U' that are PASSING at s (U' = every necessary leaf of the goal open at the start, `_offer_kinds.necessary_leaves`); fp and fs the free prefix
 and suffix slots (the shape's capacity less every explicit mod held: fractured, crafted, ordinary, the veiled placeholder); kp and ks the crafted
 mods held on each side. Every other item is OFF: phi(s) = OFF, h(OFF) = 0. A goal state has A = U', where h = 0. The table is refused (`off`)
-when the abstraction keeps no junk slots (the room is then not in the state), when the start is OFF or an unopened listing, and when U' has more
-than `MAX_OPEN` leaves (the states are 2^|U'| per room).
+when the abstraction keeps no junk slots (the room is then not in the state), when the start is OFF, and when U' has more than `MAX_OPEN`
+leaves (the states are 2^|U'| per room). An unopened listing start (ADR-0064) is no state of the model: it has a value of its own, THE
+LISTING below.
 
 THE THEOREM
 -----------
@@ -32,6 +33,28 @@ Then h(phi(s)) <= V*(s) for every item s (V* over every offer of the round). Pro
 or OFF item, tau; M_t = h(phi(s_{t ^ tau})) + the costs paid before t ^ tau is a submartingale by (*), so h(phi(s)) <= E M_t <= E h(phi(s_{t ^ tau}))
 + V^pi(s), and the first term goes to E h(phi(s_tau)) = 0 (bounded convergence). Q*(s, a) >= V*(s) for any offer, so h(phi(s)) is a lower
 bound of every offer's figure at s too.
+
+THE LISTING (#1552, H43 of board #1434)
+---------------------------------------
+When the start is an unopened listing L, the floors are stated for the item it opens into (`_offer_floor`, #731) and L itself is no state of
+the model (its flags are no shape the floors know). Only the draw that opens it works there, and the draw works nowhere else: the kernel
+refuses any action whose `opens_listing` differs from the item's unopened flag (`Abstraction.kernel`, a test of the flag alone). So h is
+given one more value,
+
+    h(L) = min over the draws d offered of [ c(d) + sum_o P_d(o) h(phi(o)) ]      (the draw's kernel at L; h = 0 at an OFF or goal outcome,
+                                                                                  a draw with no rule for L (OutOfScopeError) at c(d) alone),
+
+and T reads it in the restart's law (c(restart) + h(L), c the restart's own price: the floors' `extra`, the draw that follows it, is in h(L)
+already). The draw has no law at the in-model states: they are opened items, where its flag refuses it, so it is not in the min of T there
+(the argument of "Refused by its shape"). Proof that (*) holds on the model with L added, so the theorem gives h(L) <= V*(L) and h <= V* at
+every opened item: at L the offers that apply are the draws, each with h(L) <= c(d) + E h(phi(o)) by the min, and the restart, with
+h(L) <= c(restart) + h(L) as c >= 0; at an in-model state the restart lands at L, and T holds c(restart) + h(L) for it; nothing else
+reaches L. With no draw offered nothing works at L and the table is off. h(L) is a min of finitely many sums of bounded terms, so h stays
+bounded. It is worked out from the checked h, after its shrink, by the same function T reads, so the check h <= T h covers the restart's
+law with it. The table's `start` and its `lower` at L are h(L); the start price of the listing itself is not in it (the restart's price is,
+as at any start). Before #1552 the table was refused for a listing start and such rounds fell back on the floors' one-mod figure rho (2 to
+10 c against plans of 114 c on R09, 131 c on R08); removing that refusal alone would have put the draw among the CUTs at its price
+(0.00027 c) and held the table near 0.
 
 How (*) is met: for each offer a and each abstract state x, a number L_a(x, h) <= E[h(phi(s'))] for EVERY item s with phi(s) = x at which a
 applies (the laws below), and (T h)(x) = min_a [c(a) + L_a(x, h)]. The table is iterated from h = 0 as h <- closure(T h), the closure being the
@@ -80,7 +103,8 @@ THE LAWS (one row per kind of offer; `_Build`)
 * **Implicit change** (Ember, Ichor, Orb of Conflict, Blessed): no explicit mod changes: phi(s') = phi(s), no constraint.
 * **Harvest resistance / damage swap** when no leaf of U' has such a stat: one mod changes its element, the count and the crafted flag kept,
   no leaf of U' can pass by it: A(s') within A at the same room, no constraint. Otherwise a CUT.
-* **Restart** (buy the start again): c + h(phi(start)).
+* **Restart** (buy the start again): c + h(phi(start)); c + h(L) when the start is an unopened listing L (THE LISTING).
+* **The draw that opens a listing** (`opens_listing`): no law at the in-model states, where its flag refuses it; its law is at L (THE LISTING).
 * **Harvest likelihood reforge** (TERMINAL to the floors): it removes every mod but the fractured ones (no in-model state holds a lock) and
   draws the item full again, the held families' weights times 10 or 1/10. Every outcome holds no crafted mod and keeps the shape (checked:
   `keeps_shape`, `Adds.keeps_crafted`, `Adds.fractures`; otherwise a CUT; a shape that is not rare refuses it), so it is in the model at a room
@@ -257,7 +281,7 @@ class MissingModsTable:
     """The solved table of one round (see the module text). `off` is None when it is used."""
 
     off: str | None
-    start: float = 0.0  # h at the floors' start (0 when off)
+    start: float = 0.0  # h at the floors' start, h(L) when it is an unopened listing (0 when off)
     seconds: float = 0.0  # what the build took
     states: int = 0  # the abstract states
     reader: "_Reader | None" = field(default=None, repr=False)
@@ -285,6 +309,8 @@ class _Reader:
     lockmods: frozenset[str]
     h: dict
     offers: tuple
+    listing: CompressedState | None = None  # the unopened listing start L (THE LISTING), whose value is `at_listing`
+    at_listing: float = 0.0
 
     def phi(self, state: CompressedState) -> tuple | None:
         """(shape, A, fp, fs, kp, ks), or None for an OFF state (unknown shape, an imprint, Memory Strands, a lock, a room out of range)."""
@@ -305,6 +331,8 @@ class _Reader:
         return (shape, held, fp, fs, kp, ks)
 
     def value(self, state: CompressedState) -> float:
+        if self.listing is not None and getattr(state.flags, "unopened", False) and state == self.listing:
+            return self.at_listing if math.isfinite(self.at_listing) else 0.0
         try:
             x = self.phi(state)
         except Exception:  # noqa: BLE001  (a state phi cannot read is OFF: 0 is a bound of anything)
@@ -358,9 +386,12 @@ def missing_mods_table(
         floors.ab, build.known, tuple((leaf, build.bit[leaf]) for leaf in build.U), build.full, tuple(build.side_free), build.lockmods, build.h,
         tuple(entry.priced for entry in floors.entries),
     )  # fmt: skip
-    start = build.H(*build.xstart)
+    start = build.Hstart()
+    if build.listing is not None:
+        reader.listing, reader.at_listing = build.listing, start
     said(
-        f"missing mods' table: h(start) {start!r} at {build.xstart}, {len(build.states):,} states, {build.iterations} iterations, "
+        f"missing mods' table: h(start) {start!r} at {'the listing' if build.listing is not None else build.xstart}, {len(build.states):,} states, "
+        f"{build.iterations} iterations, "
         f"{build.raised:,} rerolls raised, {build.by_shape:,} offers refused by their shape, checked at a shrink of {shrink:g} ({seconds:.1f} s)"
     )
     return MissingModsTable(None, start, seconds, len(build.states), reader)
@@ -437,8 +468,10 @@ class _Build:
         start = floors.start
         if not floors.chosen:
             raise _Off("no open leaf: the floors have no set U")
-        if start.flags.unopened:
-            raise _Off("the start is an unopened listing")
+        self.listing = start if start.flags.unopened else None  # THE LISTING: the start is no state of the model, it has h(L)
+        if self.listing is not None and ab.is_goal(start):
+            raise _Off("the listing is a goal: nothing is missing")
+        self.listing_draws: list[tuple[float, dict]] = []  # (c(d), the law of phi over the draw's outcomes at L)
         if not ab.keeps_junk:
             raise _Off("the abstraction keeps no junk slots: the room is not in the state")
         self.U = [leaf for leaf in kinds.necessary_leaves(goal) if start.status[leaf] is not Status.PASSING]
@@ -473,8 +506,8 @@ class _Build:
             )  # fmt: skip
         self.sure = {leaf: self._sure(leaf) for leaf in self.U}
         self.reader = _Reader(ab, self.known, tuple((leaf, self.bit[leaf]) for leaf in self.U), self.full, tuple(self.side_free), self.lockmods, {}, ())
-        self.xstart = self.reader.phi(start)
-        if self.xstart is None:
+        self.xstart = None if self.listing is not None else self.reader.phi(start)
+        if self.xstart is None and self.listing is None:
             raise _Off("the start is OFF (an unknown shape, an imprint, Memory Strands or a lock)")
         self.rk = [
             [(fp, fs, kp, ks) for fp in range(self.side_free[s][P_] + 1) for fs in range(self.side_free[s][S_] + 1)
@@ -528,6 +561,7 @@ class _Build:
         self.erasing, self.draws, self.crafts, self.cuts, self.bounded = [], [], [], [], []
         self.restart = None
         self.by_shape = 0
+        drawn: set[int] = set()  # the draws given their law at L (an offer is listed once per shape)
         for s, entries in enumerate(self.floors.shape_entries):
             view = self.views[s]
             for entry in entries:
@@ -540,7 +574,13 @@ class _Build:
                     continue  # refused at every in-model state of the shape (THE LAWS, "Refused by its shape")
                 if entry.kind == kinds.RESTART_KIND:
                     if isinstance(action, BuyStartItem):
+                        if self.listing is not None:
+                            cost = float(entry.priced.cost)  # its price alone: the draw that follows it (`extra`) is in h(L)
                         self.restart = cost if self.restart is None else min(self.restart, cost)
+                    elif self.listing is not None and getattr(action, "opens_listing", False):
+                        if id(entry.priced) not in drawn:
+                            drawn.add(id(entry.priced))
+                            self._listing_draw(action, cost)  # refused at every in-model state by its flag; its law is at L
                     else:
                         self.cuts.append((s, cost))
                     continue
@@ -563,10 +603,39 @@ class _Build:
                 else:
                     self.cuts.append((s, cost))
             self.ask()
+        if self.listing is not None and not self.listing_draws:
+            raise _Off("no draw that opens the listing is offered: nothing works at the start")
         self._prepare_crafts()
         self._prepare_draws()
         self.ask()
         self._declared_level1()
+
+    def _listing_draw(self, action, cost: float) -> None:
+        """The law of one draw at the listing L (THE LISTING): the chance of each phi over its kernel at L. Refused there: no term (never used
+        after a restart). No rule for L: an empty law, c(d) alone (a CUT at L)."""
+        try:
+            outcomes = self.ab.kernel(self.listing, action)
+        except NotApplicableError:
+            return
+        except OutOfScopeError:
+            self.listing_draws.append((cost, {}))
+            return
+        law: dict = {}
+        for state, chance in outcomes.items():
+            x = self.reader.phi(state)
+            law[x] = law.get(x, ZERO) + chance
+        self.listing_draws.append((cost, {x: float(p) for x, p in law.items()}))
+
+    def Hlisting(self) -> float:
+        """h(L) of the current h (THE LISTING); `prepare` makes sure some draw is offered."""
+        return min(
+            cost + math.fsum(p * (0.0 if x is None or x[1] == self.full else self.h.get(x, 0.0)) for x, p in law.items())
+            for cost, law in self.listing_draws
+        )
+
+    def Hstart(self) -> float:
+        """The table's figure at the floors' start: h(phi(start)), or h(L) at an unopened listing."""
+        return self.H(*self.xstart) if self.listing is None else self.Hlisting()
 
     def _likelihood(self, entry, s: int, cost: float) -> None:
         """A Harvest likelihood reforge (THE LAWS): bounded like an erasing reroll at level 1, u from `likelihood_bound`; a CUT when its use may
@@ -1102,7 +1171,7 @@ class _Build:
         erasing = [self._best_erasing(s) for s in range(self.S)]
         cache: dict = {}
         bounded = [min((self._q_bounded(s, d["cost"], d["u"], cache) for d in self.bounded if d["s"] == s), default=math.inf) for s in range(self.S)]
-        again = math.inf if self.restart is None else self.restart + self.H(*self.xstart)
+        again = math.inf if self.restart is None else self.restart + self.Hstart()
         for n, x in enumerate(self.states):
             if n % ASK_STATES == 0:
                 self.ask()
@@ -1133,7 +1202,7 @@ class _Build:
                 if a != b:
                     change = max(change, math.inf if math.isinf(a) or math.isinf(b) else abs(a - b))
             self.h = new
-            if change <= CONVERGED * max(1.0, self.H(*self.xstart)):
+            if change <= CONVERGED * max(1.0, self.Hstart()):
                 break
 
     def check(self) -> float:
