@@ -154,9 +154,12 @@ def test_the_pass_asks_the_clock_and_stops_when_late(monkeypatch) -> None:
     work, alive, effective = proper_inputs(chain(5_000))
     with pytest.raises(_packed_solve.Late):
         proper_states(work, alive, effective, deadline)
-    assert asked.count("a sweep of the cheapest paths to a goal") == 63 and asked[-1] == "the rest of the shortest-path pass to a goal"
-    with pytest.raises(_packed_solve.Late, match="before the rest of the shortest-path pass to a goal"):
+    assert asked.count("a sweep of the cheapest paths to a goal") == 63
+    assert asked[-2:] == ["the shortest-path pass to a goal", "the rest of the shortest-path pass to a goal"]
+    with pytest.raises(_packed_solve.Late, match="before the shortest-path pass to a goal"):
         solve_graph(chain(5_000), late=iter([False] * 63 + [True]).__next__)
+    with pytest.raises(_packed_solve.Late, match="before the rest of the shortest-path pass to a goal"):
+        solve_graph(chain(5_000), late=iter([False] * 64 + [True]).__next__)
 
 
 def test_free_steps_ties_unreachable_states_and_a_shared_kernel() -> None:

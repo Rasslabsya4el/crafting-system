@@ -502,8 +502,11 @@ def _cheapest_paths(work: Work, cost: np.ndarray, deadline: Callable[[str], None
     A state settled at `d` settles each kernel it is a successor of that is not settled yet, at `d` exactly (the least successor of a kernel is
     the first one settled), and each usable action of a kernel just settled offers its state `cost[a] + d`, one rounding per step, the sum the
     sweeps make. So a kernel that many actions share is entered once, and the work is the edges of the kernels the usable actions use, plus a heap
-    push per action that lowers a state: `E + A log A`, in Python. `deadline` is asked after every `PASS_ASK` settled states."""
+    push per action that lowers a state: `E + A log A`, in Python. `deadline` is asked before the pass and after every `PASS_ASK` settled states.
+    Its arrays (the reverse edges of the used kernels) are built at once, not in chunks: about 40 bytes an edge at their peak."""
     g, n = work.g, work.n
+    if deadline is not None:
+        deadline("the shortest-path pass to a goal")
     distance = np.where(g.goal, 0.0, INF)
     usable = np.flatnonzero(np.isfinite(cost))
     goals = np.flatnonzero(g.goal)
