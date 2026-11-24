@@ -94,7 +94,7 @@ import math
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 
-from crafting_system.budget import BudgetExceeded
+from crafting_system.budget import BudgetExceeded, stage
 
 from . import _limits
 from ._envelope import YIELDED, Beaten
@@ -438,7 +438,9 @@ def widen(
             grow.ran(positions, best, improved)
             plan = None
             gc.collect()
-            step = grow.stop() if ends else grow.next()  # a growth that ends still runs its later group once (`_growth`, #1440)
+            if (still := left()) is not None and still <= 0.0:
+                break  # the run's net is spent: the next step is not read (its reading asks the net and would only meet it, #1566)
+            step = _read_step(grow, ends)  # a growth that ends still runs its later group once (`_growth`, #1440)
         grown = best is not None  # (with no plan in hand the rounds below are main's, from their first)
         if best is not None:
             base = sorted(grow.support(best) | grow.asked)
@@ -675,6 +677,24 @@ def _cheaper(mean: float, upper: float | None, best_mean: float, best_upper: flo
     if upper is None or best_upper is None:
         return mean < best_mean
     return upper < best_mean - max(best_upper - best_mean, 0.0)
+
+
+READING_STAGE = "the reading of the methods the next round of the growth adds"  # `_read_step`'s stage, as a stop there is said (OR-13)
+READING_KEPT = "the growth ended there, and the plan in hand is kept"
+
+
+def _read_step(grow, ends: bool):
+    """The growth's next round after one that ended (`Grower.stop`) or finished (`Grower.next`), or None when the run's net stopped that reading.
+
+    The reading builds bounds and models that ask the run's net (`abstraction._bound`, the lock's model, #1420). It only says which offers the
+    next round holds, so a stop there ends the growth and keeps the plan in hand, said under its own stage (OR-13, OR-33). Before #1566 the
+    stop went up through the rounds as a stop with no plan: R17 had priced a plan of at most 27,429.27 c at minute 51 of a 1 h net, its round
+    ended at minute 68 past the net, and the reading after it met the net and the answer was "no plan found yet"."""
+    try:
+        with stage(READING_STAGE, READING_KEPT):
+            return grow.stop() if ends else grow.next()
+    except BudgetExceeded:
+        return None
 
 
 def _growing(queue: list[Group]):
