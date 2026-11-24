@@ -61,6 +61,13 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
     Fire is 13th there on Burning Damage, first under the suffix lock (#1429); and without the lock's price the Chaos Orb (1 c) leads Harvest
     Reforge Influence (150.65 c) on Concentrated Effect under it, and the set it names plans at 429,990.79 c against the guide's
     206,331.71 c: with it (Matron, 238 c) Influence comes first, (150.65 + 238) / 4.97% against the Chaos Orb's (1 + 238) / 2.02%.
+  - for each waited mod, the `PER_ROLE` adders of least cost over chance on it (`step_adders`: they keep the mods they are given), ranked
+    only at the shapes where the step acts, among the offers the group and the round that made the plan do not hold yet; nothing else of
+    the usual roles comes with them. The usual roles rank their adders at any shape, so the one that adds to the item the step already
+    made, under the lock that keeps it, loses there to those that act on a magic item: on R20 Augmentation and Regal, where the Exalted
+    Orb acts on the rare. Named in the lock group, it is searched with the locks it works with: on R20 within the hour 115,986.10 c
+    against 206,331.71 c without it (H37 of #1434). Ranked so in the usual round instead (H36), it came without its locks, that round
+    did not build in its share, and the lock group came sixth: 4,663,549 c.
   A side under whose lock no reroll is ranked names nothing (a lock pays only with a reroll under it). The lock role is never read in
   one round with the usual roles (on R20 that made a round of 15 offers that did not build in its share); a lock group that does not
   finish within its share ends nothing, the next lock group or the later group comes (`Grower.stop`). The plan's steps are read the
@@ -418,6 +425,13 @@ class OfferTable:
             named |= self.narrowers(set(waits) | set(self.open if pending is None else pending), holding)
             named |= self.crafted_roles(current | named)
         return named
+
+    def step_adders(self, waits: set[int], shapes: frozenset[Rarity], held: frozenset[int]) -> set[int]:
+        """The adders a lock group names beside its locks (module text, #1420): for each wanted mod of `waits`, the `PER_ROLE` offers of least
+        cost over chance on it that keep the mods they are given, ranked only at `shapes` (the rarities where the step acts), among the offers
+        `held` does not hold. An offer with no chance on the mod at those shapes is not ranked."""
+        keeps = lambda entry: any(kind in KEEPS_MODS for kind in entry.kinds.values()) and not entry.removes  # noqa: E731
+        return {position for leaf in sorted(waits) for position in self._best(leaf, keeps, PER_ROLE, shapes, held)}
 
     def lockers(self, side: str) -> list[int]:
         """Every offer that may add the lock of `side` and keeps the mods it is given (a reroll at no shape): the bench lock, and what puts
@@ -796,7 +810,8 @@ class Grower:
 
     def lock_group(self, label: str, share: float, waits: set[int], shapes: frozenset[Rarity], current: frozenset[int]) -> tuple[tuple[int, ...], str] | None:
         """The lock group of a step that waits on both sides (module text, #1420), once per step, its `W` and its shapes: the offers the next
-        round holds already, the lock role (`OfferTable.lock_roles`) and the cheapest cleaner; None when the role names nothing new."""
+        round holds already, the lock role (`OfferTable.lock_roles`), the adders ranked where the step acts (`OfferTable.step_adders`) and the
+        cheapest cleaner; None when the lock role names nothing new."""
         key = (label, frozenset(waits), shapes)
         if key in self.locks_read:
             return None
@@ -805,6 +820,9 @@ class Grower:
         named = table.lock_roles(waits, shapes, current | self.plan_set)
         if not named - current:
             return None
+        held = current | self.plan_set | named
+        self._named_later(lambda: table.step_adders(waits, shapes, held))
+        named = named | table.step_adders(waits, shapes, held)
         cleaner = table.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
         chosen = table.closure(set(current) | named | ({cleaner} if cleaner is not None else set()))
         if not self._new(chosen):
