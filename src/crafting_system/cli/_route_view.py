@@ -1648,9 +1648,10 @@ def write_route_page(
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
     guide: float | None = None,
+    given_on: Plan | None = None,
 ) -> Path:
     """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
-    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide)
+    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide, given_on=given_on)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8", newline="\n")
     return path
@@ -1665,13 +1666,15 @@ def route_page(
     buy_spec: BuySpec | None = None,
     cache_dir: Path | None = None,
     guide: float | None = None,
+    given_on: Plan | None = None,
 ) -> str:
     """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
     `write_route_page` writes and the website serves (#961).
 
     The page makes no request: the trade link is built from `buy_spec` and the stat list in
     `<cache_dir>/trade/stats.json` when that exists. `guide` is the guide's route's cost with the start item when no given route is drawn (the
-    benchmark's figure of it): the proof sentence says the plan's cost against it; a given route's own cost takes its place.
+    benchmark's figure of it): the proof sentence says the plan's cost against it; a given route's own cost takes its place. `given_on` is the
+    plan the given route was evaluated on when it is not `report.plan` (the guide's own plan of its actions, `guide_plan`, #1305).
     """
     ask(fresh=True)  # the report's memory net, read at the page's start (#1381)
     plan = report.plan
@@ -1682,12 +1685,13 @@ def route_page(
         spec = buy_spec if searched is None else searched_spec(buy_spec, searched)
         buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
-    guide = given_cost(plan, given) if given is not None else guide
+    judged = plan if given_on is None else given_on
+    guide = given_cost(judged, given) if given is not None else guide
     policy = build_section(route_input(plan, report.interval, guide), data, buy, anchor="policy", route_field=not stacked)
     sections = (policy,)
     if route is not None and given is not None:
         drawn = build_section(
-            given_route_input(plan, route, given), data, buy, prefix="g-", anchor="given", route_field=False
+            given_route_input(judged, route, given), data, buy, prefix="g-", anchor="given", route_field=False
         )
         sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
     wider = any_base_words(buy) if plan.start_price.searched is not None else None
