@@ -30,7 +30,7 @@ from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
 from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, open_listing, sharing, unopened_listing
 from crafting_system.data import GameData
-from crafting_system.items import Item, eldritch_side
+from crafting_system.items import Item, Rarity, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
 from crafting_system.prices.price_source import DEFAULT_PRICE_SOURCE
 from crafting_system.risk import IntervalReport, RiskReport, Searched, _regen, evaluate, has_inputs, is_free_cost, solve_readings
@@ -121,6 +121,7 @@ class StartPrice:
     mark: str | None = None  # a thin market's price is marked (OR-8): "old price, read on <date>, ..." or "few offers: ..."; None for an unmarked price
     searched: Mapping[str, Any] | None = field(default=None, compare=False)  # the stored search body when `taken_for` is set: the page names and links it (#937)
     made: MadeStart | None = field(default=None, compare=False)  # the item is made by its recipe, not bought as one (#1523): the goods priced
+    rarity: str | None = field(default=None, compare=False)  # the rarity a hand price says it prices (`detail.rarity`, #1537); None when it says none
 
     def __post_init__(self) -> None:
         if self.given and self.chaos != 0:
@@ -428,7 +429,10 @@ def resolve_start_price(
         raise PlanError(refusal)
     stored = (entry.detail or {}).get("query")
     taken_for = other_item(spec, stored) if isinstance(stored, dict) else None
-    return StartPrice(name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=stored if taken_for else None)
+    stated = (entry.detail or {}).get("rarity")  # a hand price that says which rarity it prices (#1537: R07's Normal wand)
+    return StartPrice(
+        name, entry.chaos, entry.source, taken_for, mark=planned.mark, searched=stored if taken_for else None, rarity=stated if isinstance(stated, str) else None
+    )
 
 
 def searched_rarity(price: StartPrice) -> str | None:
@@ -438,6 +442,36 @@ def searched_rarity(price: StartPrice) -> str | None:
         return None
     query = stored.get("query") if isinstance(stored.get("query"), Mapping) else stored
     return ((((query.get("filters") or {}).get("type_filters") or {}).get("filters") or {}).get("rarity") or {}).get("option")
+
+
+ANY_RARITY = "nonunique"  # the trade search's word for an item of any rarity but unique
+RARITY_WORDS = (Rarity.NORMAL.value, Rarity.MAGIC.value, Rarity.RARE.value, ANY_RARITY)  # what a start's price may buy (#1537)
+
+
+def bought_rarity(price: StartPrice) -> str | None:
+    """The rarity of the item the start's price buys (OR-43, #1537): the stored trade search's, else the one a hand price states, else None (the
+    start's own rarity: a price that says none prices the item its key names)."""
+    return searched_rarity(price) or price.rarity
+
+
+def opening_orbs(price: StartPrice, start: Rarity) -> tuple[bool, str | None]:
+    """What makes the item the start's price buys the start's rarity `start` (OR-43): (paid, scoured_from) for `open_listing`.
+
+    The item of the start's own rarity, or of a price that states none, is the market's item: the free draw. A Normal base takes the orb that makes
+    it the rarity (#1522). An item of another rarity, or of any (`nonunique`), takes an Orb of Scouring first and then that orb: the most a player
+    pays, since a Normal one he buys skips the Scouring and one of the start's rarity both (#1537).
+    """
+    bought = bought_rarity(price)
+    if bought is not None and bought not in RARITY_WORDS:
+        raise PlanError(
+            f"the start price of {price.name!r} says it buys an item of rarity {bought!r}; the rarities a start can be bought at are "
+            f"{', '.join(RARITY_WORDS)} (a trade search's words)"
+        )
+    if bought is None or bought == start.value:
+        return False, None
+    if bought == Rarity.NORMAL.value:
+        return True, None
+    return True, "any rarity" if bought == ANY_RARITY else bought.capitalize()
 
 
 def _override(override: float) -> float:
@@ -853,11 +887,12 @@ def _make_plan(
         raise PlanError(f"no action has a price; missing: {', '.join(names)}")
     listing = unopened_listing(data, target.start_item) if price_of_start.bought else None
     if listing is not None:  # ADR-0064: the bought item is the one the market sells, so the plan opens with the draw of its mods
-        normal_base = searched_rarity(price_of_start) == "normal"  # the price is a Normal base's: the orb that makes it rare is used and paid (#1522)
-        draw = listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base)
+        # the price is a Normal base's: the orb that makes it the rarity is used and paid (#1522); of another rarity or of any: an Orb of Scouring first (#1537)
+        normal_base, scoured_from = opening_orbs(price_of_start, target.start_item.rarity)
+        draw = listing_draw(data, listing, target.start_item.rarity, priced, prices, price_source, normal_base=normal_base, scoured_from=scoured_from)
         priced = (*priced, draw)
-        if normal_base and not draw.offer.resources:  # the orb that makes the Normal base the rarity has no price: the free draw stands in, said (OR-16, OR-13)
-            orb = open_listing(target.start_item.rarity, paid=True)
+        if normal_base and not draw.offer.resources:  # the orbs that make the bought item the rarity have no price: the free draw stands in, said (OR-16, OR-13)
+            orb = open_listing(target.start_item.rarity, paid=True, scoured_from=scoured_from)
             limits += unpriced_limits(((orb.label(data), tuple(orb.resources(data)), ""),))
     limits += unpriced_limits((drop.label, drop.missing, drop.kind) for drop in dropped)
     usable, removed = split_usable(data, target.start_item, [p.offer.action for p in priced])

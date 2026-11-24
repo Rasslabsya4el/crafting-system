@@ -56,6 +56,21 @@ R08 and R09 drew a Rare listing for free at the price of a trade search of a **N
 Normal base, the draw is that orb, used and paid (`OpenListing(paid=True)`, `planner._offers.listing_draw`): an Orb of Alchemy for a Rare
 start, an Orb of Transmutation for a Magic one (the same 1 or 2 mods as an Alteration), named by the orb on the page and priced from the
 price file; a restart pays it again. An orb with no price leaves the free draw. A search of the start's own rarity or of any rarity
-(`nonunique`, R14), a hand price with no stored search (R07, R20) and a run's own `--start-price` keep the free draw (#1537). The rows of R08
+(`nonunique`, R14), a hand price with no stored search (R07, R20) and a run's own `--start-price` keep the free draw (#1537; changed for
+R14 and R07 by the amendment below). The rows of R08
 and R09 still add an Alchemy (0.02409) to the base's price, a data fix of its own (#1535). Planning such a start from the Normal base itself,
 so that an essence or another first step may replace the Alchemy, is #1537's.
+
+## Amendment: a price of another rarity or of any scours first; a hand price may state its rarity ([#1537](https://github.com/Rasslabsya4el/crafting-system/issues/1537), OR-43, OR-16)
+
+The rule of #1522 reads the rarity the start's price buys (`planner._plan.bought_rarity`): the stored trade search's rarity filter, else the
+`detail.rarity` a hand price states, else none (the price is of the item its key names). From that rarity to the start's
+(`planner._plan.opening_orbs`): the start's own rarity, or none stated, keeps the free draw; a Normal base pays the orb (#1522); any other
+rarity, or any rarity (`nonunique`, R14's search), pays an **Orb of Scouring** and then that orb (`OpenListing(paid=True, scoured_from=...)`,
+label "Orb of Scouring and Orb of Transmutation on the bought item (any rarity)"). The Scouring keeps the influences
+(`scouring.keeps_influence`). It is the most a player pays: a Normal item he buys needs only the orb and one of the start's rarity neither,
+and the plan text says so; which rarity the cheapest listings were is not stored. Either orb unpriced leaves the free draw, said. R07's hand
+price, which held the Alchemy inside its 5.0 (its note: "a Normal Convoking Wand plus the Orb of Alchemy"), states `rarity: normal` and is
+the wand alone (4.97591); the Alchemy is its first step. R20's start is made by an Awakener's Orb from two items its price rows name Rare
+(#1523): the price buys a Rare, so it keeps the free draw. A run's own `--start-price` is the start item as the target names it. Planning
+from the Normal base itself (an essence in place of the Alchemy) stays open.

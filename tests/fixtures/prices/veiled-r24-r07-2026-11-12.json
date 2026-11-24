@@ -3650,9 +3650,12 @@
       "note": "hand stand-in for benchmark route R24 (ticket #146): the trade site no longer lists Allflame (2026-11-12) and no snapshot has a line for these boots; to be priced with the next league's snapshot"
     },
     "Convoking Wand, item level 84": {
-      "chaos": 5.0,
+      "chaos": 4.97591,
+      "detail": {
+        "rarity": "normal"
+      },
       "source": "hand",
-      "note": "hand stand-in for benchmark route R07 (ticket #146), a Normal Convoking Wand plus the Orb of Alchemy that makes it rare (#494 point 2): the trade site no longer lists Allflame (2026-11-12) and poe.ninja's Allflame bases are empty; to be priced with the next league's snapshot"
+      "note": "hand stand-in for benchmark route R07 (ticket #146), a Normal Convoking Wand (#494 point 2): the trade site no longer lists Allflame (2026-11-12) and poe.ninja's Allflame bases are empty; to be priced with the next league's snapshot. Until #1537 it was 5.0 with the Orb of Alchemy that makes the wand rare inside it; now the Alchemy (0.02409 in this file) is the plan's first step, shown and paid (OR-43), and the wand alone is 5.0 - 0.02409"
     }
   },
   "unit": "chaos"

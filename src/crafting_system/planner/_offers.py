@@ -343,15 +343,16 @@ def _costs_nothing(entry: PricedOffer) -> bool:
 
 def listing_draw(
     data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer], prices: PriceFile | None = None, price_source: str = DEFAULT_PRICE_SOURCE,
-    *, normal_base: bool = False,
+    *, normal_base: bool = False, scoured_from: str | None = None,
 ) -> PricedOffer:
     """The draw that opens the bought listing `listing` (ADR-0064), priced as every action that consumes nothing is: the listing's price is the start price.
 
     With `normal_base` (the start's price is a Normal base's search, #1522) the draw is the orb that makes the base `rarity`, priced from `prices`
-    as any orb is (OR-16, OR-43); an orb with no price there leaves the free draw, and the plan's limits say the orb is unpriced.
+    as any orb is (OR-16, OR-43); an orb with no price there leaves the free draw, and the plan's limits say the orb is unpriced. With
+    `scoured_from` too (the price buys an item of another rarity or of any, in words, #1537) an Orb of Scouring comes before that orb, paid alike.
     """
     if normal_base and prices is not None:
-        paid = open_listing(rarity, paid=True)
+        paid = open_listing(rarity, paid=True, scoured_from=scoured_from)
         found, _ = price_offers((offer_of(paid, paid.label(data), data, listing, shares=False),), prices, price_source)
         if found:
             return found[0]
