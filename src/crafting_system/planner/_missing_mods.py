@@ -332,7 +332,7 @@ class _Reader:
 
     def value(self, state: CompressedState) -> float:
         if self.listing is not None and getattr(state.flags, "unopened", False) and state == self.listing:
-            return self.at_listing
+            return self.at_listing if math.isfinite(self.at_listing) else 0.0
         try:
             x = self.phi(state)
         except Exception:  # noqa: BLE001  (a state phi cannot read is OFF: 0 is a bound of anything)
@@ -469,6 +469,8 @@ class _Build:
         if not floors.chosen:
             raise _Off("no open leaf: the floors have no set U")
         self.listing = start if start.flags.unopened else None  # THE LISTING: the start is no state of the model, it has h(L)
+        if self.listing is not None and ab.is_goal(start):
+            raise _Off("the listing is a goal: nothing is missing")
         self.listing_draws: list[tuple[float, dict]] = []  # (c(d), the law of phi over the draw's outcomes at L)
         if not ab.keeps_junk:
             raise _Off("the abstraction keeps no junk slots: the room is not in the state")

@@ -431,9 +431,10 @@ def test_every_offer_the_law_drops_on_r10_is_refused_at_real_states_of_its_shape
 # --- an unopened listing start (THE LISTING, #1552, H43 of board #1434) -------------------------------------------------------------
 
 
-def listing_plan(kind: str):
+def listing_plan(kind: str, listing: float | None = None):
     """(data, target, prices, plan) of a toy boots base bought unopened (`listing_support`): "magic" wants the A prefix and the C suffix with
-    Alteration and Augmentation (the hand-worked mean `mean_after_alteration`), "rare" the P3 prefix and the S3 suffix with Chaos and Exalted Orbs."""
+    Alteration and Augmentation (the hand-worked mean `mean_after_alteration`), "rare" the P3 prefix and the S3 suffix with Chaos and Exalted Orbs;
+    `listing` the listing's price when given (`listing_support.LISTING` else)."""
     from listing_support import magic_toy, prices, rare_toy, target
 
     from crafting_system.cli import make_plan
@@ -449,6 +450,9 @@ def listing_plan(kind: str):
         entries = prices(start_price_key(data, aim))
         entries.prices["Chaos Orb"] = type(entries.prices["Orb of Alteration"])(1.0, "fixture")
         entries.prices["Exalted Orb"] = type(entries.prices["Orb of Alteration"])(3.0, "fixture")
+    if listing is not None:
+        key = start_price_key(data, aim)
+        entries.prices[key] = type(entries.prices[key])(listing, "trade-api")
     return data, aim, entries, make_plan(data, aim, entries, solver="object")
 
 
@@ -489,16 +493,23 @@ def test_the_table_at_an_unopened_listing_is_its_draw_and_never_above_the_exact_
         assert table.start <= hand and table.start == pytest.approx(hand, rel=1e-6)
 
 
-def test_the_restart_into_a_listing_reads_h_at_the_listing_without_its_draw_twice():
+@pytest.mark.parametrize("listing", [0.1, 0.5])
+def test_the_restart_into_a_listing_reads_h_at_the_listing_without_its_draw_twice(listing):
     """The floors add the draw that follows a restart into a listing to the restart's cost (`through_listing`, `extra`); the table's restart law
-    is the restart's own price plus h(L), which holds that draw already. The restart is the only way back to L, so with a cheap enough listing
-    it is the best move at an opened state that holds no wanted mod, and the table there is c(restart) + h(L), never more."""
-    _data, aim, _entries, plan = listing_plan("magic")
+    is the restart's own price plus h(L), which holds that draw already. With a listing this cheap (the mean from it is about 3.55) the restart
+    is the best move at some opened states, where the table is c(restart) + h(L) (to the check's shrink), and at most the exact mean everywhere (#1552 checker:
+    counting the draw twice put 8 states above their exact mean at both prices)."""
+    _data, aim, _entries, plan = listing_plan("magic", listing)
     floors = OfferFloors(plan.abstraction, plan.start, plan.offers, aim.start_item)
     restart = next(entry for entry in floors.entries if isinstance(entry.priced.offer.action, BuyStartItem))
-    assert restart.extra > 0  # the draw that follows it
+    assert restart.extra > 0 and restart.priced.cost == listing  # the draw that follows it
     table = missing_mods_table(floors)
-    assert all(table.lower(state) <= restart.priced.cost + table.start for state in plan.solution.values)
+    exact = plan.solution.values
+    assert table.off is None
+    assert all(table.lower(state) <= value * (1 + TOLERANCE) for state, value in exact.items())
+    again = restart.priced.cost + table.start
+    assert any(table.lower(state) == pytest.approx(again, rel=1e-8) for state in exact if state != plan.start)
+    assert all(table.lower(state) <= again * (1 + TOLERANCE) for state in exact)
 
 
 def test_a_listing_with_no_draw_offered_has_its_table_off():
