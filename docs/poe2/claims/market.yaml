@@ -1,0 +1,29 @@
+# Mechanic family: market (buying start items and inputs: the Currency Exchange, the trade site, the
+# price sources and the unit of account). PoE2 research of 2026-11-24, docs/poe2/research/data-sources.md
+# and the pinned dat-export table CurrencyExchange (research/poe2/data/PIN.json). The PoE1 counterpart is
+# ADR-0007 and ADR-0011.
+rules:
+  - id: market.currency_exchange_gold_fee
+    statement: Stackable items (currency, omens, essences, augments, bones, catalysts, emotions and more; 687 items) trade on the in-game Currency Exchange, and each purchase there costs a gold fee set per item (`GoldPurchaseFee`; most often 1000 gold, 20 for the first row). The gold is a second cost of a bought input next to its price; whether the planner counts it is open.
+    source_kind: datamined
+    url: https://raw.githubusercontent.com/repoe-fork/dat-export/85174b650e4ed46d672745e280f5a0e5827cad80/current/poe2/heuristics/csv/CurrencyExchange.csv
+    quote: '"rownum","Item","Category","SubCategory","EnabledInStandardLeague","EnabledInChallengeLeague","GoldPurchaseFee","bool_54","bool_55" / 0,24,0,0,1,1,20,"",1'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+
+  - id: market.price_unit_divine_and_exalted
+    statement: PoE2 prices are quoted in Divine Orbs and Exalted Orbs; the Chaos Orb is a crafting orb, not the unit of account. On 2026-11-24 in Forbidden Rites one Divine Orb was 452.6 Exalted Orbs and 16.06 Chaos Orbs on poe.ninja. A PoE2 price file needs Exalted (or Divine) as its unit where PoE1's uses Chaos.
+    source_kind: experiment
+    url: https://poe.ninja/poe2/api/economy/exchange/current/overview?league=Forbidden%20Rites&type=Currency
+    quote: '"rates":{"exalted":452.6,"chaos":16.06},"primary":"divine","secondary":"chaos"'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
+    value: {Exalted Orb: 452.6, Chaos Orb: 16.06}
+
+  - id: market.price_sources
+    statement: The stackable inputs are priced by poe.ninja's PoE2 exchange overview (types Currency, Fragments, Essences, Ritual for omens, Abyss, SoulCores, Runes, Delirium, Breach, Expedition, UncutGems; values in Divine Orbs; answers a plain server request while its web page refuses one), by poe2scout's API (keyed by metadata path), and by GGG's hourly Currency Exchange digest; rare items by the official trade site (`api/trade2/search` and `fetch`). Leagues on 2026-11-24 are Runes of Aldur and Forbidden Rites, with their Hardcore versions, and Standard.
+    source_kind: experiment
+    url: https://poe.ninja/poe2/api/data/index-state
+    quote: 'economyLeagues: [{name:"Forbidden Rites", url:"forbiddenrites", ...}, {name:"Runes of Aldur", ...}]'
+    patch_verified: "0.5.5.10"
+    date_checked: 2026-11-24
