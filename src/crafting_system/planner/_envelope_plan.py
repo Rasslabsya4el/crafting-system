@@ -44,10 +44,10 @@ from . import _limits
 from ._envelope import ACCEPT_BOUND, BoundError, Net, NoPolicy, Refused, Search, Standing, figure_error, reaches, resident_mb, solve_info_records
 from ._limits import Limit, claim
 from ._offer_floor import OTHER, OUTSIDE
-from ._offers import RESTART, BuyStartItem, PricedOffer
+from ._offers import BuyStartItem, PricedOffer, WipeStartItem
 from ._packed import PackedResult, Walked, solve_walked
 from ._pattern_bound import PatternBound, lowering, pack_pattern_model, pattern_lower_bound, pattern_offers
-from ._prune import corrupting_offer_pruned
+from ._prune import corrupting_offer_pruned, wipe_lands
 
 RESTART_KEY = ("restart",)
 
@@ -111,7 +111,14 @@ class CraftingProblem:
         self.cost_of = np.array([self.offers[position].cost for position in bound.positions], dtype=np.float64)  # and its cost
         self.expected = _expected(model, values)  # the lowered value of each pushed kernel of the model, in expectation
         self._lowest: tuple | None = None  # the last key `lowest` read, with what it read it under, and its answer
-        self.restart = next((p for p, priced in enumerate(self.offers) if isinstance(priced.offer.action, BuyStartItem)), None)
+        # the restart that buys the start item again: an action of every state but the start, which the upper graph holds at every tip (a wipe,
+        # OR-42, is an action only where its Scouring gives back the start, so it is an offer the search realizes like any other)
+        self.restart = next(
+            (p for p, priced in enumerate(self.offers) if isinstance(priced.offer.action, BuyStartItem) and not isinstance(priced.offer.action, WipeStartItem)), None
+        )
+        wipes = [priced.offer.action for priced in self.offers if isinstance(priced.offer.action, WipeStartItem)]
+        self.wiped_to = {id(action): abstraction.compress(action.wipe.scoured) for action in wipes}  # the state each wipe's Scouring must leave
+        self._wipes: dict[tuple[CompressedState, int], bool] = {}
         self.start_lower = float(values[0])  # key 0 is the start's
         self.keys_missing = 0
         self.bound_error = float(bound.error_bound)  # what the values below are lowered by: the search's consistency guard allows for it above 1e-6 (#867)
@@ -239,7 +246,9 @@ class CraftingProblem:
         for position, priced in enumerate(self.offers):
             action = priced.offer.action
             restart = isinstance(action, BuyStartItem)
-            if priced.label == RESTART and state == self.start:
+            if restart and state == self.start:
+                continue
+            if restart and isinstance(action, WipeStartItem) and not self.wipes(state, action):
                 continue
             if k is not None and k == self.ruined and not restart:
                 continue  # a ruined key: every other offer leads to the restart all the same, at a cost (its value is the restart's backup)
@@ -264,6 +273,14 @@ class CraftingProblem:
                     continue  # refused at this state (an unopened listing takes the draw alone)
             out.append((max(low, least), position))
         return out
+
+    def wipes(self, state: CompressedState, action: WipeStartItem) -> bool:
+        """Whether the wipe `action` gives back the start at `state` (`_prune.wipe_lands`), asked once per state."""
+        key = (state, id(action))
+        found = self._wipes.get(key)
+        if found is None:
+            found = self._wipes[key] = wipe_lands(self.ab, action, state, self.wiped_to[id(action)])
+        return found
 
     def tighten(self, state: CompressedState, position: int, best: float) -> float | None:
         """The offer's own floor at `state`, its chance worked out until the floor is above `best` (`_offer_floor.OfferFloors.tighten`); None without

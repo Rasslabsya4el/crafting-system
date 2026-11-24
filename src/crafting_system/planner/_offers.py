@@ -12,6 +12,7 @@ from collections import Counter, defaultdict
 from collections.abc import Callable, Collection, Hashable, Iterable, Mapping
 from dataclasses import dataclass, replace
 from itertools import combinations, product
+from typing import Any
 
 from crafting_system.abstraction import Goal, Status, status_of
 from crafting_system.actions import Action, Axis, ListingGap, Need, NotApplicableError, OutOfScopeError, Reads, StrandUse, UnmodelledBase, base_refusal, catalog, catalog_kinds, crafted_limit_of, default_actions, drawable_mod_ids, holds_placeholder, kinds, open_listing, unveil_pool_families
@@ -25,6 +26,7 @@ from . import _limits
 from ._limits import Limit, claim, kind_title
 
 RESTART = "restart"
+WIPE_PREFIX = "Start over on the same item: "  # the label of a wipe (OR-42): this, then its orbs ("Orb of Scouring, then Orb of Transmutation")
 UNVEIL_KIND = "unveil"  # the catalog kind whose offer a bench craft can block (ADR-0026)
 LOCK_KIND = "hinekora-lock"  # the name the run's methods setting gives Hinekora's Lock; off unless the setting names it (OR-37, #1125; `_foresight`)
 FREE_ACTION_SHARE = 1e-6  # what an action that consumes nothing costs, as a share of the cheapest offer that costs something (ADR-0026)
@@ -408,6 +410,42 @@ class BuyStartItem(Action):
 
     def sample(self, rng: random.Random) -> Item:
         return self.item
+
+
+@dataclass(frozen=True)
+class WipeStartItem(BuyStartItem):
+    """Start over on the item in hand (OR-42): wipe it with the orbs of `wipe` (`actions.Wipe`: an Orb of Scouring, then the orb that makes
+    the start's rarity where one is needed) instead of buying the start item again.
+
+    It ends where the restart does, in the start state, so the planner treats it as a restart (`isinstance(action, BuyStartItem)` holds) of
+    another price; unlike the restart it is an action only of a state whose Scouring leaves `wipe.scoured` (`_prune.wipe_lands`): not of a
+    corrupted item, nor of one a fractured mod, a locked side or anything else a Scouring keeps would take somewhere else than the start.
+    """
+
+    wipe: Any = None  # actions.Wipe; the planner names no concrete action class
+
+    def label(self, data: GameData | None = None) -> str:
+        return wipe_label(self.wipe, data)
+
+
+def wipe_label(wipe: Any, data: GameData | None = None) -> str:
+    """The name of the wipe on the page: "Start over on the same item: Orb of Scouring, then Orb of Transmutation" (OR-16)."""
+    return WIPE_PREFIX + ", then ".join(orb.label(data) for orb in wipe.orbs)
+
+
+def starts_over(label: str) -> bool:
+    """Whether a policy action of this label starts the craft over: the restart, or a wipe (OR-42)."""
+    return label == RESTART or label.startswith(WIPE_PREFIX)
+
+
+def wipe_offer(data: GameData, wipe: Any, start: Item) -> Offer:
+    """The offer of the wipe back to `start` (OR-42): what its orbs consume, one use each."""
+    resources: dict[str, int] = {}
+    for orb in wipe.orbs:
+        for name, count in orb.resources(data).items():
+            resources[name] = resources.get(name, 0) + count
+    action = WipeStartItem(start, wipe)
+    return Offer(action.label(data), action, resources, shares=False)
 
 
 def _allowing(data: GameData, start_item: Item, action: Action) -> Action:

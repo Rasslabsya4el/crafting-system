@@ -30,11 +30,14 @@ from .contract import Action, Adds, Reads
 from .errors import NotApplicableError
 from .magic import AlterationOrb, TransmutationOrb
 from .outcomes import Outcomes
+from .scour import ScouringOrb
 
 __all__ = [
     "DRAW_LABEL",
     "OpenListing",
+    "Wipe",
     "open_listing",
+    "start_over_wipe",
     "unopened_listing",
 ]
 
@@ -103,3 +106,51 @@ class OpenListing(Action):
             raise NotApplicableError("the draw of a bought item's mods works only on a listing that is not opened yet")
         opened = item.changed(data, unopened=False, rarity=self.rarity if self.rarity is Rarity.MAGIC else Rarity.NORMAL)
         return DRAWN_BY[self.rarity].outcomes(data, opened)
+
+
+@dataclass(frozen=True)
+class Wipe:
+    """Starting over on the item in hand instead of buying the start item again (OR-42): the orbs a player uses, in order, and the item the
+    first of them (an Orb of Scouring) must leave for the wipe to give back the start.
+
+    `scouring` is that orb; `scoured` is the item it must leave (the start item itself, or the Normal base of a bought listing, which the
+    orb after it makes the listing's rarity: its mods are then the same draw as the listing's, `OpenListing`); `orbs` are every orb used,
+    the Scouring first. A state the Scouring leaves anything else on (a fractured mod the start does not hold, a locked side, another
+    influence, quality, implicit or strand count) is not wiped back to the start, and a corrupted item takes no Scouring.
+    """
+
+    scouring: Action
+    scoured: Item
+    orbs: tuple[Action, ...]
+
+
+def start_over_wipe(data: GameData, start: Item, listing: Item | None, paid: bool = False) -> Wipe | None:
+    """How the start item `start` is wiped back to itself (OR-42), or None when no wipe gives it back.
+
+    * a bought listing (`listing`, ADR-0064): an Orb of Scouring leaves its Normal base, and the orb that makes the listing's rarity (an Orb
+      of Transmutation for Magic, an Orb of Alchemy for Rare) draws its mods as the listing's draw does; with `paid` the draw is that orb
+      already (#1522), so the wipe is the Scouring alone;
+    * a Normal start with no mod, or a start whose every mod is fractured and that a Scouring leaves as it is: the Scouring alone;
+    * a corrupted start, or one holding a mod a Scouring removes: none (buying it again is the only way back).
+    """
+    if start.corrupted:
+        return None
+    scouring = ScouringOrb()
+    if listing is not None:
+        if listing.corrupted or listing.mods:
+            return None
+        base = listing.changed(data, unopened=False)
+        orbs: tuple[Action, ...] = (scouring,) if paid else (scouring, MADE_BY[start.rarity])
+        return Wipe(scouring, base, orbs)
+    if start.unopened or any(not entry.fractured for entry in start.mods):
+        return None
+    if start.rarity is not Rarity.NORMAL:
+        try:
+            left = scouring.outcomes(data, start).retained
+        except NotApplicableError:
+            return None
+        if left != start:
+            return None
+    elif start.mods:
+        return None
+    return Wipe(scouring, start, (scouring,))

@@ -17,12 +17,13 @@ Quality changes no odds, so the same catalysts put on later cost the same, and t
 """
 
 from collections.abc import Iterable
+from dataclasses import replace
 
 from crafting_system.abstraction import PRUNED_CORRUPTING, PRUNED_QUALITY, Abstraction, CompressedState
 from crafting_system.actions import NotApplicableError, OutOfScopeError
 from crafting_system.solver import Action
 
-from ._offers import RESTART, BuyStartItem, PricedOffer
+from ._offers import BuyStartItem, PricedOffer, WipeStartItem
 
 
 def chosen_offers(
@@ -72,7 +73,9 @@ def keyed_offers(
     """
     allowed: list[tuple[int, PricedOffer, object]] = []  # (position, offer, kernel key or None for restart)
     for position, priced in enumerate(offers):
-        if priced.label == RESTART and state == start:
+        if isinstance(priced.offer.action, BuyStartItem) and state == start:
+            continue
+        if isinstance(priced.offer.action, WipeStartItem) and not wipe_lands(abstraction, priced.offer.action, state):
             continue
         if prune_corrupting and corrupting_offer_pruned(abstraction, priced, state):
             abstraction.prunings.note(priced.label, PRUNED_CORRUPTING)
@@ -153,3 +156,22 @@ def corrupting_offer_pruned(abstraction: Abstraction, priced: PricedOffer, state
         return False
     adds = priced.offer.action.adds(abstraction.data)
     return adds.corrupts and adds.keeps_mods and not abstraction.meets_requirements(state)
+
+
+def wipe_lands(abstraction: Abstraction, action: WipeStartItem, state: CompressedState, scoured: CompressedState | None = None) -> bool:
+    """Whether wiping the item of `state` (OR-42) gives back the start: its Orb of Scouring leaves exactly the state of `action.wipe.scoured`
+    (`scoured`, when the caller has compressed it already), the imprints held aside. A corrupted item takes no Scouring, and a state the
+    Scouring leaves a mod, a locked side or anything else on that the start does not hold is not wiped back to it."""
+    flags = state.flags
+    if flags.corrupted or flags.unopened:
+        return False
+    try:
+        after = abstraction.kernel(state, action.wipe.scouring)
+    except (NotApplicableError, OutOfScopeError):
+        return False
+    if len(after) != 1:
+        return False
+    (left,) = after
+    if scoured is None:
+        scoured = abstraction.compress(action.wipe.scoured)
+    return replace(left, imprints=()) == scoured

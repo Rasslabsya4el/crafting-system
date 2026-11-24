@@ -28,7 +28,7 @@ from crafting_system.abstraction import _pattern
 from crafting_system.budget import NO_PLAN, PIECES, STATES, Binding, Budget, BudgetExceeded, Clock, checkpoint, running, stage
 from crafting_system.budget import active as budget_active
 from crafting_system.abstraction import Abstraction, CompressedState, Gap, Goal, adds_metamod, integer_weights, pattern_refusal, refusal_causes
-from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, open_listing, sharing, unopened_listing
+from crafting_system.actions import BLOCKING, Axis, NotApplicableError, OutOfScopeError, Reading, kinds, open_listing, sharing, start_over_wipe, unopened_listing
 from crafting_system.data import GameData
 from crafting_system.items import Item, eldritch_side
 from crafting_system.prices import PriceFile, lock_price, planned_price
@@ -53,7 +53,7 @@ from . import _limits
 from ._made_start import made_start
 from ._start_types import MadeStart
 from ._limits import Limit, approximate_limits, rough_mean_limits, budget_limit, claim, kind_title, model_gap_limits, pruning_limits, risk_limits, twins_limit, unpriced_limits, with_limits
-from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
+from ._offers import RESTART, BuyStartItem, Offer, PricedOffer, WipeStartItem, wipe_offer, cheapest_per_class, eldritch_unreachable, free_action_cost, listing_draw, offers_for, price_offers, same_craft_limit, split_usable, takes_inputs, unusable_limits
 from . import _packed
 from ._envelope import ACCEPT_BOUND, Net, NoPolicy, Standing
 from ._envelope_plan import SEARCH_PER_BUILD, BoundError, EnvelopeInfo, build_stop, certified_upper, envelope_limits, envelope_result
@@ -63,7 +63,7 @@ from ._presenter import presenter_limits
 from ._price_cut import price_cut_limit, restart_dominated
 from . import _growth, _rounds
 from ._rounds import RoundCall
-from ._prune import chosen_offers, solver_actions
+from ._prune import chosen_offers, solver_actions, wipe_lands
 from ._start_types import StartChoice
 
 VIEW_FROM_STATES = 1_000  # a packed plan whose policy visits more item states than this is shown by its lumped chain (ticket #70)
@@ -349,6 +349,8 @@ def offer_action(
     if isinstance(priced.offer.action, BuyStartItem):
         if start is None:
             raise ValueError("`restart` needs the start state")
+        if isinstance(priced.offer.action, WipeStartItem) and not wipe_lands(abstraction, priced.offer.action, state):
+            raise NotApplicableError("the Orb of Scouring does not give the start item back here")
         return Action(priced.label, priced.cost, (Outcome(start, 1),))
     weights = integer_weights(abstraction.kernel(state, priced.offer.action))
     return Action(priced.label, priced.cost, tuple(Outcome(s, w) for s, w in weights.items()))
@@ -876,6 +878,13 @@ def _make_plan(
         parts = price_of_start.made.goods if price_of_start.made is not None else ((bought, 1, price_of_start.chaos, price_of_start.source),)
         marks = ((bought, price_of_start.mark),) if price_of_start.mark else ()
         priced = (*priced, PricedOffer(restart, price_of_start.chaos, parts, marks))
+        # OR-42: starting over may wipe the item in hand instead, where that is cheaper; it is offered beside the restart, which stays at every
+        # state (a wipe is an action only where its Scouring gives the start back: `_prune.wipe_lands`)
+        wipe = start_over_wipe(data, target.start_item, listing, paid=listing is not None and normal_base)
+        if wipe is not None:
+            wiped, _ = price_offers((wipe_offer(data, wipe, listing or target.start_item),), prices, price_source)
+            if wiped and wiped[0].cost < price_of_start.chaos:
+                priced = (*priced, *wiped)
     # a route judged against the plan: no price cut, since the route may name the offer it would leave out; a round of the rounds is cut, and its
     # cut keeps the route's offers (`route_actions`)
     judged = incumbent is not None or judges_route or (route_actions is not None and round_call is None)

@@ -78,7 +78,7 @@ from crafting_system.risk import RiskReport
 from crafting_system.solver import Action
 from crafting_system.prices.price_names import canonical_influences
 from crafting_system.targets import Target, plain_base_names
-from crafting_system.planner import PROOF_PROVED, guide_plan, proof_words
+from crafting_system.planner import PROOF_PROVED, WIPE_PREFIX, guide_plan, proof_words, starts_over
 from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
 from ._interval import IntervalAnswer
@@ -372,7 +372,7 @@ def steps_of_chain(chain: Chain) -> Flow:
     """
     cached = getattr(chain, "_steps", None)
     if cached is None:
-        cached = flow_of(chain, is_restart=lambda action: action.label == RESTART, loss=LOST_LEAVES)
+        cached = flow_of(chain, is_restart=lambda action: starts_over(action.label), loss=LOST_LEAVES)
         object.__setattr__(chain, "_steps", cached)
     return cached
 
@@ -689,6 +689,8 @@ class _View:
         """
         if edge.kind == "goal" or edge.to is None:
             return "the target", False
+        if edge.kind == "failure" and step.action is not None and step.action.label.startswith(WIPE_PREFIX):
+            return "the start item again, the same item wiped", False
         if edge.kind == "failure" and step.action is not None and step.action.label == RESTART:
             again = "made again at the vendor" if self.first is not None else "made again" if self.plan.start_price.made is not None else "bought again"
             return f"the start item {again}", False
@@ -708,6 +710,9 @@ class _View:
             lead = f"{words}, " if words else ""
             if there is None:
                 return f"{lead}the route has no step for this item", True
+            if there.label.startswith(WIPE_PREFIX):  # the wipe of OR-42: the same item, with what its orbs cost
+                orbs = there.label.removeprefix(WIPE_PREFIX)
+                return f"{lead}the item is started over: wiped with {orbs} for {money(self.plan.offer_of(there).cost)}", True
             if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442), and the item that sends there
                 return f"{lead}the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
         if words:
@@ -873,7 +878,7 @@ class _View:
         """
         found = []
         for edge, (what, names_row) in zip(edges, (self.edge_phrase(step, edge) for edge in edges)):
-            if edge.to is None or edge.kind in ("goal", "again") or (step.action is not None and step.action.label == RESTART):
+            if edge.to is None or edge.kind in ("goal", "again") or (step.action is not None and starts_over(step.action.label)):
                 found.append((what, names_row))
             elif edge.to == step.number:
                 found.append((f"{what}, this step again", names_row))
@@ -895,7 +900,7 @@ class _View:
 
         Only for a step with several outcomes; the count only when the abstraction tracks every mod.
         """
-        if not forward or action.label == RESTART or sum(1 for outcome in action.outcomes if outcome.weight > 0) < 2:
+        if not forward or starts_over(action.label) or sum(1 for outcome in action.outcomes if outcome.weight > 0) < 2:
             return []
         landing = list(dict.fromkeys(state for edge in forward for state in edge.states))
         lines = []
@@ -909,7 +914,7 @@ class _View:
 
     def tier_field(self, step: Step, action: Action) -> Field | None:
         """OR-31: one line per wanted family the step can add, with the chance of each tier, mixed over the step's states."""
-        if action.label == RESTART:
+        if starts_over(action.label):
             return None
         lines = tier_lines(self.ab, self.plan.offer_of(action).offer.action, step.states, step.weights)
         return Field("Tier chances", tuple(Line(self.tier_text(line)) for line in lines)) if lines else None
@@ -951,7 +956,7 @@ class _View:
     def branches(self, step: Step, after: ItemCard) -> tuple[Branch, ...]:
         """The card of each branch whose landing items differ from `after`; only a step with several branches draws them."""
         edges = [edge for edge in step.edges if edge.kind != "again"]
-        if len(edges) < 2 or step.action is None or step.action.label == RESTART:
+        if len(edges) < 2 or step.action is None or starts_over(step.action.label):
             return ()
         found = []
         for edge, (what, _) in zip(edges, self.phrases(step, edges)):
@@ -966,6 +971,8 @@ class _View:
             return [money(self.plan.start_price.chaos), *([mark] if mark else [])]  # OR-8: a thin market's price carries its mark
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the listing's price was paid in row 1 and is paid again by every restart
             again = " and again by each restart" if any(step.action is not None and step.action.label == RESTART for step in self.flow.steps) else ""
+            if any(step.action is not None and step.action.label.startswith(WIPE_PREFIX) for step in self.flow.steps):  # OR-42: a wipe's orbs draw them anew
+                again += "; after a wipe, the wipe's last orb draws them anew"
             if self.plan.start_price.made is not None:  # the item was made in row 1, not bought (#1523)
                 return [f"{FREE}: the item was paid in step 1{again}"]
             return [f"{FREE}: the listing's price is paid in step 1{again}"]
@@ -991,6 +998,8 @@ class _View:
                 return f"Restart: make the start item again with an {self.plan.start_price.made.orb}"
             name = self.start_name()
             return f"Restart: buy {name} again" if name else "Restart: buy the start item again"
+        if action.label.startswith(WIPE_PREFIX):  # OR-42: the orbs that wipe the item back to the start, named in order
+            return action.label
         if action.label == DRAW_LABEL:  # the first draw of a bought item (ADR-0064): the player reads what the listing came with, he uses nothing
             return MADE_DRAW_TITLE if self.plan.start_price.made is not None else DRAW_TITLE
         offer = self.plan.offer_of(action).offer
@@ -1198,7 +1207,7 @@ class _View:
         if action is None:
             fields = _fields(_plain("Why", step.reason or "no action is available here"))
             return StepRow(number, "No action", fields, card_of_states(self.ab, step.states, self.reader), self.anchor(number))
-        restart = action.label == RESTART
+        restart = starts_over(action.label)
         sure = self.sure(action) and not restart
         removing = [edge for edge in step.edges if sure and self.removes(edge)]  # a sure use's removal is no failure: it is what it is used for
         moving = [edge for edge in step.edges if edge.kind in ("forward", "goal") or edge in removing]
@@ -1244,7 +1253,7 @@ class _View:
         if edge.kind != "failure" or not edge.lost or edge.to is None:
             return False
         there = self.flow.steps[edge.to - 1].action
-        return there is not None and there.label != RESTART
+        return there is not None and not starts_over(there.label)
 
     def reached_from(self, number: int) -> Field | None:
         """The rows that lead to row `number`, when the row above it is not one of them: a row reached only from a loop or a jump is printed

@@ -167,6 +167,8 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_starts.py", "_plan_candidate", ("PlanError",), EITHER, "a start option's plan was refused, whichever family or error it was: its row has no plan and shows the error's text"),
     ("planner/_plan.py", "reading_search.search", ("OutOfScopeError", "NoPolicy", "BoundError", "ConvergenceError"), GAP, "the envelope search of one reading of a rule axis cannot answer, as the plan's own search (#1111): the bound has no members for it, no policy closed, the bound fell, or the solver could not certify the plan of a stopped search; the states it knew are counted and the text becomes the `PlanError`"),
     ("planner/_plan.py", "solve_each_reading", ("OutOfScopeError", "ConvergenceError"), GAP, "a reading's model has no rule outside the kernel's own gap records, or its solve did not converge: the text becomes the `PlanError` (#589)"),
+    ("planner/_prune.py", "wipe_lands", ("NotApplicableError", "OutOfScopeError"), EITHER, "the Scouring of a wipe refused at the state (the game) or with no rule there (a gap): no wipe there, and the restart that buys the start item again stays, so the plan is exact for what it offers (OR-42, #1201)"),
+    ("actions/listing.py", "start_over_wipe", ("NotApplicableError",), GAME, "the game refuses the Scouring on the start item (a Normal item): no wipe gives it back, and starting over buys it again (OR-42, #1201)"),
     ("planner/_prune.py", "keyed_offers", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
     ("planner/_prune.py", "keyed_offers", ("OutOfScopeError",), RECORDS, "a model gap: written"),
     ("planner/_prune.py", "solver_actions", ("NotApplicableError",), RECORDS, "a game refusal: silent"),
