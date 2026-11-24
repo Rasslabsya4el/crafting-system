@@ -1235,7 +1235,7 @@ class _View:
             self.reached_from(number),
             _plain("Goal", *goal),
             _plain("Accepts", *self.accepts(action, moving, after)),
-            self.trade_field() if restart else None,
+            self.trade_field() if action.label == RESTART else None,  # a wipe (OR-42) buys nothing
             Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
             None if one_way else self.tier_field(step, action),  # a listing that goes on the same way: its odds change no choice (crafter, #1442)
             _plain("Cost per use", *self.cost_lines(action)),

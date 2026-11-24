@@ -165,6 +165,15 @@ def wipe_lands(abstraction: Abstraction, action: WipeStartItem, state: Compresse
     flags = state.flags
     if flags.corrupted or flags.unopened:
         return False
+    if scoured is None:
+        scoured = abstraction.compress(action.wipe.scoured)
+    # what a Scouring keeps must already be the start's: the fractured mods, the influences, the implicits, the quality and the strands (a cheap
+    # test before the kernel; the kernel below still decides, a locked side included)
+    if (
+        state.fractured != scoured.fractured or flags.influences != scoured.flags.influences or state.implicits != scoured.implicits
+        or state.quality != scoured.quality or state.strands != scoured.strands or state.replaced != scoured.replaced
+    ):  # fmt: skip
+        return False
     try:
         after = abstraction.kernel(state, action.wipe.scouring)
     except (NotApplicableError, OutOfScopeError):
@@ -172,6 +181,4 @@ def wipe_lands(abstraction: Abstraction, action: WipeStartItem, state: Compresse
     if len(after) != 1:
         return False
     (left,) = after
-    if scoured is None:
-        scoured = abstraction.compress(action.wipe.scoured)
     return replace(left, imprints=()) == scoured

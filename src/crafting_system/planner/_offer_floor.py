@@ -203,7 +203,9 @@ class OfferFloors:
                     self.ask()
                 entry = _Entry(position, offer, kind, 0, ONE)
                 if kind == RESTART_KIND:
-                    if restart is not None and offer is restart.priced:  # back to the start: a move into its shape (or its listing and the draw)
+                    # back to the start: a move into its shape (or its listing and the draw); a wipe (OR-42) is one too, at its own price, and is
+                    # given it in every shape although it lands only where its Scouring gives back the start: a relaxation, so still a floor
+                    if restart is not None and isinstance(offer.offer.action, BuyStartItem):
                         entry.pbar, entry.extra, entry.dests = restart.pbar, restart.extra, frozenset({0})
                     else:  # the draw that opens a listing: no listing is of this shape
                         entry.kind = REFUSED

@@ -20,7 +20,7 @@ from crafting_system.planner import RESTART, BuyStartItem, WipeStartItem, plan_t
 from crafting_system.planner._offers import DRAW_COST_SHARE
 from crafting_system.planner._prune import wipe_lands
 from crafting_system.prices import PriceEntry
-from crafting_system.targets import parse_target, start_price_key
+from crafting_system.targets import buy_spec_of, parse_target, start_price_key
 
 DATA = magic_toy()
 SCOURING = 1.0
@@ -183,3 +183,6 @@ def test_the_page_names_the_wipe_as_a_step_with_its_cost():
     assert "the item is started over: wiped with Orb of Scouring, then Orb of Transmutation for 1.2 c" in text  # the Regal's failure goes there
     assert "Next step the start item again, the same item wiped → step 2" in text
     assert "Restart: buy" not in text  # no restart buys the listing again
+    with_buy = route_page(build_report(plan, DATA), DATA, buy_spec=buy_spec_of(DATA, aim))
+    wipe_row = with_buy[with_buy.index(WIPE_LABEL.split(":")[0]) :]
+    assert "trade site" not in html.unescape(re.sub(r"<[^>]+>", " ", wipe_row[: wipe_row.index("step 2")]))  # a wipe buys nothing
