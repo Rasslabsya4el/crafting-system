@@ -14,7 +14,7 @@ Start with `PROGRESS.md` (summary in Russian for the owner, then the log).
 | `DATA-PLAN.md` | which export gives which table, what is missing | ADR-0003, `src/crafting_system/data/PIN.json` |
 | `GLOSSARY-POE2.md` | PoE2 terms in `GLOSSARY.md` form | `GLOSSARY.md` |
 | `COMPLETENESS.md` | the completeness pass: 604 of 604 crafting items named by a claim | – |
-| `claims/*.yaml` | 463 claims in 53 mechanic families, in the exact schema of the PoE1 rules registry (ADR-0004) | `src/crafting_system/rules/claims/` |
+| `claims/*.yaml` | 468 claims in 54 mechanic families, in the exact schema of the PoE1 rules registry (ADR-0004) | `src/crafting_system/rules/claims/` |
 | `notes/*.md` | confidence (high/medium/low) per claim id, conflicts between sources, in-game checks | open sections of `docs/research/` notes |
 | `research/*.md` | the raw research per area, with every source and quote: patch history, currency and omens, essences/augments/corruption/abyss, items and modifiers, data sources, Reddit evidence, the PoE1 format inventory | `docs/research/` |
 | `../../research/poe2/data/` | `PIN.json` (repoe-fork/poe2 0.5.5.10 + 42 dat-export tables + Craft of Exile beta data), `fetch_poe2.py`, `derive_tables.py`, `completeness.py`, the official trade site's lists of 2026-11-24, readable extracts in `derived/` | `src/crafting_system/data/` |

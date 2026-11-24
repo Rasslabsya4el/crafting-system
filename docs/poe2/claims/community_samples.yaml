@@ -1,0 +1,62 @@
+# Mechanic family: community_samples (large player samples that measure what the PoE2 game data hides:
+# the reveal window of desecration, desecrated-mod weights, a check of poe2db's estimated weights, and the
+# lowest-level rule of Whittling). PoE2 research of 2026-11-24/25, docs/poe2/research/community-evidence.md;
+# Reddit read through the Arctic Shift archive (reddit.com refuses this server). Quotes are the posts' own words.
+rules:
+  - id: community_samples.reveal_always_one_desecrated
+    statement: A desecration reveal shows 3 options and at least 1 of them is always a desecrated-only mod (none of 563 reveal windows had 0). On item level 65+ rings, prefix reveals (236) showed 1, 2 or 3 desecrated-only options in 83.9%, 15.7% and 0.4% of windows, suffix reveals (327) in 86.2%, 12.5% and 1.2%; about 37% of all 1,689 options were desecrated-only. So the 3 options are not 3 independent draws from one pool.
+    source_kind: experiment
+    url: https://www.reddit.com/r/PathOfExile2/comments/1uslcts/
+    quote: "roughly 37% of the shown options were desecrated modifiers ... roughly 63% were natural ... no cases with 0 desecrated modifiers"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-25
+    value: {prefix: {1: 198, 2: 37, 3: 1, 0: 0}, suffix: {1: 282, 2: 41, 3: 4, 0: 0}}
+    approximate: true
+    approximate_reason: One player's sample of 563 reveal windows on rings only; the rule for other classes and the exact window distribution are not published by the game.
+    page_statement: The chance that a desecration reveal offers the mod you want is estimated from one large player sample on rings.
+    page_source: a player's sample of 563 reveals
+
+  - id: community_samples.desecrated_weights_unequal
+    statement: Desecrated-only mods do not share one weight (poe2db's weight 1 for them is a placeholder). Among 15 desecrated ring suffixes the observed shares ran from about 11.8% (Strength and Dexterity) to about 1.2% (Cooldown Recovery Rate) against 6.7% if equal; an existing attribute mod removes the desecrated attribute options from the pool, and resistances do not block each other.
+    source_kind: experiment
+    url: https://www.reddit.com/r/PathOfExile2/comments/1uva5fc/
+    quote: "The 1 weighting for desecrated mods is a placeholder value that we know is inaccurate. The mod pool weighting was generated from the chance of success from the recombinator"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-25
+    approximate: true
+    approximate_reason: Shares from about 1,000 suffix options with wide intervals; the per-mod charts are images not kept in the archive.
+    page_statement: The odds of each desecrated mod are rough estimates from a player sample, not game data.
+    page_source: a player's sample of about 500 rings
+
+  - id: community_samples.poe2db_weights_checked_by_chaos
+    statement: 1,811 Chaos Orb uses on item level 82 Intelligence boots matched poe2db's estimated weights within the 95% interval for every mod family but one (maximum Mana, observed about 9,500 to 12,500 against poe2db's 9,000). The estimates come from recombinator odds measured before 0.5.0; mods added since (rune-bound mods, Kolr's Hunt) carry guessed weights, and no new measurement by recombinator is possible while it is disabled.
+    source_kind: experiment
+    url: https://www.reddit.com/r/PathOfExile2/comments/1vsm9ip/
+    quote: "+X to maximum Mana` family is somewhere around 9,500–12,500. poe2db predicts a weight of 9,000"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-25
+    approximate: true
+    approximate_reason: One base checked by one player; poe2db's weights are themselves community estimates.
+    page_statement: The mod odds used for PoE2 are community estimates, checked by one player on one base.
+    page_source: a player's sample of 1,811 Chaos Orbs
+
+  - id: community_samples.whittling_lowest_level_not_tier
+    statement: Omen of Whittling removes the mod with the lowest modifier level (the level requirement of its tier), which can be a better tier of another family; on an item with tier 1 life and tier 2 evasion it removed the tier 1 life, whose level is lower.
+    source_kind: experiment
+    url: https://www.reddit.com/r/PathOfExile2/comments/1vicm56/
+    quote: "It is the lowest level requirement of modifier not it's tier"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-25
+
+  - id: community_samples.catalyst_drop_shares
+    statement: 1,000 Lavish Wombgifts gave 3,411 catalysts in these percentages (`value`); a separate 1,920 three-to-one catalyst reforges gave nearly the same spread, so one table may cover both (not tested).
+    source_kind: experiment
+    url: https://www.reddit.com/r/PathOfExile2/comments/1uczobt/
+    quote: "Data from 1,000 Lavish Wombgifts (Catalyst Weights)"
+    patch_verified: "0.5.0"
+    date_checked: 2026-11-25
+    value: {Neural Catalyst: 12.5, Flesh Catalyst: 12.2, Carapace Catalyst: 12.0, Adaptive Catalyst: 9.7, Xoph's Catalyst: 8.2, Esh's Catalyst: 7.4, Uul-Netol's Catalyst: 7.0, Tul's Catalyst: 6.9, Sibilant Catalyst: 6.0, Necrotic Catalyst: 5.5, Reaver Catalyst: 4.9, Chayula's Catalyst: 4.7, Skittering Catalyst: 3.0}
+    approximate: true
+    approximate_reason: One player's sample; drop shares, which matter to prices, not to a craft's outcome.
+    page_statement: How often each catalyst drops is estimated from one player's sample.
+    page_source: a player's sample of 1,000 Wombgifts
