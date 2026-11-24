@@ -23,6 +23,7 @@ Both ways give the same mean (`test_the_finish_and_the_search_give_the_same_mean
 """
 
 import dataclasses
+import math
 import datetime
 from fractions import Fraction
 
@@ -266,17 +267,18 @@ def test_the_catalysts_gain_law_is_an_approximate_input_of_the_finished_plan():
 
 
 def test_a_start_that_holds_every_mod_has_a_step_bound_for_the_simulator():
-    from crafting_system.cli._verify import MIN_STEPS, max_steps_for
+    from crafting_system.cli._verify import MIN_STEPS, STEPS_PER_MEAN, max_steps_for
 
-    assert max_steps_for(_plan(LIGHTNING_HELD)) == MIN_STEPS  # no action is offered to the mods: nothing to divide by
+    # no action is offered to the mods; the finish step's catalysts are the run's clicks (#1234): 50 times the E(0) = 13.35 the mean allows
+    assert max_steps_for(_plan(LIGHTNING_HELD)) == math.ceil(STEPS_PER_MEAN * _mean(84)) == 668 > MIN_STEPS
 
 
-def test_a_plan_a_given_route_is_judged_against_keeps_the_catalyst_among_its_offers():
-    # a route may name the catalyst as one of its steps, so a judged plan searches the quality with the mods (#159)
+def test_a_plan_a_given_route_is_judged_against_finishes_the_quality_too():
+    # a solved plan a route is judged against finishes the quality as any plan does; the route's catalyst rule is read as that finish (#1234)
     target = parse(CRAFTED, methods=("bench-craft", "catalyst"))
     plan = plan_target(D, target, _prices(), PlanSettings(recipe_starts=False, solver="envelope", judges_route=True))
-    assert plan.quality_finish is None and "Intrinsic Catalyst" in {priced.label for priced in plan.offers}
-    assert plan.mean_remaining == pytest.approx(6 * A + _mean(84) * K, rel=1e-9)
+    assert plan.quality_finish is not None and plan.mean_remaining == pytest.approx(6 * A, rel=1e-9)
+    assert plan.risk.mean.value == pytest.approx(6 * A + _mean(84) * K, rel=1e-9)
 
 
 QUALITY_KINDS = ("Catalysts", "Quality currency")  # the kinds that only set the quality (`Kind.only_quality`)

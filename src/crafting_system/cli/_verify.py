@@ -6,6 +6,10 @@ compressed state. The comparison is the mean total cost (the start price include
 computed mean, within `SIGMAS` standard errors of the simulated mean, and the run must have ended
 every time in the goal. Every interval is a normal approximation, good for thousands of runs.
 
+A plan with finish steps (the catalyst quality, the implicit's roll: `Plan.finish_steps`, #1234) is simulated with them: once an item holds
+every mod, each finish step's catalyst or orb is used on it, with its own sampler, until the item meets what that step asks, and the run ends
+when the item is the target as asked (`Plan.asked_target`); the computed mean is then the mods' and the finishes' (`Plan.craft_mean`).
+
 An approximate plan is verified the same way through the lift (`_lift`, ADR-0023): the policy of blocks is run on
 concrete items. There is no computed mean to compare with, only the certified interval `[lower, upper]`, so the
 run agrees when no run was cut or stopped and the simulated mean, within `SIGMAS` standard errors, touches that
@@ -21,7 +25,7 @@ from crafting_system.actions import Action
 from crafting_system.data import GameData
 from crafting_system.items import Item
 from crafting_system.simulator import SampledEstimate, SimulationReport, Step, simulate
-from crafting_system.planner import PackedPolicy, Plan, PricedOffer
+from crafting_system.planner import FINISH_QUALITY, PackedPolicy, Plan, PricedOffer
 
 from ._lift import lift
 
@@ -120,11 +124,11 @@ def max_steps_for(plan: Plan) -> int:
     `STEPS_PER_MEAN` times that is far in the tail of any sane policy; a policy whose odds are
     badly wrong then ends as `unfinished` instead of running 100,000 clicks per run.
     """
-    costs = [priced.cost for _, priced in chosen_offers(plan)]
-    if not costs:  # the start already meets what the policy plans (the mods of a quality finish, #159): no step is taken
+    costs = [priced.cost for _, priced in chosen_offers(plan)] + [step.priced.cost for step in plan.finish_steps]
+    if not costs:  # the start already meets the target as asked: no step is taken
         return MIN_STEPS
     cheapest = min(costs)
-    bound = math.ceil(STEPS_PER_MEAN * max(plan.mean_remaining, cheapest) / cheapest)
+    bound = math.ceil(STEPS_PER_MEAN * max(plan.craft_mean, cheapest) / cheapest)
     return max(MIN_STEPS, bound)
 
 
@@ -132,17 +136,18 @@ def verify(data: GameData, plan: Plan, *, runs: int = DEFAULT_RUNS, seed: int = 
     """Simulate `runs` crafts of the plan's policy from the target's start item."""
     steps = {state: Step(_memoized(priced.offer.action), priced.cost) for state, priced in chosen_offers(plan)}
     target = plan.target
-    policy = lift(plan, steps)
+    policy = with_finish_steps(plan, lift(plan, steps))
 
     limit = max_steps_for(plan)
     report = simulate(
-        data, policy, plan.simulated_start, target.is_met_by,
+        data, policy, plan.simulated_start, plan.asked_target.is_met_by,
         runs=runs, seed=seed, start_cost=plan.start_price.chaos, max_steps=limit, block=SIMULATION_BLOCK,
     )  # fmt: skip
     shift = plan.start_price.chaos
-    computed = shift + plan.mean_remaining
+    computed = shift + plan.craft_mean
     if plan.approximation is not None:
-        bounds = (shift + plan.approximation.lower, shift + plan.approximation.upper)
+        finishes = plan.craft_mean - plan.mean_remaining
+        bounds = (shift + plan.approximation.lower + finishes, shift + plan.approximation.upper + finishes)
         reason = _approximate_reason(report, bounds, limit)
         return Verification(runs, seed, limit, report, computed, None, not reason, reason, bounds)
     reason = ""
@@ -156,6 +161,26 @@ def verify(data: GameData, plan: Plan, *, runs: int = DEFAULT_RUNS, seed: int = 
     return Verification(
         runs, seed, limit, report, computed, plan.start_price.chaos + plan.risk.p90.value, not reason, reason
     )
+
+
+def with_finish_steps(plan: Plan, policy):
+    """`policy` of the mods (`lift`), followed by the plan's finish steps (the module text): on an item that holds every mod, the catalyst
+    or the orb of the first finish step whose wish the item does not meet yet."""
+    finishing = plan.finish_steps
+    if not finishing:
+        return policy
+    mods, asked = plan.target, plan.asked_target
+    wishes = []
+    for step in finishing:
+        met = asked.quality.is_met_by if step.kind == FINISH_QUALITY else (lambda item: all(wish.is_met_by(item) for wish in asked.implicits))
+        wishes.append((met, Step(step.priced.offer.action, step.priced.cost)))  # not memoized: each reads the quality or the implicit it sets
+
+    def finished(item: Item) -> Step | None:
+        if not mods.is_met_by(item):
+            return policy(item)
+        return next((step for met, step in wishes if not met(item)), None)
+
+    return finished
 
 
 def _approximate_reason(report: SimulationReport, bounds: tuple[float, float], limit: int) -> str:

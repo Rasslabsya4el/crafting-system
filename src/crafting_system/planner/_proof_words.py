@@ -150,7 +150,7 @@ def proof_words(plan, guide: float | None = None, *, recorded: bool = False) -> 
     """The proof sentence of `plan` (a `Plan`); `guide` is the cost of the guide's route with the start item, when one was given, and
     `recorded` says it is the figure its route file records, since the route's rules do not finish (#1596)."""
     total = _open(plan)
-    cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.mean_remaining)
+    cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.craft_mean)  # the mods and the finish steps (#1234)
     against = _guide_words(cost, guide, recorded)
     gap = _proved_gap(plan)
     if gap is not None and any(limit.kind == _limits.IMPRINTS for limit in plan.limits):  # the search left imprints out by its rule (#1567, #1580)

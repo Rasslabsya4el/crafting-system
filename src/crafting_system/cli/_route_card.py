@@ -561,8 +561,28 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
     prefixes, suffixes = (
         _fill(wanted[side], _capacity(data, target.base_id, side), ANY_OR_EMPTY) for side in SIDES
     )
-    implicits = (*_implicits(data, target.base_id), *(_wanted_implicit(data, wish) for wish in target.implicits))
+    # a wished implicit is drawn once, with the roll asked, in the place of the base's range of it (#1234, crafter on R06)
+    wished = {_hashes(mod_text_of(data.mods[mod_id])) for wish in target.implicits for mod_id in wish.mod_ids}
+    held = tuple(slot for slot in _implicits(data, target.base_id) if _hashes(slot.text) not in wished)
+    implicits = (*held, *(_wanted_implicit(data, wish) for wish in target.implicits))
     return ItemCard(data.base_items[target.base_id].name, properties, implicits, (), prefixes, suffixes, groups=tuple(groups))
+
+
+def with_quality(card: ItemCard, need) -> ItemCard:
+    """`card` once a finish step gave it the quality `need` asks (#1234): the quality's pill beside the rarity and item level, as a target's."""
+    shown = _quality(_kind(need), need.min_percent, " or more")
+    properties = [entry for entry in card.properties if "quality" not in entry.lower()]
+    at = next((index for index, entry in enumerate(properties) if entry in ("corrupted",) or entry.startswith("Memory Strands")), len(properties))
+    return replace(card, properties=(*properties[:at], shown, *properties[at:]))
+
+
+def with_implicits(card: ItemCard, data: GameData, wishes: Iterable[ImplicitRequirement]) -> ItemCard:
+    """`card` once a finish step rolled its implicit as `wishes` ask (#1234): each wished implicit's line with the roll asked, in the place
+    of the implicit's range."""
+    wishes = tuple(wishes)
+    texts = {_hashes(mod_text_of(data.mods[mod_id])) for wish in wishes for mod_id in wish.mod_ids}
+    kept = tuple(slot for slot in card.implicits if _hashes(slot.text) not in texts)
+    return replace(card, implicits=(*kept, *(_wanted_implicit(data, wish) for wish in wishes)))
 
 
 def roll_note(min_roll) -> str:
