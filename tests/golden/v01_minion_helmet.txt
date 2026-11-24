@@ -1,4 +1,5 @@
 Target: v01-minion-helmet.yaml
+Proof: Proved: no cheaper plan exists among all 4 crafts this planner can use on this item, every one checked to the end. Methods it cannot use yet are listed below the prices, and one of them could be cheaper.
 Approximate inputs (claims that no other source settles):
   Quality gems for a vendor recipe are counted as uncorrupted skill gems only, the narrowest reading. Source: the wiki asks for 'quality gems' with the tag and gives no rule for support, Awakened or corrupted gems.
   A vendor recipe is taken to keep the item level of the input, but it is not settled whether the flask or the gems can lower the result's item level. Source: two wiki pages that disagree in wording; no other source settles it.
