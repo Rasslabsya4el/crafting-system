@@ -192,7 +192,7 @@ def test_the_orb_of_dominance_is_not_cut():
     assert orb.cut_of(DATA, shaper_helmet(roll(P1, 3), roll(S1, 2), strands=100)) is None
 
 
-# --- the beast recipe: neither cuts nor spends, and borrows the pool without the cut --------------------------------------------
+# --- the beast recipe: neither cuts nor spends, and draws the Exalted Orb's pool without the cut (#1538) --------------------------------------------
 
 
 @pytest.mark.parametrize("strands", [1, 100])

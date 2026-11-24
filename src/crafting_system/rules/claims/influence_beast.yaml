@@ -36,7 +36,7 @@ rules:
     patch_verified: "3.26.0"  # the patch the guide says it is updated for (dateModified 2025-06-13)
     date_checked: 2026-11-24
     approximate: true
-    approximate_reason: "One secondary source: a single guide (Maxroll's Beastcrafting Guide, dated 2025-06-13, updated for 3.26) says the recipe is functionally an Exalted Orb on the influenced item; no wiki text or patch note confirms it, and no source says otherwise (#1538)."
+    approximate_reason: "One secondary source: a single guide (Maxroll's Beastcrafting Guide, dated 2025-06-13, updated for 3.26) says the recipe is functionally an Exalted Orb on the influenced item; no wiki text or patch note confirms it, and no source says otherwise (#1538). The guide is of 3.26; nothing read says whether 3.27 to 3.29 changed the recipe."
     page_statement: "A beast's influence recipe adds one mod to an item of that influence as an Exalted Orb would: any mod of the item's pool, not always one of the influence."
     page_source: "one guide (Maxroll's Beastcrafting Guide, 2025-06-13) says so; no wiki text confirms it"
 
