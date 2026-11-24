@@ -78,7 +78,7 @@ def price_uses(
     Divine Orb by its row of the file or, with none, as the file's rate, as `planner._offers.price_offers` prices them. Any other resource
     with no entry in the price file (a start price given on the command line) is not listed: it carries no source to show. With `policy` None, or `solve_uses` False, no expected use is solved and a depth is
     compared with one unit, the least a plan that takes the action buys. `mean` is the policy's expected cost without the start item
-    (default: the plan's own, `Plan.mean_remaining`); a given route passes its own, which the plan's optimum does not bound. With `all_uses`
+    (default: the plan's own, `Plan.craft_mean`, the mods and the finish steps); a given route passes its own, which the plan's optimum does not bound. With `all_uses`
     the expected uses of every resource are solved, not only of those whose depth could matter (a report of what a plan buys). `chain` is
     `policy` on item states when the caller holds it (a lumped view's item chain, `_route_chain.chain_of_plan`); else it is made from `policy`.
     """
@@ -87,7 +87,13 @@ def price_uses(
         return ()
     labels = _labels(plan, policy) if policy is not None else {}
     counts = _counts(plan, labels) if labels else {}
-    names = [name for name in dict.fromkeys(counts) if name in prices.prices or name in (CHAOS_ORB, DIVINE_ORB)]
+    # the finish steps after the mods buy their catalysts and orbs too (#1234), each a known mean number of uses
+    finishing: dict[str, float] = {}
+    for step in getattr(plan, "finish_steps", ()):
+        for name, count, _, _ in step.priced.parts:
+            if count:
+                finishing[name] = finishing.get(name, 0.0) + count * float(step.uses)
+    names = [name for name in dict.fromkeys((*counts, *finishing)) if name in prices.prices or name in (CHAOS_ORB, DIVINE_ORB)]
     start_name = plan.start_price.name if plan.start_price.bought else None
     made = getattr(plan.start_price, "made", None) if plan.start_price.bought else None
     # what the first start item is bought as: the item itself, or the goods of the recipe that makes it (an Awakener's Orb's, #1523)
@@ -97,7 +103,7 @@ def price_uses(
             names.insert(0, name)
     # the most a plan can buy of a resource is its whole expected cost over the resource's price: a price deeper than that needs no solve
     try:
-        spent = plan.mean_remaining if mean is None else mean
+        spent = (plan.craft_mean if hasattr(type(plan), "craft_mean") else plan.mean_remaining) if mean is None else mean
     except KeyError:  # a plan that was not solved (a stand-in for a route's own policy)
         spent = math.inf
     ceiling = spent + (plan.start_price.chaos if plan.start_price.bought else 0.0)
@@ -117,7 +123,10 @@ def price_uses(
         for name in need:
             total = math.fsum(per_label[label] * count for label, count in counts.get(name, {}).items())
             total += first.get(name, 0)  # the first purchase of the start item (or of its recipe's goods), before any restart
-            solved[name] = total
+            solved[name] = total + finishing.get(name, 0.0)
+    for name in need:
+        if name not in solved and name in finishing and not counts.get(name):  # a resource only the finish steps buy: its uses need no solve
+            solved[name] = finishing[name]
     found = []
     for name in names:
         uses = solved.get(name)

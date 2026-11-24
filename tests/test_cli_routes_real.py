@@ -96,7 +96,7 @@ def test_the_policy_reaches_the_goal_with_odds_mean_and_p90(solved):
     assert risk.success_probability.value == pytest.approx(1.0)
     assert 0.0 < risk.mean.value < float("inf")
     assert risk.p90.value >= risk.p50.value > 0.0
-    assert plan.mean_remaining == pytest.approx(risk.mean.value, rel=1e-9)
+    assert plan.craft_mean == pytest.approx(risk.mean.value, rel=1e-9)  # the mods and the finish steps (#1234)
     # only some essences that no source prices (poe.ninja, poe.watch, an earlier league) are dropped, and the
     # Harvest reforges whose lifeforce the fixture price file lacks (it holds the Primal lifeforce only)
     assert {label for label in labels_of(plan.limits, "unpriced") if not label.startswith("Harvest Reforge")} <= UNPRICED_ESSENCES
@@ -175,10 +175,10 @@ def test_the_states_of_a_policy_with_crafts_show_the_crafted_and_the_other_mods(
 
     if route_id == "R05":
         # since ticket #457 a bench Life or resistance has no natural tier and counts toward no line of R05: no craft is offered,
-        # so no state holds a crafted mod (before it, the cheap answer was a bench craft that met "Life T1"). Since #1289 the ring asks
-        # for its 20% Intrinsic quality, which a plan a route is judged against searches with the mods (`_quality_finish.applies`): the
-        # catalyst keeps the mods, so the model counts the other mods per side and the states say so.
-        assert "other mods:" in text and "crafted" not in text.replace("not crafted", "")
+        # so no state holds a crafted mod (before it, the cheap answer was a bench craft that met "Life T1"). Its 20% Intrinsic quality
+        # (#1289) is a finish step after the mods since #1234, also in a plan a route is judged against: no catalyst is in the model, which
+        # then has no action that reads the other mods, so the states do not count them.
+        assert "crafted" not in text.replace("not crafted", "")
         return
     assert "other mods:" in text
 

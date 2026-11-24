@@ -222,7 +222,8 @@ def test_an_implicit_requirement_is_a_wanted_implicit_with_hashes_the_grade_and_
 def test_an_implicit_requirement_with_neither_grade_nor_roll_has_no_note():
     wish = ImplicitRequirement("Strength", None, frozenset({STRENGTH}))
 
-    (_, wanted) = card_of_target(TEXTED, target_of(implicits=(wish,))).implicits
+    # the wished implicit is drawn once, in the place of the base's range of it (#1234)
+    (wanted,) = card_of_target(TEXTED, target_of(implicits=(wish,))).implicits
 
     assert wanted == Slot("+# to Strength", "wanted")
 

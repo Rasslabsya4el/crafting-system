@@ -79,6 +79,7 @@ from crafting_system.solver import Action
 from crafting_system.prices.price_names import canonical_influences
 from crafting_system.targets import Target, plain_base_names
 from crafting_system.planner import PROOF_PROVED, guide_plan, proof_words
+from crafting_system.planner import FINISH_QUALITY as QUALITY
 from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS, Plan, grouped, limit_text, more_labels, not_shown, spent_kinds_named
 
 from ._interval import IntervalAnswer
@@ -86,8 +87,9 @@ from ._marking import approximate_inputs, approximate_page_lines, price_inputs
 from ._price_marks import price_uses, use_line
 from ._report import Report
 from ._report_net import ask
-from ._route import RESTART, Route, RouteResult
+from ._route import RESTART, Route, RouteResult, finish_labels
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
+from ._route_card import with_implicits, with_quality
 from ._route_chain import chain_of_packed_policy
 from ._route_flow import _blocks as _route_flow_blocks
 from ._route_flow import Chain, Edge, Flow, LossReader, Step, arrived, chain_of_policy, flow_limits, flow_of
@@ -552,6 +554,9 @@ class _View:
         used = [step.action.label for step in self.flow.steps if step.action is not None]
         self.forced = essence_notes(data, self.ab.base_id, used)
         self.reader = _StateReader(self.ab, self.start_item, self.forced, self.plan.target.influences)
+        # the finishes drawn as the last rows, after the mods (#1234): a mods' goal leads to the first of them, not to the target
+        self.finishing = tuple(getattr(self.plan, "finish_steps", ()))  # a stand-in plan of a test has none
+        self.finish_row = len(self.flow.steps) + 2 if self.finishing else None
 
     # -- anchors and links ---------------------------------------------------------------------------------
 
@@ -689,6 +694,8 @@ class _View:
         (`item_words`): the item by which a player tells where it goes (#1442). Only when nothing tells them apart do the words name the row.
         """
         if edge.kind == "goal" or edge.to is None:
+            if self.finish_row is not None:  # the mods are made: the finish steps follow (#1234)
+                return f"every mod asked, then {finish_title(self.finishing[0])}", False
             return "the target", False
         if edge.kind == "failure" and step.action is not None and step.action.label == RESTART:
             again = "made again at the vendor" if self.first is not None else "made again" if self.plan.start_price.made is not None else "bought again"
@@ -844,11 +851,16 @@ class _View:
                 text = f"whatever mods it came with, go on with {self.next_title(edge)}"
                 return [self.link(text, edge.to + 1)] if onward else [Line(text)]
             text = chance_text(edge.chance)
+            if edge.kind == "goal" and self.finish_row is not None:  # the mods are made: the finish steps follow (#1234)
+                return [self.link(f"{text}, then {finish_title(self.finishing[0])}", self.finish_row)]
             return [self.link(f"{text}, then {self.next_title(edge)}", edge.to + 1)] if onward else [Line(text)]
         lines = []
         for edge, (what, _) in zip(shown, self.phrases(step, shown)):
             text = f"{what}: {chance_text(edge.chance)}" + (" of uses" if sure else "")
-            lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1))
+            if edge.kind == "goal" and self.finish_row is not None:
+                lines.append(self.link(text, self.finish_row))
+            else:
+                lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1))
         return lines
 
     def failure_lines(self, step: Step, failing: list[Edge]) -> list[Line]:
@@ -970,15 +982,7 @@ class _View:
             if self.plan.start_price.made is not None:  # the item was made in row 1, not bought (#1523)
                 return [f"{FREE}: the item was paid in step 1{again}"]
             return [f"{FREE}: the listing's price is paid in step 1{again}"]
-        priced = self.plan.offer_of(action)
-        if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
-            return [FREE]
-        stand_ins = priced.offer.action.stand_ins(self.data)  # a resource paid in place of goods no price list holds says what it is (#1518)
-        lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
-        if len(priced.parts) > 1:
-            lines.append(f"total {money(priced.cost)}")
-        lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
-        return lines
+        return priced_lines(self.data, self.plan.offer_of(action))
 
     def plan_name(self, price_name: str | None) -> str | None:
         """A price name as the page shows it: the base by its game name, never its id (#553, #481); words tell it from a base of its name."""
@@ -1245,8 +1249,39 @@ class _View:
             Field("On failure", tuple(self.failure_lines(step, failing)), "warn") if failing and not restart else None,
             _plain("Note", *self.notes(action, step, restart, goal)),
         )
-        final = any(edge.kind == "goal" for edge in step.edges)
+        final = any(edge.kind == "goal" for edge in step.edges) and not self.finishing  # with finish steps, the last of them makes the target
         return StepRow(number, self.title(action), fields, after, self.anchor(number), final, step_cost, self.branches(step, after), step.uses)
+
+    def goal_states(self) -> list[CompressedState]:
+        """The item states the mods' steps end in, the target's mods made; the start's own when no step is needed."""
+        found = [state for step in self.flow.steps for edge in step.edges if edge.kind == "goal" for state in edge.states]
+        return list(dict.fromkeys(found)) or [self.plan.start]
+
+    def finish_rows(self) -> list[StepRow]:
+        """The finish steps as the last rows (#1234, OR-16): once the mods are made, the catalysts until the quality asked, then the Blessed
+        Orbs until the implicit's roll; each with its cost per use, its mean uses, its cost, and the item it leaves (the quality, the roll)."""
+        if not self.finishing:
+            return []
+        asked = self.plan.asked_target
+        card = card_of_states(self.ab, self.goal_states(), self.reader)
+        rows = []
+        for at, step in enumerate(self.finishing):
+            number = self.finish_row + at
+            card = with_quality(card, asked.quality) if step.kind == QUALITY else with_implicits(card, self.data, asked.implicits)
+            chance = None if step.chance is None else Field("Chance per use", (Line(f"{step.goal}: {chance_text(float(step.chance))}"),))
+            last = at + 1 == len(self.finishing)
+            onward = None if last else Field(NEXT, (self.link(f"then {finish_title(self.finishing[at + 1])}", number + 1),))
+            fields = _fields(
+                _plain("Goal", step.goal),
+                chance,
+                onward,
+                _plain("Cost per use", *priced_lines(self.data, step.priced)),
+                _plain("Uses on average", count(float(step.uses))),
+                _plain("Step cost", money(step.value)),
+                _plain("Note", FINISH_NOTE, step.approximate),
+            )
+            rows.append(StepRow(number, finish_title(step), fields, card, self.anchor(number), last, step.value, (), float(step.uses)))
+        return rows
 
     def removes(self, edge: Edge) -> bool:
         """Whether a failure edge is a use that took wanted mods off the item and goes on to a step that acts (not a restart, not a dead end)."""
@@ -1383,7 +1418,30 @@ class _View:
             Field(group_words(group_title(group[0].kind, title) if self.proof is not None else title), tuple(self.limit_line(limit) for limit in group))
             for title, group in grouped(limits)
         )
-        return GoalCard(fields, card_of_target(self.data, plan.target, self.start_item, self.forced), leaves_out)
+        asked = getattr(plan, "asked_target", plan.target)  # the target as asked, its quality and implicit wishes with it (#1234)
+        return GoalCard(fields, card_of_target(self.data, asked, self.start_item, self.forced), leaves_out)
+
+
+def priced_lines(data: GameData, priced) -> list[str]:
+    """What one use of a priced offer costs, by its parts, with the marks of a thin market's price (OR-8)."""
+    if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
+        return [FREE]
+    stand_ins = priced.offer.action.stand_ins(data)  # a resource paid in place of goods no price list holds says what it is (#1518)
+    lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
+    if len(priced.parts) > 1:
+        lines.append(f"total {money(priced.cost)}")
+    lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
+    return lines
+
+
+FINISH_UNTIL = " until the "  # what joins a finish step's catalyst or orb to its goal in the row's title (`finish_title`)
+FINISH_NOTE = "once every mod is made: no step of the mods changes this, so it comes last and changes no step before it"
+
+
+def finish_title(step) -> str:
+    """The title of a finish step's row: "Intrinsic Catalyst until the item has 20% Intrinsic quality" (#1234)."""
+    goal = step.goal if step.kind == QUALITY else step.goal.removeprefix("the ")
+    return f"{step.label} until the item has {goal}" if step.kind == QUALITY else f"{step.label} until the {goal}"
 
 
 BENCH_LABEL = "Bench craft "  # how an action label names a bench craft (`actions.bench`)
@@ -1443,8 +1501,9 @@ def build_section(
     """
     _require_limits(inp.plan)
     view = _View(inp, data, buy, prefix, route_field)
-    rows = [view.buy_row(final=not view.flow.steps)]
+    rows = [view.buy_row(final=not view.flow.steps and not view.finishing)]
     rows += [view.step_row(step) for step in view.flow.steps]
+    rows += view.finish_rows()
     goal = view.goal_card()
     base = view.any_base()
     if base is not None:  # the start is priced as any base of its kind: no card promises the planned base's name or implicit (#937)
@@ -1576,7 +1635,6 @@ def _parting(given: RouteSection, shared: dict[int, StepRow], prefix: str) -> di
 
 COST_AGAINST_GIVEN = "Where the cost differs from the given route"
 START_SPEND = "the start item (row 1 and every restart)"
-FINISH_SPEND = "the finish after the mods (catalyst quality, implicit)"
 SHOWN_DIFFERENCES = 5  # the kinds of step named one by one; the rest is one line
 SAME_COST = 0.01  # under this share of the given route's cost apart, the two routes cost the same and nothing is named
 
@@ -1592,29 +1650,18 @@ def judged_on(plan: Plan, labels: tuple[str, ...], data: GameData, target: Targe
     guide's own plan never offers the catalyst or the orb its route names for them, and the route was refused as naming an unknown action
     (R17's "Intrinsic Catalyst", #1596)."""
     plain = plan.starts is None or plan.starts.chosen.key == "plain"  # the guide starts from the target's own item, not a vendor recipe's
-    if plain and set(labels) <= {priced.label for priced in plan.offers}:
+    # a label that names the catalyst or the orb of one of the plan's finishes is read as that finish on the plan itself (#1234, `finish_labels`)
+    if plain and set(labels) <= {priced.label for priced in plan.offers} | finish_labels(plan):
         return plan
     return guide_plan(data, target, plan.prices if prices is None else prices, labels)
 
 
-def kept_finishes(plan: Plan, judged_on: Plan) -> float:
-    """What `plan` leaves to a finish after its mods (its rows and mean hold the mods alone) while the guide's own plan `judged_on` keeps it
-    in its model, since the guide names the catalyst or the orb (`guide_plan`): the guide's cost holds it, so the plan is compared with its
-    mods and that finish (#1442, the benchmark's `solver_compared`). 0 when the guide is read on the plan itself."""
-    if judged_on is plan:
-        return 0.0
-    quality = plan.quality_finish_value if judged_on.target.quality is not None else 0.0
-    implicit = plan.implicit_finish_value if judged_on.target.implicits else 0.0
-    return quality + implicit
-
-
-def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...], finish: float = 0.0) -> Field | None:
+def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...]) -> Field | None:
     """What the plan spends on each kind of step against what the given route (the guide's) spends on it, the largest difference first,
     with the uses of each (#1305, crafter Q9: a plan several times cheaper than its guide names the choices that make the difference).
 
     A kind of step is a row title; the start item's row 1 and every restart are one kind, the buys of the start item. Each route's
     spend on a kind is the sum of its rows' step costs, so a route's kinds add up to its cost with the start item (`StepRow.cost`).
-    `finish` is what the plan pays after its mods that the given route holds in its own steps (`kept_finishes`): one more kind of the plan.
     None when either route has no cost (a gap, a row that never finishes) or the two costs are within `SAME_COST` of each other."""
 
     def spend(rows: tuple[StepRow, ...]) -> tuple[dict[str, float], dict[str, float]] | None:
@@ -1623,7 +1670,8 @@ def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...],
         for row in rows:
             if row.cost is None or not math.isfinite(row.cost):
                 return None  # a gap ("No action") or a row that never finishes: the route has no cost to split
-            kind = START_SPEND if row.number == 1 or row.title.startswith("Restart") else row.title
+            # a finish step's row is the kind of its catalyst or orb, as a guide's own row of it is titled (#1234)
+            kind = START_SPEND if row.number == 1 or row.title.startswith("Restart") else row.title.split(FINISH_UNTIL)[0]
             found[kind] = found.get(kind, 0.0) + row.cost
             if kind != START_SPEND and row.uses is not None and math.isfinite(row.uses):
                 uses[kind] = uses.get(kind, 0.0) + row.uses
@@ -1633,8 +1681,6 @@ def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...],
     if mine_rows is None or theirs_rows is None or not mine_rows[0] or not theirs_rows[0]:
         return None
     (ours, our_uses), (theirs, their_uses) = mine_rows, theirs_rows
-    if finish > 0:
-        ours[FINISH_SPEND] = ours.get(FINISH_SPEND, 0.0) + finish
     mine, guide = math.fsum(ours.values()), math.fsum(theirs.values())
     if abs(mine - guide) <= SAME_COST * guide:
         return None
@@ -1659,7 +1705,7 @@ def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...],
     return Field(COST_AGAINST_GIVEN, tuple(lines))
 
 
-def merge_sections(policy: RouteSection, given: RouteSection, name: str, finish: float = 0.0) -> tuple[RouteSection, ...]:
+def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tuple[RouteSection, ...]:
     """The planner's section and the given route's: one when they are the same, else the given route's differing steps.
 
     When every row of the given route is one of the planner's, one for one and with the same continuation
@@ -1671,7 +1717,7 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str, finish:
     planner's section; the given section holds only what its own steps cannot show (`flow_limits`).
     """
     prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
-    differs = cost_against_given(policy.rows, given.rows, finish)  # from every row of both routes, before the shared ones are taken out
+    differs = cost_against_given(policy.rows, given.rows)  # from every row of both routes, before the shared ones are taken out
     if differs is not None:
         policy = replace(policy, goal=replace(policy.goal, fields=(*policy.goal.fields, differs)))
     alike = _same_steps(policy, given, prefix)
@@ -1769,9 +1815,9 @@ def route_page(
         drawn = build_section(
             given_route_input(judged, route, given), data, buy, prefix="g-", anchor="given", route_field=False
         )
-        sections = merge_sections(policy, drawn, route.name or Path(route.source).name, kept_finishes(plan, judged))
+        sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
     wider = any_base_words(buy) if plan.start_price.searched is not None else None
-    return render_page(Page(page_title(data, plan.target, wider), sections))
+    return render_page(Page(page_title(data, plan.asked_target, wider), sections))
 
 
 def given_cost(plan: Plan, given: RouteResult | None) -> float | None:

@@ -559,19 +559,16 @@ def test_the_cost_against_the_given_route_names_each_kind_of_step_by_its_differe
     ]
 
 
-def test_the_plans_finish_the_given_route_holds_in_its_steps_is_counted_on_the_plans_side():
-    """Checker on #1305: a guide that names the catalyst is priced on its own plan, which keeps the quality in its model, while the site plan
-    leaves it to a finish after its mods (`kept_finishes`, the benchmark's `solver_compared`). Plan 100 c of mods and a 17 c finish; the
-    guide 100 c of the same steps and 17 c of catalysts: 117 c each, the same cost."""
-    plan = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0)])
-    guide = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0), ("Catalyst", 17.0, 20.0)], "g-")
-
-    assert cost_against_given(plan, guide) is not None  # without the finish the plan reads 17 c cheaper, with the catalyst as its reason
-    assert cost_against_given(plan, guide, finish=17.0) is None
-    field = cost_against_given(plan, guide, finish=34.0)
-    assert field is not None and "the finish after the mods (catalyst quality, implicit): 34 c here, nothing in the given route" in [
-        line.text for line in field.lines
-    ]
+def test_the_plans_finish_step_and_the_given_routes_catalysts_cost_the_same():
+    """Checker on #1305, #1234: a guide that names the catalyst is priced on its own plan, which keeps the quality in its model, while the site
+    plan draws it as a finish step after its mods. Plan 100 c of mods and a 17 c finish step; the guide 100 c of the same steps and 17 c of
+    catalysts: 117 c each, the same cost, and nothing is named."""
+    plan = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0), ("Intrinsic Catalyst until the item has 20% Intrinsic quality", 17.0, 9.53)])
+    guide = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0), ("Intrinsic Catalyst", 17.0, 9.53)], "g-")
+    assert cost_against_given(plan, guide) is None
+    without = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0)])
+    field = cost_against_given(without, guide)  # a plan without the step would read 17 c cheaper, with the catalyst as its reason
+    assert field is not None and "Intrinsic Catalyst: nothing here, 17 c (9.53 uses) in the given route" in [line.text for line in field.lines]
 
 
 def test_the_cost_against_the_given_route_folds_the_small_differences_and_says_nothing_when_the_costs_agree():
