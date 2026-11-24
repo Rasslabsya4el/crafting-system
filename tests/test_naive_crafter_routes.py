@@ -193,7 +193,9 @@ def played(request) -> Played:
     assert sum(spend.values()) == pytest.approx(result.risk.mean.value, rel=1e-9), "the chain's visits do not add up to risk.evaluate's mean"
     # The draw of a bought item's mods (ADR-0064) is free in the game and in the naive crafter (`World.opened_start`); the planner charges it 0.1 of the cheapest orb so that
     # the solver certifies (#657). The exact side leaves that price out, so both sides are of the same process; #657 removes it (R13: 0.0016 Chaos a draw).
-    drawn = spend.get(DRAW_LABEL, 0.0)
+    # R08 and R09 are priced as a Normal base, so the planner's draw is the Orb of Alchemy, paid (#1522); the naive crafter holds the bought boots as an
+    # empty rare (the first fossil erases whatever a rare holds), so that orb is left out of the exact side as the free draw's price is (0.1235 Chaos a start)
+    drawn = sum(spent for label, spent in spend.items() if is_opening(label))
 
     world = load_world(target_file(stem), PRICES, KEYS)
     judge = Judge(world)
@@ -202,9 +204,14 @@ def played(request) -> Played:
     tally = t.simulate(Player(world, route, judge), runs, seed=555 * 1000 + SEED)
     if OUT is not None:
         OUT.mkdir(parents=True, exist_ok=True)
-        document = {"route": route_id, "exact_mean": result.risk.mean.value - drawn, "exact_spend": {label: spent for label, spent in spend.items() if label != DRAW_LABEL}, "seed": SEED, "tally": tally.to_dict()}
+        document = {"route": route_id, "exact_mean": result.risk.mean.value - drawn, "exact_spend": {label: spent for label, spent in spend.items() if not is_opening(label)}, "seed": SEED, "tally": tally.to_dict()}
         (OUT / f"naive-{route_id.replace(' ', '_')}-{SEED}.json").write_text(json.dumps(document, sort_keys=True), encoding="utf-8")
     return Played(route_id, result.risk.mean.value - drawn, spend, tally)
+
+
+def is_opening(label: str) -> bool:
+    """The label of the step that opens a bought listing: the free draw (ADR-0064), or the orb paid on a Normal base (#1522)."""
+    return label == DRAW_LABEL or label.endswith(" on the bought Normal base")
 
 
 def recorded_for(route_id: str) -> dict:
@@ -358,7 +365,8 @@ def test_each_step_costs_what_the_planner_says(played, label):
 def test_the_planners_policy_takes_only_the_actions_the_route_file_names(played):
     stem, _ = COVERED[played.route]
 
-    assert set(played.exact_spend) - {DRAW_LABEL} <= set(route_labels(stem))  # the draw of a bought item's mods is the market's, not a step the route file names (ADR-0064)
+    # the draw of a bought item's mods is the market's, not a step the route file names (ADR-0064); so is the Alchemy on a Normal base it stands for (#1522)
+    assert {label for label in played.exact_spend if not is_opening(label)} <= set(route_labels(stem))
 
 
 @pytest.mark.parametrize("played", list(COVERED), indirect=True)

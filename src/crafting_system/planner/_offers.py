@@ -341,8 +341,20 @@ def _costs_nothing(entry: PricedOffer) -> bool:
     return not entry.offer.resources or (bool(entry.parts) and all(part[2] == 0 for part in entry.parts))
 
 
-def listing_draw(data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer]) -> PricedOffer:
-    """The draw that opens the bought listing `listing` (ADR-0064), priced as every action that consumes nothing is: the listing's price is the start price."""
+def listing_draw(
+    data: GameData, listing: Item, rarity: Rarity, priced: Iterable[PricedOffer], prices: PriceFile | None = None, price_source: str = DEFAULT_PRICE_SOURCE,
+    *, normal_base: bool = False,
+) -> PricedOffer:
+    """The draw that opens the bought listing `listing` (ADR-0064), priced as every action that consumes nothing is: the listing's price is the start price.
+
+    With `normal_base` (the start's price is a Normal base's search, #1522) the draw is the orb that makes the base `rarity`, priced from `prices`
+    as any orb is (OR-16, OR-43); an orb with no price there leaves the free draw, and the plan's limits say the orb is unpriced.
+    """
+    if normal_base and prices is not None:
+        paid = open_listing(rarity, paid=True)
+        found, _ = price_offers((offer_of(paid, paid.label(data), data, listing, shares=False),), prices, price_source)
+        if found:
+            return found[0]
     action = open_listing(rarity)
     paid = [entry.cost for entry in priced if entry.offer.resources and entry.cost > 0]  # the actions that cost something, not the free ones
     free_cost = DRAW_COST_SHARE * min(paid) if paid else FREE_ACTION_SHARE

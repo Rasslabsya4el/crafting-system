@@ -7,8 +7,7 @@ The condition of keeping them is that none of them reaches the route page or the
 
 * **Who can set the start item.** A `Target` is built by the parser alone, and its start item is replaced in three places only:
   `targets/floor.py` (the same item at a lower item level), `planner/_starts.py` (the vendor-recipe start I7) and `planner/_bought_starts.py` (the
-  same base at another item level or with the influence a requirement needs, #351; listed as a start option, never a made-up item), and
-  `planner/_plan.py` (`start_as_bought`, #1522: the same item at the lower rarity its price was searched for, OR-43). No module of I8 to I12 builds a
+  same base at another item level or with the influence a requirement needs, #351; listed as a start option, never a made-up item). No module of I8 to I12 builds a
   `Target` or replaces its start item (a scan of `src`, for I8, which only a real benchmark prints, and for the rest as a backstop).
 * **I7, in the output.** When a vendor recipe wins, the text's "Start item" line is the Normal base the recipe takes, the recipe is a step of
   its own ("Step 1: Vendor recipe: ...") with its bill, and the Magic item it gives back is "You get back" and row 1 of the page.
@@ -31,7 +30,6 @@ PARSER = "targets/parse.py"
 FLOOR = "targets/floor.py"
 VENDOR_START = "planner/_starts.py"
 BOUGHT_START = "planner/_bought_starts.py"
-AS_BOUGHT = "planner/_plan.py"  # the start at the rarity its price was searched for (#1522, OR-43)
 
 
 def calls_named(names: set[str]):
@@ -53,7 +51,7 @@ def test_a_target_is_built_by_the_parser_alone():
 def test_the_start_item_of_a_target_is_replaced_in_the_floor_and_the_vendor_start_only():
     replacing = {path for path, call in calls_named({"replace"}) if any(keyword.arg == "start_item" for keyword in call.keywords)}
 
-    assert replacing == {FLOOR, VENDOR_START, BOUGHT_START, AS_BOUGHT}
+    assert replacing == {FLOOR, VENDOR_START, BOUGHT_START}
 
 
 def test_the_modules_that_build_the_other_items_never_set_a_start_item():

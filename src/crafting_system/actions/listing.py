@@ -14,8 +14,9 @@ Augmentation only where the item holds 1 mod, and an Alteration (or whatever is 
 the cost is the listing's, and the orb it copies is only the law of the draw. The result is exactly that orb's result on the opened item, so no
 solver or abstraction learns a new kind of step.
 
-The draw stands for a listing of that rarity only: a start whose price was searched as a lower rarity (a Normal base priced for a Rare start) is
-that item, planned from as bought, with no draw (`planner._plan.bought_rarity`, OR-43, #1522).
+A listing whose price is a **Normal base's** (the stored trade search asks for rarity normal: R08 and R09) is not drawn for free: the player buys
+the Normal base and uses the orb that makes it the rarity, an Orb of Alchemy (Rare) or an Orb of Transmutation (Magic, the same 1 or 2 mods as an
+Alteration). The draw is then that orb, `paid`: it is named by the orb and costs one of it (OR-16, OR-43, #1522).
 """
 
 from collections.abc import Mapping
@@ -27,7 +28,7 @@ from crafting_system.items import Item, Rarity
 from .alchemy import AlchemyOrb
 from .contract import Action, Adds, Reads
 from .errors import NotApplicableError
-from .magic import AlterationOrb
+from .magic import AlterationOrb, TransmutationOrb
 from .outcomes import Outcomes
 
 __all__ = [
@@ -40,6 +41,7 @@ __all__ = [
 DRAW_LABEL = "The bought item's own mods"
 
 DRAWN_BY = {Rarity.MAGIC: AlterationOrb(), Rarity.RARE: AlchemyOrb()}
+MADE_BY = {Rarity.MAGIC: TransmutationOrb(), Rarity.RARE: AlchemyOrb()}  # the orb a player uses on a Normal base to make it that rarity (#1522)
 
 
 def unopened_listing(data: GameData, start: Item) -> Item | None:
@@ -53,9 +55,10 @@ def unopened_listing(data: GameData, start: Item) -> Item | None:
     return start.changed(data, rarity=Rarity.NORMAL, unopened=True)
 
 
-def open_listing(rarity: Rarity) -> "OpenListing":
-    """The draw that opens a listing of `rarity` (Magic or Rare); the planner asks for it here and names no concrete class."""
-    return OpenListing(rarity)
+def open_listing(rarity: Rarity, paid: bool = False) -> "OpenListing":
+    """The draw that opens a listing of `rarity` (Magic or Rare); `paid` when the item bought is a Normal base, so the draw is the orb that makes
+    it that rarity, used and paid (#1522). The planner asks for it here and names no concrete class."""
+    return OpenListing(rarity, paid)
 
 
 @dataclass(frozen=True)
@@ -63,6 +66,7 @@ class OpenListing(Action):
     """Open an unopened listing of `rarity` (Magic or Rare): the draw of the mods the market item holds."""
 
     rarity: Rarity
+    paid: bool = False  # the item bought is a Normal base: the draw is the orb that makes it `rarity`, named and paid (#1522)
     opens_listing = True
 
     def __post_init__(self) -> None:
@@ -71,12 +75,14 @@ class OpenListing(Action):
 
     @property
     def variant(self) -> str:
-        return self.rarity.value
+        return f"{self.rarity.value}-paid" if self.paid else self.rarity.value
 
     def label(self, data: GameData | None = None) -> str:
-        return DRAW_LABEL
+        return f"{MADE_BY[self.rarity].label(data)} on the bought Normal base" if self.paid else DRAW_LABEL
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
+        if self.paid:  # the player uses the orb on the Normal base he bought (#1522)
+            return MADE_BY[self.rarity].resources(data)
         return {}  # the price of the listing is the start price
 
     def reads(self, data: GameData) -> Reads:
