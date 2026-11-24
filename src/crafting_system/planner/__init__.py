@@ -22,7 +22,7 @@ from ._approx import Approximation
 from ._axes import axis_name, axis_what, reading_pair, value_text
 from ._bought_starts import bought_base_starts
 from ._decide import BUDGET_SECONDS
-from ._entry import NotModelled, PlanSettings, guide_plan, plan_target, progress, say_progress_to
+from ._entry import NotModelled, PlanSettings, guide_plan, plan_target, progress, request_budget, say_progress_to
 from ._envelope import Standing
 from ._foresight import Status as LockStatus
 from ._limits import PROVED as PROVED_UNNEEDED
@@ -198,6 +198,7 @@ __all__ = [
     "price_offers",
     "progress",
     "reading_pair",
+    "request_budget",
     "say_progress_to",
     "strand_setting",
     "unresolved",

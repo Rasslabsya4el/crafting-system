@@ -87,7 +87,8 @@ def test_the_entry_is_the_start_choice_with_the_settings_passed_by_name(monkeypa
 
     assert plan_target("data", "target", "prices", settings) == "the plan"
     assert (seen["data"], seen["target"], seen["prices"]) == ("data", "target", "prices")
-    assert seen["fields"] == vars(settings)  # every setting, each under its own name, and nothing else
+    # every setting, each under its own name, and nothing else; the request's time limit is folded into the budget (#1577, `request_budget`)
+    assert seen["fields"] == {name: value for name, value in vars(settings).items() if name != "time_limit_seconds"}
 
 
 def test_the_defaults_of_the_settings_are_the_planners_own():
@@ -95,6 +96,9 @@ def test_the_defaults_of_the_settings_are_the_planners_own():
     start_choice = inspect.signature(plan_with_starts).parameters
     one_plan = inspect.signature(make_plan).parameters
     for field in dataclasses.fields(PlanSettings):
+        if field.name == "time_limit_seconds":  # the entry's own: None keeps the budget as given (#1577, `tests/test_request_time_limit.py`)
+            assert field.default is None
+            continue
         own = start_choice[field.name] if field.name in start_choice else one_plan[field.name]
         assert field.default == own.default, field.name
 
