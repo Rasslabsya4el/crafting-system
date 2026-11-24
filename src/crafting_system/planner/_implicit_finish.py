@@ -210,7 +210,7 @@ def plan_implicit_finish(
 
 ROLL_APPROXIMATE = (
     "the chance per use is read from the roll law of the Blessed Orb (an approximate input: each value uniform over its range, the value it "
-    "had able to come again)"
+    "had can come again)"
 )
 
 
@@ -221,11 +221,11 @@ def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: boo
         why = f"the start item's implicit {finish.words} already, which no step of the mods changes, so nothing is added to the cost of the mods"
         labels: tuple[str, ...] = ()
     else:
-        costs = "costs at most" if at_most else "costs"
+        costs = "has a mean cost of at most" if at_most else "costs on average"
         why = (
             f"a last step, once the mods are made: {finish.orb.label} until the implicit {finish.words} (a chance of "
             f"{float(finish.chance):.2%} each), {float(finish.uses):,.2f} on average at {finish.orb.cost:,.2f} Chaos each, {finish.value:,.2f} "
-            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos on average after the start item, the mean the result "
+            f"Chaos on average; so the whole craft {costs} {total:,.2f} Chaos after the start item, the mean the result "
             "gives"
         )
         labels = (finish.orb.label,)
@@ -234,7 +234,7 @@ def implicit_finish_limits(finish: ImplicitFinish, total: float, *, at_most: boo
         "Implicit finished after the mods",
         why,
         "No step of the mods changes the implicit, so rolling it last changes no step of the mods; the mean number of Blessed Orbs is exact at "
-        "the roll law read for the Blessed Orb (an approximate input: each value uniform over its range, the value it had able to come again).",
+        "the roll law read for the Blessed Orb (an approximate input: each value uniform over its range, the value it had can come again).",
         labels,
     )
     return (found, *unpriced_limits((drop.label, drop.missing, drop.kind) for drop in finish.dropped))
