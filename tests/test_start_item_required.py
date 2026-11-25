@@ -5,7 +5,8 @@
 * I6: a target that asks for sockets and whose start item states none is refused, unless the start item says `sockets: any` (it used to
   get one white, unlinked socket; `Target.start_sockets_assumed` is gone).
 * Every committed target file parses on the real data and states its start item; the five that had no `start_item:` (R04, R06, R13, R14,
-  V01) now state the plain Normal item they always started from, with the guide's words in the file.
+  V01) now state their start with the guide's words in the file: R04 and V01 the plain Normal item they always started from, R13 and R14 a
+  Magic one (#576), R06 the Rare belt the market sells (#1673).
 """
 
 import dataclasses
@@ -24,9 +25,9 @@ MODS = "  mods:\n    - mod: LightningResist2\n      values: [14]\n      fracture
 EXAMPLE_FILES = sorted(EXAMPLES.glob("*.yaml"))
 HAD_NO_START_ITEM = {
     "r04-penetrating-quiver.yaml",
-    "r06-strength-heavy-belt.yaml",
     "v01-minion-helmet.yaml",
 }
+START_RARE = {"r06-strength-heavy-belt.yaml"}  # its guide buys a belt of any rarity: the Rare one the market sells (OR-43, #1673)
 START_MAGIC = {"r13-life-resist-belt.yaml", "r14-hunter-bow.yaml"}  # their guides open with Alteration: a Magic start, no Transmutation Orb (#576)
 
 
@@ -117,3 +118,5 @@ def test_every_committed_target_parses_and_states_its_start_item(real, path):
         assert target.start_item.rarity is Rarity.NORMAL and not target.start_item.mods
     if path.name in START_MAGIC:
         assert target.start_item.rarity is Rarity.MAGIC and not target.start_item.mods
+    if path.name in START_RARE:
+        assert target.start_item.rarity is Rarity.RARE and not target.start_item.mods
