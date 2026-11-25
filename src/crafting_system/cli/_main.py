@@ -48,7 +48,7 @@ from crafting_system.solver import ConvergenceError
 from crafting_system.targets import StartKind, TargetError, buy_spec_of, load_target
 from crafting_system.budget import NO_PLAN
 from crafting_system.planner import no_plan_words
-from crafting_system.planner import BUDGET_SECONDS, SOLVERS, PlanError, PlanSettings, plan_target, progress, say_progress_to
+from crafting_system.planner import BUDGET_SECONDS, SOLVERS, PlanError, PlanSettings, UnusablePlan, plan_target, progress, say_progress_to
 
 from ._benchmark import benchmark_main
 from ._inputs import load_target_prices, write_json
@@ -289,7 +289,9 @@ def main(
                 print(f"The plan's record (its cost, odds, start and limits) is written to {out}")
             return 2 if check is not None and not check.agrees else 0
     except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
-        if isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-59, #1576)
+        if isinstance(error, UnusablePlan):  # a plan no player would follow is no plan: its own proof sentence says why (#1628, OR-12)
+            print(f"Proof: {error.words.sentence}")
+        elif isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-59, #1576)
             print(f"Proof: {no_plan_words().sentence}")
         print(f"Error: {error}", file=sys.stderr)
         return 1

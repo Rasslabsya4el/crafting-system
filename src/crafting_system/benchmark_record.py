@@ -18,6 +18,12 @@ runs that happened to agree must not make the check fail on that. A route that p
 spread to measure (`UNSTABLE`): every new result passes until the record is renewed. A route that planned in neither passes too, and a new plan
 there is told as such. The tolerance is checked on the cost alone: the lower bound, the seconds, the memory and the stop are recorded so that
 a reader sees what changed, and they are machine readings, not verdicts.
+
+A plan no player would follow is no plan (#1628): the planner's entry answers it as "no usable plan found within the limit"
+(`planner.UnusablePlan`), so its run's record has no cost, and a record never holds it as a plan. And a route that passes with a plan dearer
+than `GUIDE_FLAG_TIMES` its guide's route (the guide's figure the same run evaluated, `given_route`) is flagged (`FLAGGED`): it fails
+nothing, and a person reads that plan (R24's 51,581 c at the ten-minute runner net, 10.7 times its guide's 4,838.92 c). The figure is the
+check's, not the planner's: a plan dearer than the guide is still shown, with the honest label (OR-59, the owner on R17 at 1.8 times).
 """
 
 from collections.abc import Iterable, Mapping
@@ -29,12 +35,14 @@ FORMAT = "crafting-system-heavy-benchmark-record/2"  # /2: the site's plan, with
 SITE_PLAN = "site"  # the plan a `benchmark.json` of `--net` holds: the target alone, as the site plans it (#1156)
 GUIDED_PLAN = "guided"  # the plan of a `benchmark` with no net: a guide's actions lead its first round (#1110)
 TOLERANCE_FLOOR = PROOF_GAP  # the least tolerance of a route, as a share of its higher recorded cost (see the module text)
+GUIDE_FLAG_TIMES = 10.0  # a passing plan dearer than this many times its guide's route is flagged for a person (see the module text)
 
 PLANNED = "planned"  # both recorded runs gave a plan: the route is checked against its ceiling
 UNSTABLE = "unstable"  # one recorded run gave a plan and the other did not: no spread to check against
 NO_PLAN = "no plan"  # neither recorded run gave a plan
 
 PASS = "pass"
+FLAGGED = "needs a human"  # passes, but a person must read the plan: dearer than `GUIDE_FLAG_TIMES` its guide's route
 FAIL = "fail"
 NOT_RUN = "not run"  # a route of the record the new run left out: a failure, unless the check was asked for some routes only
 NOT_RECORDED = "not recorded"  # a route of the new run the record does not hold
@@ -183,6 +191,7 @@ def check_run(record: Mapping, document: Mapping, routes: Iterable[str] | None =
     if record.get("format") != FORMAT:
         raise ValueError(f"not a record of the heavy benchmark (format {record.get('format')!r}, not {FORMAT!r})")
     new = runs_of(_site(document))
+    guides = guides_of(document)
     wanted = list(record["routes"]) if routes is None else list(routes)
     unknown = [name for name in wanted if name not in record["routes"]]
     if unknown:
@@ -197,7 +206,7 @@ def check_run(record: Mapping, document: Mapping, routes: Iterable[str] | None =
             else:
                 verdicts.append(Verdict(name, NOT_RUN, "the run holds no entry for this route (a runner that died writes none)"))
             continue
-        verdicts.append(_verdict(name, RouteRecord(first, second), new[name]))
+        verdicts.append(_flagged(_verdict(name, RouteRecord(first, second), new[name]), new[name]["mean"], guides.get(name)))
     verdicts.extend(Verdict(name, NOT_RECORDED, "the record does not hold this route") for name in new if name not in record["routes"])
     return verdicts
 
@@ -216,6 +225,23 @@ def _verdict(name: str, held: RouteRecord, run: Mapping) -> Verdict:
     if cost > ceiling:
         return Verdict(name, FAIL, f"{cost:,.2f} c, above the ceiling of {ceiling:,.2f} c")
     return Verdict(name, PASS, f"{cost:,.2f} c, within the ceiling of {ceiling:,.2f} c")
+
+
+def guides_of(document: Mapping) -> dict[str, float]:
+    """The cost of each route's guide's route that a run evaluated (`given_route.mean`, the start item included), by route id."""
+    found = {}
+    for entry in document.get("routes", ()):
+        mean = (entry.get("given_route") or {}).get("mean")
+        if isinstance(mean, (int, float)) and mean > 0:
+            found[entry["id"]] = float(mean)
+    return found
+
+
+def _flagged(verdict: Verdict, cost: float | None, guide: float | None) -> Verdict:
+    """`verdict`, flagged for a person when it passes a plan dearer than `GUIDE_FLAG_TIMES` its guide's route (see the module text)."""
+    if verdict.outcome != PASS or cost is None or guide is None or cost <= GUIDE_FLAG_TIMES * guide:
+        return verdict
+    return Verdict(verdict.route, FLAGGED, f"{verdict.why}; {cost / guide:,.1f} times its guide's route ({guide:,.2f} c): a person reads this plan")
 
 
 def render_check(verdicts: Iterable[Verdict]) -> str:
