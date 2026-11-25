@@ -59,7 +59,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
 OTHER_ITEM = {
     "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
-    "r06-strength-heavy-belt": "#1267, #1673 the stored price of the Rare belt is hand-set (OR-44): no file has a line for an influenced Heavy Belt and the 3.29 league has left the trade site (the Normal belt of the earlier start had 0 listings on 2026-11-06, #483): it has no body",
+    "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; the market sells Rare ones, which the first essence reforges like the Normal one, #1673) and no file has a line for an influenced Heavy Belt: it has no body",
     "r05-strength-ring": "#483 the exact item has 1 listing, at 12,905 Chaos on 2026-11-10: the stored price is hand-set (OR-44) from a search of any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the stored price of item level 85 is hand-set (OR-44) from the 2026-11-10 reading of a search of item level 84 or more (#1472); its stored query, the search of 85, was never sent",
     "r10-fractured-boots-70-life": "#483 the stored price of item level 85 is hand-set (OR-44) from the 2026-11-10 reading of a search of item level 84 or more (#1472); its stored query, the search of 85, was never sent",
@@ -345,18 +345,12 @@ def test_where_the_guide_buys_the_start_item_the_target_says_bought_and_quotes_t
 SEARCHES = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "start_items" / "searches_r03_r06_2026-11-06.json"
 
 
-def test_the_recorded_search_of_r06_is_the_query_of_its_former_normal_start_and_had_no_listing(data, stats):
+def test_the_recorded_search_of_r06_is_the_query_built_from_the_target_and_had_no_listing(data, stats):
     record = json.loads(SEARCHES.read_text(encoding="utf-8"))["r06-strength-heavy-belt"]
 
-    # the search is of the Normal belt R06 started from until #1673 (OR-43: the start is now the Rare belt the market sells): the record keeps that key
-    assert record["key"] == "Heavy Belt, normal, item level 75, Hunter influence" and record["date"] == "2026-11-06" and record["league"] == "Allflame"
+    assert record["key"] == expected_keys()["r06-strength-heavy-belt"] and record["date"] == "2026-11-06" and record["league"] == "Allflame"
     assert record["total"] == 0 and record["requests"] == 1
-    normal = record["query"]["query"]["filters"]["type_filters"]["filters"]
-    assert normal["rarity"] == {"option": "normal"}
-    computed = query_of(data, stats, "r06-strength-heavy-belt")  # the computed query of the Rare start differs from it by its rarity alone (OR-3)
-    assert computed["query"]["filters"]["type_filters"]["filters"]["rarity"] == {"option": "rare"}
-    computed["query"]["filters"]["type_filters"]["filters"]["rarity"] = {"option": "normal"}
-    assert record["query"] == computed
+    assert record["query"] == query_of(data, stats, "r06-strength-heavy-belt")  # the stored query is the computed one (OR-3)
 
 
 def test_r03_asks_for_a_stat_the_trade_site_lists_twice_and_both_were_searched_with_no_listing(data, stats):

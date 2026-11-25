@@ -1601,12 +1601,9 @@
       },
       "source": "poe.ninja-history"
     },
-    "Heavy Belt, item level 75, Hunter influence": {
+    "Heavy Belt, normal, item level 75, Hunter influence": {
       "chaos": 5.0,
-      "detail": {
-        "rarity": "rare"
-      },
-      "note": "hand-set start price of reference route R06 (#1267, #1673, OR-44): the start is the Rare Hunter-influenced Heavy Belt a player buys (OR-43: the guide buys a Hunter- or Elder-influenced Heavy Belt at item level 75 or more, of any rarity, and the market sells Rare ones), and the first Deafening Essence of Rage reforges it whatever its mods (an essence of level 5 or higher reforges a Rare, OR-16), so no step makes it another rarity. The week-one file has no line for an influenced Heavy Belt and Allflame has left the trade site, so no 3.29 reading of it exists: 5 Chaos is the stand-in of #1231 (PR #1265), the price of a single-influence base read for R20 (#150, PR #816). Check that it is in range (not a price: the tests keep 3.29 prices only): the trade site, league Covens (3.30), 2026-11-25, instant buyout, Hunter, item level 75 or more: 1,146 Rare listings, the cheapest five 3, 10, 10, 10 and 11 Chaos (mean 8.8, item levels 83 to 86), 1 Rare listing at item level 75 exactly (14 Divine); Normal ones (scoured, no mod) 3 listings from 15 Chaos",
+      "note": "hand-set start price of reference route R06 (#1267, #1673, OR-44): the week-one file has no line for an influenced Heavy Belt and Allflame has left the trade site, so no 3.29 reading of it exists; 5 Chaos is the stand-in of #1231 (PR #1265), the price of a single-influence base read for R20 (#150, PR #816). The key's Normal belt is the item the plan starts from: the guide buys a Hunter- or Elder-influenced Heavy Belt at item level 75 or more, of any rarity, and the first Deafening Essence of Rage reforges the belt whatever its rarity and mods (an essence of level 5 or higher reforges a Rare, OR-16), so the player buys the Rare one the market sells (OR-43) and the plan is the same. Check that 5 Chaos is in range (not a price: the tests keep 3.29 prices only): the trade site, league Covens (3.30), 2026-11-25, instant buyout, Hunter, item level 75 or more: 1,146 Rare listings, the cheapest five 3, 10, 10, 10 and 11 Chaos (mean 8.8, item levels 83 to 86), 1 Rare listing at item level 75 exactly (14 Divine); Normal ones (scoured, no mod) 3 listings from 15 Chaos",
       "provenance": {
         "date": "2026-07-31",
         "kind": "hand-set",
