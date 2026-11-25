@@ -544,13 +544,15 @@ def _words(columns: list[_Column]) -> str:
     return " ".join(part for part in (" ".join(column.noun for column in ordered if column.sign == ""), " and ".join(signed)) if part)
 
 
+ONE_PLACE = 0.95  # a pick whose items go on to one place this often is said to go there (#1644)
+FEW_RUNS = 0.5  # a step fewer runs than this come to says that share first (`_rare_uses`)
 RUNS_COME = "of runs come to this step"  # the words of a step most runs never reach (`_rare_uses`)
 
 
 def _rare_uses(uses: float, reached: float, times: float, per: str) -> str:
     """The uses of a step that only some runs reach, the mean over every run first, then the share of runs that come and how often they come
     (#1597: "comes ≈215 times in a run that reaches it (reached in ≈0.026% of runs)" read as the craft's count beside a sure step)."""
-    return f"{count(uses)} in a run on average: {chance_text(reached)} {RUNS_COME}, and such a run brings an item here {count(times).replace('≈ ', '≈')} times, {per}"
+    return f"{chance_text(reached)} {RUNS_COME}, and such a run brings an item here {count(times).replace('≈ ', '≈')} times, {per}; {count(uses).replace('≈ ', '≈')} in a run on average"
 
 
 class _View:
@@ -1478,7 +1480,8 @@ class _View:
                     if chance > 0 and landing in where:
                         place = goes.setdefault(taken, {})
                         place[self._onward(where[landing])] = place.get(self._onward(where[landing]), 0.0) + weight * made.chance * float(chance)
-        mostly = {mod: max(place, key=place.__getitem__) for mod, place in goes.items()}  # where the items a pick makes mostly go on to
+        # where the items a pick makes go on to, when nearly all go to one place; else "several steps" (no free choice is said of it)
+        mostly = {mod: (top if place[top] >= ONE_PLACE * math.fsum(place.values()) else "several steps") for mod, place in goes.items() for top in [max(place, key=place.__getitem__)]}
         whole = math.fsum(share for share, _, _ in offers)
         if not whole:
             return []
@@ -1501,7 +1504,8 @@ class _View:
             places: dict[str, list[str]] = {}  # where the item goes on to -> the mods that send it there, the most taken first
             for mod in sorted(shares, key=lambda name: -shares[name]):
                 places.setdefault(mostly.get(mod, "another step"), []).append(mod)
-            main = max(places, key=lambda place: math.fsum(shares[mod] for mod in places[place]))
+            known = [place for place in places if place != "several steps"] or list(places)
+            main = max(known, key=lambda place: math.fsum(shares[mod] for mod in places[place]))
             free = places[main]
             for place, mods in places.items():  # a mod that sends the item elsewhere than the rest: said before them, with when it is taken
                 if place == main:
@@ -1511,7 +1515,7 @@ class _View:
                     when = "only when the window shows none of the mods below" if alone else "by what else is shown"
                     lines.append(f"{'else ' if lines else ''}{mod}: taken {when}, on {chance_text(shares[mod] / whole)} of unveils; it goes on to {place}")
             share = chance_text(math.fsum(shares[mod] for mod in free) / whole)
-            each = f"each goes on to {main}, so which of them is taken is a free choice" if len(free) > 1 else f"it goes on to {main}"
+            each = f"each goes on to {main}, so which of them is taken is a free choice" if len(free) > 1 and main != "several steps" else f"it goes on to {main}"
             lines.append(f"{'else ' if lines else ''}{'; '.join(free)}: {each}; taken on {share} of unveils")
         return ["the window shows up to three mods and one is taken, free; the plan takes, in this order:", *lines]
 
@@ -1616,7 +1620,7 @@ class _View:
                 return count(uses)
             each = count(1.0 / leave).replace("≈ ", "≈")
             per = f"{each} {'use' if each in ('1', '≈1') else 'uses'} each time"
-            if reached and reached < 0.9995:  # the mean of every run first: a count of a run that comes here alone reads as the craft's (#1597)
+            if reached and reached < FEW_RUNS:  # the share of runs first: a count of a run that comes here alone reads as the craft's (#1597)
                 return _rare_uses(uses, reached, times, per)
             run = "in a run that reaches it" if reached else "in a run"
             return f"{count(uses)} in all: an item comes to this step {count(times).replace('≈ ', '≈')} times {run}, {per}"
@@ -1625,7 +1629,7 @@ class _View:
         times = count(uses / reached)
         if times in ("1", "≈ 1"):
             return "1"
-        if reached < 0.9995:
+        if reached < FEW_RUNS:
             return _rare_uses(uses, reached, uses / reached, "1 use each time")
         return f"an item comes to this step {times.replace('≈ ', '≈')} times in a run that reaches it, 1 use each time"
 

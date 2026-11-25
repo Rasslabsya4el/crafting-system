@@ -97,8 +97,8 @@ def test_conditions_read_one_way():
 def test_a_step_few_runs_reach_says_the_mean_of_every_run_first():
     # R17's step 4: ≈0.0557 uses in a run, ≈0.026% of runs come, each ≈215 times
     text = _View.uses_text(0.0557, 0.000259, True)
-    assert text.startswith("0.0557 in a run on average: ≈0.026% of runs come to this step, and such a run brings an item here ≈215 times")
-    assert _rare_uses(2.0, 0.5, 4.0, "1 use each time") == "2 in a run on average: 50% of runs come to this step, and such a run brings an item here 4 times, 1 use each time"
+    assert text == "≈0.026% of runs come to this step, and such a run brings an item here ≈215 times, 1 use each time; 0.0557 in a run on average"
+    assert _rare_uses(2.0, 0.5, 4.0, "1 use each time") == "50% of runs come to this step, and such a run brings an item here 4 times, 1 use each time; 2 in a run on average"
     assert _View.uses_text(3.0, 1.0, True) == "an item comes to this step 3 times in a run that reaches it, 1 use each time"
 
 
@@ -107,3 +107,13 @@ def test_the_guide_at_0_and_a_hair_below_the_plan_read_by_their_difference():
     words = _guide_words(1_002.0, 1_000.0)
     assert "1.00 times" not in words and "2.00 Chaos more than the guide's route at 1,000.00 Chaos (0.20% more)" in words
     assert "1.80 times" in _guide_words(59_734.75, 33_140.41)
+
+
+def test_a_beast_count_at_poe_ninjas_cap_is_a_least_number_and_a_stash_line_is_read_as_it_is():
+    from crafting_system.prices.provenance import STASH, capped
+    from crafting_system.prices.week_snapshot import _seen
+
+    assert _seen(399) == "at least 399" and _seen(246) == "246"
+    assert capped(Provenance(HISTORY, "Allflame", "2026-07-31", 399.0, OBSERVATIONS))
+    assert not capped(Provenance(STASH, "Allflame", "2026-11-10", 1_200.0, OBSERVATIONS))  # a base's stash line: not shown to be capped (#930)
+    assert supply_words(Provenance(STASH, "Allflame", "2026-11-10", 1_200.0, OBSERVATIONS)) == "1,200 listings seen that day"

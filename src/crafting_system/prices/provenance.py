@@ -57,6 +57,12 @@ KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVER
 UNITS = "units"
 OBSERVATIONS = "observations"
 OBSERVATION_CAP = 399.0  # poe.ninja's daily count of a beast's listings stops here: 399 is the largest count in every beast's history (#930)
+
+
+def capped(provenance: "Provenance") -> bool:
+    """Whether a depth is poe.ninja's cap, not a count: a beast's daily row (the history of this or an earlier league, in observations) at
+    `OBSERVATION_CAP` (#930). A stash line of the live overview is not shown to be capped, so it is read as it is."""
+    return provenance.depth_unit == OBSERVATIONS and provenance.kind in (HISTORY, PREVIOUS_LEAGUE) and (provenance.depth or 0.0) >= OBSERVATION_CAP
 DEPTH_UNITS = (UNITS, OBSERVATIONS)
 
 EXACT = "exact"

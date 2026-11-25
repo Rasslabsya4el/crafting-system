@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB
 from crafting_system.prices.price_marks import PriceMark, chaos_text, judged_depth, price_marks, provenance_of, units_text
-from crafting_system.prices.provenance import HAND_SET, OBSERVATION_CAP, OBSERVATIONS, TRADE, WIDER, Provenance
+from crafting_system.prices.provenance import HAND_SET, OBSERVATIONS, TRADE, WIDER, Provenance, capped
 import numpy as np
 
 from crafting_system.solver import Action
@@ -61,7 +61,7 @@ def supply_words(provenance: Provenance | None) -> str | None:
     if provenance is None or provenance.depth is None:
         return None
     if provenance.depth_unit == OBSERVATIONS:
-        if provenance.depth >= OBSERVATION_CAP:  # the count stops at the cap: the listings were that many or more (#930)
+        if capped(provenance):  # the count stops at the cap: the listings were that many or more (#930)
             return f"at least {units_text(provenance.depth)} listings seen that day (poe.ninja counts no further)"
         return f"{units_text(provenance.depth)} listings seen that day"
     if provenance.kind in (TRADE, HAND_SET):
