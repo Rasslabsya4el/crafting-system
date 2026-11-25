@@ -5,7 +5,9 @@
         (`planner.guide_plan`, #1442: nothing searched, the plan `benchmark` judges a guide on when the site's plan does not hold its actions)
         and writes `OUT_DIR/planner-side-R04.json`. Until #1608 it made the planner's own plan of every method with no net first, which since
         November no longer ends on R14 (47 minutes on the first key of its bound) and passes 16 GB on R04 (#1621); the route is a fixed
-        policy walked on its own reach (`cli._route.evaluate_route`), so its figures never depended on that plan.
+        policy walked on its own reach (`cli._route.evaluate_route`), so its mean does not depend on that plan. Its success BRACKET does when
+        the route has gaps: the risk grid is sized by the plan's mean (`planner._plan.evaluate_risk`), which this plan leaves infinite, so a
+        gapped route reads (0, 1); record a gapped route's bracket from a plan with a finite mean (#1634).
     python tests/naive_planner_side.py write DIR --run RUN_ID --commit SHA
         Reads every `planner-side-*.json` under DIR and writes `tests/fixtures/naive_crafter/benchmark_means.json` (keeping the naive shares already recorded there).
 

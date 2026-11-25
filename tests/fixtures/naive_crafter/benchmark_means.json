@@ -1,6 +1,6 @@
 {
  "provenance": {
-  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy run 43381687684 on the branch of PR #855, commit fef5ae99, which holds origin/main 98e8837, 2026-11-13, at tests/fixtures/prices/routes-allflame-2026-07-31.json) and `write`; docs/ci.md. Before: heavy run 42432611502 (PR #665, 2026-11-08) and, for R14, 42892654469. R14 and R14 with restart re-recorded on 2026-11-25 (#1608, after #1537 made R14's opening pay an Orb of Scouring and an Orb of Transmutation on each buy) on the owner's server at main 0ac8e354 with `plan R14` on the plan of the guide's own actions (`planner.guide_plan`), as the script does since #1608; R04 keeps its 2026-11-13 record",
+  "how": "python tests/naive_planner_side.py plan R04|R14 (heavy run 43381687684 on the branch of PR #855, commit fef5ae99, which holds origin/main 98e8837, 2026-11-13, at tests/fixtures/prices/routes-allflame-2026-07-31.json) and `write`; docs/ci.md. Before: heavy run 42432611502 (PR #665, 2026-11-08) and, for R14, 42892654469. R14 with restart re-recorded on 2026-11-25 (#1608, after #1537 made R14's opening pay an Orb of Scouring and an Orb of Transmutation on each of its about 18 buys) by the script of #1608 on the owner's server at main 0ac8e354: the completed route priced on the plan of the guide's own actions (`planner.guide_plan`). R14 as written (gapped) keeps its 2026-11-13 record: on that plan, whose mean is infinite, its bracket is sized by no finite mean and reads (0, 1) (#1634); R04 keeps its record of 2026-11-13",
   "inputs": "sha256 of the target and route files (line ends as in the repository) and the cost of one use of each action of the route at the price file; pin is the game-data version. A quick test in every CI run fails when they differ; it does not see a change of the planner's code (issue #692)",
   "mean_without_start": "risk.mean.value of the completed route. `benchmark` prints mean + start price (_benchmark._totals), so mean_with_start = mean_without_start + start_price is recorded beside it and a test checks the sum",
   "success": "success_value is what the planner prints (the low end of its bracket, issue #683); success_low and success_high are its bracket; naive_heavy is the share of naive plays that finished in heavy run 42410566176 (python -m naive_crafter play); the naive play's finish share does not depend on prices, so it is kept when the planner side is recorded again",
@@ -66,7 +66,7 @@
    "success_value": 1.0
   },
   "R14": {
-   "commit": "0ac8e354a1173c3b8bd2419996706c1cddc47550",
+   "commit": "4a3b09131e09c715dcbc592ee950cfd842bbcb75",
    "gaps": 1,
    "inputs": {
     "costs": {
@@ -93,7 +93,7 @@
     "seed": 13
    },
    "pin": "3.29.3.3",
-   "run": "server t1608 2026-11-25 (gpR14)",
+   "run": "43681523684",
    "stem": "r14-hunter-bow",
    "success_high": 1.0,
    "success_low": 0.0,
@@ -121,7 +121,7 @@
    "mean_with_start": 6894.811143238762,
    "mean_without_start": 6885.011143238762,
    "pin": "3.29.3.3",
-   "run": "server t1608 2026-11-25 (gpR14)",
+   "run": "t1608 on the server (no GitHub run): tests/naive_planner_side.py of #1608 at main 0ac8e354",
    "start_price": 9.8,
    "stem": "r14-hunter-bow-restart",
    "success_high": 1.0,

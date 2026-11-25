@@ -393,7 +393,7 @@ WITHOUT the price of the bought start item (`mean_without_start`, as the naive m
 JSON), the start price and `mean_with_start` beside it, the bracket `(success_low, success_high)` and the printed `success_value` of the guide's route as written (issue #683),
 the run id, the commit, the game-data pin and what they were computed from (the sha256 of the target and route files and the cost of one use of each action of the route at the
 price file). A quick test in every CI run fails when one of these differs from the files as they are; it does not see a change of the planner's code, so record again after one.
-To record it again (R04 about 10 minutes, R14 about 45 on a runner):
+To record it again (since #1608 the script prices the routes on the plan of the guide's own actions, `planner.guide_plan`, nothing searched: a few seconds each, on the server as well; a gapped route's bracket then reads (0, 1), see the script):
 
     D='python .github/scripts/heavy_dispatch.py run --ref my-branch --runners 2'
     $D --command 'case $RUNNER_INDEX in 1) R=R14;; 2) R=R04;; esac; PYTHONPATH=tests:src uv run --no-sync python -u tests/naive_planner_side.py plan $R $OUT_DIR'
