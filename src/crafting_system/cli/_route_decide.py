@@ -20,6 +20,7 @@ import numpy as np
 
 MOST_CONDITIONS = 3  # the most conditions one row joins: past them a row no longer reads as a check a player makes
 TRIPLE_POOL = 24  # the conditions a triple is formed from: the ones that each cover the most of what is left
+LAST_TRIED = 3  # the heaviest places tried as the last row ("any other item"): each try is a whole list
 SHOWN_ROWS = 8  # the most rows a step shows; the rarer rest is in a list below them (the stage board's form)
 
 
@@ -37,7 +38,8 @@ def decision_list(tests: np.ndarray, labels: np.ndarray, mass: np.ndarray, negat
     view_mass = np.bincount(at, weights=mass, minlength=len(views))
     view_tests = np.ascontiguousarray(views.T)
     best, best_size = None, None
-    for last in (None, *np.unique(view_labels).tolist()):
+    heavy = sorted(np.unique(view_labels).tolist(), key=lambda label: -float(view_mass[view_labels == label].sum()))[:LAST_TRIED]
+    for last in (None, *heavy):
         for by_mass in (True, False):
             rows = _learn(view_tests, view_labels, view_mass, by_mass, last)
             used = [c for conditions, _ in rows for c in conditions or ()]
@@ -62,16 +64,15 @@ def _learn(tests: np.ndarray, labels: np.ndarray, mass: np.ndarray, by_mass: boo
             found = _best_row(tests, labels, mass, left, by_mass, skip=last)
         if found is None:
             found = _best_row(tests, labels, mass, left, by_mass)
-        if found is None:  # no row of `MOST_CONDITIONS` parts what is left: the heaviest item by every condition that holds on it (exact,
-            # as H63's learner isolates a key by its full row: the columns hold "with" and "without" of each fact, so they name the item)
-            j = max(np.flatnonzero(left).tolist(), key=lambda i: float(mass[i]))
-            conditions = tuple(c for c in range(tests.shape[0]) if tests[c, j] and (left & ~tests[c]).any())
-            covered = left.copy()
-            for c in conditions:
-                covered &= tests[c]
-            rows.append((conditions, int(labels[j])))
-            left &= ~covered
-            continue
+        if found is None:  # no row of `MOST_CONDITIONS` parts what is left: each item of the other places is said by its every fact (exact,
+            # as H63's learner isolates a key by its full row: the columns hold "with" and "without" of each fact, so they name the item), the
+            # heaviest place last; with no new search, which on R17 took minutes per row
+            heaviest = max(open_labels.tolist(), key=lambda label: float(mass[left & (labels == label)].sum()))
+            for j in sorted(np.flatnonzero(left & (labels != heaviest)).tolist(), key=lambda i: -float(mass[i])):
+                conditions = tuple(c for c in range(tests.shape[0]) if tests[c, j] and (left & ~tests[c]).any())
+                rows.append((conditions, int(labels[j])))
+            rows.append((None, int(heaviest)))
+            break
         conditions, label, covered = found
         rows.append((conditions, label))
         left &= ~covered
