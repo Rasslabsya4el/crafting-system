@@ -51,7 +51,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
-from .beasts import RECIPE_BEASTS, ANY_RARE_CREATURE_PRICE, RareBeastFee, recipe_resources
+from .beasts import ANY_RARE_CREATURE_PRICE, RECIPE_BEASTS, RareBeastFee, recipe_resources
 from .catalog import kind
 from .contract import Action, Adds, ImprintMove, Reads
 from .draw import jewel_class
