@@ -54,7 +54,7 @@ def _priced(plan: Plan, path: Path, data: GameData, target: Target) -> tuple[Pla
     """The route file at `path` evaluated on the plan it is judged on (`judged_on`): that plan, the route and its result."""
     judged = judged_on(plan, route_actions(path), data, target)
     route = load_route(path, judged, data)
-    return judged, route, evaluate_route(judged, route, data)
+    return judged, route, evaluate_route(judged, route, data, divergences=False)  # the block needs the costs only
 
 
 def reference_beside(data: GameData, plan: Plan, target: Target, root: Path | None = None) -> GuideBeside | None:
@@ -80,7 +80,7 @@ def reference_beside(data: GameData, plan: Plan, target: Target, root: Path | No
             return None
         # the rules with a last restart: how the file's figure was measured (its comment says so); its steps are used when they give that figure
         restarting = replace(route, rules=(*route.rules, Rule(0, When(), RESTART)), recorded_cost=None)
-        again = evaluate_route(judged, restarting, data)
+        again = evaluate_route(judged, restarting, data, divergences=False)
         cost = given_cost(judged, again)
         if cost is not None and math.isclose(cost, recorded, rel_tol=0.01):
             return GuideBeside(judged, route, again, RESTART_READING, recorded=True)
