@@ -49,8 +49,10 @@ skip_refused: true  # step 10: a rule whose action the game refuses falls throug
 
 # The guide's cost with the start item, recorded on 2026-11-24 (#1567, #1596): these rules have gaps on today's target (#1503), so they never
 # finish and price nothing; the same rules with a last `restart` (used 0.001 times per craft) cost 33,140.41 Chaos at the week-one prices,
-# success 1 (an Orb of Annulment there instead: 33,139.61). The proof sentence compares the plan's cost with this figure, said as recorded.
-recorded_cost: 33140.41
+# success 1 (an Orb of Annulment there instead: 33,139.61). Re-recorded on 2026-11-25 (#1663): each imprint also pays its three rare beasts
+# of any kind, so the same rules with the last `restart` cost 34,099.35 Chaos (33,566.35 + the 533 start; the old charge gives 33,140.41
+# again on the same code). The proof sentence compares the plan's cost with this figure, said as recorded.
+recorded_cost: 34099.35
 rules:
   # Step 4: the Normal Talisman is made Magic, then Alterations until the +1.
   - when:
