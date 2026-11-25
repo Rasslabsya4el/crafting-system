@@ -140,3 +140,9 @@ def test_the_needed_multimod_never_draws_a_line_past_the_side():
     card = card_of_target(DATA, belt_target(leaf(DAMAGE), leaf(LOCK), leaf(FIRE), leaf(COLD)))
 
     assert len(card.suffixes) == 3 and "Can have up to 3 Crafted Modifiers" not in slots(card)
+
+
+def test_the_title_never_says_crafted_twice():
+    title = page_title(DATA, belt_target(leaf(DAMAGE), leaf(MULTIMOD)))
+
+    assert "crafted Damage" in title and "crafted Can have" not in title and "Can have up to 3 Crafted Modifiers" in title
