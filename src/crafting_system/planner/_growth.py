@@ -86,11 +86,12 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   state leaves it one metamod to add it puts on the same lock, and it may be the cheaper one: on R24's boots, whose suffixes are full, the
   suffix lock is the one metamod with room (238 c against the bench's 353 c), and a plan that relocks at each reroll of the prefixes pays
   it at each use (2,541.56 c within the hour with the bench lock alone, 2,184.44 c with the Matron beside it). So the protector names
-  with the bench lock of a side the lockers whose every outcome at the step's item is that same lock (`OfferTable.lock_ways`); a locker
+  with the bench lock of a side the lockers whose every outcome at the step's item (sampled: the shape's item with a mod of each wanted
+  mod at risk) is that same lock (`OfferTable.lock_ways`); a locker
   whose draw may give another metamod there is another lock, and comes only where a step names that lock itself (a lock group names every
   locker, `lock_roles`). Until #1665 the closure brought every locker of a side with its bench lock: on R17, whose step names the prefix
   lock where the Matron makes the suffix lock, the Matron's states were 29.7% of the new keys of the guide set's probe, which then did not
-  build within the memory net. The search reads which metamod it adds at each state, so nothing is cut (OR-12).
+  build within the memory net (the probe's log `.claude/scratch/t1389c/full/run.log`; R24's figures #1513). The search reads which metamod it adds at each state, so nothing is cut (OR-12).
 * **The next round** holds the support of the plan in hand (the offers its policy uses), the run's named offers, the named roles and their
   dependencies; never the union of the earlier rounds. A set held by an earlier round names nothing new: the step is marked diagnosed and the
   next dearest is read. When no step names anything new the growth ends, and the rounds of `_rounds.widen` follow with the plan's support as
@@ -605,7 +606,8 @@ class OfferTable:
 
     def lock_ways(self, side: str, shapes, leaves: frozenset[int]) -> set[int]:
         """The other ways of making the lock of `side` (#1665 J4): the lockers of that side that draw which metamod they add (the Wild Bristle
-        Matron), each where every one of its outcomes at the item of one of `shapes` (its fractured mods and a mod of each wanted mod of
+        Matron), named only beside the bench lock of that side the protector names, each where every one of its outcomes at the sampled
+        item of one of `shapes` (its fractured mods and a mod of each wanted mod of
         `leaves`, the mods the step holds and can lose, on either side) holds that very lock: there it is the same lock, made otherwise, and the search picks
         between them by price. On R24's boots, whose suffixes the wanted mods fill, the suffix lock is the one metamod with room (#1513).
         Where its draw may give another metamod (on R17's Talisman with its prefixes full the Matron makes the suffix lock or a suffix

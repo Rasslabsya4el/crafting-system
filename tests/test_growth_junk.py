@@ -83,6 +83,9 @@ def test_an_addition_that_removes_a_mod_of_one_side_is_held_back_though_the_shap
     table._both_sides = lambda item: both if item is view else None
     assert table._removes_at(_OneSideRemover(), view) is False  # read at the shape's item alone, nothing is removed (main's reading)
     assert table._fans_at(_OneSideRemover(), view) == _growth.REMOVES_AND_ADDS  # main: ""
+    # a beast swap's outcomes are a mixture: one part for each mod it may take off, read by the item each part keeps before its draw
+    mixture = SimpleNamespace(outcomes=lambda data, item: SimpleNamespace(components=((Fraction(1), SimpleNamespace(retained=SimpleNamespace(mods=(_mod("S1"),)))),)))
+    assert table._removes_at(mixture, both) is True and table._removes_at(mixture, view) is False
 
 
 def test_the_item_with_a_mod_on_each_side_is_made_from_the_item_s_own_pool_and_is_none_where_both_sides_hold_one():
@@ -200,3 +203,21 @@ def test_the_matron_is_the_other_way_of_a_lock_only_where_its_draw_makes_that_lo
     table.held_back = frozenset()
     for name in ("prefix", "suffix"):
         assert table.lock_ways(name, frozenset({RARE}), side(name)) == set()
+
+
+def test_through_the_protector_the_matron_is_named_with_r24_s_suffix_lock_and_not_with_r17_s_prefix_lock():
+    matron, suffix_lock, prefix_lock = "Beastcraft Wild Bristle Matron (add a metamod)", "Bench craft Suffixes Cannot Be Changed", "Bench craft Prefixes Cannot Be Changed"
+    table, _at = _real_table("r24-avoid-shock-boots")
+    table.held_back = frozenset()
+    suffixes = {leaf for leaf in table.open if table.side_of(leaf) == "suffix"}
+    prefixes = {leaf for leaf in table.open if table.side_of(leaf) == "prefix"}
+    # R24's round 3: the Veiled Exalted Orb at the rare item waits for nothing and can lose the three wanted suffixes
+    named = _names(table, table.roles(set(), suffixes, frozenset({RARE}), False, frozenset(), frozenset()))
+    assert {suffix_lock, matron} <= named
+    table, _at = _real_table("r17-lightning-talisman")
+    table.held_back = frozenset()
+    suffixes = {leaf for leaf in table.open if table.side_of(leaf) == "suffix"}
+    prefixes = {leaf for leaf in table.open if table.side_of(leaf) == "prefix"}
+    # a step that waits for a suffix and can lose the prefixes names the prefix lock; the Matron's draw is not that lock there
+    named = _names(table, table.roles(suffixes, prefixes, frozenset({RARE}), False, frozenset(), frozenset()))
+    assert prefix_lock in named and matron not in named
