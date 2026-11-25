@@ -51,7 +51,9 @@ def test_r11_the_armour_craft_names_the_flat_evasion_family_and_the_exalt_finds_
     assert without(on, ARMOUR) == ab.compress(pelt)  # the item had the craft not been made
     assert chances(ab, on, ExaltedOrb())[0][0] == pytest.approx(float(Fraction(7000, 21275)), rel=1e-12)
     assert chances(ab, without(on, ARMOUR), ExaltedOrb())[0][0] == pytest.approx(float(Fraction(7000, 29275)), rel=1e-12)
-    assert blocks(data, LION_PELT, 85, ARMOUR) == "it takes the family of +# to Evasion Rating: while it is on, no such mod can be added"
+    assert blocks(data, LION_PELT, 85, ARMOUR) == (
+        "it is of one family with +# to Evasion Rating: an item holds one mod of a family, so while this craft is on, it cannot be added"
+    )
 
 
 def test_r14_under_the_attack_lock_an_annulment_never_takes_the_attack_speed_and_takes_it_without(data):
@@ -92,3 +94,16 @@ def test_r11_a_bench_fire_resistance_below_the_tier_asked_is_said_to_be_no_step_
         "so it only holds the slot until a step takes it off"
     )
     assert below_target(view, ARMOUR) is None
+
+
+def test_a_veiled_mod_is_drawn_on_a_card_as_the_game_names_it(data):
+    """#1644: after a Veiled Chaos Orb R24's card drew the veiled prefix as "any mod"; it is "Veiled Prefix" (the game's words)."""
+    from crafting_system.abstraction import Slot, Status
+    from crafting_system.cli._route_card import _StateReader
+    from crafting_system.items import Side
+
+    goal = Goal((Wanted(of_family(data, "DefencesPercent", "Evasion")),))
+    reader = _StateReader(Abstraction(data, goal, LION_PELT, 85, [ExaltedOrb()]))
+    row = reader.family(Slot(Side.PREFIX, "VeiledPrefix", (Status.ABSENT,)))
+
+    assert (row.text, row.marks) == ("Veiled Prefix", ("veiled",))

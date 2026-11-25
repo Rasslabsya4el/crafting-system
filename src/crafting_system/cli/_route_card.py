@@ -776,8 +776,13 @@ class _StateReader:
         return Slot(mod_text(mod), "crafted", ("crafted", *_marks(mod)))
 
     def family(self, slot: StateSlot) -> Slot:
-        """A slot of a family told apart: a mod of that family on its side, with the tiers it can have."""
+        """A slot of a family told apart: a mod of that family on its side, with the tiers it can have. A veiled mod is drawn as the game
+        names it, "Veiled Prefix" or "Veiled Suffix": the Unveil turns it into a pick from its offer, and a card that drew it as "any mod"
+        hid what the Veiled Chaos Orb made (#1644)."""
         key = (slot.side, slot.kind)
+        mod = self.data.mods.get(slot.kind)
+        if mod is not None and mod.domain == VEILED_DOMAIN:
+            return Slot(f"Veiled {slot.side.value.title()}", "mod", ("veiled",))
         if key not in self._families:
             self._families[key] = self._family_row(slot)
         return self._families[key]
@@ -854,6 +859,7 @@ def _rank(row: Slot) -> int:
     return {"wanted": 1, "crafted": 3}.get(row.tone, 2)
 
 
+BELOW_NOTES = ("tier too low", "below roll")  # the note of a wanted family's row below what the target asks: on a joined card, one of the "any mod" slots
 VARIES = "only on some of these items, each in a slot marked any:"  # the heading of the rows only some states of a card hold (#889)
 
 
@@ -897,7 +903,9 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
     for side in SIDES:
         rows, rest = _shared_rows([entry.rows[side] for entry in read])
         limit = _capacity(data, base_id, side, Rarity.MAGIC if only_magic else Rarity.RARE)
-        varies += [replace(row, marks=(*row.marks, side.value)) for row in dict.fromkeys(row for each in rest for row in each) if row.tone != "any"]
+        # the rows some states hold: the wanted, crafted, fractured and veiled ones; a mod the target does not need, or a wanted family below its tier, is one of
+        # the "any mod" slots (the stage board's rule: a player reads the unwanted mods as a count, the Where field names the one that decides)
+        varies += [replace(row, marks=(*row.marks, side.value)) for row in dict.fromkeys(row for each in rest for row in each) if (row.tone not in ("any", "mod") and not row.note.startswith(BELOW_NOTES)) or {"veiled", "fractured"} & set(row.marks)]
         if reader.tracked:
             counts = [entry.junk[side] + len(each) for entry, each in zip(read, rest)]  # what a state holds beside the shared rows
             rows += [ANY_MOD] * min(min(counts), max(0, limit - len(rows)))

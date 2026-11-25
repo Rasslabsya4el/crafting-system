@@ -11,7 +11,7 @@ from items_support import DATA
 from route_view_support import COLD_REQ, DAMAGE, FRACTURED_COLD, HYSTERIA_REQ, LIFE, belt, hand_input
 
 from crafting_system.abstraction import Status
-from crafting_system.cli._route_view import NEXT, SURE_NEXT, build_section
+from crafting_system.cli._route_view import DECIDE, NEXT, SURE_NEXT, build_section
 from crafting_system.targets import Requirement
 
 DAMAGE_REQ = Requirement("AllDamage", None, frozenset({DAMAGE}))
@@ -75,7 +75,11 @@ def test_the_branches_of_a_sure_craft_that_all_get_the_crafted_mod_are_told_apar
 
     onward = {line.text.split(", then ")[-1].split(":")[0]: line.text for line in lines(bench, SURE_NEXT) if not line.text.startswith("the target")}
     assert set(onward) == {"Chaos Orb", "Essence of Hysteria"}
-    assert "without +# to maximum Life" in onward["Chaos Orb"] and "with +# to maximum Life" in onward["Essence of Hysteria"]
+    rows = [line.text.rsplit(" (", 1)[0].removeprefix("else ") for line in lines(bench, DECIDE)[1:] if "every mod the target asks" not in line.text]  # the item is told in the step's list, read from the top (#1526)
+    assert rows in (
+        ["with +# to maximum Life · any tier: then Essence of Hysteria", "any other item: then Chaos Orb"],
+        ["without +# to maximum Life · any tier: then Chaos Orb", "any other item: then Essence of Hysteria"],
+    )
 
 
 def test_a_wanted_mod_a_fracturing_orb_hits_is_named_though_the_state_holds_it_as_its_family_type():
