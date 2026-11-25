@@ -552,7 +552,7 @@ def test_a_join_whose_items_each_hold_one_of_two_wanted_mods_names_them_as_one_r
 
     card = card_of_states(ab, [ab.compress(belt(roll(LIFE_3))), ab.compress(belt(roll(SHIELD)))])
 
-    assert card.prefixes == (Slot("one of +(40-54) to maximum Life / +(1-3) to maximum Energy Shield", "wanted", (), "T1"), EMPTY, EMPTY)
+    assert card.prefixes == (Slot("one of +(1-3) to maximum Energy Shield / +(40-54) to maximum Life", "wanted", (), "T1"), EMPTY, EMPTY)
     assert card.groups == ()
     mixed = card_of_states(ab, [ab.compress(belt(roll(LIFE_3))), ab.compress(belt())])  # one item holds none: no slot is sure, "any" it is
     assert mixed.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY)

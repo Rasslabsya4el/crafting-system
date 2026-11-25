@@ -914,7 +914,7 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         named = list(dict.fromkeys(row for each in wanted for row in each))
         notes = {row.note for row in named}
         if held and len(notes) == 1 and len(named) > 1:
-            text = f"one of {' / '.join(dict.fromkeys(row.text for row in named))}"
+            text = f"one of {' / '.join(sorted(dict.fromkeys(row.text for row in named)))}"  # one order whatever the states' order
             rows += [Slot(text, "wanted", (), named[0].note)] * min(held, max(0, limit - len(rows)))
             rest = [list(each) for each in rest]
             for each, own in zip(rest, wanted):
