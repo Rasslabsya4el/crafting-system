@@ -1343,6 +1343,8 @@ class _View:
         opens = opening is not None and self.plan.start in step.states
         if opens:  # the orbs a player uses once on the item he bought: they make it the start's rarity, never a mod he rerolls toward (#1540)
             goal = [f"a {opening.rarity.value} item"]
+            if any(edge.kind == "goal" for edge in step.edges):  # the one use may also land every wanted mod: the chance says how often (crafter on R08)
+                goal.append("rarely the target at once: its chance is under Chance per use")
         fields = _fields(
             self.reached_from(number),
             _plain("Goal", *goal),

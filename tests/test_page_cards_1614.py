@@ -102,7 +102,7 @@ def test_a_start_bought_as_a_normal_base_draws_the_normal_base_and_the_alchemy_m
     assert rows[0].after.properties[0] == "Normal" and rows[0].after.prefixes == (EMPTY,) * 3 and rows[0].after.suffixes == (EMPTY,) * 3
     alchemy = rows[1]
     assert alchemy.title == "Orb of Alchemy on the bought Normal base"
-    assert field(alchemy, "Goal") == ["a rare item"]  # never the mods, as if the orb were used again toward them (crafter on R08)
+    assert field(alchemy, "Goal")[0] == "a rare item" and all("Toy" not in line for line in field(alchemy, "Goal"))  # never the mods, as if the orb were used again toward them (crafter on R08)
     assert field(alchemy, "Accepts") == []  # the free draw's words (crafter on R09, Q11)
     assert field(alchemy, "Used on")[0] == "the Normal Toy Listing Boots bought in step 1"
     assert field(alchemy, "Used on")[1].startswith("it comes out Rare")
