@@ -18,9 +18,7 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   (what `D` can destroy). The roles named for them:
   - **adders** for each mod of `W`: the `PER_ROLE` offers of least cost over chance on it that keep the mods they are given (an addition, a
     craft, a veiled choice or a veil: not a reroll), at any shape, among the offers the round that made the plan did not hold;
-  - **moves**: for an adder whose best shape is not one `D` acts at, the cheapest offer of each step of the rarities between them that
-    forces no mod and leads to one rarity (`move_to`, #1665 J1: an essence's full random draw is no move; Whispering Essence of Greed at
-    0.0027 c was R17's Normal-to-rare move), any offer only where no such way is found;
+  - **moves**: for an adder whose best shape is not one `D` acts at, the cheapest offer of each step of the rarities between them;
   - **protectors** for each mod of `K`, among the offers that draw no mod (they keep the mods they are given; a reroll that also fractures
     keeps none of them): every one that fractures (when the states hold no fractured mod), the cheapest that adds the lock of the mod's side
     (unless every mod of `W` sits on that side: a step that waits for a mod of the other side still gains it under the lock), and the
@@ -78,9 +76,7 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   step are beaten (about 120 s), nothing more is named, and its lock group comes: 206,331.71 c within the hour.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
-  a restore brings every restore and an imprint the restores and the imprints made at its own shapes (`imprint_chain`, `Entry.copies_at`:
-  the imprint the roles named where the miss happens, and the one that replaces it; a restore with no imprint brings every imprint, #1665
-  J3: on R17 the Fenumal pair, named at the rare Talisman, brought the Croaker pair of the magic shape too).
+  a restore brings the imprints and an imprint the restores.
   The other ways of making a lock (#1513, hypothesis H35 of #1434; #1665 J4). The protector rule names the lock among the offers that draw
   no mod, so the Wild Bristle Matron, which draws which metamod it adds, was never named beside the bench lock; yet where the item's
   state leaves it one metamod to add it puts on the same lock, and it may be the cheaper one: on R24's boots, whose suffixes are full, the
@@ -208,7 +204,6 @@ class Entry:
     need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
     forces: bool = False  # every use puts on a mod it names (an essence's) or one of a tag (a Harvest reforge): no plain reroll or move (#1600)
     wipes: bool = False  # a reroll that draws no mod and adds none: it leaves the item bare but for what it keeps (an Orb of Scouring, #1600)
-    copies_at: frozenset[Rarity] = frozenset()  # the shapes where it makes an imprint (also of an item holding one: a replacing imprint, #1665 J3)
 
     def acts_at(self, shapes) -> bool:
         """Whether it is read as acting at one of `shapes` (its kind there is not a refusal)."""
@@ -278,8 +273,6 @@ class OfferTable:
             if ask is not None and position % 256 == 0:
                 ask()
             entry, action = self.entries[position], offer.offer.action
-            if self._copies(action, view):
-                entry.copies_at |= {rarity}
             try:
                 kind, named = _kind_of(data, view, offer)
                 entry.kinds[rarity] = kind
@@ -327,20 +320,6 @@ class OfferTable:
                             continue
                     if bound is not None and bound > 0:
                         self.entries[position].chance[(rarity, leaf)] = bound
-
-    def _copies(self, action, view: Item) -> bool:
-        """Whether `action` makes an imprint of `view`'s item, or of it holding one imprint of itself (an imprint that replaces one acts only
-        on an item whose imprints are full), as its outcomes there say (#1665 J3)."""
-        move = getattr(action, "imprint_move", lambda: None)()
-        if move is None or move.restore:
-            return False
-        for item in (view, replace(view, imprints=(replace(view, imprints=()),))):
-            try:
-                action.outcomes(self.data, item)
-                return True
-            except (NotApplicableError, OutOfScopeError, ValueError):  # refused at this item
-                continue
-        return False
 
     def _read_declarations(self, entry: Entry, offer: PricedOffer, item: Item) -> None:
         data, action = self.data, offer.offer.action
@@ -483,7 +462,7 @@ class OfferTable:
                 for roll in self._best(leaf, lambda entry, at=at: repeats(entry, at), 1, (at,)):
                     extra.add(roll)
                     if at != self.start_rarity:
-                        extra |= self.move_to(frozenset({self.start_rarity}), at) - self.held_back
+                        extra |= self.moves(frozenset({self.start_rarity}), at) - self.held_back
         return extra
 
     def _best(self, leaf: int, allowed: Callable[[Entry], bool], count: int, shapes: Sequence[Rarity] | None = None, held: frozenset[int] = frozenset()) -> list[int]:
@@ -559,7 +538,7 @@ class OfferTable:
         for position, at in adders:
             named.add(position)
             if at is not None and at not in shapes:
-                named.update(self.move_to(shapes, at))
+                named.update(self.moves(shapes, at))
         wait_sides = {self.side_of(leaf) for leaf in waits}
         for leaf in sorted(risks):
             if not fractured:
@@ -750,12 +729,6 @@ class OfferTable:
         moves of the reset path, module text)."""
         return set(self._way(shapes, to, plain)[1])
 
-    def move_to(self, shapes: frozenset[Rarity], to: Rarity) -> set[int]:
-        """The moves a role names to take an item from `shapes` to an adder's shape `to` (#1665 J1): the plain ones (`moves` with `plain`: no
-        offer that forces a mod, such as an essence whose other mods are a full random draw, and no offer whose outcomes have several
-        rarities), or, only where no plain way is found, the cheapest way of any offers."""
-        return self.moves(shapes, to, plain=True) or self.moves(shapes, to)
-
     def _way(self, shapes: frozenset[Rarity], to: Rarity, plain: bool = False) -> tuple[float, tuple[int, ...]]:
         """The cost and the positions of `moves`; infinity and none when no way is found."""
         best: dict[Rarity, tuple[float, tuple[int, ...]]] = {shape: (0.0, ()) for shape in shapes}
@@ -819,17 +792,6 @@ class OfferTable:
         ]  # fmt: skip
         return {min(found)[1]} if found else set()
 
-    def imprint_chain(self, chosen: Sequence[Entry]) -> set[int]:
-        """What an imprint or a restore among `chosen` brings (module text, dependencies; #1665 J3): every restore, and the imprints made at
-        the shapes where an imprint of `chosen` is made (`Entry.copies_at`: the one the roles named where the miss happens, and the one that
-        replaces it), or every imprint when `chosen` holds a restore and no imprint (no shape is named)."""
-        imprints = [entry for entry in chosen if entry.makes_imprint]
-        shapes = frozenset().union(*(entry.copies_at for entry in imprints)) if imprints else None
-        return {
-            entry.position for entry in self.entries
-            if entry.restores or (entry.makes_imprint and (shapes is None or entry.copies_at & shapes))
-        } | {entry.position for entry in imprints}  # fmt: skip
-
     def closure(self, positions: set[int]) -> set[int]:
         """`positions` with what each needs to act (module text, dependencies); a group that holds anything also holds the reset closure
         (module text). The other ways of making a lock are named with it where a step names it (`lock_ways`, #1665 J4), not here."""
@@ -840,7 +802,7 @@ class OfferTable:
             if any(entry.needs_veiled or entry.veils for entry in chosen):
                 more.update(entry.position for entry in self.entries if entry.needs_veiled or (entry.veils and any(each.needs_veiled for each in chosen)))
             if any(entry.restores or entry.makes_imprint for entry in chosen):
-                more.update(self.imprint_chain(chosen))
+                more.update(entry.position for entry in self.entries if entry.restores or entry.makes_imprint)
             if more <= found:
                 return found
             found |= more
