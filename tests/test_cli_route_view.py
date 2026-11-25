@@ -556,7 +556,7 @@ def test_the_block_against_the_guide_gives_both_costs_and_the_three_kinds_of_ste
         "the guide's route spends 900 c (45 uses) on Fossil; this plan does not use it",
         "this plan spends 100 c (50 uses) on Essence; the guide's route does not use it",
         "the guide's route spends 50 c (1 use) on Exalt; this plan does not use it",
-        "the other 1 kinds of step that differ: this plan 30 c, the guide's route 10 c",
+        "the other kind of step that differs: this plan 30 c, the guide's route 10 c",
     ]
 
 

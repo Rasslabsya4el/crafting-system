@@ -19,6 +19,7 @@ import math
 from dataclasses import replace
 from pathlib import Path
 
+from crafting_system.budget import BudgetExceeded
 from crafting_system.config import find_project_root
 from crafting_system.data import DataError, GameData
 from crafting_system.planner import Plan, PlanError
@@ -58,8 +59,10 @@ def _priced(plan: Plan, path: Path, data: GameData, target: Target) -> tuple[Pla
 
 def reference_beside(data: GameData, plan: Plan, target: Target, root: Path | None = None) -> GuideBeside | None:
     """The guide's route of the reference craft `target` states, priced on `plan`'s model for the page's block against the guide (#1584), or
-    None: no such reference, or a route that cannot be read or priced here (the page then says only what `reference_guide` gives). `target`
-    is the target as its file states it (`judged_on`)."""
+    None: no such reference, or a route that cannot be read or priced here, or the run's memory net met while pricing it (the page then says
+    only what `reference_guide` gives: a comparison never costs the plan its page). `target` is the target as its file states it (`judged_on`).
+    The guide is priced on the plan's prices (`judged_on`), not on the start price or price source a run overrides (#1584 point 1 stays open).
+    Its cost: seconds on a light craft, about two minutes on R17."""
     root = find_project_root() if root is None else root
     bench = _reference(data, target, root)
     if bench is None:
@@ -83,6 +86,8 @@ def reference_beside(data: GameData, plan: Plan, target: Target, root: Path | No
             return GuideBeside(judged, route, again, RESTART_READING, recorded=True)
         return GuideBeside(judged, route, None, recorded=True)
     except (RouteError, PlanError):
+        return None
+    except BudgetExceeded:  # the run's memory net, met while the guide was priced: the plan's own page and record stand without the comparison
         return None
 
 

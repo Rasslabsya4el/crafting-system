@@ -2299,7 +2299,8 @@ def against_guide(planned: tuple[StepRow, ...], given: tuple[StepRow, ...] | Non
             lines.append(Line(f"this plan spends {spent(kind, ours, our_uses)} on {kind}; the guide's route does not use it"))
     here, there = math.fsum(ours.get(kind, 0.0) for kind in rest), math.fsum(theirs.get(kind, 0.0) for kind in rest)
     if rest and (here or there):
-        lines.append(Line(f"the other {len(rest)} kinds of step that differ: this plan {money(here) if here else 'nothing'}, the guide's route {money(there) if there else 'nothing'}"))
+        others = "the other kind of step that differs" if len(rest) == 1 else f"the other {len(rest)} kinds of step that differ"
+        lines.append(Line(f"{others}: this plan {money(here) if here else 'nothing'}, the guide's route {money(there) if there else 'nothing'}"))
     return Field(AGAINST_GUIDE, tuple(lines))
 
 

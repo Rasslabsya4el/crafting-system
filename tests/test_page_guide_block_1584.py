@@ -80,7 +80,9 @@ def test_a_guide_whose_rules_finish_is_walked_on_the_plan_and_the_block_says_the
 
     lines = _block(page)
     assert len(lines) == 1 and lines[0].endswith("the same cost, to within 1%"), lines
-    assert "the same as the guide's route" in words or "the guide's route at" in words  # the proof sentence says the guide's cost too (OR-59)
+    figure = f"{guide:,.2f} Chaos"
+    assert f"the guide's route at {figure}" in words or "the same as the guide's route" in words  # the proof sentence says the guide's cost too (OR-59)
+    assert f"the guide's route at {figure} (the figure recorded" not in words  # walked on the plan, not recorded
 
 
 def test_a_guide_with_gaps_is_priced_with_a_restart_and_the_block_names_where_the_two_part(data, tmp_path):
