@@ -776,13 +776,13 @@ class _StateReader:
         return Slot(mod_text(mod), "crafted", ("crafted", *_marks(mod)))
 
     def family(self, slot: StateSlot) -> Slot:
-        """A slot of a family told apart: a mod of that family on its side, with the tiers it can have. A veiled mod is drawn as one
-        (`VEILED_ROW`): the Unveil turns it into a pick from its offer, and a card that drew it as "any mod" hid what the Veiled Chaos
-        Orb made (#1644)."""
+        """A slot of a family told apart: a mod of that family on its side, with the tiers it can have. A veiled mod is drawn as the game
+        names it, "Veiled Prefix" or "Veiled Suffix": the Unveil turns it into a pick from its offer, and a card that drew it as "any mod"
+        hid what the Veiled Chaos Orb made (#1644)."""
         key = (slot.side, slot.kind)
         mod = self.data.mods.get(slot.kind)
         if mod is not None and mod.domain == VEILED_DOMAIN:
-            return VEILED_ROW
+            return Slot(f"Veiled {slot.side.value.title()}", "mod", ("veiled",))
         if key not in self._families:
             self._families[key] = self._family_row(slot)
         return self._families[key]
@@ -860,7 +860,6 @@ def _rank(row: Slot) -> int:
 
 
 BELOW_NOTES = ("tier too low", "below roll")  # the note of a wanted family's row below what the target asks: on a joined card, one of the "any mod" slots
-VEILED_ROW = Slot("a veiled mod (Unveil shows its offer)", "mod", ("veiled",))  # a veiled placeholder on a card (#1644)
 VARIES = "only on some of these items, each in a slot marked any:"  # the heading of the rows only some states of a card hold (#889)
 
 

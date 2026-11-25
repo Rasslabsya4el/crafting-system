@@ -94,3 +94,16 @@ def test_r11_a_bench_fire_resistance_below_the_tier_asked_is_said_to_be_no_step_
         "so it only holds the slot until a step takes it off"
     )
     assert below_target(view, ARMOUR) is None
+
+
+def test_a_veiled_mod_is_drawn_on_a_card_as_the_game_names_it(data):
+    """#1644: after a Veiled Chaos Orb R24's card drew the veiled prefix as "any mod"; it is "Veiled Prefix" (the game's words)."""
+    from crafting_system.abstraction import Slot, Status
+    from crafting_system.cli._route_card import _StateReader
+    from crafting_system.items import Side
+
+    goal = Goal((Wanted(of_family(data, "DefencesPercent", "Evasion")),))
+    reader = _StateReader(Abstraction(data, goal, LION_PELT, 85, [ExaltedOrb()]))
+    row = reader.family(Slot(Side.PREFIX, "VeiledPrefix", (Status.ABSENT,)))
+
+    assert (row.text, row.marks) == ("Veiled Prefix", ("veiled",))

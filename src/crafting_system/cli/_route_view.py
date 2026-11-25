@@ -68,7 +68,7 @@ import numpy as np
 from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError, paid_opening, scoured_from
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import AtLeast, CompressedState, Status, Wanted
-from crafting_system.abstraction._kinds import kind_tags
+from crafting_system.abstraction._kinds import kind_families, kind_tags
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
 from crafting_system.items.model import VEILED_DOMAIN
@@ -549,6 +549,7 @@ def _words(columns: list[_Column]) -> str:
     return " ".join(part for part in (" ".join(column.noun for column in ordered if column.sign == ""), " and ".join(signed)) if part)
 
 
+ALIKE_PICKS = 0.01  # the most two picks' shares of a place may differ for the picks to be a free choice (#1644)
 ONE_PLACE = 0.95  # a pick whose items go on to one place this often is said to go there (#1644)
 FEW_RUNS = 0.5  # a step fewer runs than this come to says that share first (`_rare_uses`)
 RUNS_COME = "of runs come to this step"  # the words of a step most runs never reach (`_rare_uses`)
@@ -927,10 +928,11 @@ class _View:
         for slot in state.slots:
             if slot.crafted:
                 traits[("crafted", slot.kind)] = 1
+            elif self._veiled(slot.kind):  # a veiled mod is its own condition, not one of the unwanted mods (checker)
+                veiled[slot.side] += 1
             elif not any(status is not Status.ABSENT for status in slot.contribution):
                 junk[slot.side] += 1
                 tags.update(kind_tags(slot.kind))
-                veiled[slot.side] += int(self._veiled(slot.kind))
                 for i in self._blocked_leaves(slot.kind):
                     if state.status[i] is not Status.PASSING:
                         family = self.reader.family(slot)
@@ -956,12 +958,14 @@ class _View:
         """The wanted leaves whose family a mod of slot `kind` holds (a family type "~n" names none): while it is on, they cannot be added."""
         cache = self.__dict__.setdefault("_blocked", {})
         if kind not in cache:
-            if kind.startswith("~"):
+            if kind.startswith("~"):  # a family type names no family
                 families: set[str] = set()
             elif kind in self.data.mods:
                 families = set(self.data.mods[kind].families)
+            elif kind.startswith("$") and kind[1:] in self.data.mods:  # a mod kind
+                families = set(self.data.mods[kind[1:]].families)
             else:
-                families = {kind.lstrip("^").split("@")[0]}
+                families = kind_families(kind)
             cache[kind] = tuple(
                 i for i, leaf in enumerate(self.ab.goal.leaves)
                 if any(families & set(self.data.mods[mod_id].families) for mod_id in leaf.mod_ids if mod_id in self.data.mods)
@@ -971,7 +975,7 @@ class _View:
     def _veiled(self, kind: str) -> bool:
         """Whether a slot of this kind is a veiled mod (the placeholder an unveil reveals)."""
         mod = self.data.mods.get(kind)
-        return (mod is not None and mod.domain == VEILED_DOMAIN) or "veiled" in kind.lower()
+        return mod is not None and mod.domain == VEILED_DOMAIN
 
     @property
     def plan_imprints(self) -> bool:
@@ -1079,8 +1083,12 @@ class _View:
             texts.append(lines[-1].text + (f" {lines[-1].anchor}" if lines[-1].anchor else ""))
         if len(lines) > SHOWN_ROWS:
             rest = texts[SHOWN_ROWS - 1 :]
-            lines = [*lines[: SHOWN_ROWS - 1], Line(f"the {len(rest)} rarer rows, in the same order", more=tuple(rest), more_title="show them", more_apart=True)]
-        return Field(DECIDE, (Line("check the item from the top; the first row that holds says what is next:"), *lines))
+            lines = [*lines[: SHOWN_ROWS - 1], Line(f"the other {len(rest)} rows, in the same order", more=tuple(rest), more_title="show them", more_apart=True)]
+        head = [Line("check the item from the top; the first row that holds says what is next:")]
+        if any(edge.kind == "goal" for edge in step.edges):  # the target's items are told by its mods, before any row (checker: a row could hold on them)
+            head.append(Line("the item holds every mod the target asks: it is done"))
+            lines = [replace(line, text=line.text if line.text.startswith(("else ", "the other ")) else f"else {line.text}") for line in lines]
+        return Field(DECIDE, (*head, *lines))
 
     def _place(self, step: Step, edge: Edge) -> str:
         """Where a branch goes on to, as a row of `decision_field` says it: this step again, the item given up, or the next action."""
@@ -1655,7 +1663,9 @@ class _View:
                 shown = tuple(self._mod(entry.mod_id) for entry in made.offered.offer)
                 taken = self._taken(made)
                 offers.append((weight * made.chance, shown, taken))
-                role.setdefault(taken, self._pick_role(made))
+                found = self._pick_role(made)
+                if role.get(taken, ("junk", ""))[0] == "junk":  # a mod that blocks, or meets, a wanted mod on any offer is said so
+                    role[taken] = found
                 for landing, chance in made.pick.outcomes:
                     if chance > 0 and landing in where:
                         place = goes.setdefault(taken, {})
@@ -1686,10 +1696,15 @@ class _View:
             when = "only when the window shows none of the mods below" if alone or not free else "over the mods below on some offers"
             why = f"; it blocks the {role[mod][1]} asked (one family), so" if role[mod][0] == "blocks" else ";"
             lines.append(f"{'else ' if lines else ''}{mod}: taken {when}, on {chance_text(shares[mod] / whole)} of unveils{why} it goes on to {mostly.get(mod, 'another step')}")
-        if free:  # mods the target does not ask and that block none it asks: one is as good as another (#1644)
+        if free:  # mods the target does not ask and that block none it asks (#1644)
             share = chance_text(math.fsum(shares[mod] for mod in free) / whole)
             if len(free) > 1:
-                lines.append(f"{'else ' if lines else ''}any of {'; '.join(free)}: none is a mod the target asks and none blocks one, so which is taken is a free choice; taken on {share} of unveils; where the item goes then is under \"{DECIDE}\"")
+                # a free choice only when the items they make go on alike: the same places, each within a point (checker: a junk suffix may
+                # take the open suffix a later step needs)
+                spread = [{place: value / math.fsum(goes[mod].values()) for place, value in goes.get(mod, {}).items()} for mod in free]
+                alike = all(set(each) == set(spread[0]) and all(abs(each[p] - spread[0][p]) <= ALIKE_PICKS for p in each) for each in spread[1:])
+                said = "so which is taken is a free choice" if alike else "and the item goes on by its other mods"
+                lines.append(f"{'else ' if lines else ''}any of {'; '.join(free)}: none is a mod the target asks and none blocks one, {said}; taken on {share} of unveils; where the item goes then is under \"{DECIDE}\"")
             else:
                 lines.append(f"{'else ' if lines else ''}{free[0]}: a mod the target does not ask; taken on {share} of unveils; it goes on to {mostly.get(free[0], 'another step')}")
         return ["the window shows up to three mods and one is taken, free; the plan takes, in this order:", *lines]
@@ -1870,7 +1885,7 @@ class _View:
             return []
         base = self.data.base_items[self.ab.base_id]
         if "talisman" in base.tags:
-            return ["not asked: a Talisman's implicit is random, and the plan keeps whatever implicit the bought Talisman has"]
+            return ["not asked: a Talisman's implicit is random, and the plan keeps whatever implicit the start Talisman has"]
         if base.implicits:
             return [f"not asked: the base's own implicit ({', '.join(self._implicit_text(mod_id) for mod_id in base.implicits)}) stays as it is"]
         return []

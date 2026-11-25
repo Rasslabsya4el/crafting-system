@@ -75,10 +75,10 @@ def test_the_branches_of_a_sure_craft_that_all_get_the_crafted_mod_are_told_apar
 
     onward = {line.text.split(", then ")[-1].split(":")[0]: line.text for line in lines(bench, SURE_NEXT) if not line.text.startswith("the target")}
     assert set(onward) == {"Chaos Orb", "Essence of Hysteria"}
-    rows = [line.text.rsplit(" (", 1)[0] for line in lines(bench, DECIDE)[1:]]  # the item is told in the step's list, read from the top (#1526)
+    rows = [line.text.rsplit(" (", 1)[0].removeprefix("else ") for line in lines(bench, DECIDE)[1:] if "every mod the target asks" not in line.text]  # the item is told in the step's list, read from the top (#1526)
     assert rows in (
-        ["with +# to maximum Life · any tier: then Essence of Hysteria", "else any other item: then Chaos Orb"],
-        ["without +# to maximum Life · any tier: then Chaos Orb", "else any other item: then Essence of Hysteria"],
+        ["with +# to maximum Life · any tier: then Essence of Hysteria", "any other item: then Chaos Orb"],
+        ["without +# to maximum Life · any tier: then Chaos Orb", "any other item: then Essence of Hysteria"],
     )
 
 

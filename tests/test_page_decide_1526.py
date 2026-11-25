@@ -71,3 +71,80 @@ def test_items_a_player_sees_alike_are_one_item_to_the_rows():
     rows = decision_list(tests, labels, np.array([0.5, 0.25, 0.25]))
 
     assert len(rows) == 2 and all(first_place(rows, tests, i) == labels[i] for i in range(3))
+
+
+# -- the field on the page, on the hand-made belt of `test_cli_page_branch_conditions` -------------------------------------------------
+
+
+def _chaos_view():
+    from items_support import DATA
+    from route_view_support import COLD_REQ, FRACTURED_COLD, belt, hand_input
+    from test_cli_page_branch_conditions import DAMAGE_REQ, JUNK_ES, JUNK_PREFIX, chaos_until_no_unwanted_prefix
+
+    from crafting_system.cli._route_view import _View
+
+    view = _View(hand_input(belt(FRACTURED_COLD, JUNK_PREFIX, JUNK_ES), (COLD_REQ, DAMAGE_REQ), chaos_until_no_unwanted_prefix), DATA, None, "", True)
+    (chaos,) = [step for step in view.flow.steps if step.action is not None and step.action.label == "Chaos Orb"]
+    return view, chaos
+
+
+def test_the_rows_shares_and_the_targets_chance_add_up_to_every_use():
+    view, chaos = _chaos_view()
+    goal = sum(edge.chance for edge in chaos.edges if edge.kind == "goal")
+    assert abs(sum(share for *_, share in view.decisions(chaos)) + goal - 1.0) < 1e-9
+
+
+def test_a_long_list_shows_its_first_rows_and_the_rest_below_and_look_alike_items_say_so():
+    from crafting_system.cli._route_decide import SHOWN_ROWS
+    from crafting_system.cli._route_view import DECIDE
+
+    view, chaos = _chaos_view()
+    edges = [edge for edge in chaos.edges if edge.kind != "goal"]
+    rows = [(f"with condition {n}", [(edges[n % len(edges)], 1.0)], (0,), 0.01) for n in range(SHOWN_ROWS + 3)]
+    rows.append(("", [(edges[0], 0.75), (edges[-1], 0.25)], (), 0.5))
+    view.__dict__["_decisions"] = {chaos.number: rows}
+
+    field = view.decision_field(chaos)
+
+    assert field is not None and field.label == DECIDE
+    shown = field.lines[1:]
+    assert len(shown) == SHOWN_ROWS and shown[-1].text == f"the other {len(rows) - SHOWN_ROWS + 1} rows, in the same order"
+    assert shown[-1].more[-1].startswith("else any other item: items that look alike go on differently (50%): ")
+    assert "on 75%" in shown[-1].more[-1] and "on 25%" in shown[-1].more[-1]
+
+
+def test_a_veiled_mod_is_drawn_as_the_game_names_it_and_counts_apart_from_the_unwanted_mods():
+    from crafting_system.abstraction import Slot as StateSlot
+    from crafting_system.abstraction import Status
+    from crafting_system.items import Side
+
+    import pytest
+
+    view, _ = _chaos_view()
+    if "VeiledPrefix" not in view.data.mods:
+        pytest.skip("the game data of these tests holds no veiled mod")
+    leaves = len(view.plan.leaf_labels)
+    row = view.reader.family(StateSlot(Side.PREFIX, "VeiledPrefix", (Status.ABSENT,) * leaves))
+
+    assert (row.text, row.marks) == ("Veiled Prefix", ("veiled",))
+    assert view._veiled("VeiledPrefix")
+    assert not view._veiled("JunMasterVeiledMovementVelocityAndOnslaughtOnKill")  # an unveiled mod (domain "unveiled") is no veiled mod
+
+
+def test_an_unwanted_mod_of_a_wanted_mods_family_blocks_it():
+    view, _ = _chaos_view()
+    cold = next(i for i, label in enumerate(view.plan.leaf_labels) if "Cold" in label)
+
+    assert cold in view._blocked_leaves("ColdResistance")
+    assert view._blocked_leaves("~3") == ()  # a family type names no family
+
+
+def test_the_goal_card_says_the_divine_rate_and_the_implicit_the_target_does_not_ask():
+    view, _ = _chaos_view()
+
+    (line,) = view.divine_line(())
+    assert line.startswith("Divine Orb: ") and line.endswith("the Divine figures of this page are at this rate")
+    base = view.data.base_items[view.ab.base_id]
+    if base.implicits:
+        (said,) = view.implicit_lines()
+        assert said.startswith("not asked: the base's own implicit (")
