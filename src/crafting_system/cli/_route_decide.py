@@ -69,14 +69,27 @@ def _learn(tests: np.ndarray, labels: np.ndarray, mass: np.ndarray, by_mass: boo
             # heaviest place last; with no new search, which on R17 took minutes per row
             heaviest = max(open_labels.tolist(), key=lambda label: float(mass[left & (labels == label)].sum()))
             for j in sorted(np.flatnonzero(left & (labels != heaviest)).tolist(), key=lambda i: -float(mass[i])):
-                conditions = tuple(c for c in range(tests.shape[0]) if tests[c, j] and (left & ~tests[c]).any())
-                rows.append((conditions, int(labels[j])))
+                rows.append((_isolating(tests, labels, left, j), int(labels[j])))
             rows.append((None, int(heaviest)))
             break
         conditions, label, covered = found
         rows.append((conditions, label))
         left &= ~covered
     return rows
+
+
+def _isolating(tests: np.ndarray, labels: np.ndarray, left: np.ndarray, j: int) -> tuple[int, ...]:
+    """Conditions that hold on item `j` and on no item of another label among `left`: each the one that rules out the most of what is still
+    covered (greedy; the item's every condition rules out all, since the columns hold "with" and "without" of each fact)."""
+    other = left & (labels != labels[j])
+    chosen: list[int] = []
+    while other.any():
+        c = max((c for c in range(tests.shape[0]) if tests[c, j]), key=lambda c: int((other & ~tests[c]).sum()))
+        if not (other & ~tests[c]).any():
+            break  # nothing parts the rest (equal conditions): the caller's labels promise it never happens
+        chosen.append(c)
+        other &= tests[c]
+    return tuple(sorted(chosen))
 
 
 def _best_row(tests: np.ndarray, labels: np.ndarray, mass: np.ndarray, left: np.ndarray, by_mass: bool, skip: int | None = None):
