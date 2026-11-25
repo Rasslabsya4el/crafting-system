@@ -65,7 +65,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError, scoured_from
+from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError, paid_opening, scoured_from
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.abstraction._kinds import kind_tags
@@ -952,7 +952,7 @@ class _View:
         landing = list(dict.fromkeys(state for edge in forward for state in edge.states))
         mods = sorted({len(state.fractured) + len(state.slots) for state in landing}) if self.reader.tracked else []
         held = "" if not mods else f" with {mods[0]} random mod{'s' if mods[0] != 1 else ''}" if len(mods) == 1 else f" with {', '.join(map(str, mods[:-1]))} or {mods[-1]} random mods"
-        return [took, f"it comes out {opening.rarity.value.capitalize()}{held}, once: what it holds decides the next step"]
+        return [took, f"it comes out {paid_opening(opening).value.capitalize()}{held}, once: what it holds decides the next step"]
 
     def tier_field(self, step: Step, action: Action) -> Field | None:
         """OR-31: one line per wanted family the step can add, with the chance of each tier, mixed over the step's states."""
@@ -1116,7 +1116,7 @@ class _View:
             first = None if at is None else at.action
             priced = None if first is None else next((p for p in self.plan.offers if p.label == first.label), None)
             action = None if priced is None else priced.offer.action
-            found = action if action is not None and action.opens_listing and getattr(action, "paid", False) else None
+            found = action if action is not None and paid_opening(action) is not None else None
             self._opening = found
         return found
 
@@ -1343,7 +1343,7 @@ class _View:
         opening = self.opening()
         opens = opening is not None and self.plan.start in step.states
         if opens:  # the orbs a player uses once on the item he bought: they make it the start's rarity, never a mod he rerolls toward (#1540)
-            goal = [f"a {opening.rarity.value} item"]
+            goal = [f"a {paid_opening(opening).value} item"]
             if any(edge.kind == "goal" for edge in step.edges):  # the one use may also land every wanted mod: the chance says how often (crafter on R08)
                 goal.append("rarely the target at once: its chance is under Chance per use")
         fields = _fields(

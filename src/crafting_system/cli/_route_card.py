@@ -74,8 +74,7 @@ from typing import Literal
 
 from crafting_system.abstraction import CompressedState, Status, Wanted, status_of
 from crafting_system.abstraction import Slot as StateSlot
-from crafting_system.actions import OutOfScopeError, forced_mod_id, tiers_of
-from crafting_system.actions.metamods import crafted_limit_of
+from crafting_system.actions import OutOfScopeError, crafted_limit_of, forced_mod_id, tiers_of
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
