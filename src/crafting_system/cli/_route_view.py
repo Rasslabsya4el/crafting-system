@@ -1964,11 +1964,11 @@ def page_title(data: GameData, target: Target, wider: str | None = None) -> str:
     return f"Route to craft: {influences + ' ' if influences else ''}{base}, item level {target.item_level}" + (f", with {wanted}" if wanted else "")
 
 
-def _titled(slot) -> str:
+def _titled(slot, tier: bool = True) -> str:
     """A wanted slot in the title: its short name, its tier ("T1", "T2 or better") and whether it is fractured or crafted (crafter, #1442)."""
     crafted = "crafted" in slot.marks or slot.note.split(", ")[0] == "crafted"  # a target's leaf only a crafted mod meets says it in its note (#1614)
     marks = [mark for mark, held in (("fractured", "fractured" in slot.marks), ("crafted", crafted)) if held]
-    tier = f" {slot.note}" if re.match(r"^T\d", slot.note or "") else ""
+    tier = f" {slot.note}" if tier and re.match(r"^T\d", slot.note or "") else ""  # a group's member is named without its tier, as before
     return f"{' '.join(marks) + ' ' if marks else ''}{short_mod(slot.text)}{tier}"
 
 
@@ -1978,5 +1978,5 @@ def wanted_words(data: GameData, target: Target) -> str:
     names = [_titled(slot) for slot in (*card.implicits, *card.prefixes, *card.suffixes) if slot.tone == "wanted" and not slot.stands_for]
     for group in card.groups:
         need = re.match(r"at least (\d+) of", group.heading)
-        names.append(f"{need.group(1) if need else 'some'} of {' / '.join(dict.fromkeys(short_mod(member.text) for member in group.members))}")
+        names.append(f"{need.group(1) if need else 'some'} of {' / '.join(dict.fromkeys(_titled(member, tier=False) for member in group.members))}")
     return ", ".join(dict.fromkeys(names))

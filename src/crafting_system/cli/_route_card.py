@@ -570,7 +570,7 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
                 sides = {side for side, _ in drawn}
                 if len(sides) == 1:  # every member on one side: the group fills `at_least` of its slots, each one of the members
                     names = list(dict.fromkeys(short_mod(slot.text) for slot in members))
-                    text = f"one of {' / '.join(names)}" if len(names) > 1 else f"{names[0]}, one of the {len(members)} below"
+                    text = f"one of {' / '.join(names)}" if len(names) > 1 else (names[0] if len(members) == 1 else f"{names[0]}, one of the {len(members)} below")
                     reserved.append((sides.pop(), node.at_least, Slot(text, "wanted", stands_for="group")))
                 continue
             side, slot = leaf(node)
@@ -578,7 +578,7 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
 
     add(target.requirements)
     needed = _needed_multimod(data, target, begin)
-    if needed is not None:
+    if needed is not None and len(wanted[needed[0]]) < _capacity(data, target.base_id, needed[0]):  # never a line past the side's slots (#1533)
         wanted[needed[0]].append(needed[1])
     for side, count_, slot in reserved:  # after the mods named alone: a group's slot is any of its members, the slots left over are open
         room = _capacity(data, target.base_id, side) - len(wanted[side])

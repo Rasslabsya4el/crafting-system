@@ -127,3 +127,16 @@ def test_a_start_priced_at_its_own_rarity_keeps_the_listing_card_and_the_draw():
 
     rows = build_section(route_input(plan), data, None).rows
     assert rows[0].after.properties[0] == "Magic" and not field(rows[1], "Used on")
+
+
+def test_a_group_across_both_sides_reserves_no_slot_and_a_crafted_member_is_titled_crafted():
+    card = card_of_target(DATA, belt_target(KOfN(1, (leaf(DAMAGE), leaf(FIRE)))))
+
+    assert set(card.prefixes) == {ANY_OR_EMPTY} and set(card.suffixes) == {ANY_OR_EMPTY}  # which side the member takes is not known
+    assert "1 of crafted Damage / Fire Resistance" in page_title(DATA, belt_target(KOfN(1, (leaf(DAMAGE), leaf(FIRE)))))
+
+
+def test_the_needed_multimod_never_draws_a_line_past_the_side():
+    card = card_of_target(DATA, belt_target(leaf(DAMAGE), leaf(LOCK), leaf(FIRE), leaf(COLD)))
+
+    assert len(card.suffixes) == 3 and "Can have up to 3 Crafted Modifiers" not in slots(card)
