@@ -1,8 +1,11 @@
 """The planner side of the long routes R04 and R14, for `tests/test_naive_crafter_routes.py` (ticket #610, PR #665).
 
     python tests/naive_planner_side.py plan R04 OUT_DIR
-        Heavy (R04 about 10 minutes, R14 about 45 on a runner). Plans the route as `benchmark` does (`make_plan`), evaluates the guide's route as written and the completed
-        route (the route file with a restart) and writes `OUT_DIR/planner-side-R04.json`.
+        Evaluates the guide's route as written and the completed route (the route file with a restart) on the plan of the guide's OWN actions
+        (`planner.guide_plan`, #1442: nothing searched, the plan `benchmark` judges a guide on when the site's plan does not hold its actions)
+        and writes `OUT_DIR/planner-side-R04.json`. Until #1608 it made the planner's own plan of every method with no net first, which since
+        November no longer ends on R14 (47 minutes on the first key of its bound) and passes 16 GB on R04 (#1621); the route is a fixed
+        policy walked on its own reach (`cli._route.evaluate_route`), so its figures never depended on that plan.
     python tests/naive_planner_side.py write DIR --run RUN_ID --commit SHA
         Reads every `planner-side-*.json` under DIR and writes `tests/fixtures/naive_crafter/benchmark_means.json` (keeping the naive shares already recorded there).
 
@@ -62,8 +65,9 @@ def inputs_of(stem: str) -> dict:
 
 
 def plan_route(route_id: str, out: Path) -> Path:
-    from crafting_system.cli import evaluate_route, load_route, make_plan
-    from crafting_system.planner import _packed
+    from crafting_system.cli import evaluate_route, load_route
+    from crafting_system.cli._route import route_actions
+    from crafting_system.planner import _packed, guide_plan
     from crafting_system.data import load_game_data
     from crafting_system.prices import load_price_file
     from crafting_system.targets import load_target
@@ -71,8 +75,9 @@ def plan_route(route_id: str, out: Path) -> Path:
     _packed.PROGRESS = lambda text: print(text, flush=True)
     stem = STEMS[route_id]
     data = load_game_data()
-    # the routes are evaluated on the policy alone; the planner's own risk grid is not read and took 8 GB more on R14 at the 2026-11-10 prices (#738)
-    plan = make_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICES), with_risk=False, judges_route=True)
+    # the routes are fixed policies evaluated on their own reach: the plan of their own actions is enough, nothing searched (#1442, #1608)
+    labels = tuple(dict.fromkeys(label for name in (stem, f"{stem}-restart") for label in route_actions(ROUTES / f"{name}.yaml")))
+    plan = guide_plan(data, load_target(TARGETS / f"{stem}.yaml", data), load_price_file(PRICES), labels)
     found: dict = {"route": route_id, "pin": data_pin(), "start_price": plan.start_price.chaos}
     for kind, name in (("guide", stem), ("completed", f"{stem}-restart")):
         result = evaluate_route(plan, load_route(ROUTES / f"{name}.yaml", plan, data), data)
