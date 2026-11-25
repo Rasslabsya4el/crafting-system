@@ -5,8 +5,8 @@ These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the ca
 """
 
 import random
-from fractions import Fraction
 import re
+from fractions import Fraction
 
 import pytest
 from targets_support import EXAMPLES
@@ -270,18 +270,21 @@ def test_left_out_crafts_that_share_a_label_are_named_with_their_mod_id(data, mo
 
 LION_PELT = "Metadata/Items/Armours/Helmets/HelmetDex10"  # Evasion only (dex_armour)
 TWO_TONED_EVASION_ES = "Metadata/Items/Armours/Boots/BootsAtlas1"  # Evasion and Energy Shield, no Armour (dex_int_armour)
+SORCERER_BOOTS = "Metadata/Items/Armours/Boots/BootsInt9"  # Energy Shield only (int_armour), R08's base
 
 
 def test_a_local_armour_craft_is_offered_on_bases_without_armour_as_the_game_and_craft_of_exile_offer_it(data):
     """The bench offers its options by item class alone: the crafted mods have no spawn weights and the options name no
     defence, so '+(50-75) to Armour' is crafted on a Lion Pelt and '(26-35)% increased Armour' on Two-Toned Boots of
-    Evasion and Energy Shield. Craft of Exile lists both crafts for every helmet and boots base (DEX, DEX/INT included) and
-    applies them (tools/coe_emulator/checks/1282-defence-bench-off-base.json, 50 of 50 each, 2026-11-25)."""
+    Evasion and Energy Shield, and both on R08's Sorcerer Boots (Energy Shield only). Craft of Exile lists both crafts for
+    every helmet and boots base (DEX, INT, DEX/INT included) and applies them on the first two (tools/coe_emulator/checks/1282-defence-bench-off-base.json, 50 of 50 each, 2026-11-25)."""
     for base_id, mod_id in (
         (LION_PELT, "EinharMasterFlatArmour1"),
         (LION_PELT, "EinharMasterArmourPercent1_"),
         (TWO_TONED_EVASION_ES, "EinharMasterArmourPercent1_"),
         (TWO_TONED_EVASION_ES, "EinharMasterFlatArmour1"),
+        (SORCERER_BOOTS, "EinharMasterArmourPercent1_"),
+        (SORCERER_BOOTS, "EinharMasterFlatArmour1"),
     ):
         assert not data.mods[mod_id].spawn_weights
         item = Item.build(data, base_id=base_id, item_level=86, rarity=Rarity.RARE, mods=(rolled(data, "ColdResist5"),))
