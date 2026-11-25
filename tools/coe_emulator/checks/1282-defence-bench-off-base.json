@@ -1,0 +1,80 @@
+[
+ {
+  "id": "1282-lion-pelt",
+  "note": "Lion Pelt (pure Evasion helmet), rare, one suffix: may the bench craft Armour? Result 2026-11-25: ours applies, CoE applies (50 of 50) for both crafts.",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [
+   "ColdResist5"
+  ],
+  "actions": [
+   "Bench craft +(50-75) to Armour",
+   "Bench craft (26-35)% increased Armour"
+  ],
+  "repeats": 50,
+  "ticket": 1282
+ },
+ {
+  "id": "1282-two-toned-evasion-es",
+  "note": "Two-Toned Boots (Evasion/ES), rare, one suffix: may the bench craft Armour? Result 2026-11-25: ours applies, CoE applies (50 of 50) for all three crafts.",
+  "base": "Metadata/Items/Armours/Boots/BootsAtlas1",
+  "item_level": 86,
+  "rarity": "rare",
+  "mods": [
+   "ColdResist5"
+  ],
+  "actions": [
+   "Bench craft (26-35)% increased Armour",
+   "Bench craft +(50-75) to Armour",
+   "Bench craft (26-35)% increased Armour and Energy Shield"
+  ],
+  "repeats": 50,
+  "ticket": 1282
+ },
+ {
+  "id": "1282-r11-card3-with-craft",
+  "note": "R11 card 3: Life T1 + crafted +(50-75) Armour, suffixes full; Exalted Orb Result 2026-11-25 (4000): DefencesPercent ours 0.329 / CoE 0.332; BaseLocalDefences (flat Evasion) never drawn.",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 85,
+  "rarity": "rare",
+  "mods": [
+   "IncreasedLife9",
+   "EinharMasterFlatArmour1",
+   "ChaosResist6",
+   "ManaReservationEfficiencyEssence6_",
+   "ColdResist5"
+  ],
+  "fractured": [
+   "ChaosResist6"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
+  "repeats": 4000,
+  "label": "family",
+  "ticket": 1282
+ },
+ {
+  "id": "1282-r11-card2-no-craft",
+  "note": "R11 card 2: the same item without the bench craft; Exalted Orb Result 2026-11-25 (4000): DefencesPercent ours 0.2391 / CoE 0.2345; BaseLocalDefences ours 0.2733 / CoE 0.2752.",
+  "base": "Metadata/Items/Armours/Helmets/HelmetDex10",
+  "item_level": 85,
+  "rarity": "rare",
+  "mods": [
+   "IncreasedLife9",
+   "ChaosResist6",
+   "ManaReservationEfficiencyEssence6_",
+   "ColdResist5"
+  ],
+  "fractured": [
+   "ChaosResist6"
+  ],
+  "actions": [
+   "Exalted Orb"
+  ],
+  "repeats": 4000,
+  "label": "family",
+  "ticket": 1282
+ }
+]

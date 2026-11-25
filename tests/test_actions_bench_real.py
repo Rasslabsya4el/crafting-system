@@ -5,6 +5,7 @@ These tests need the cached dump (`<cache dir>/repoe-fork/3.29.3.3/`, set the ca
 """
 
 import random
+from fractions import Fraction
 import re
 
 import pytest
@@ -13,9 +14,11 @@ from targets_support import EXAMPLES
 from crafting_system.actions import (
     BenchCraft,
     CurrencyCost,
+    ExaltedOrb,
     NotApplicableError,
     RemoveCraftedMods,
     bench_crafts,
+    catalog,
 )
 from crafting_system.abstraction import Goal, Wanted
 from crafting_system.cli import offers_for
@@ -261,3 +264,57 @@ def test_left_out_crafts_that_share_a_label_are_named_with_their_mod_id(data, mo
         f"Bench craft +(91-120) to Accuracy Rating [{first}]",
         f"Bench craft +(91-120) to Accuracy Rating [{second}]",
     }
+
+
+# --- a defence craft on a base without that defence (#1282) --------------------------------------------------------
+
+LION_PELT = "Metadata/Items/Armours/Helmets/HelmetDex10"  # Evasion only (dex_armour)
+TWO_TONED_EVASION_ES = "Metadata/Items/Armours/Boots/BootsAtlas1"  # Evasion and Energy Shield, no Armour (dex_int_armour)
+
+
+def test_a_local_armour_craft_is_offered_on_bases_without_armour_as_the_game_and_craft_of_exile_offer_it(data):
+    """The bench offers its options by item class alone: the crafted mods have no spawn weights and the options name no
+    defence, so '+(50-75) to Armour' is crafted on a Lion Pelt and '(26-35)% increased Armour' on Two-Toned Boots of
+    Evasion and Energy Shield. Craft of Exile lists both crafts for every helmet and boots base (DEX, DEX/INT included) and
+    applies them (tools/coe_emulator/checks/1282-defence-bench-off-base.json, 50 of 50 each, 2026-11-25)."""
+    for base_id, mod_id in (
+        (LION_PELT, "EinharMasterFlatArmour1"),
+        (LION_PELT, "EinharMasterArmourPercent1_"),
+        (TWO_TONED_EVASION_ES, "EinharMasterArmourPercent1_"),
+        (TWO_TONED_EVASION_ES, "EinharMasterFlatArmour1"),
+    ):
+        assert not data.mods[mod_id].spawn_weights
+        item = Item.build(data, base_id=base_id, item_level=86, rarity=Rarity.RARE, mods=(rolled(data, "ColdResist5"),))
+        assert BenchCraft(mod_id) in catalog(data, item, names={"bench-craft"})
+        assert BenchCraft(mod_id).outcomes(data, item).chance_all([mod_id]) == 1
+
+
+def test_r11_the_armour_craft_blocks_the_flat_evasion_family_so_the_exalted_orb_finds_the_evasion_percent_more_often(data):
+    """R11's plan crafts '+(50-75) to Armour' before an Exalted Orb: its family BaseLocalDefences is the one of the natural
+    '+# to Evasion Rating', so the crafted mod keeps that family out of the draw (a crafted mod blocks its family as any mod
+    does). Lion Pelt of item level 85, Life tier 1 on the item, suffixes full: the open prefix pool weighs 7000 (Evasion %)
+    + 6000 (Evasion % and stun recovery) + 3000 (flat Evasion and Life) + 3000 (rarity) + 2000 (reflect) + 275 (minion gem
+    levels) = 21,275 with the craft, plus 8000 (flat Evasion) = 29,275 without. Craft of Exile, 4000 Exalted Orbs each:
+    Evasion % 0.2345 without, 0.332 with, flat Evasion 0.2752 without, never with (the same check file)."""
+    base = Item.build(
+        data,
+        base_id=LION_PELT,
+        item_level=85,
+        rarity=Rarity.RARE,
+        mods=(
+            rolled(data, "IncreasedLife9"),
+            rolled(data, "ChaosResist6", fractured=True),
+            rolled(data, "ManaReservationEfficiencyEssence6_"),
+            rolled(data, "ColdResist5"),
+        ),
+    )
+    blocked = BenchCraft("EinharMasterFlatArmour1").outcomes(data, base).sample(random.Random(1))
+
+    def share(item, family):
+        shown = ExaltedOrb().outcomes(data, item).distribution(lambda mod: mod.families[0])
+        return sum(chance for outcome, chance in shown.items() if any(name == family for name, _ in outcome))
+
+    assert share(base, "DefencesPercent") == Fraction(7000, 29275)
+    assert share(blocked, "DefencesPercent") == Fraction(7000, 21275)
+    assert share(base, "BaseLocalDefences") == Fraction(8000, 29275)
+    assert share(blocked, "BaseLocalDefences") == 0
