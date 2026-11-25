@@ -373,7 +373,7 @@ def command(tmp_path, monkeypatch, budget):
     """The command on the fixture amulet; the plan is made with the fixture's offers and rates (the catalog would offer other crafts)."""
     path = tmp_path / "amulet.yaml"
     path.write_text(TARGET, encoding="utf-8")
-    monkeypatch.setattr(_main, "plan_target", lambda data, target, prices, settings: plan_with_starts(data, target, prices, **{k: v for k, v in vars(settings).items() if k != "time_limit_seconds"}, offers=OFFERS, rates=RATES))  # the entry takes no offers and no rates (#880)
+    monkeypatch.setattr(_main, "plan_target", lambda data, target, prices, settings: plan_with_starts(data, target, prices, **{k: v for k, v in vars(settings).items() if k not in ("time_limit_seconds", "usable_step_uses")}, offers=OFFERS, rates=RATES))  # the entry takes no offers and no rates (#880)
     monkeypatch.setattr(_main, "write_route_page", lambda path, *a, **k: path)  # the route card needs mods that the fixture pool lacks
 
     def run(*arguments):
