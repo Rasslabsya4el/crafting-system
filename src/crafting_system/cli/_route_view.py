@@ -167,6 +167,7 @@ class Branch:
 
     caption: str
     card: ItemCard
+    final: bool = False  # the branch ends in the target: its card, not the joined card above it, is drawn as the target (#1675)
 
 
 @dataclass(frozen=True)
@@ -1271,7 +1272,7 @@ class _View:
         for edge, (what, _) in zip(edges, self.phrases(step, edges)):
             card = card_of_states(self.ab, list(edge.states), self.reader)
             if card != after or self.decisions(step):  # a step read by its list draws every branch's item (#1644: the Unveil's Annulment had no card)
-                found.append(Branch(f"{what} ({chance_text(edge.chance)})", card))
+                found.append(Branch(f"{what} ({chance_text(edge.chance)})", card, edge.kind == "goal" and not self.finishing))
         return tuple(found)
 
     def cost_lines(self, action: Action, uses: float | None = None) -> list[str]:
@@ -2202,8 +2203,9 @@ AGAINST_GUIDE = "Against the guide's route"
 START_SPEND = "the start item (row 1 and every restart)"
 SHOWN_DIFFERENCES = 3  # the kinds of step named one by one; the rest is one line
 SAME_COST = 0.01  # under this share of the guide's cost apart, the two routes cost the same and no step is named
-COMPLETED_READING = "as its route file completes it where the guide's words stop"  # the guide's cost is of its completed route (#1584 point 4)
-RESTART_READING = "with a restart where its rules stop, as its recorded figure was measured"  # its rules have gaps; the file records the figure (#1596)
+# what was added to the guide's words to price them, said in the block (#1584 point 4; crafter on R04 and R17: no "route file", no "restart")
+COMPLETED_READING = "its steps as written do not finish on this item: priced with steps added where its words stop, which the guide does not name"
+RESTART_READING = "its steps as written do not finish on this item: priced with a new item bought wherever its words stop"
 
 
 @dataclass(frozen=True)

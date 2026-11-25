@@ -48,6 +48,7 @@ from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
 from crafting_system.cli._route_view import (
     AGAINST_GUIDE,
+    Branch,
     DRAW_TITLE,
     Field,
     Line,
@@ -567,10 +568,10 @@ def test_a_kind_of_step_both_routes_use_names_both_spends_and_a_dearer_plan_says
     plan = costed([("Buy", 1.0, None), ("Imprint", 400.0, 40.0), ("Annul", 80.0, 8.0)])
     guide = costed([("Buy", 1.0, None), ("Imprint", 300.0, 30.0), ("Annul", 10.0, 1.0)], "g-")
 
-    field = against_guide(plan, guide, reading="with a restart where its rules stop")
+    field = against_guide(plan, guide, reading="its steps as written do not finish")
 
     assert [line.text for line in field.lines] == [
-        "this plan 481 c, the guide's route 311 c (with a restart where its rules stop): 1.55 times its cost",
+        "this plan 481 c, the guide's route 311 c (its steps as written do not finish): 1.55 times its cost",
         "Imprint: this plan 400 c (40 uses), the guide's route 300 c (30 uses)",
         "Annul: this plan 80 c (8 uses), the guide's route 10 c (1 use)",
     ]
@@ -601,6 +602,19 @@ def test_the_block_folds_the_small_differences_and_says_the_figures_alone_when_t
     recorded = against_guide(costed([("Buy", 1.0, None), ("A", 9.0, 1.0)]), gap, (10.0, 40.0))
     assert [line.text for line in recorded.lines] == ["this plan 10 c, the guide's route 40 c: 0.25 times its cost"]
     assert against_guide(costed([("Buy", 1.0, None), ("A", 9.0, 1.0)]), None) is None  # a site user's own target: no guide, no block
+
+
+def test_a_step_whose_branch_ends_in_the_target_draws_that_branch_as_the_target_and_not_the_joined_card_above_it(two_leaf_plan):
+    """#1675 (crafter on R04 step 11): the card after a step joins the target and the items that go on; drawn green as the target, it read
+    as the end item with "any mod or empty" where the wanted mods are. The branch that ends in the target is the green card."""
+    section = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
+    row = section.rows[-1]
+    branches = (Branch("the target (41%)", row.after, True), Branch("then Exalted Orb (59%)", row.after))
+    html = render_page(Page("x", (dataclasses.replace(section, rows=(*section.rows[:-1], dataclasses.replace(row, final=True, branches=branches))),)))
+
+    last = html[html.rindex('<div class="ar">') :]
+    assert last.count('class="cd tg"') == 1
+    assert last.index('class="cd tg"') > last.index("the target (41%)") and last.index('class="cd tg"') < last.index("then Exalted Orb (59%)")
 
 
 def test_the_block_goes_right_under_the_proof_sentence(two_leaf_plan):

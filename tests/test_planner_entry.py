@@ -18,7 +18,7 @@ from targets_support import DATA
 
 import crafting_system.planner as planner
 from crafting_system.budget import Budget
-from crafting_system.cli import build_report, policy_document, render_text
+from crafting_system.cli import build_report, policy_document, reference_beside, render_text
 from crafting_system.config import load_config
 from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, USABLE_STEP_USES, make_plan, plan_target, plan_with_starts
 from crafting_system.planner import _presenter
@@ -60,13 +60,14 @@ def test_the_entry_gives_the_plan_the_command_prints_on_r12(tmp_path, capsys, mo
 
     assert isinstance(plan, Plan)
     report = build_report(plan, DATA)
-    text = render_text(report, None, target_name=R12.name)
+    guide, recorded = reference_beside(DATA, plan, load_target(R12, DATA)).cost()  # R12 is a reference craft: its guide's cost is said (#1584)
+    text = render_text(report, None, target_name=R12.name, guide=guide, guide_recorded=recorded)
     assert without_times(text) == without_times(printed)[: len(without_times(text))]  # the command then says where it wrote its files
     assert [line for line in without_times(printed)[len(without_times(text)) :] if line] == [
         f"JSON policy written to {out}",
         f"Route view written to {out.parent / (R12.stem + '.route.html')}",
     ]
-    document = json.loads(json.dumps(policy_document(report, None, target_name=R12.name)))  # as the file holds it
+    document = json.loads(json.dumps(policy_document(report, None, target_name=R12.name, guide=guide, guide_recorded=recorded)))  # as the file holds it
     written = read_json(out)
     assert document.keys() == written.keys() and TIMINGS in written
     assert {key: value for key, value in document.items() if key != TIMINGS} == {key: value for key, value in written.items() if key != TIMINGS}
@@ -185,7 +186,8 @@ def test_the_command_passes_its_methods_option_to_the_planner_and_says_what_the_
     assert code == 0
     named = plan_target(DATA, load_target(R12, DATA), price_file(), dataclasses.replace(settings_of_the_command(), budget=Budget.in_states(100_000), methods=NAMED))
     assert read_json(out)["offered_actions"] == [priced.label for priced in named.offers]  # the command planned what the setting allows
-    assert render_text(build_report(named, DATA), None, target_name=R12.name).splitlines()[:5] == printed.splitlines()[:5]
+    guide, recorded = reference_beside(DATA, named, load_target(R12, DATA)).cost()  # R12 is a reference craft: its guide's cost is said (#1584)
+    assert render_text(build_report(named, DATA), None, target_name=R12.name, guide=guide, guide_recorded=recorded).splitlines()[:5] == printed.splitlines()[:5]
     assert "kinds the run's methods setting does not name" in printed  # the text says the run allowed fewer than every beta method
 
 
