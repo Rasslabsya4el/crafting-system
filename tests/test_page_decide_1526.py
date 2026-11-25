@@ -164,3 +164,12 @@ def test_items_no_three_conditions_part_get_rows_of_their_own_and_are_never_sent
     rows = decision_list(tests, labels, mass)
 
     assert all(first_place(rows, tests, i) == labels[i] for i in range(labels.size))
+
+
+def test_no_two_rows_say_the_same_conditions():
+    bits = np.array([[(i >> b) & 1 for i in range(16)] for b in range(4)], dtype=bool)
+    tests = np.concatenate((bits, ~bits))
+    rows = decision_list(tests, bits.sum(axis=0) % 2, np.linspace(1.0, 2.0, 16))
+
+    said = [conditions for conditions, _ in rows]
+    assert len(said) == len(set(said))

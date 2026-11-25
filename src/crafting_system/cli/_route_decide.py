@@ -68,8 +68,12 @@ def _learn(tests: np.ndarray, labels: np.ndarray, mass: np.ndarray, by_mass: boo
             # as H63's learner isolates a key by its full row: the columns hold "with" and "without" of each fact, so they name the item), the
             # heaviest place last; with no new search, which on R17 took minutes per row
             heaviest = max(open_labels.tolist(), key=lambda label: float(mass[left & (labels == label)].sum()))
+            said: set[tuple[tuple[int, ...], int]] = set()
             for j in sorted(np.flatnonzero(left & (labels != heaviest)).tolist(), key=lambda i: -float(mass[i])):
-                rows.append((_isolating(tests, labels, left, j), int(labels[j])))
+                row = (_isolating(tests, labels, left, j), int(labels[j]))
+                if row not in said:  # two items said by the same facts to the same place are one row (crafter on R13: 141 repeated rows)
+                    said.add(row)
+                    rows.append(row)
             rows.append((None, int(heaviest)))
             break
         conditions, label, covered = found
