@@ -113,6 +113,7 @@ class Edge[S]:
     chance: float
     states: tuple[S, ...]
     lost: tuple = ()
+    shares: tuple[float, ...] = ()  # per landing state, in the order of `states`: its part of `chance` (the branch's items by how often they come, #1526)
 
 
 @dataclass(frozen=True)
@@ -402,6 +403,7 @@ def flow_of[S: Hashable](
     code_parts: list[np.ndarray] = []
     mass_parts: list[np.ndarray] = []
     pair_parts: list[np.ndarray] = []
+    pair_mass: list[np.ndarray] = []
     lost_parts: dict = {}
     for src, dst, whole, counted in _edges_by_class(chain, step, mix, reader):
         into_goal = dst >= m
@@ -422,7 +424,9 @@ def flow_of[S: Hashable](
         found, at = np.unique(code, return_inverse=True)
         code_parts.append(found)
         mass_parts.append(np.bincount(at.reshape(-1), weights=mass, minlength=len(found)))
-        pair_parts.append(np.unique(code * width + dst))  # the distinct landing states of each group
+        pairs, at_pair = np.unique(code * width + dst, return_inverse=True)  # the distinct landing states of each group, with their mass
+        pair_parts.append(pairs)
+        pair_mass.append(np.bincount(at_pair.reshape(-1), weights=mass, minlength=len(pairs)))
         for u, item in enumerate(items):
             hit = lost_matrix[:, u] & lost_edge
             if hit.any():
@@ -436,7 +440,9 @@ def flow_of[S: Hashable](
     chance = np.bincount(np.searchsorted(group_codes, every), weights=np.concatenate(mass_parts) if mass_parts else None, minlength=ngroups) / total[group_step]
     items = sorted(lost_parts)
     gone = [np.isin(group_codes, np.concatenate(lost_parts[item])) for item in items]
-    pair = np.unique(np.concatenate(pair_parts)) if pair_parts else np.zeros(0, dtype=np.int64)
+    every_pair = np.concatenate(pair_parts) if pair_parts else np.zeros(0, dtype=np.int64)
+    pair, at_pair = np.unique(every_pair, return_inverse=True)
+    pair_share = np.bincount(at_pair.reshape(-1), weights=np.concatenate(pair_mass) if pair_mass else None, minlength=len(pair)) / total[(pair // width) // 2 // (nsteps + 1)] if len(pair) else np.zeros(0)
     pair_group = np.searchsorted(group_codes, pair // width)
     bounds = np.searchsorted(pair_group, np.arange(ngroups + 1))
     everything = (lambda d: chain.states[d] if d < m else chain.goals[d - m])
@@ -453,7 +459,8 @@ def flow_of[S: Hashable](
             kind = "forward"
         landing = tuple(everything(int(d)) for d in (pair[bounds[g] : bounds[g + 1]] % width).tolist())
         lost = tuple(sorted(items[u] for u in range(len(items)) if gone[u][g]))
-        edges_of[s].append(Edge(kind, None if t == _GOAL else t + 1, float(chance[g]), landing, lost))  # type: ignore[arg-type]
+        shares = tuple(float(x) for x in pair_share[bounds[g] : bounds[g + 1]])
+        edges_of[s].append(Edge(kind, None if t == _GOAL else t + 1, float(chance[g]), landing, lost, shares))  # type: ignore[arg-type]
 
     # the steps
     order = np.argsort(step, kind="stable")

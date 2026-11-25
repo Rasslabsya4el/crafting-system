@@ -71,6 +71,7 @@ from crafting_system.abstraction import AtLeast, CompressedState, Status, Wanted
 from crafting_system.abstraction._kinds import kind_tags
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
+from crafting_system.items.model import VEILED_DOMAIN
 from crafting_system.prices.query_compare import searched_spec
 from crafting_system.prices import BuySpec
 from crafting_system.prices.trade_stats import TradeStats, parse_trade_stats
@@ -84,13 +85,14 @@ from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS
 
 from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
-from crafting_system.prices.price_marks import units_text
+from crafting_system.prices.price_marks import chaos_text, provenance_of, units_text
+from crafting_system.prices.price_file import DIVINE_ORB
 
-from ._price_marks import PriceUse, price_uses, use_line
+from ._price_marks import RATE_WORDS, PriceUse, price_uses, use_line
 from ._report import Report
 from ._report_net import ask
 from ._route import RESTART, Route, RouteResult, finish_labels
-from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
+from ._route_card import ANY_MOD, ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
 from ._route_card import short_mod, with_implicits, with_quality
 from ._route_chain import chain_of_packed_policy
 from ._route_flow import _blocks as _route_flow_blocks
@@ -101,6 +103,7 @@ from ._route_proof import PROOF, Proof, group_title, page_line, page_words, proo
 from ._route_tiers import TierLine, tier_lines
 from ._route_purpose import added_crafts, again, purpose_lines
 from ._route_unveil import joined_picks
+from ._route_decide import SHOWN_ROWS, decision_list
 from ._route_trade import BuyStep, buy_step
 from ._start_step import ROLE_GEMS, FirstStep, first_step
 
@@ -125,6 +128,7 @@ SURE_NEXT = "Next step, by the item it is used on"  # the field of a sure action
 GAPS = "never finishes: the route has gaps"
 MADE_DRAW_TITLE = "Check the mods the Awakener's Orb gave"  # the same step when row 1 made the item by its recipe (#1523)
 DRAW_TITLE = "Check the mods the bought item came with"  # the step of the draw of a bought listing (`DRAW_LABEL` is the planner's name for it, #1442)
+DECIDE = "Where the item goes"  # the field of a step's decision list (#1526)
 AGAIN = "not yet, this step again"  # an outcome that leaves the item in the same step: the player uses the action again (#889)
 NEXT = "Next step"  # the field of a restart, in place of "On failure": buying the item again is the step, not a failure of it (#892)
 FREE = "free"  # the cost of a use that consumes nothing (an unveil, a pick): the planner's epsilon is no price a player pays (#1442)
@@ -400,8 +404,8 @@ def _require_limits(plan: Plan) -> None:
 # --- telling the branches of a step apart by the item (#1442) ---------------------------------------------------
 
 # the order of the conditions on an item: wanted mods first, a wanted family at too low a tier last
-_ORDER = {"leaf": 0, "crafted": 1, "fractured": 1, "rarity": 2, "junk": 3, "tag": 3, "open": 4, "below": 5}
-_BINARY = ("leaf", "below", "fractured", "crafted", "rarity")
+_ORDER = {"leaf": 0, "group": 0, "blocks": 1, "crafted": 1, "fractured": 1, "rarity": 2, "junk": 3, "tag": 3, "veiled": 3, "open": 4, "below": 5}
+_BINARY = ("leaf", "group", "blocks", "below", "fractured", "crafted", "rarity")
 KINDS = 4  # the most kinds of item one line names, and the most conditions that name one: past them a line no longer reads as a condition
 KIND_WORDS = 4
 
@@ -455,10 +459,11 @@ def _conditions(key: tuple, values: np.ndarray, noun):
             return
         words = noun(key)
         yield "with", words, values == 1
-        yield "without", words, values == 0
+        yield "without", words.replace("one of ", "any of ", 1) if kind == "group" else words, values == 0
         return
     side = key[1]
-    what = f"open {side}" if kind == "open" else f"unwanted {side}" if kind == "junk" else f"unwanted {side} mod"
+    what = f"open {side}" if kind == "open" else f"unwanted {side}" if kind == "junk" else f"veiled {side}" if kind == "veiled" else f"unwanted {side} mod"
+    article = "an" if what[0] in "aeiou" else "a"
 
     def counted(count_: int) -> str:
         return f"{count_} {what}" if count_ == 1 else f"{count_} {what}{'es' if what.endswith('fix') else 's'}"
@@ -468,9 +473,9 @@ def _conditions(key: tuple, values: np.ndarray, noun):
         if kind == "open":
             yield "with", _open(count_, side), values == count_
         elif count_ == 0:
-            yield "without", f"an {what}", values == 0
+            yield "without", f"{article} {what}", values == 0
         else:
-            yield "with", f"an {what}" if count_ == 1 else counted(count_), values == count_
+            yield "with", f"{article} {what}" if count_ == 1 else counted(count_), values == count_
     for count_ in found[1:]:
         yield "with", f"at least {counted(count_)}", values >= count_
     for count_ in found[:-1]:
@@ -840,6 +845,8 @@ class _View:
     def _item_words(self, step: Step, edge: Edge, among: list[Edge] | None, given: tuple[tuple[str, str], ...]) -> str:
         if not edge.states:
             return ""
+        if among is None and self.decisions(step):  # the step's decision field says which item goes where (#1526)
+            return ""
         pool = [other for other in (step.edges if among is None else among) if other is not edge and other.to != edge.to]
         # the items of the branches that go on with another action (the target's too): a lost-and-back branch to the same step reads apart already
         table = self._table(step)
@@ -884,6 +891,14 @@ class _View:
             return f"{below.text} · {below.note}"  # "tier too low", or "below roll 12" for a leaf that asks a roll (#1433)
         if kind == "crafted":
             return f"{self._mod(key[1])} · crafted"
+        if kind == "group":  # a k-of-n group of the target met (#1526): "one of Fire Resistance / Cold Resistance / Lightning Resistance · T2 or better"
+            k, members = key[1]
+            names = list(dict.fromkeys(short_mod(self._leaf_mod_text(leaf)) for leaf in members))
+            notes = {self.leaf_text(leaf).rpartition(" · ")[2] for leaf in members if " · " in self.leaf_text(leaf)}
+            return f"{'one' if k == 1 else k} of {' / '.join(names)}" + (f" · {notes.pop()}" if len(notes) == 1 else "")
+        if kind == "blocks":  # an unwanted mod of a wanted mod's family: it keeps the wanted one off (R24's natural Movement Speed, #1526)
+            short = short_mod(self._leaf_mod_text(key[1]))
+            return f"{key[2]} (it blocks the {short} asked)" if key[2] else f"another mod of the family of {short} (it blocks that mod)"
         return key[1]  # a fractured mod's words, a rarity
 
     def _traits(self, state: CompressedState) -> dict[tuple, int]:
@@ -893,10 +908,13 @@ class _View:
         for i, status in enumerate(state.status):
             traits[("leaf", i)] = int(status is Status.PASSING)
             traits[("below", i)] = int(status is Status.BELOW)
+        for k, members in self._groups():
+            traits[("group", (k, members))] = int(sum(state.status[i] is Status.PASSING for i in members) >= k)
         for entry in state.fractured:
             traits[("fractured", self._fractured_text(entry))] = 1
         traits[("rarity", state.flags.rarity.value)] = 1
         junk = {Side.PREFIX: 0, Side.SUFFIX: 0}
+        veiled = {Side.PREFIX: 0, Side.SUFFIX: 0}
         tags: Counter = Counter()
         for slot in state.slots:
             if slot.crafted:
@@ -904,14 +922,147 @@ class _View:
             elif not any(status is not Status.ABSENT for status in slot.contribution):
                 junk[slot.side] += 1
                 tags.update(kind_tags(slot.kind))
+                veiled[slot.side] += int(self._veiled(slot.kind))
+                for i in self._blocked_leaves(slot.kind):
+                    if state.status[i] is not Status.PASSING:
+                        family = self.reader.family(slot)
+                        traits[("blocks", i, "" if family is ANY_MOD else family.text)] = 1
         if self.reader.tracked:  # else the state keeps no mod the target does not need
             traits[("junk", "prefix")], traits[("junk", "suffix")] = junk[Side.PREFIX], junk[Side.SUFFIX]
+            if any(veiled.values()) or self.plan_veils:  # a veiled mod the unveil turns into a pick (R24: the Unveil or a new Matron, H63)
+                traits[("veiled", "prefix")], traits[("veiled", "suffix")] = veiled[Side.PREFIX], veiled[Side.SUFFIX]
             for tag in ("attack", "caster"):
                 traits[("tag", tag)] = tags[tag]
             free = self._free_slots(state)
             if free is not None:
                 traits[("open", "prefix")], traits[("open", "suffix")] = free
         return traits
+
+    def _groups(self) -> list[tuple[int, tuple[int, ...]]]:
+        """The target's top-level k-of-n groups of plain leaves, as (k, member leaves)."""
+        return sorted({group for i in range(len(self.plan.leaf_labels)) if (group := self.leaf_group(i)) is not None})
+
+    def _blocked_leaves(self, kind: str) -> tuple[int, ...]:
+        """The wanted leaves whose family a mod of slot `kind` holds (a family type "~n" names none): while it is on, they cannot be added."""
+        cache = self.__dict__.setdefault("_blocked", {})
+        if kind not in cache:
+            if kind.startswith("~"):
+                families: set[str] = set()
+            elif kind in self.data.mods:
+                families = set(self.data.mods[kind].families)
+            else:
+                families = {kind.lstrip("^").split("@")[0]}
+            cache[kind] = tuple(
+                i for i, leaf in enumerate(self.ab.goal.leaves)
+                if any(families & set(self.data.mods[mod_id].families) for mod_id in leaf.mod_ids if mod_id in self.data.mods)
+            )
+        return cache[kind]
+
+    def _veiled(self, kind: str) -> bool:
+        """Whether a slot of this kind is a veiled mod (the placeholder an unveil reveals)."""
+        mod = self.data.mods.get(kind)
+        return (mod is not None and mod.domain == VEILED_DOMAIN) or "veiled" in kind.lower()
+
+    @property
+    def plan_veils(self) -> bool:
+        """Whether any state of the plan's route holds a veiled mod: then every item's count of them is a condition (0 included)."""
+        found = self.__dict__.get("_plan_veils")
+        if found is None:
+            found = any(self._veiled(slot.kind) for step in self.flow.steps for state in step.states for slot in state.slots)
+            self.__dict__["_plan_veils"] = found
+        return found
+
+    def decisions(self, step: Step) -> list[tuple[str, list[tuple[Edge, float]], tuple[int, ...]]]:
+        """Where the items a use of `step` leaves go next, as a list read from the top (`_route_decide`, #1526): each row the conditions that
+        hold on its items ("" for any other item) and the branches they go on by, with each one's share of the row's items (one branch, or
+        several when items a player sees alike go on differently: a question for the planner, never words that would send a player wrong), and
+        the columns of the step's table (`_table`) the words say.
+        Empty when the items go on to fewer than two places besides the target (the target is told by its mods)."""
+        cache = self.__dict__.setdefault("_decisions", {})
+        if step.number in cache:
+            return cache[step.number]
+        places: dict[int, list[Edge]] = {}
+        for edge in step.edges:
+            if edge.kind != "goal" and edge.to is not None and edge.states:
+                places.setdefault(edge.to, []).append(edge)
+        if len(places) < 2:
+            cache[step.number] = []
+            return []
+        table = self._table(step)
+        mass: dict[int, dict[int, float]] = {}  # table row -> place -> visits
+        for to, edges in places.items():
+            for edge in edges:
+                shares = edge.shares or (edge.chance / len(edge.states),) * len(edge.states)
+                for state, share in zip(edge.states, shares, strict=True):
+                    row = table.index[state]
+                    mass.setdefault(row, {})
+                    mass[row][to] = mass[row].get(to, 0.0) + share
+        rows = sorted(mass)
+        tests = table.tests[:, rows] if table.tests.size else np.zeros((0, len(rows)), dtype=bool)
+        views: dict[bytes, dict[int, float]] = {}  # what a player sees -> place -> visits
+        for i, row in enumerate(rows):
+            seen = views.setdefault(tests[:, i].tobytes(), {})
+            for to, value in mass[row].items():
+                seen[to] = seen.get(to, 0.0) + value
+        sets: dict[tuple[int, ...], int] = {}  # the places items seen alike go on to -> its label
+        labels = np.zeros(len(rows), dtype=np.int64)
+        weight = np.zeros(len(rows), dtype=float)
+        for i, row in enumerate(rows):
+            went = views[tests[:, i].tobytes()]
+            labels[i] = sets.setdefault(tuple(sorted(went)), len(sets))
+            weight[i] = math.fsum(mass[row].values())
+        alike: dict[int, dict[int, float]] = {}
+        for i in range(len(rows)):
+            went = views[tests[:, i].tobytes()]
+            if len(went) > 1:
+                into = alike.setdefault(int(labels[i]), {})
+                for to, value in mass[rows[i]].items():
+                    into[to] = into.get(to, 0.0) + value
+        label_places = {label: places_ for places_, label in sets.items()}
+        found = []
+        negative = np.array([column.sign == "without" for column in table.columns], dtype=bool)
+        for conditions, label in decision_list(tests, labels, weight, negative):
+            words = "" if conditions is None else _words([table.columns[c] for c in conditions])
+            went = alike.get(label)
+            columns = tuple(conditions or ())
+            if went is None:
+                (to,) = label_places[label]
+                found.append((words, [(places[to][0], 1.0)], columns))
+            else:
+                whole = math.fsum(went.values())
+                found.append((words, [(places[to][0], went[to] / whole) for to in sorted(went, key=lambda to: -went[to])], columns))
+        cache[step.number] = found
+        return found
+
+    def decision_field(self, step: Step) -> Field | None:
+        """The rows of `decisions` as a field: at most `SHOWN_ROWS`, the rarer rest in a list below them; None without rows."""
+        rows = self.decisions(step)
+        if not rows:
+            return None
+        lines: list[Line] = []
+        texts: list[str] = []
+        for at, (words, went, _) in enumerate(rows):
+            lead = ("else " if at else "") + (f"{words}: " if words else "any other item: " if at else "")
+            if len(went) == 1:
+                edge = went[0][0]
+                place = self._place(step, edge)
+                lines.append(self.link(f"{lead}{place}", edge.to + 1) if edge.to != step.number else Line(f"{lead}{place}"))
+            else:  # items a player sees alike that the plan sends on differently
+                parts = ", ".join(f"{self._place(step, edge)} on {chance_text(share)}" for edge, share in went)
+                lines.append(Line(f"{lead}items that look alike go on differently: {parts}"))
+            texts.append(lines[-1].text + (f" {lines[-1].anchor}" if lines[-1].anchor else ""))
+        if len(lines) > SHOWN_ROWS:
+            rest = texts[SHOWN_ROWS - 1 :]
+            lines = [*lines[: SHOWN_ROWS - 1], Line(f"the {len(rest)} rarer rows, in the same order", more=tuple(rest), more_title="show them", more_apart=True)]
+        return Field(DECIDE, (Line("check the item from the top; the first row that holds says what is next:"), *lines))
+
+    def _place(self, step: Step, edge: Edge) -> str:
+        """Where a branch goes on to, as a row of `decision_field` says it: this step again, the item given up, or the next action."""
+        if edge.to == step.number:
+            return "this step again"
+        if self.restarts(edge):
+            return f"{self.lost_item()} for {self.cost_lines(self.flow.steps[edge.to - 1].action)[0]}"
+        return f"then {self.next_title(edge)}"
 
     @staticmethod
     def sure(action: Action) -> bool:
@@ -1081,7 +1232,7 @@ class _View:
         found = []
         for edge, (what, _) in zip(edges, self.phrases(step, edges)):
             card = card_of_states(self.ab, list(edge.states), self.reader)
-            if card != after:
+            if card != after or self.decisions(step):  # a step read by its list draws every branch's item (#1644: the Unveil's Annulment had no card)
                 found.append(Branch(f"{what} ({chance_text(edge.chance)})", card))
         return tuple(found)
 
@@ -1450,6 +1601,7 @@ class _View:
             _plain("Pick from the offer", *self.pick_lines(step)),
             self.trade_field() if restart else None,
             Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
+            None if restart else self.decision_field(step),
             None if one_way else self.tier_field(step, action),  # a listing that goes on the same way: its odds change no choice (crafter, #1442)
             _plain("Cost per use", *self.cost_lines(action, step.uses)),
             _plain("Uses on average", *uses),
@@ -1471,52 +1623,49 @@ class _View:
         where = {state: edge for edge in step.edges for state in edge.states}  # the branch each item the step leaves goes on by
         offers: list[tuple[float, tuple[str, ...], str]] = []  # (share of the step's unveils, the mods shown, the one taken)
         goes: dict[str, dict[str, float]] = {}  # each mod taken -> where the items it makes go on to, in words, with the share of its uses
+        role: dict[str, tuple[str, str]] = {}  # each mod taken -> ("wanted" | "blocks" | "junk", the short name of the mod it blocks)
         for state, weight in zip(step.states, weights, strict=True):
             for made in self.picks.get(state, ()):
                 shown = tuple(self._mod(entry.mod_id) for entry in made.offered.offer)
                 taken = self._taken(made)
                 offers.append((weight * made.chance, shown, taken))
+                role.setdefault(taken, self._pick_role(made))
                 for landing, chance in made.pick.outcomes:
                     if chance > 0 and landing in where:
                         place = goes.setdefault(taken, {})
                         place[self._onward(where[landing])] = place.get(self._onward(where[landing]), 0.0) + weight * made.chance * float(chance)
-        # where the items a pick makes go on to, when nearly all go to one place; else "several steps" (no free choice is said of it)
+        # where the items a pick makes go on to, when nearly all go to one place; else "several steps"
         mostly = {mod: (top if place[top] >= ONE_PLACE * math.fsum(place.values()) else "several steps") for mod, place in goes.items() for top in [max(place, key=place.__getitem__)]}
         whole = math.fsum(share for share, _, _ in offers)
         if not whole:
             return []
         lines, left = [], list(offers)
-        alike = {offer[2] for offer in offers}
-        while left:
+        while left:  # a wanted mod taken whenever it is shown, the most taken first
             taken = {offer[2] for offer in left}
-            # taken whenever it is shown, and the one mod that sends the item where it goes (mods that go on alike are a free choice, below)
-            always = [mod for mod in taken if all(offer[2] == mod for offer in left if mod in offer[1]) and sum(mostly.get(mod) == mostly.get(other) for other in alike) == 1]
+            always = [mod for mod in taken if role[mod][0] == "wanted" and all(offer[2] == mod for offer in left if mod in offer[1])]
             if not always:
                 break
             mod = max(always, key=lambda name: math.fsum(offer[0] for offer in left if offer[2] == name))
             share = math.fsum(offer[0] for offer in left if offer[2] == mod)
             lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: taken on {chance_text(share / whole)} of unveils; it goes on to {mostly.get(mod, 'another step')}")
             left = [offer for offer in left if offer[2] != mod]
-        if left:  # no order holds for the rest: they are said by where the item goes on to after them (#1644)
-            shares: dict[str, float] = {}
-            for share, _, mod in left:
-                shares[mod] = shares.get(mod, 0.0) + share
-            places: dict[str, list[str]] = {}  # where the item goes on to -> the mods that send it there, the most taken first
-            for mod in sorted(shares, key=lambda name: -shares[name]):
-                places.setdefault(mostly.get(mod, "another step"), []).append(mod)
-            known = [place for place in places if place != "several steps"] or list(places)
-            main = max(known, key=lambda place: math.fsum(shares[mod] for mod in places[place]))
-            free = places[main]
-            for place, mods in places.items():  # a mod that sends the item elsewhere than the rest: said before them, with when it is taken
-                if place == main:
-                    continue
-                for mod in mods:
-                    alone = all(not set(shown) & set(free) for _, shown, taken in left if taken == mod)  # taken only when none of the rest is shown
-                    when = "only when the window shows none of the mods below" if alone else "over the mods below on some offers"
-                    lines.append(f"{'else ' if lines else ''}{mod}: taken {when}, on {chance_text(shares[mod] / whole)} of unveils; it goes on to {place}")
+        shares: dict[str, float] = {}
+        for share, _, mod in left:
+            shares[mod] = shares.get(mod, 0.0) + share
+        free = [mod for mod in sorted(shares, key=lambda name: -shares[name]) if role[mod][0] == "junk"]
+        for mod in sorted(shares, key=lambda name: -shares[name]):  # a wanted mod taken only on some offers, or one that blocks a wanted mod
+            if mod in free:
+                continue
+            alone = all(not set(shown) & set(free) for _, shown, taken in left if taken == mod)  # taken only when none of the free ones is shown
+            when = "only when the window shows none of the mods below" if alone or not free else "over the mods below on some offers"
+            why = f"; it blocks the {role[mod][1]} asked (one family), so" if role[mod][0] == "blocks" else ";"
+            lines.append(f"{'else ' if lines else ''}{mod}: taken {when}, on {chance_text(shares[mod] / whole)} of unveils{why} it goes on to {mostly.get(mod, 'another step')}")
+        if free:  # mods the target does not ask and that block none it asks: one is as good as another (#1644)
             share = chance_text(math.fsum(shares[mod] for mod in free) / whole)
-            each = f"each goes on to {main}, so which of them is taken is a free choice" if len(free) > 1 and main != "several steps" else f"it goes on to {main}"
-            lines.append(f"{'else ' if lines else ''}{'; '.join(free)}: {each}; taken on {share} of unveils")
+            if len(free) > 1:
+                lines.append(f"{'else ' if lines else ''}any of {'; '.join(free)}: none is a mod the target asks and none blocks one, so which is taken is a free choice; taken on {share} of unveils; where the item goes then is under \"{DECIDE}\"")
+            else:
+                lines.append(f"{'else ' if lines else ''}{free[0]}: a mod the target does not ask; taken on {share} of unveils; it goes on to {mostly.get(free[0], 'another step')}")
         return ["the window shows up to three mods and one is taken, free; the plan takes, in this order:", *lines]
 
     def _onward(self, edge: Edge) -> str:
@@ -1524,6 +1673,23 @@ class _View:
         if edge.kind == "goal" or edge.to is None:
             return "the target"
         return f"step {edge.to + 1} ({self.next_title(edge)})"
+
+    def _pick_role(self, made) -> tuple[str, str]:
+        """What a pick's mod is to the target, read off its outcome: "wanted" when it meets a leaf the offered item lacks, "blocks" with the
+        short name of the wanted mod when it is of the family of one the item lacks (R24's Avoid being Chilled Movement Speed against the
+        Onslaught one, #1644), else "junk"."""
+        landing = [state for state, weight in made.pick.outcomes if weight > 0]
+        if not landing:
+            return ("junk", "")
+        added = Counter(landing[0].slots) - Counter(made.offered.slots)
+        for slot in added:
+            if any(status is Status.PASSING for status in slot.contribution):
+                return ("wanted", "")
+        for slot in added:
+            for i in self._blocked_leaves(slot.kind):
+                if landing[0].status[i] is not Status.PASSING:
+                    return ("blocks", short_mod(self._leaf_mod_text(i)))
+        return ("junk", "")
 
     def _taken(self, made) -> str:
         """The mod of the offer a pick takes, read off its outcome: the slot it adds is of the family of one mod of the offer (a mod unveiled
@@ -1670,6 +1836,17 @@ class _View:
         """Whether the planner's own plan is one its search walked to and was stopped on (a `REACHED` limit, #1142); a given route never is."""
         return self.inp.label == PLANNER_LABEL and any(limit.kind == REACHED for limit in self.plan.limits)
 
+    def divine_line(self, uses: tuple[PriceUse, ...]) -> list[str]:
+        """The Divine Orb's rate the page's Divine figures are in (the Mean, 9 runs in 10), with its source, when no step buys one (then its
+        line is already there): "(12 Divine)" was said with no rate on R17, R24 and R14 (#1651, #891)."""
+        if any(use.name == DIVINE_ORB for use in uses):
+            return []
+        prices = self.plan.prices
+        entry = prices.prices.get(DIVINE_ORB)
+        provenance = None if entry is None else provenance_of(entry, prices)
+        source = f"{RATE_WORDS}, {prices.league}, {prices.fetched_at:%Y-%m-%d}" if provenance is None else provenance.words
+        return [f"{DIVINE_ORB}: {chaos_text(prices.chaos_per_divine)} Chaos, {source}; the Divine figures of this page are at this rate"]
+
     def goal_card(self) -> GoalCard:
         plan, risk = self.plan, self.inp.risk
         shift, divine = plan.start_price.chaos, plan.prices.chaos_per_divine
@@ -1700,7 +1877,7 @@ class _View:
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
             *rule,
             _plain("Approximate inputs", *approximate, tone="warn"),
-            _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}", *(plain_base_names(self.data, use_line(use)) for use in uses)),
+            _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}", *(plain_base_names(self.data, use_line(use)) for use in uses), *self.divine_line(uses)),
         )
         # the plan's limits are said in the planner's section (they already hold what its own steps cannot show); a given route says its own
         limits = plan.limits if self.inp.label == PLANNER_LABEL else flow_limits(self.chain)

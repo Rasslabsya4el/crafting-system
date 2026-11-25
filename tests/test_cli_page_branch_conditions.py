@@ -12,7 +12,7 @@ from route_view_support import COLD_REQ, DAMAGE, FRACTURED_COLD, LIFE, belt, cra
 
 from crafting_system.abstraction import Status
 from crafting_system.cli._route_flow import Edge, Flow, Step
-from crafting_system.cli._route_view import AGAIN, NEXT, REACHED_FROM, SURE_NEXT, _View, build_section
+from crafting_system.cli._route_view import AGAIN, DECIDE, NEXT, REACHED_FROM, SURE_NEXT, _View, build_section
 from crafting_system.targets import Requirement
 
 DAMAGE_REQ = Requirement("AllDamage", None, frozenset({DAMAGE}))
@@ -39,25 +39,42 @@ def lines(row, label: str) -> list[str]:
 
 
 def test_branches_told_apart_only_by_the_mods_the_target_does_not_need_say_so():
+    """The Chaos Orb's two places (again, the bench) are said in its "Where the item goes" list by the unwanted prefixes (#1526); the chance
+    lines then say only the place and its chance."""
     section = build_section(hand_input(belt(FRACTURED_COLD, JUNK_PREFIX, JUNK_ES), (COLD_REQ, DAMAGE_REQ), chaos_until_no_unwanted_prefix), DATA)
     (chaos,) = [row for row in section.rows if row.title == "Chaos Orb"]
 
+    rows = lines(chaos, DECIDE)[1:]
+    assert len(rows) == 2
+    assert rows[0].startswith("with an unwanted prefix: then Benchcraft: ") or rows[0] == "with 2 unwanted prefixes: this step again"
+    assert rows[1].startswith("else any other item: ")
+    assert ("Benchcraft" in rows[0]) != ("Benchcraft" in rows[1])
     chances = lines(chaos, "Chance per use")
-    onward = [text for text in chances if "then Benchcraft" in text]
-    again = [text for text in chances if AGAIN in text]
-    assert len(onward) == 1 and onward[0].startswith("with an unwanted prefix, then Benchcraft: ")
-    assert len(again) == 1 and again[0].startswith(f"with 2 unwanted prefixes, {AGAIN}: ")
+    assert any(text.startswith(f"{AGAIN}: ") for text in chances) and any(text.startswith("then Benchcraft: ") for text in chances)
 
 
-def test_the_words_of_a_branch_hold_on_every_item_of_it_and_on_none_of_the_others():
-    """The words are read off the item: checked here on each item the Chaos Orb leaves, by its own unwanted prefixes."""
+def test_the_rows_of_a_step_send_every_item_it_leaves_to_its_branch():
+    """The list is read from the top: the first row whose conditions hold on an item says where it goes. Checked on each item the Chaos Orb
+    leaves, by its own traits (the conditions are columns of the step's table)."""
     view = _View(hand_input(belt(FRACTURED_COLD, JUNK_PREFIX, JUNK_ES), (COLD_REQ, DAMAGE_REQ), chaos_until_no_unwanted_prefix), DATA, None, "", True)
     (chaos,) = [step for step in view.flow.steps if step.action is not None and step.action.label == "Chaos Orb"]
-    by_words = {view.item_words(chaos, edge): edge for edge in chaos.edges if edge.kind != "goal"}
 
-    assert set(by_words) == {"with an unwanted prefix", "with 2 unwanted prefixes"}
-    assert {_unwanted_prefixes(state) for state in by_words["with an unwanted prefix"].states} == {1}
-    assert {_unwanted_prefixes(state) for state in by_words["with 2 unwanted prefixes"].states} == {2}
+    assert_rows_send_every_item(view, chaos)
+    assert all(view.item_words(chaos, edge) == "" for edge in chaos.edges)  # the list says it: no words on the chance lines
+
+
+def assert_rows_send_every_item(view, step) -> None:
+    """Every item a use of `step` leaves (but the target's) meets, as the first row that holds on it, a row whose places include its own."""
+    table = view._table(step)
+    rows = view.decisions(step)
+    assert rows and rows[-1][0] == "" and rows[-1][2] == ()
+    for edge in step.edges:
+        if edge.kind == "goal":
+            continue
+        for state in edge.states:
+            i = table.index[state]
+            went = next(went for _, went, columns in rows if all(table.tests[c, i] for c in columns))
+            assert edge.to in {other.to for other, _ in went}
 
 
 def remove_then_chaos(state, ab):
