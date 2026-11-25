@@ -699,7 +699,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData, divergences: bool =
     needs only the route's own costs, and on R20's site plan reading them took over half an hour, #1584).
     """
     if plan.donors is not None:  # the route makes second items too: it is read on the product of the target and its donors (#225)
-        return _evaluate_route_with_donors(plan, route, data)
+        return _evaluate_route_with_donors(plan, route, data, divergences)
     searched = plan.packed is not None and "envelope" in plan.packed.info
     if isinstance(plan.policy, PackedPolicy) and not searched:  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed
@@ -774,7 +774,7 @@ def _decide_product(plan: Plan, route: Route, data: GameData, product: tuple) ->
     return refusal
 
 
-def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> RouteResult:
+def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData, divergences: bool = True) -> RouteResult:
     """`evaluate_route` for a plan that makes donors (ticket #225): the route as a fixed policy of the product of the target and its donors.
 
     The walk starts at the target's own item and follows every outcome and every second item a recombination consumes; a second item is
@@ -820,6 +820,6 @@ def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> Rou
         if isinstance(choice, str):
             continue
         if choice.label != plan.policy[state].label:
-            divergences.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
-    first = divergences[0] if divergences else None
-    return RouteResult(own, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(divergences), product_policy=policy)
+            parted.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
+    first = parted[0] if parted else None
+    return RouteResult(own, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(parted), product_policy=policy)
