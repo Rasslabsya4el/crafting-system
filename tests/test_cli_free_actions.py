@@ -171,7 +171,8 @@ def test_a_target_that_names_the_veiled_kinds_is_planned_end_to_end_and_the_repo
 
     assert plan.mean_remaining == pytest.approx(1.5 + 2.6 * 5.0 * FREE_ACTION_SHARE, rel=1e-12)
     assert plan.solution.error_bound < 1e-8
-    assert "cost per use: free (counted at 5e-06 Chaos" in text  # not "( = 0.00 Chaos each)"
+    assert "cost per use: free (counted at 1e-05 Chaos" in text  # not "( = 0.00 Chaos each)"; the unveil and its pick are one step (#1625), counted at both
+    assert "Step 3: Pick" not in text and "Pick 1" not in text.split("Proof")[0]
     document = policy_document(report)
     assert any("unveil offer: 1. " in state["description"] and "2. " in state["description"] for state in document["states"])  # "Pick 2" names the second mod of the offer: the JSON lists each state
     assert {state["action"] for state in document["states"]} >= {"Unveil", "Pick 1", "Pick 2"}

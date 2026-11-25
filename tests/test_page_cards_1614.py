@@ -158,7 +158,7 @@ def test_a_normal_item_made_magic_has_the_goal_a_magic_item():
     def state(rarity):
         return SimpleNamespace(flags=SimpleNamespace(rarity=rarity), status=(), fractured=(), slots=())
 
-    view = SimpleNamespace(plan=SimpleNamespace(leaf_labels=()), _passing_in_all=lambda states: set(), _fractured=lambda s: set(), _crafted=lambda s: set())
+    view = SimpleNamespace(plan=SimpleNamespace(leaf_labels=()), _passing_in_all=lambda states: set(), _fractured=lambda s: set(), _crafted=lambda s: set(), _grouped=lambda entries: [text for text, _ in entries])
     step = SimpleNamespace(states=[state(Rarity.NORMAL)])
     edges = [SimpleNamespace(states=[state(Rarity.MAGIC)])]
     assert _View.gains(view, step, edges) == ["a magic item"]

@@ -220,6 +220,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_main.py", "_limit", ("ValueError",), NOT_A_REFUSAL, "a `--time-limit` or `--memory-limit` that is not a number: the command says so (#825)"),
     ("cli/_report.py", "_leaf_chance", ("ValueError",), EITHER, "the chance of one use is left out of the line; display only, no plan is changed"),
     ("cli/_route_view.py", "_View.leaf_text", ("ValueError",), NOT_A_REFUSAL, "the trade site's stat list: no action is called"),
+    ("cli/_route_view.py", "_View._leaf_mod_text", ("ValueError",), NOT_A_REFUSAL, "a leaf's mod text for a group's names, as `leaf_text` reads it: no action is called (#1622)"),
     ("cli/_route_view.py", "_View._start_over", ("NotApplicableError", "OutOfScopeError", "ValueError"), EITHER, "a step whose action's declarations cannot be read at the start item is not read as starting the item over: its row keeps the action's own title (#1600)"),
     ("cli/_route_view.py", "_trade_stats", ("OSError", "ValueError", "AttributeError"), NOT_A_REFUSAL, "the recorded stat list on disk: no action is called"),
     ("cli/_trade.py", "trade_main", ("TradeError", "TargetError", "DataError", "PriceFileNotFound", "ValueError", "OSError"), NOT_A_REFUSAL, "the trade command: no action is called"),
