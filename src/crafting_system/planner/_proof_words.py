@@ -1,7 +1,7 @@
 """The one sentence that says how sure a plan is, in a player's words (#1576, OR-59): the route page's "Proof" field, the text report's
 "Proof:" line and the JSON's `proof` say it from here, and nothing else words the answer's proof.
 
-Three cases, no more:
+Four cases, no more:
 
 * **Proved** (`PROVED`): the search held every action open to the craft together and finished, and its plan is proved within 1% of the
   cheapest (`budget.PROOF_GAP`; exact when the gap is 0). Only then does the sentence say "proved" without a qualifier.
@@ -10,6 +10,9 @@ Three cases, no more:
   whose plan the run ended with on; a group that finished early because it could not beat the plan counts, a group that showed only that its
   methods alone do not reach the target does not (it did not hold the plan's actions). With a guide's route, its cost beside the plan's.
 * **No plan** (`NO_PLAN`): the search stopped before any plan reached the target; that is not a proof that none does (OR-33).
+* **No usable plan** (`NO_USABLE`, #1628): the search ended with a plan one of whose steps expects more uses than the run's setting
+  (`_usable`, OR-12's stop-and-say-so net): the answer is no plan, and the sentence gives that plan's cost, the step, its uses and what was
+  considered (`unusable_words`).
 
 The rule (OR-59, owner 2026-11-24): a craft is shown as proved only when the plan is proved within 1% over every method; otherwise "best plan
 found, not proved", what was considered, and the cost against the guide. The words carry no search term (round, bound, key, envelope); "a group
@@ -29,6 +32,7 @@ from ._envelope_plan import certificate_gap
 from ._rounds import BEATEN, CLOSED, WITHIN
 
 PROVED, BEST_FOUND, NO_PLAN = "proved", "best found, not proved", "no plan"
+NO_USABLE = "no usable plan"  # the search ended with a plan no player would follow (`_usable`, #1628)
 NO_PLAN_SENTENCE = (
     "No plan found: the search stopped before it found any way to reach the target. That does not mean there is none; a longer run may find one."
 )
@@ -202,9 +206,33 @@ def info_rounds(plan) -> bool:
     return plan.search is not None and bool(plan.search.widening)
 
 
+def unusable_words(plan, label: str, uses: float, line: float) -> ProofWords:
+    """The proof sentence of a run whose best plan expects more than `line` uses of its step `label` (`_usable.check_usable`, #1628, OR-12):
+    no usable plan, the figure and the step, and what the search considered, in the words of the plan it replaces (OR-59)."""
+    best = proof_words(plan)
+    cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.craft_mean)
+    said = (
+        f"No usable plan found within the limit: the best plan found costs {_chaos(cost)} and expects about {uses:,.0f} uses of {label}, "
+        f"more than the {line:,.0f} uses of one step a player can follow, so it is not shown as a plan."
+    )
+    if best.case == PROVED:
+        considered = f" No cheaper plan exists among {_all(best.open)}; a plan that uses one step fewer times, if there is one, costs more."
+    elif best.tried_together:
+        considered = (
+            f" The search checked only {best.tried_together:,} {f'of the {best.open:,} ' if best.open else ''}crafts this planner can use on "
+            "this item fully in combination with that plan before it ran out of time or memory; a longer run may find a usable plan."
+        )
+    else:
+        considered = (
+            f" The search ran out of time or memory before it finished checking the {f'{best.open:,} ' if best.open else ''}crafts this planner "
+            "can use on this item together; a longer run may find a usable plan."
+        )
+    return ProofWords(NO_USABLE, said + considered, best.open, best.tried_together)
+
+
 def no_plan_words() -> ProofWords:
     """The proof sentence of a run that stopped with no plan."""
     return ProofWords(NO_PLAN, NO_PLAN_SENTENCE)
 
 
-__all__ = ["BEST_FOUND", "NO_PLAN", "NO_PLAN_SENTENCE", "PROVED", "ProofWords", "no_plan_words", "proof_words"]
+__all__ = ["BEST_FOUND", "NO_PLAN", "NO_PLAN_SENTENCE", "NO_USABLE", "PROVED", "ProofWords", "no_plan_words", "proof_words", "unusable_words"]

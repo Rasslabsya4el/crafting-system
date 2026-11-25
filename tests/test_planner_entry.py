@@ -20,7 +20,7 @@ import crafting_system.planner as planner
 from crafting_system.budget import Budget
 from crafting_system.cli import build_report, policy_document, render_text
 from crafting_system.config import load_config
-from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, make_plan, plan_target, plan_with_starts
+from crafting_system.planner import BUDGET_SECONDS, Plan, PlanError, PlanSettings, USABLE_STEP_USES, make_plan, plan_target, plan_with_starts
 from crafting_system.planner import _presenter
 from crafting_system.targets import TargetError, load_target
 
@@ -87,8 +87,9 @@ def test_the_entry_is_the_start_choice_with_the_settings_passed_by_name(monkeypa
 
     assert plan_target("data", "target", "prices", settings) == "the plan"
     assert (seen["data"], seen["target"], seen["prices"]) == ("data", "target", "prices")
-    # every setting, each under its own name, and nothing else; the request's time limit is folded into the budget (#1577, `request_budget`)
-    assert seen["fields"] == {name: value for name, value in vars(settings).items() if name != "time_limit_seconds"}
+    # every setting, each under its own name, and nothing else; the request's time limit is folded into the budget (#1577, `request_budget`),
+    # and the net on one step's uses is the entry's own, read on the plan it hands over (#1628, `tests/test_usable_plan_1628.py`)
+    assert seen["fields"] == {name: value for name, value in vars(settings).items() if name not in ("time_limit_seconds", "usable_step_uses")}
 
 
 def test_the_defaults_of_the_settings_are_the_planners_own():
@@ -98,6 +99,9 @@ def test_the_defaults_of_the_settings_are_the_planners_own():
     for field in dataclasses.fields(PlanSettings):
         if field.name == "time_limit_seconds":  # the entry's own: None keeps the budget as given (#1577, `tests/test_request_time_limit.py`)
             assert field.default is None
+            continue
+        if field.name == "usable_step_uses":  # the entry's own net on one step's uses (#1628, `tests/test_usable_plan_1628.py`)
+            assert field.default == USABLE_STEP_USES
             continue
         own = start_choice[field.name] if field.name in start_choice else one_plan[field.name]
         assert field.default == own.default, field.name

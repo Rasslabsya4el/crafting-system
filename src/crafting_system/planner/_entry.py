@@ -23,6 +23,7 @@ from ._envelope import Standing
 from ._offers import unmodelled_labels
 from ._plan import Plan, PlanError, StartPrice, make_plan, with_finishes
 from ._starts import plan_with_starts
+from ._usable import USABLE_STEP_USES, check_usable
 
 
 @dataclass(frozen=True)
@@ -51,6 +52,9 @@ class PlanSettings:
       or labels of single actions ("Essence of Insanity"), as `kinds()` and the offers name them; None is every beta method the planner
       offers by default (OR-37). A target never names them (its file's `actions:` key is refused); a run with fewer says so in its answer
       ("Methods this run's setting leaves out").
+    * `usable_step_uses`: the most expected uses of one step a plan may need and still be answered as a plan (`_usable`, #1628, OR-12: a
+      stop-and-say-so net on the answer, never a cut in the search); past it the entry raises `UnusablePlan`, "no usable plan found within
+      the limit". None: no such net.
     """
 
     recipe_starts: bool = True
@@ -66,6 +70,7 @@ class PlanSettings:
     route_actions: tuple[str, ...] | None = None
     methods: tuple[str, ...] | None = None
     time_limit_seconds: float | None = None
+    usable_step_uses: float | None = USABLE_STEP_USES
 
 
 def request_budget(budget: Budget | None, seconds: float | None) -> Budget | None:
@@ -93,14 +98,16 @@ def request_budget(budget: Budget | None, seconds: float | None) -> Budget | Non
 
 def plan_target(data: GameData, target: Target, prices: PriceFile, settings: PlanSettings = PlanSettings()) -> Plan:
     """The cheapest plan for `target` at `prices` under `settings`; raises `PlanError` where no plan can be made (`plan_with_starts`), or
-    where the request's time limit cannot be had (`request_budget`)."""
+    where the request's time limit cannot be had (`request_budget`), and its `UnusablePlan` where the plan the search ended with needs more
+    uses of one step than `settings.usable_step_uses` (#1628)."""
     budget = request_budget(settings.budget, settings.time_limit_seconds)
-    return plan_with_starts(
+    plan = plan_with_starts(
         data, target, prices, recipe_starts=settings.recipe_starts, start_price=settings.start_price, price_source=settings.price_source,
         price_gap_percent=settings.price_gap_percent, today=settings.today, budget=budget, strands=settings.strands,
         solver=settings.solver, judges_route=settings.judges_route, watch=settings.watch,
         route_actions=settings.route_actions, methods=settings.methods,
     )  # fmt: skip
+    return check_usable(plan, settings.usable_step_uses)
 
 
 class NotModelled(PlanError):

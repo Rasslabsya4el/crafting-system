@@ -39,7 +39,7 @@ from crafting_system.prices.price_file import OVERRIDES_FILE_NAME
 from crafting_system.risk import Estimate
 from crafting_system.solver import ConvergenceError
 from crafting_system.targets import KOfN, Requirement, StartKind, Target, load_target, start_price_key
-from crafting_system.planner import BUDGET_SECONDS, PackedPolicy, Plan, PlanError, PlanSettings, default_offers, guide_plan, made_start, plan_target
+from crafting_system.planner import BUDGET_SECONDS, PackedPolicy, Plan, PlanError, PlanSettings, UnusablePlan, default_offers, guide_plan, made_start, plan_target
 
 from ._benchmark_divergence import divergence_lines, divergences_of, first_divergence_of, mean_ratio, review_lines, review_of
 from ._benchmark_verdicts import COMPLETED, GUIDE, Reviewing, text_hash, verdict_of
@@ -482,6 +482,7 @@ def run_route(
         "record": None,
         "guide_not_evaluable": None,
         "guide_judged_on": None,
+        "unusable": None,
     }
     timings: dict[str, float | None] = {"solver": None, "risk_evaluate": None, "route_evaluate": None}
     loaded: PriceFile | None = None
@@ -551,6 +552,9 @@ def run_route(
         pass
     except BudgetExceeded as stop:  # the memory net, met after the plan: the record is kept and the stop is said (#1381)
         entry["error"] = stop.binding.words()
+    except UnusablePlan as unusable:  # no plan a player would follow: no plan in the record, and what was found beside it (#1628)
+        entry["error"] = str(unusable)
+        entry["unusable"] = unusable.document()
     except ROUTE_ERRORS as error:
         entry["error"] = _without_root(str(error), root)
     timings["total"] = time.perf_counter() - began
