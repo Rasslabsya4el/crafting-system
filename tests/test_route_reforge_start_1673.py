@@ -30,7 +30,11 @@ def test_a_normal_start_reforged_first_is_bought_normal_or_rare_and_the_page_say
 
     buy = build_section(plan_input, DATA).rows[0]
     assert buy.title == "Buy Hand start belt (Normal or Rare)"
-    assert lines_of(buy, "Accepts")[-1] == "a Normal or a Rare one, the cheaper: the first step, Essence of Hysteria, reforges either alike"
+    accepts = lines_of(buy, "Accepts")
+    assert accepts[0].startswith("Normal or Rare") and accepts[-1] == (
+        "a Normal or a Rare one with no fractured or crafted mod and no other influence, the cheaper: the first step, Essence of Hysteria, "
+        "reforges either alike, with no Orb of Scouring"
+    )  # a fractured or crafted mod would stay or block, a second influence is another pool: those are not the same start
 
 
 def test_a_start_that_is_already_rare_keeps_the_buy_step_as_it_was():
@@ -56,8 +60,10 @@ def test_the_words_and_the_link_of_either_rarity():
     assert name == "Heavy Belt, Normal or Rare, item level 75, Hunter influence"
     assert accepts == [
         "Normal or Rare Heavy Belt", "item level 75", "Hunter influence", "not corrupted",
-        "a Normal or a Rare one, the cheaper: the first step, Deafening Essence of Rage, reforges either alike",
+        "a Normal or a Rare one with no fractured or crafted mod and no other influence, the cheaper: the first step, Deafening Essence of "
+        "Rage, reforges either alike, with no Orb of Scouring",
     ]  # fmt: skip
+    assert either_rarity(["Normal", "item level 86"], "Hand start belt", "Essence of Hysteria")[0][0] == "Normal or Rare"  # the start's own card
     spec = BuySpec("Heavy Belt, normal, item level 75, Hunter influence", "Heavy Belt", "accessory.belt", "normal", 75, 75, ("hunter",))
     linked = link_spec(spec)
     assert linked.rarity == "nonunique" and linked.item_level_min == linked.item_level_max == 75 and linked.influences == ("hunter",)

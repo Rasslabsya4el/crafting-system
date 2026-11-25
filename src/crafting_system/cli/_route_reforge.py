@@ -53,11 +53,14 @@ def either_rarity(accepts: list[str], name: str | None, step: str) -> tuple[list
     """The buy step's Accepts lines and item name for a start the first step reforges at either rarity: "Normal or Rare" in place of the
     rarity word, and one line that says why, naming the step."""
     head, *rest = accepts or [""]
-    for prefix in ("Any rarity but unique ", "Normal "):  # the link's search (`link_spec`), or the start item's own card
-        if head.startswith(prefix):
-            head = f"{NORMAL_OR_RARE} {head.removeprefix(prefix)}"
+    for prefix in ("Any rarity but unique", "Normal"):  # the link's search (`link_spec`), or the start item's own card ("Normal" alone)
+        if head == prefix or head.startswith(f"{prefix} "):
+            head = f"{NORMAL_OR_RARE}{head.removeprefix(prefix)}"
             break
-    why = f"a Normal or a Rare one, the cheaper: the first step, {step}, reforges either alike"
+    why = (
+        f"a Normal or a Rare one with no fractured or crafted mod and no other influence, the cheaper: the first step, {step}, reforges "
+        "either alike, with no Orb of Scouring"
+    )
     if name is not None:
         name = name.replace(", normal,", f", {NORMAL_OR_RARE},", 1) if ", normal," in name else f"{name} ({NORMAL_OR_RARE})"
     return [head, *rest, why], name
