@@ -23,7 +23,7 @@ The checks, one per rule that can be seen on a page. A check takes a `Page` and 
   OR-15  every mod line is in one format          `check_mod_format`, `check_bench_line_is_its_craft`, `check_group_printed_once`
   OR-16  every in-game step is shown              `check_no_hidden_step`
   OR-17  the bought item's other mods             `check_bought_item_not_empty`
-  OR-18  one page step is one player step         `check_one_step_per_action`
+  OR-18  one page step is one player step         `check_one_step_per_action`, `check_card_is_one_item` (a card is one item)
   OR-19  the same route is never shown twice      `check_route_not_twice`
   OR-20  a known mechanic is never a range        `check_no_range`
   OR-23  an unknown is marked approximate         `check_approximate_marked`, `check_no_dropped_for_price`
@@ -595,6 +595,24 @@ def check_no_repeated_card(page: Page) -> list[Fault]:
     return faults
 
 
+_BLEND = re.compile(r"\bonly on some of these items\b", re.I)
+
+
+def check_card_is_one_item(page: Page) -> list[Fault]:
+    """OR-18: an item card is one item a player can hold. A card that joins several items lists what only some of them hold as its
+    "any mod" slots, never as a group under it ("only on some of these items, each in a slot marked any": R20 printed it 29 times, the
+    crafter read the cards as blends of several items, #1675). What decides where an item goes is the step's own list, not the card."""
+    faults = []
+    for route in page.routes:
+        cards = [(f"step {step.number} ({step.title})", card) for step in route.steps for card in ([step.after] if step.after else []) + list(step.branches)]
+        for where, card in cards:
+            for caption, slots in card.sides:
+                if _BLEND.search(caption) or any(_BLEND.search(f"{slot.text} {slot.note}") for slot in slots):
+                    faults.append(_fault("OR-18", check_card_is_one_item, where, "the card lists rows 'only on some of these items': a blend of several items"))
+                    break
+    return faults
+
+
 # --- OR-19: the same route is never shown twice --------------------------------------------------------------
 
 
@@ -1082,6 +1100,7 @@ CHECKS: tuple[Callable[[Page], list[Fault]], ...] = (
     check_bought_item_not_empty,
     check_one_step_per_action,
     check_no_repeated_card,
+    check_card_is_one_item,
     check_route_not_twice,
     check_no_range,
     check_approximate_marked,

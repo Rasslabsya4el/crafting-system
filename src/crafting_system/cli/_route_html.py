@@ -142,9 +142,10 @@ def _section(section, heading: bool) -> str:
     )
     for row in section.rows:
         out.append('<div class="ar">↓</div>')
-        items = _item(row.after, target=row.final)
+        # the card after the step is drawn as the target only when no branch card is: a joined card of the target and other items is no target (#1675)
+        items = _item(row.after, target=row.final and not any(branch.final for branch in row.branches))
         if row.branches:  # the card after the step, then the card of each branch whose items differ from it, each under its own caption
-            items = "<div>" + items + "".join(f'<div class="sd">{escape(branch.caption)}</div>{_item(branch.card)}' for branch in row.branches) + "</div>"
+            items = "<div>" + items + "".join(f'<div class="sd">{escape(branch.caption)}</div>{_item(branch.card, target=branch.final)}' for branch in row.branches) + "</div>"
         out.append(
             f'<div class="rw"><div class="cd" id="{escape(row.anchor, quote=True)}">'
             f"<h3>{row.number}. {escape(row.title)}</h3>" + _fields(row.fields) + "</div>"

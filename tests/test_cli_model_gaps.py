@@ -218,6 +218,7 @@ OTHERS: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("planner/_plan.py", "_make_plan", ("ValueError",), EITHER, "`offers_for` failed: the text becomes the `PlanError`, whichever family or error it was"),
     ("planner/_plan.py", "_make_plan", ("ValueError",), EITHER, "`climb` found no level: the text becomes the `PlanError`, whichever family or error it was"),
     ("cli/_main.py", "_limit", ("ValueError",), NOT_A_REFUSAL, "a `--time-limit` or `--memory-limit` that is not a number: the command says so (#825)"),
+    ("cli/_reference_guide.py", "reference_beside", ("RouteError", "PlanError"), EITHER, "the guide's route of a reference craft cannot be read or priced on its own offers (an action the model does not hold, #1442): the page says only the figure its file records, and the plan stands (#1584)"),
     ("cli/_report.py", "_leaf_chance", ("ValueError",), EITHER, "the chance of one use is left out of the line; display only, no plan is changed"),
     ("cli/_route_view.py", "_View.leaf_text", ("ValueError",), NOT_A_REFUSAL, "the trade site's stat list: no action is called"),
     ("cli/_route_view.py", "_View._leaf_mod_text", ("ValueError",), NOT_A_REFUSAL, "a leaf's mod text for a group's names, as `leaf_text` reads it: no action is called (#1622)"),

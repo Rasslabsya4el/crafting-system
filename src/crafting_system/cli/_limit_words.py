@@ -97,7 +97,8 @@ def state_line_text(limit: Limit) -> str | None:
     if limit.what.startswith("A state lists the other mods only as a count per side"):
         return (
             "An item card names the mods the target asks for; every other mod shows only as \"any mod\" or \"an unwanted mod\" on its side, "
-            "not by name. The odds and costs count every one of them."
+            "not by name. The odds and costs count every one of them. A card that stands for several items names a wanted mod only where "
+            "every one of them holds it (\"one of A / B\" where each holds one of the two); the step's list says which item goes where."
         )
     if limit.what.startswith("A state does not list the other mods"):
         return "An item card names only the mods the target asks for. The odds and costs do not depend on the others: no method of the route reads them."

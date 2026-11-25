@@ -2,7 +2,8 @@
 
 A change to the route page is then checked on a heavy craft's plan in minutes instead of the hour the plan takes. The plan is
 read against the game data of the settings (`_plan_file`); the page is the one the plain command writes, the given route left out. With no `--route`, a target that is a reference craft's still has its
-guide's recorded figure said in the proof sentence (`_reference_guide`, #1596).
+guide's route priced on the plan's model, or its recorded figure, said in the proof sentence and the block against the guide
+(`_reference_guide`, #1596, #1584).
 """
 
 from __future__ import annotations
@@ -18,7 +19,7 @@ from crafting_system.planner import PlanError
 from crafting_system.targets import StartKind, buy_spec_of
 
 from ._plan_file import PlanFileError, load_plan
-from ._reference_guide import reference_guide
+from ._reference_guide import reference_beside, reference_guide
 from ._report import build_report
 from ._route import RouteError, evaluate_route, load_route, route_actions
 from ._route_view import judged_on, write_route_page
@@ -47,10 +48,12 @@ def page_main(argv: Sequence[str], *, env: Mapping[str, str] | None = None, data
         judged = None if not args.route else judged_on(saved.plan, route_actions(Path(args.route)), game, saved.target)
         route = load_route(Path(args.route), judged, game) if judged is not None else None
         given = evaluate_route(judged, route, game) if route is not None else None
-        recorded = reference_guide(game, saved.target) if route is None else None  # no guide's route given: a reference craft's recorded figure (#1596)
+        # no guide's route given: a reference craft's guide priced on the plan's model (#1584), else its recorded figure (#1596)
+        beside = reference_beside(game, saved.plan, saved.target) if route is None else None
+        recorded = reference_guide(game, saved.target) if route is None and beside is None else None
         page = write_route_page(
             out, report, game, route=route, given=given, given_on=judged, buy_spec=spec, cache_dir=config.cache_dir,
-            guide=recorded, guide_recorded=recorded is not None,
+            guide=recorded, guide_recorded=recorded is not None, beside=beside,
         )  # fmt: skip
     except (DataError, PlanFileError, RouteError, PlanError, OSError) as error:  # RouteError: a --route file that cannot be read; PlanError: the guide's own plan
         print(f"Error: {error}", file=sys.stderr)

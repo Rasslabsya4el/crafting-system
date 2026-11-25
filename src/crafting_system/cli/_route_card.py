@@ -57,7 +57,9 @@ capacity; a slot of a family told apart is a mod of that family. Without it (rer
 erased by every action), everything besides the fractured, crafted and wanted slots is `any mod or
 empty`, and `empty` on a normal item. With several states, a row every state has is plain; a row only some have is no line of
 the item (a card is an item a player can hold, never a blend of outcomes: six prefixes on a Rare, #889), its slot is `any mod` or `any mod
-or empty` and the row is listed once under the heading `VARIES` with its side; a property that differs reads `Magic or Rare` or `(some)`.
+or empty`, and nothing else is said of it on the card: a card joins only states the plan treats alike, so what tells them apart does not
+matter there, and where it does the step's "Where the item goes" list names it (#1675: a group "only on some of these items" under the
+card read as a blend of several items); a property that differs reads `Magic or Rare` or `(some)`.
 
 Reaches into the abstraction beyond its public names, because it exposes no public way to ask: the
 `tracked` flag of `abstraction._kinds` (in `tracks_junk`) and `abstraction._drawn_contribution(mod)` (what
@@ -859,8 +861,9 @@ def _rank(row: Slot) -> int:
     return {"wanted": 1, "crafted": 3}.get(row.tone, 2)
 
 
+
+
 BELOW_NOTES = ("tier too low", "below roll")  # the note of a wanted family's row below what the target asks: on a joined card, one of the "any mod" slots
-VARIES = "only on some of these items, each in a slot marked any:"  # the heading of the rows only some states of a card hold (#889)
 
 
 def _shared_rows(per_state: list[list[Slot]]) -> tuple[list[Slot], list[list[Slot]]]:
@@ -899,13 +902,26 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
     only_normal = all(state.flags.rarity is Rarity.NORMAL for state in states)
     only_magic = all(state.flags.rarity is Rarity.MAGIC for state in states)  # a Magic item draws its own one prefix and one suffix (#962)
     sides: dict[Side, tuple[Slot, ...]] = {}
-    varies: list[Slot] = []
     for side in SIDES:
         rows, rest = _shared_rows([entry.rows[side] for entry in read])
         limit = _capacity(data, base_id, side, Rarity.MAGIC if only_magic else Rarity.RARE)
-        # the rows some states hold: the wanted, crafted, fractured and veiled ones; a mod the target does not need, or a wanted family below its tier, is one of
-        # the "any mod" slots (the stage board's rule: a player reads the unwanted mods as a count, the Where field names the one that decides)
-        varies += [replace(row, marks=(*row.marks, side.value)) for row in dict.fromkeys(row for each in rest for row in each) if (row.tone not in ("any", "mod") and not row.note.startswith(BELOW_NOTES)) or {"veiled", "fractured"} & set(row.marks)]
+        # a row only some states hold, wanted, crafted, fractured or not, is one of the "any mod" slots: the stage board's rule, a card is one
+        # item and a player reads the mods that do not decide its way as a count; the Where field names the one that decides (#1675). Where
+        # every state holds at least one of the wanted rows only some hold (with one tier note), that many slots read "one of A / B" with the
+        # note: the item holds one of them (crafters on R04, R08, R09: "any mod" hid that the item before the Exalted Orb holds one wanted mod)
+        # the same of the crafted rows: "one of A / B · crafted" where every item holds one of the crafted mods only some hold (crafters on R04, R11)
+        for tone in ("wanted", "crafted"):
+            wanted = [[row for row in each if row.tone == tone and "fractured" not in row.marks and not row.note.startswith(BELOW_NOTES)] for each in rest]
+            held = min(len(each) for each in wanted)
+            named = list(dict.fromkeys(row for each in wanted for row in each))
+            if not held or len({(row.note, row.marks) for row in named}) != 1 or len(named) < 2:
+                continue
+            text = f"one of {' / '.join(sorted(dict.fromkeys(row.text for row in named)))}"  # one order whatever the states' order
+            rows += [Slot(text, tone, named[0].marks, named[0].note)] * min(held, max(0, limit - len(rows)))
+            rest = [list(each) for each in rest]
+            for each, own in zip(rest, wanted):
+                for row in own[:held]:
+                    each.remove(row)
         if reader.tracked:
             counts = [entry.junk[side] + len(each) for entry, each in zip(read, rest)]  # what a state holds beside the shared rows
             rows += [ANY_MOD] * min(min(counts), max(0, limit - len(rows)))
@@ -921,7 +937,6 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         (),
         sides[Side.PREFIX],
         sides[Side.SUFFIX],
-        groups=(Group(VARIES, tuple(sorted(varies, key=_rank))),) if varies else (),
     )
 
 

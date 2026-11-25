@@ -58,6 +58,7 @@ from crafting_system.cli import (
     make_plan,
     plan_with_starts,
     policy_document,
+    reference_beside,
     render_text,
     vendor_recipe_starts,
     verify,
@@ -674,9 +675,10 @@ def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(
 
     plan = make_plan(DATA, load_target(R12, DATA), r12_prices(), budget=budget)
     report = build_report(plan, DATA)
+    guide, recorded = reference_beside(DATA, plan, load_target(R12, DATA)).cost()  # R12 is a reference craft: its guide's cost is said (#1584)
     assert code == 0
-    assert masked(printed).startswith(masked(render_text(report, target_name=R12.name)))  # the text, then where the files were written
-    expected = json.loads(json.dumps(policy_document(report, None, target_name=R12.name)))
+    assert masked(printed).startswith(masked(render_text(report, target_name=R12.name, guide=guide, guide_recorded=recorded)))  # the text, then where the files were written
+    expected = json.loads(json.dumps(policy_document(report, None, target_name=R12.name, guide=guide, guide_recorded=recorded)))
     assert without_timings(read_json(out)) == without_timings(expected)
 
 
