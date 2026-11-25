@@ -146,3 +146,19 @@ def test_the_title_never_says_crafted_twice():
     title = page_title(DATA, belt_target(leaf(DAMAGE), leaf(MULTIMOD)))
 
     assert "crafted Damage" in title and "crafted Can have" not in title and "Can have up to 3 Crafted Modifiers" in title
+
+
+def test_a_normal_item_made_magic_has_the_goal_a_magic_item():
+    """Crafter on R14 step 14: the Transmutation after a Scouring read "a rare item" (`gains` said rare of any rarity made)."""
+    from types import SimpleNamespace
+
+    from crafting_system.cli._route_view import _View
+    from crafting_system.items import Rarity
+
+    def state(rarity):
+        return SimpleNamespace(flags=SimpleNamespace(rarity=rarity), status=(), fractured=(), slots=())
+
+    view = SimpleNamespace(plan=SimpleNamespace(leaf_labels=()), _passing_in_all=lambda states: set(), _fractured=lambda s: set(), _crafted=lambda s: set())
+    step = SimpleNamespace(states=[state(Rarity.NORMAL)])
+    edges = [SimpleNamespace(states=[state(Rarity.MAGIC)])]
+    assert _View.gains(view, step, edges) == ["a magic item"]

@@ -638,7 +638,8 @@ class _View:
         if all(state.flags.rarity.value == "normal" for state in step.states) and any(
             state.flags.rarity.value != "normal" for state in landing
         ):
-            found.append("a rare item")
+            made = [rarity.value for rarity in (Rarity.MAGIC, Rarity.RARE) if any(state.flags.rarity is rarity for state in landing)]
+            found.append(f"a {' or '.join(made)} item")  # the rarity the use makes: a Transmutation's is magic (crafter on R14 step 14)
         return list(dict.fromkeys(found))
 
     def lost(self, edge: Edge, removed: bool = False) -> list[str]:
