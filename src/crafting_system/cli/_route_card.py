@@ -12,7 +12,9 @@ its enchantments, and one `Slot` per line for the full capacity of each side. No
   `rolled=False` they show the range of the tier, not the roll, and `filler` draws the slots it has no mod for.
 * `card_of_target(data, target, start, forced)`: the goal. Each requirement leaf is a "wanted" slot on its mod's side,
   the rest `any mod or empty`; a k-of-n group is one heading `at least k of n of these:` with its members under it, each in the one mod
-  format with its own tier and no note of the group (`ItemCard.groups`, OR-15). Each implicit
+  format with its own tier and no note of the group (`ItemCard.groups`, OR-15). A group whose members are all on one side fills `at_least`
+  slots of that side, each `one of A / B / C` (`Slot.stands_for` "group"), so the side draws as many lines as the item holds (#1533); the
+  multimod is a slot of its own when the target asks more crafted mods than the item holds without it (`stands_for` "needed", #1614). Each implicit
   requirement is a wanted implicit (note `grade 3 or better, roll 30 or more`), the catalyst quality a
   property (`Prismatic catalyst quality 12% or more`).
 * `card_of_states(abstraction, states)`: the item after a step, the join of the compressed states the
@@ -72,7 +74,7 @@ from typing import Literal
 
 from crafting_system.abstraction import CompressedState, Status, Wanted, status_of
 from crafting_system.abstraction import Slot as StateSlot
-from crafting_system.actions import OutOfScopeError, forced_mod_id, tiers_of
+from crafting_system.actions import OutOfScopeError, crafted_limit_of, forced_mod_id, tiers_of
 from crafting_system.data import GameData, Mod
 from crafting_system.items import (
     EldritchSide,
@@ -80,6 +82,7 @@ from crafting_system.items import (
     ImplicitMod,
     Influence,
     Item,
+    Metamod,
     Rarity,
     Side,
     capacity,
@@ -113,6 +116,7 @@ class Slot:
     tone: Tone
     marks: tuple[str, ...] = ()  # "fractured", "crafted", "veiled", "influence", "essence only", "searing exarch", "eater of worlds", and for a member of a group "prefix" or "suffix"
     note: str = ""  # "any of 10 tiers", "tier too low", "at least 1 of 2", "in some"; "" otherwise
+    stands_for: str = ""  # on a target card, a slot that is no mod the target names by itself: "group" (a slot of a k-of-n group, #1533), "needed" (the multimod two crafted mods need, #1614)
 
 
 NESTED_GROUP = (
@@ -155,6 +159,16 @@ EMPTY = Slot("empty", "empty")
 
 def _hashes(text: str) -> str:
     return _RANGE.sub("#", text)
+
+
+_LEAD = re.compile(r"^\+?(?:#|\([\d.]+-[\d.]+\)|[\d.]+)%?\s+(?:(?:to|increased|chance to)\s+)?")  # "reduced" and a minus sign stay: they turn the mod
+
+
+def short_mod(text: str) -> str:
+    """A wanted mod as a title names it: its first line without the figures in front ("+(13-14)% chance to Suppress Spell Damage" is
+    "Suppress Spell Damage", "+# to maximum Life" is "maximum Life"); a text with no figure in front stays as it is."""
+    first = text.split(" / ")[0]
+    return _LEAD.sub("", first, count=1) or first
 
 
 _FIGURE = re.compile(rf"(?<![\w.]){_NUMBER}(?![\w.])")
@@ -542,18 +556,32 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
         tier_note = _note(tier_note, roll_note(node.min_roll))
         return side, Slot(text, "wanted", (*((side.value,) if member else ()), *marks), tier_note)
 
+    reserved: list[tuple[Side, int, Slot]] = []  # the slots a group fills on its one side (#1533)
+
     def add(nodes) -> None:
         for node in nodes:
             if isinstance(node, KOfN):
                 if any(isinstance(member, KOfN) for member in node.of):
                     raise ValueError(NESTED_GROUP)
-                members = tuple(leaf(member, member=True)[1] for member in node.of)
+                drawn = [leaf(member, member=True) for member in node.of]
+                members = tuple(slot for _, slot in drawn)
                 groups.append(Group(f"at least {node.at_least} of {len(node.of)} of these:", members))
+                sides = {side for side, _ in drawn}
+                if len(sides) == 1:  # every member on one side: the group fills `at_least` of its slots, each one of the members
+                    names = list(dict.fromkeys(short_mod(slot.text) for slot in members))
+                    text = f"one of {' / '.join(names)}" if len(names) > 1 else (names[0] if len(members) == 1 else f"{names[0]}, one of the {len(members)} below")
+                    reserved.append((sides.pop(), node.at_least, Slot(text, "wanted", stands_for="group")))
                 continue
             side, slot = leaf(node)
             wanted[side].append(slot)
 
     add(target.requirements)
+    needed = _needed_multimod(data, target, begin)
+    if needed is not None and len(wanted[needed[0]]) < _capacity(data, target.base_id, needed[0]):  # never a line past the side's slots (#1533)
+        wanted[needed[0]].append(needed[1])
+    for side, count_, slot in reserved:  # after the mods named alone: a group's slot is any of its members, the slots left over are open
+        room = _capacity(data, target.base_id, side) - len(wanted[side])
+        wanted[side] += [slot] * max(0, min(count_, room))
     influences = tuple(influence.value.title() for influence in sorted(target.influences))
     need = target.quality
     quality = _quality(_kind(need), need.min_percent, " or more") if need is not None else ""
@@ -566,6 +594,37 @@ def card_of_target(data: GameData, target: Target, start: Item | None = None, fo
     held = tuple(slot for slot in _implicits(data, target.base_id) if _hashes(slot.text) not in wished)
     implicits = (*held, *(_wanted_implicit(data, wish) for wish in target.implicits))
     return ItemCard(data.base_items[target.base_id].name, properties, implicits, (), prefixes, suffixes, groups=tuple(groups))
+
+
+def _needed_multimod(data: GameData, target: Target, start: Item) -> tuple[Side, Slot] | None:
+    """The multimod ("Can have up to 3 Crafted Modifiers") as a slot of the target card when the target asks more crafted mods than the item
+    holds without it (one, two with the enchantment of the extra crafted slot), and does not ask the multimod itself: the finished item
+    cannot be without it, so its slot is never "any mod or empty" (#1614, R14's +2 Support Gems and Chaos Damage over Time Multiplier).
+    A leaf counts when a crafted mod alone meets it; a k-of-n group by the members it must take among those (its `at_least` past the others).
+    None otherwise."""
+    multimods = [mod for mod in data.mods.values() if mod.domain == CRAFTED_DOMAIN and Metamod.MULTIPLE_CRAFTED_MODS.value in mod.families]
+    if not multimods:
+        return None
+    ids = {mod.id for mod in multimods}
+
+    def only_crafted(node) -> bool:
+        known = [mod_id for mod_id in node.mod_ids if mod_id in data.mods]
+        return bool(known) and all(data.mods[mod_id].domain == CRAFTED_DOMAIN for mod_id in known)
+
+    crafted = 0
+    for node in target.requirements:
+        members = node.of if isinstance(node, KOfN) else (node,)
+        if any(not isinstance(member, KOfN) and member.mod_ids & ids for member in members):
+            return None  # the target asks the multimod: its own line draws it
+        if isinstance(node, KOfN):
+            others = sum(1 for member in node.of if isinstance(member, KOfN) or not only_crafted(member))
+            crafted += max(0, node.at_least - others)
+        elif only_crafted(node):
+            crafted += 1
+    if crafted <= crafted_limit_of(data, multimod=False, enchantment=start.enchantment):
+        return None
+    mod = min(multimods, key=lambda mod: mod.id)
+    return Side(mod.generation_type), Slot(mod_text_of(mod), "wanted", (), "crafted, to hold the other crafted mods", stands_for="needed")
 
 
 def with_quality(card: ItemCard, need) -> ItemCard:

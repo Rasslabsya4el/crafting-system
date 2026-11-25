@@ -714,7 +714,12 @@ def test_the_real_r11_goal_card_marks_the_fractured_chaos_resistance_and_names_e
         ANY_OR_EMPTY,
     )
     # the leaf takes any tier; the bought helmet's fractured mod is tier 1 and stays on the item
-    assert card.suffixes == (Slot("+(31-35)% to Chaos Resistance", "wanted", ("fractured",), "T1"), ANY_OR_EMPTY, ANY_OR_EMPTY)
+    # each group fills one suffix (#1533): the item holds three suffixes, never the fractured one, two open ones and eight members
+    assert card.suffixes == (
+        Slot("+(31-35)% to Chaos Resistance", "wanted", ("fractured",), "T1"),
+        Slot("Mana Reservation Efficiency of Skills, one of the 2 below", "wanted", stands_for="group"),
+        Slot("one of Fire Resistance / Cold Resistance / Lightning Resistance / Strength / Dexterity / Intelligence", "wanted", stands_for="group"),
+    )
     reservation = "% increased Mana Reservation Efficiency of Skills"
     assert card.groups == (
         Group(

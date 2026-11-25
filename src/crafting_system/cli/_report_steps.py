@@ -94,4 +94,4 @@ def _outcome(view: _View, step, edge) -> str:
     if edge.to is None or edge.kind == "again":
         return _ascii(what)
     there = f"step {edge.to + 1}: {_title(view, edge.to)}"
-    return _ascii(there if names_row else f"{what}; next {there}")  # a phrase that only names the step ("the item of step 4", "the item is restarted") is the step
+    return _ascii(there if names_row else f"{what}; next {there}")  # a phrase that only names the step ("the item of step 4", "the item is given up: a new one is bought") is the step

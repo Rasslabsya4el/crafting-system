@@ -65,7 +65,7 @@ from pathlib import Path
 
 import numpy as np
 
-from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError, scoured_from
+from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError, paid_opening, scoured_from
 from crafting_system.solver._packed import expand_ranges
 from crafting_system.abstraction import CompressedState, Status
 from crafting_system.abstraction._kinds import kind_tags
@@ -89,7 +89,7 @@ from ._report import Report
 from ._report_net import ask
 from ._route import RESTART, Route, RouteResult, finish_labels
 from ._route_card import ANY_OR_EMPTY, EMPTY, FAMILY_TYPE_TEXT, ItemCard, _capacity, _StateReader, card_of_item, card_of_states, card_of_target, essence_notes, mod_text
-from ._route_card import with_implicits, with_quality
+from ._route_card import short_mod, with_implicits, with_quality
 from ._route_chain import chain_of_packed_policy
 from ._route_flow import _blocks as _route_flow_blocks
 from ._route_flow import Chain, Edge, Flow, LossReader, Step, arrived, chain_of_policy, flow_limits, flow_of
@@ -638,7 +638,8 @@ class _View:
         if all(state.flags.rarity.value == "normal" for state in step.states) and any(
             state.flags.rarity.value != "normal" for state in landing
         ):
-            found.append("a rare item")
+            made = [rarity.value for rarity in (Rarity.MAGIC, Rarity.RARE) if any(state.flags.rarity is rarity for state in landing)]
+            found.append(f"a {' or '.join(made)} item")  # the rarity the use makes: a Transmutation's is magic (crafter on R14 step 14)
         return list(dict.fromkeys(found))
 
     def lost(self, edge: Edge, removed: bool = False) -> list[str]:
@@ -721,7 +722,7 @@ class _View:
             if over is not None:  # OR-42: the same item started over, with what its orbs cost
                 return f"{lead}the item is started over: {over[0].removeprefix(START_OVER + ': ')} for {money(over[1])}", True
             if there.label == RESTART:  # with what the restart costs: its row may be far from this one (#1442), and the item that sends there
-                return f"{lead}the item is restarted: a new start item for {self.cost_lines(there)[0]}", True
+                return f"{lead}{self.lost_item()} for {self.cost_lines(there)[0]}", True
         if words:
             return words, False
         return f"the item of step {edge.to + 1}", True
@@ -867,11 +868,27 @@ class _View:
                 lines.append(Line(text) if edge.kind in ("goal", "again") else self.link(text, edge.to + 1))
         return lines
 
+    def lost_item(self) -> str:
+        """What a use that sends the item to the restart does to it, in a player's words: the item is given up and a new one bought (#1602)."""
+        again = "made at the vendor" if self.first is not None else "made" if self.plan.start_price.made is not None else "bought"
+        return f"the item is given up: a new one is {again}"
+
+    def restarts(self, edge: Edge) -> bool:
+        """Whether the edge leads to the restart: the item it leaves is given up."""
+        if edge.to is None:
+            return False
+        there = self.flow.steps[edge.to - 1].action
+        return there is not None and there.label == RESTART
+
     def failure_lines(self, step: Step, failing: list[Edge]) -> list[Line]:
-        """One line per place a use that loses a wanted mod, or restarts the item, leads to."""
+        """One line per place a use that loses a wanted mod, or restarts the item, leads to. A line to the restart says first the share of the
+        uses that lose the item, then why: R13's Fracturing Orb, 44% of the plan's cost, loses the belt on about half of its uses (#1602)."""
         lines = []
         for edge, (what, _) in zip(failing, self.phrases(step, failing)):
-            lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1))
+            if self.restarts(edge):
+                lines.append(self.link(f"{chance_text(edge.chance)} of uses: {what}", edge.to + 1))
+            else:
+                lines.append(self.link(f"{what} ({chance_text(edge.chance)})", edge.to + 1))
         return lines
 
     def restart_lines(self, step: Step, edges: list[Edge]) -> list[Line]:
@@ -898,6 +915,8 @@ class _View:
                 found.append((f"then {self.next_title(edge)}", True))
             elif names_row:
                 found.append((what, names_row))
+            elif self.restarts(edge):  # the item is given up and bought again, said as on a use that sends it there directly (#1602)
+                found.append((f"{what}, {self.lost_item()} for {self.cost_lines(self.flow.steps[edge.to - 1].action)[0]}", names_row))
             else:
                 found.append((f"{what}, then {self.next_title(edge)}", names_row))
         return found
@@ -923,6 +942,17 @@ class _View:
         if any(slot.tone == "any" for slot in (*after.prefixes, *after.suffixes)):
             lines.append("other mods: any")
         return lines
+
+    def opening_lines(self, opening: Action, forward: list[Edge]) -> list[str]:
+        """What the orbs that open a bought item take and give (#1540, Q11 of #1543): the item bought in step 1, and the item they make, with
+        the mods it may come out with when the abstraction tracks every mod."""
+        bought = scoured_from(opening)
+        name = self.data.base_items[self.plan.target.base_id].name
+        took = f"the Normal {name} bought in step 1" if bought is None else f"the {name} bought in step 1 ({bought})"
+        landing = list(dict.fromkeys(state for edge in forward for state in edge.states))
+        mods = sorted({len(state.fractured) + len(state.slots) for state in landing}) if self.reader.tracked else []
+        held = "" if not mods else f" with {mods[0]} random mod{'s' if mods[0] != 1 else ''}" if len(mods) == 1 else f" with {', '.join(map(str, mods[:-1]))} or {mods[-1]} random mods"
+        return [took, f"it comes out {paid_opening(opening).value.capitalize()}{held}, once: what it holds decides the next step"]
 
     def tier_field(self, step: Step, action: Action) -> Field | None:
         """OR-31: one line per wanted family the step can add, with the chance of each tier, mixed over the step's states."""
@@ -1077,9 +1107,34 @@ class _View:
                 lines.append(f"fractured: {slot.text}" if "fractured" in slot.marks else slot.text)
         return lines
 
+    def opening(self) -> Action | None:
+        """The action (the offer's own, not the policy's) that opens the bought listing at the start, when the price is of an item the player
+        makes the start's rarity himself: a Normal base and its orb (#1522), or an item of another rarity scoured first (#1537); else None."""
+        found = self.__dict__.get("_opening", False)
+        if found is False:
+            at = next((step for step in self.flow.steps if self.plan.start in step.states), None) if self.plan.start.flags.unopened else None
+            first = None if at is None else at.action
+            priced = None if first is None else next((p for p in self.plan.offers if p.label == first.label), None)
+            action = None if priced is None else priced.offer.action
+            found = action if action is not None and paid_opening(action) is not None else None
+            self._opening = found
+        return found
+
     def start_card(self) -> ItemCard:
-        """The bought start item: its known mods by tier, the rest of a rare unknown ("any mod or empty")."""
+        """The bought start item: its known mods by tier, the rest of a rare unknown ("any mod or empty").
+
+        When the price is of an item the next step's orbs make the start's rarity (`opening`), the card is that item as bought, never the
+        item the orbs make (#1540): a Normal base with no mod, or an item of the rarity bought ("any rarity but unique") whose mods are any."""
         item = self.plan.target.start_item
+        opening = self.opening()
+        if opening is not None:
+            bought = scoured_from(opening)
+            if bought is None:  # a Normal base: no mod at all
+                return card_of_item(self.data, replace(item, rarity=Rarity.NORMAL, mods=()), tiers=True, rolled=False, filler=EMPTY)
+            held = Rarity.MAGIC if bought.lower() == "magic" else Rarity.RARE  # "any rarity" draws the slots of a rare, the most it may hold
+            card = card_of_item(self.data, replace(item, rarity=held, mods=()), tiers=True, rolled=False, filler=ANY_OR_EMPTY)
+            rarity = "Any rarity but unique" if bought == "any rarity" else bought.capitalize()
+            return replace(card, properties=(rarity, *card.properties[1:]))
         filler = ANY_OR_EMPTY if item.rarity is Rarity.RARE or self.plan.start.flags.unopened else EMPTY  # a bought item holds mods the target does not name (OR-17, ADR-0064)
         return card_of_item(self.data, item, tiers=True, rolled=False, filler=filler)
 
@@ -1285,10 +1340,16 @@ class _View:
         else:
             landing = [state for edge in (moving or step.edges) for state in edge.states]
             after = card_of_states(self.ab, list(dict.fromkeys(landing)), self.reader)
+        opening = self.opening()
+        opens = opening is not None and self.plan.start in step.states
+        if opens:  # the orbs a player uses once on the item he bought: they make it the start's rarity, never a mod he rerolls toward (#1540)
+            goal = [f"a {paid_opening(opening).value} item"]
+            if any(edge.kind == "goal" for edge in step.edges):  # the one use may also land every wanted mod: the chance says how often (crafter on R08)
+                goal.append("rarely the target at once: its chance is under Chance per use")
         fields = _fields(
             self.reached_from(number),
             _plain("Goal", *goal),
-            _plain("Accepts", *self.accepts(action, moving, after)),
+            _plain("Used on", *self.opening_lines(opening, moving)) if opens else _plain("Accepts", *self.accepts(action, moving, after)),
             self.trade_field() if restart else None,
             Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
             None if one_way else self.tier_field(step, action),  # a listing that goes on the same way: its odds change no choice (crafter, #1442)
@@ -1906,28 +1967,23 @@ def page_title(data: GameData, target: Target, wider: str | None = None) -> str:
     return f"Route to craft: {influences + ' ' if influences else ''}{base}, item level {target.item_level}" + (f", with {wanted}" if wanted else "")
 
 
-_LEAD = re.compile(r"^\+?(?:#|\([\d.]+-[\d.]+\)|[\d.]+)%?\s+(?:(?:to|increased|chance to)\s+)?")  # "reduced" and a minus sign stay: they turn the mod
-
-
-def short_mod(text: str) -> str:
-    """A wanted mod as a title names it: its first line without the figures in front ("+(13-14)% chance to Suppress Spell Damage" is
-    "Suppress Spell Damage", "+# to maximum Life" is "maximum Life"); a text with no figure in front stays as it is."""
-    first = text.split(" / ")[0]
-    return _LEAD.sub("", first, count=1) or first
-
-
-def _titled(slot) -> str:
+def _titled(slot, tier: bool = True) -> str:
     """A wanted slot in the title: its short name, its tier ("T1", "T2 or better") and whether it is fractured or crafted (crafter, #1442)."""
-    marks = [mark for mark in ("fractured", "crafted") if mark in slot.marks]
-    tier = f" {slot.note}" if re.match(r"^T\d", slot.note or "") else ""
-    return f"{' '.join(marks) + ' ' if marks else ''}{short_mod(slot.text)}{tier}"
+    crafted = "crafted" in slot.marks or slot.note.split(", ")[0] == "crafted"  # a target's leaf only a crafted mod meets says it in its note (#1614)
+    crafted = crafted and "crafted" not in short_mod(slot.text).lower()  # "Can have up to 3 Crafted Modifiers" says it already (crafter on R13)
+    marks = [mark for mark, held in (("fractured", "fractured" in slot.marks), ("crafted", crafted)) if held]
+    tier = f" {slot.note}" if tier and re.match(r"^T\d", slot.note or "") else ""  # a group's member is named without its tier, as before
+    text = slot.text
+    # a hybrid mod is named by each of its lines, as the game names it (#1625: R24's unveiled Movement Speed and Onslaught read "Movement Speed")
+    name = " / ".join(short_mod(part) for part in text.split(" / ")) if " / " in text and not text.startswith("one of") and " or " not in text else short_mod(text)
+    return f"{' '.join(marks) + ' ' if marks else ''}{name}{tier}"
 
 
 def wanted_words(data: GameData, target: Target) -> str:
     """The target's wanted mods in short, in the order of its card: each wanted slot, then each group as "1 of A / B / C" (#893)."""
     card = card_of_target(data, target)
-    names = [_titled(slot) for slot in (*card.implicits, *card.prefixes, *card.suffixes) if slot.tone == "wanted"]
+    names = [_titled(slot) for slot in (*card.implicits, *card.prefixes, *card.suffixes) if slot.tone == "wanted" and not slot.stands_for]
     for group in card.groups:
         need = re.match(r"at least (\d+) of", group.heading)
-        names.append(f"{need.group(1) if need else 'some'} of {' / '.join(dict.fromkeys(short_mod(member.text) for member in group.members))}")
+        names.append(f"{need.group(1) if need else 'some'} of {' / '.join(dict.fromkeys(_titled(member, tier=False) for member in group.members))}")
     return ", ".join(dict.fromkeys(names))

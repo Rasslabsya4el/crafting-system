@@ -42,6 +42,7 @@ __all__ = [
     "DRAW_LABEL",
     "OpenListing",
     "open_listing",
+    "paid_opening",
     "scoured_from",
     "unopened_listing",
 ]
@@ -71,6 +72,12 @@ def open_listing(rarity: Rarity, paid: bool = False, scoured_from: str | None = 
     it that rarity, used and paid (#1522); `scoured_from` (with `paid`) when the item bought is of another rarity or any, in words, so an Orb of
     Scouring comes first (#1537). The planner asks for it here and names no concrete class."""
     return OpenListing(rarity, paid, scoured_from if paid else None)
+
+
+def paid_opening(action: Action) -> Rarity | None:
+    """The rarity a paid opening makes of the item bought (#1540: the route page draws the item bought, not the one made), when `action` is an
+    opening whose orbs a player uses on it (`OpenListing.paid`, #1522, #1537); None for any other action, the free draw among them."""
+    return action.rarity if isinstance(action, OpenListing) and action.paid else None
 
 
 def scoured_from(action: Action) -> str | None:
