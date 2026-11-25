@@ -8,8 +8,8 @@ Approximate inputs (claims that no other source settles):
   The price of Regal Orb is 0.0636 Chaos, an approximate input: where this price comes from is not recorded. Source: poe.ninja exchange, Allflame, 2026-10-31.
 Requirements: +1 to Level of all Minion Skill Gems; family IncreasedLife (top tier, not crafted)
 Prices: league Allflame, fetched 2026-10-31, 1 Divine = 372.20 Chaos
-  Orb of Augmentation: 0.016 Chaos, poe.ninja exchange, Allflame, 2026-10-31; approximate: where this price comes from is not recorded
-  Regal Orb: 0.0636 Chaos, poe.ninja exchange, Allflame, 2026-10-31; approximate: where this price comes from is not recorded
+  Orb of Augmentation: 0.016 Chaos, poe.ninja exchange, Allflame, 2026-10-31, no supply recorded; approximate: where this price comes from is not recorded
+  Regal Orb: 0.0636 Chaos, poe.ninja exchange, Allflame, 2026-10-31, no supply recorded; approximate: where this price comes from is not recorded
 Start item (Lion Pelt (ilvl 84), a Normal base): 2.00 Chaos [hand]; the recipe below uses it up
 Step 1: Vendor recipe: Helmet with +1 to Minion Skill Gems, 1 recipe
   You hand the vendor:
