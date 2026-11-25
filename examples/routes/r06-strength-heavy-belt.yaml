@@ -6,7 +6,8 @@
 # and actions are explained in examples/routes/r12-lightning-amulet.yaml.
 #
 # The route (POEGuy / PoE Vault, "Strength-stacking influenced Heavy Belt", 3.29, docs/research/2026-10-30-5-reference-routes.md, id R06):
-#   1. Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt (the target plans from a Normal Hunter belt; the first essence reforges one of any rarity, #1673).
+#   1. Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt (the target plans from a Normal Hunter belt of item level 84, the level the
+#      market sells, #1693; the first essence reforges one of any rarity, #1673).
 #   2. Use Deafening Essence of Rage until Tier 1 % Increased Attributes.
 #   3. Use Orb of Annulment to remove unwanted modifiers and Exalted Orb to add useful ones; if Strength or Increased Attributes is
 #      removed, back to step 2.

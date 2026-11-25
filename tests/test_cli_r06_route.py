@@ -50,9 +50,9 @@ def test_its_own_price_file_prices_the_start_belt_by_hand_and_says_so(data, targ
     assert target.price_file is not None and target.price_file.name == "references-allflame-2026-07-31.json"
     named = ("catalyst", "blessed-orb", "exalted-orb")  # named: the classic offers of a module's tests hold neither finish's method
     plan = make_plan(data, dataclasses.replace(target, actions=named), load_price_file(target.price_file), solve_it=False)
-    assert plan.start_price.name == "Heavy Belt, normal, item level 75, Hunter influence" and plan.start_price.bought and not plan.start_price.given and plan.start_price.chaos == 5.0
+    assert plan.start_price.name == "Heavy Belt, normal, item level 84, Hunter influence" and plan.start_price.bought and not plan.start_price.given and plan.start_price.chaos == 5.0
     prices = load_price_file(target.price_file)
-    entry = prices.prices["Heavy Belt, normal, item level 75, Hunter influence"]
+    entry = prices.prices["Heavy Belt, normal, item level 84, Hunter influence"]
     assert entry.chaos == 5.0 and entry.source == "hand-set" and "#1267" in entry.note and "OR-44" in entry.note
     # #1673: the stand-in is marked (never printed as the plain number of a user's own hand price, the OVERRIDE kind)
     assert [mark.reason for mark in price_marks(entry, prices, None)] == ["a price set by hand"]

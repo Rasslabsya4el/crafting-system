@@ -26,16 +26,25 @@
 #     or higher reforges a Rare, OR-16). So the plan is the same from a Rare belt of this item level (OR-43), and the route page
 #     tells the player to buy a Normal or a Rare one (#1673). A Rare start in this file is the same plan, but its draw of the
 #     bought mods sinks the search (#1685). The item level window is #483 and #445.
-#   * "Tier 1 % Increased Attributes": on a Hunter belt of item level 75 it is "(10-12)% increased
+#   * The item level: 84, not 75 (#1693, OR-43). The guide asks "item level 75 or higher"; the trade site holds almost no belt at 75
+#     exactly (league Covens, 2026-11-25, Hunter, instant buyout: 1 Rare listing, at 14 Divine), while the cheapest Rare belts of 75 or
+#     more (3 to 11 Chaos) are item level 83 to 86. So the plan is of a belt the market sells, item level 84. The finished item asked is
+#     the same as at item level 75: the mods the guide leaves to the crafter state the tiers OR-1 gave at 75 (see the reading of "Life, #
+#     to Armour, or Resistances" below), because OR-1's top tier at 84 would silently ask a stricter item (Armour tier 2, the resistances
+#     tier 1). What the higher level changes is the pool: Armour tier 2 (item level 83), the tier-1 resistances (84) and the other mods of
+#     levels 76 to 84 can now roll, and the tier-1 resistances and Armour tier 2 count toward the "at least 1 of" below. The natural Strength
+#     tier 2, "+(51-55)" (item level 82), rolls too and is no essence Strength (below). No Attributes tier opens between 75 and 84.
+#   * "Tier 1 % Increased Attributes": on a Hunter belt of item level 75 (and 84) it is "(10-12)% increased
 #     Attributes" (mod PercentageAllAttributesInfluence2, tier 1 of the Hunter pool; its lower tier is
 #     (6-9)%). The guide then uses a Divine Orb "until 14%": 14% is the 12 shown with 20% quality
 #     (12 x 1.2 = 14.4, shown rounded down), so the roll asked is 12, the best the mod can give.
-#   * "Tier 1 Strength": at item level 75 the natural Strength tops out at tier 3 ("+(43-50)"), so
+#   * "Tier 1 Strength": at item level 75 the natural Strength tops out at tier 3 ("+(43-50)"; at 84, tier 2, "+(51-55)"), so
 #     the tier-1 Strength is the one the Deafening Essence of Rage adds, "+(51-58) to Strength" (mod
 #     StrengthEssence7_), exactly that tier, as in the R05 example.
 #   * "Life, # to Armour, or Resistances": at least one of Life, Armour and the three elemental resistances, each at the top tier
-#     the item level (75) allows: Life tier 1, "+(130-144)"; Armour tier 3, "+(323-400)" (its tiers 2 and 1
-#     need item level 83 and 86); each resistance tier 2, "+(42-45)%". The guide ends with a bench craft of an open modifier, which is
+#     item level 75 allows (OR-1, read at the guide's "75"), stated with `min_tier` since the file plans at 84: Life tier 1,
+#     "+(130-144)"; Armour tier 3 or better, "+(323-400)" (its tiers 2 and 1 need item level 83 and 86); each resistance tier 2 or
+#     better, "+(42-45)%" (its tier 1 needs item level 84). The guide ends with a bench craft of an open modifier, which is
 #     not a tier of these mods: a bench craft has no natural tier and meets no tier line (OR-1).
 #   * "42 to Strength" (implicit): the Heavy Belt's own implicit, "+(25-35) to Strength" (mod
 #     StrengthImplicitBelt1). A requirement compares the BASE roll the item stores, never the value
@@ -46,8 +55,8 @@
 # The base item, by its English name exactly as the game writes it (capital letters matter).
 base: Heavy Belt
 
-# The item level of the belt, a whole number from 1 to 100. The guide says "75+".
-item_level: 75
+# The item level of the belt, a whole number from 1 to 100. The guide says "75+"; 84 is the level the market sells (#1693, see above).
+item_level: 84
 
 # Influences on the base (shaper, elder, crusader, hunter, redeemer, warlord).
 # The guide allows Hunter or Elder; this file takes Hunter.
@@ -57,17 +66,23 @@ influence: [hunter]
 requirements:
   # The prefix or suffix the guide leaves to the crafter: at least 1 of these 5. Guide (poe-vault.com/guides/shrapnel-ballista-
   # hierophant-gear-flasks, "Belt"): "The remaining modifiers are up to you. You can choose from Life, # to Armour, or Resistances,
-  # depending on what your character needs", and step 3: "Exalted Orb to add new useful ones". It names no tier, so there is no
-  # `min_tier` and OR-1 holds: the top tier the item level (75) allows (Life tier 1; Armour tier 3, the same mods `min_tier: 1` and
-  # `min_tier: 3` asked before #404; each resistance tier 2). The three elemental resistances are new here: the guide lists
+  # depending on what your character needs", and step 3: "Exalted Orb to add new useful ones". It names no tier, so OR-1 holds at the
+  # guide's item level 75: Life tier 1; Armour tier 3; each resistance tier 2. The file plans at item level 84 (#1693), where OR-1 with
+  # no `min_tier` would ask Armour tier 2 and the resistances tier 1, a stricter item than the guide's; so the tiers of 75 are stated,
+  # and a better tier (Armour tier 2, a tier-1 resistance) counts too. The three elemental resistances are new here: the guide lists
   # "Resistances" and the file named only Life and Armour. (Chaos Resistance is not read into "Resistances", as in R05.)
   - at_least: 1
     of:
       - family: IncreasedLife
+        min_tier: 1
       - family: IncreasedPhysicalDamageReductionRating
+        min_tier: 3
       - family: FireResistance
+        min_tier: 2
       - family: ColdResistance
+        min_tier: 2
       - family: LightningResistance
+        min_tier: 2
 
   # The top "% increased Attributes" of the Hunter pool, with the roll the Divine Orb aims at.
   # `mod` narrows the family to that one mod; `min_roll` is the base roll (see the readings above).
@@ -102,8 +117,9 @@ start_item:
 
 # How the start item is had (OR-6): bought. The guide's step 1 reads "Buy an item level 75+ Hunter- or Elder-influenced Heavy Belt"
 # (docs/research/2026-10-30-5-reference-routes.md). Its buy spec, trade query and price key are computed from this file (base,
-# item level, influence), so nothing else describes it. It must have a price under that key, and the exact item has no listing (0 on
-# 2026-11-06, search #483), and at item level 75 the Rare one has almost none (#1673), so its price is a stand-in set by hand.
+# item level, influence), so nothing else describes it. It must have a price under that key. At item level 75 the exact item had no
+# listing (0 on 2026-11-06, search #483) and the Rare one has almost none (#1673); at 84 Rare ones sell from 3 Chaos (#1693), but on
+# Covens (3.30), and the tests keep 3.29 prices, which hold no reading of it: so its price is a stand-in set by hand.
 start: bought
 
 # The price file of this route (a path from this file's folder): the 3.29 week-one file (OR-44) plus the hand-set start items of the

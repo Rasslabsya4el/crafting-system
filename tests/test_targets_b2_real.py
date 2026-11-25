@@ -81,7 +81,37 @@ def test_r06_loads_as_base_rolls_plus_intrinsic_quality(r06):
     assert wanted.family == "Strength" and wanted.mod_ids == {"StrengthImplicitBelt1"}
     assert wanted.min_roll == (35,)
     assert r06.quality.type is CatalystType.INTRINSIC and r06.quality.min_percent == 20
-    assert r06.base_id == BELT and r06.item_level == 75
+    assert r06.base_id == BELT and r06.item_level == 84
+
+
+def test_r06_at_item_level_84_asks_the_finished_item_its_reading_at_75_asked(r06, real, tmp_path):
+    """#1693 (OR-1, OR-43): R06 plans at item level 84, where the market sells the belt, and states the tiers OR-1 gives at the guide's 75,
+    so the item asked is the same: the file read at 75 with no `min_tier` (the reading before #1693) asks every mod alike. Worked by hand:
+    Life tier 1 is IncreasedLife9 at both levels; Armour tier 3 or better is 6, 7 and 8_ (tiers 2 and 1 open at 83 and 86); each resistance
+    tier 2 or better is 7 and 8 (tier 1, 84). At 84 with no `min_tier`, OR-1 would ask Armour tier 2 and the resistances tier 1 alone."""
+    text = (EXAMPLES / "r06-strength-heavy-belt.yaml").read_text(encoding="utf-8")
+    text = text.replace("price_file: ../../", f"price_file: {(EXAMPLES / '..' / '..').resolve().as_posix()}/")
+
+    def read(name, body):
+        path = tmp_path / name
+        path.write_text(body, encoding="utf-8")
+        return load_target(path, real)
+
+    def tiers(target):
+        return [(leaf.family, leaf.tier_ok) for leaf in target.requirements[0].of]
+
+    unstated = "\n".join(line for line in text.splitlines() if not line.strip().startswith("min_tier:"))
+    at_75 = read("at-75.yaml", unstated.replace("item_level: 84", "item_level: 75"))
+    top_at_84 = read("top-at-84.yaml", unstated)
+    assert tiers(r06) == tiers(at_75) == [
+        ("IncreasedLife", {"IncreasedLife9"}),
+        ("IncreasedPhysicalDamageReductionRating", {f"IncreasedPhysicalDamageReductionRating{tier}" for tier in ("6", "7", "8_")}),
+        ("FireResistance", {"FireResist7", "FireResist8"}),
+        ("ColdResistance", {"ColdResist7", "ColdResist8"}),
+        ("LightningResistance", {"LightningResist7", "LightningResist8"}),
+    ]
+    assert r06.requirements[1:] == at_75.requirements[1:] and (r06.implicits, r06.quality) == (at_75.implicits, at_75.quality)
+    assert tiers(top_at_84) != tiers(r06)  # the stricter item the stated tiers keep out
 
 
 def test_r06_implicit_and_quality_are_met_only_at_35_and_20_percent_intrinsic(r06, real):

@@ -59,7 +59,7 @@ def _known(rows: dict[tuple[str, str], tuple]) -> dict[tuple[str, str], Known]:
 KNOWN: dict[tuple[str, str], Known] = _known(
     {
         ("r03-avoid-shock-boots", "price.entry"): ("#483", "OR-6", "a bought start item must have a price, and the exact item has 0 listings on the trade site (searched 2026-11-06), so none is written", "Velour Boots, item level 100, fractured +(13-14)% chance to Suppress Spell Damage", "no entry"),
-        ("r06-strength-heavy-belt", "price.item_level"): ("#1046", "OR-3", "the hand-set week-one price records no item level: the check cannot tell (#1267)", "75", "cannot tell (label 75)"),
+        ("r06-strength-heavy-belt", "price.item_level"): ("#1046", "OR-3", "the hand-set week-one price records no item level: the check cannot tell (#1267)", "84", "cannot tell (label 84)"),
         ("r06-strength-heavy-belt", "price.source"): ("#1046", "OR-44", "the start price is hand-set: no file has a line for an influenced Heavy Belt (#1267, #1673)", "trade-api", "hand-set"),
         ("r04-penetrating-quiver", "price.base"): ("#486", "OR-3", "the price entry is by a name that two bases share, and neither the trade site nor poe.ninja can tell them apart", f"{_QUIVER}QuiverNew5", f"{_QUIVER}Quiver12, {_QUIVER}QuiverNew5"),
         ("r04-penetrating-quiver", "price.item_level"): ("#425", "OR-3", "the poe.ninja line the price was read from is item level 85 in the snapshot of 2026-10-31 and 84 in that of 2026-11-10, labelled 81", "81", "85", (("81", "84"),)),

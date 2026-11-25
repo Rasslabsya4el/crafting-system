@@ -39,7 +39,7 @@ KEYS = ROOT / "tests" / "reconcile" / "expected_keys.txt"  # the independent tab
 GIVEN = {"j01-cobalt-life-attack-speed"}  # "what you hold after you scour a rare jewel": the player already has it (OR-6, #505); every other target buys
 WINDOWS = {  # (item level, highest item level with the same pool)
     "r03-avoid-shock-boots": (100, 100),
-    "r06-strength-heavy-belt": (75, 75),
+    "r06-strength-heavy-belt": (84, 84),  # #1693: planned at 84, where the market sells; 85 adds the natural Strength tier 1
     "r07-minion-wand": (84, 84),
     "r04-penetrating-quiver": (81, 81),
     "r05-strength-ring": (75, 75),
@@ -59,7 +59,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
 OTHER_ITEM = {
     "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
-    "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; the market sells Rare ones, which the first essence reforges like the Normal one, #1673) and no file has a line for an influenced Heavy Belt: it has no body",
+    "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item had 0 listings at item level 75 (searched on 2026-11-06, #483; planned at 84 since #1693, where the market sells; the market sells Rare ones, which the first essence reforges like the Normal one, #1673) and no file has a line for an influenced Heavy Belt: it has no body",
     "r05-strength-ring": "#483 the exact item has 1 listing, at 12,905 Chaos on 2026-11-10: the stored price is hand-set (OR-44) from a search of any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the stored price of item level 85 is hand-set (OR-44) from the 2026-11-10 reading of a search of item level 84 or more (#1472); its stored query, the search of 85, was never sent",
     "r10-fractured-boots-70-life": "#483 the stored price of item level 85 is hand-set (OR-44) from the 2026-11-10 reading of a search of item level 84 or more (#1472); its stored query, the search of 85, was never sent",
@@ -348,9 +348,15 @@ SEARCHES = ROOT / "tests" / "fixtures" / "trade" / "recorded" / "start_items" / 
 def test_the_recorded_search_of_r06_is_the_query_built_from_the_target_and_had_no_listing(data, stats):
     record = json.loads(SEARCHES.read_text(encoding="utf-8"))["r06-strength-heavy-belt"]
 
-    assert record["key"] == expected_keys()["r06-strength-heavy-belt"] and record["date"] == "2026-11-06" and record["league"] == "Allflame"
+    # the search of 2026-11-06 is of item level 75, the level R06 planned at until #1693 (now 84, where the market sells): the same query but
+    # for the level, under the same key but for the level
+    assert record["key"] == expected_keys()["r06-strength-heavy-belt"].replace("item level 84", "item level 75")
+    assert record["date"] == "2026-11-06" and record["league"] == "Allflame"
     assert record["total"] == 0 and record["requests"] == 1
-    assert record["query"] == query_of(data, stats, "r06-strength-heavy-belt")  # the stored query is the computed one (OR-3)
+    query = query_of(data, stats, "r06-strength-heavy-belt")
+    assert query["query"]["filters"]["misc_filters"]["filters"]["ilvl"] == {"min": 84, "max": 84}
+    query["query"]["filters"]["misc_filters"]["filters"]["ilvl"] = {"min": 75, "max": 75}
+    assert record["query"] == query  # the stored query is the computed one at its level (OR-3)
 
 
 def test_r03_asks_for_a_stat_the_trade_site_lists_twice_and_both_were_searched_with_no_listing(data, stats):

@@ -94,7 +94,6 @@ def test_r05_is_lowered_to_the_level_its_tiers_need(data):
 STAYS = {
     "r03-avoid-shock-boots": (100, "at target"),
     "r04-penetrating-quiver": (81, "derived"),
-    "r06-strength-heavy-belt": (75, "derived"),
     "r07-minion-wand": (84, "at target"),  # the minion speed and the Trigger are veiled and bench mods: no source the floor knows
     "r08-energy-shield-boots": (86, "derived"),  # the rolled 35% Movement Speed needs 86 (OR-58, #1289)
     "r09-life-boots": (86, "derived"),
@@ -105,6 +104,7 @@ STAYS = {
 LOWERED = {
     "j01-cobalt-life-attack-speed": 1,  # a jewel's mods all open at level 1
     "r05-strength-ring": 44,
+    "r06-strength-heavy-belt": 75,  # the Hunter (10-12)% Attributes needs 75; planned at 84, where the market sells (#1693)
     "r10-fractured-boots": 60,  # the (21-25)% Avoid Elemental Ailments craft is sold from level 60 (#1289; the (16-20)% one from 55)
     "r10-fractured-boots-70-life": 60,
     "r11-reservation-helmet": 81,  # the start helmet's fractured Chaos Resistance (tier 1) needs 81; the tier 1 Life opens at 64 and the tier 3 Evasion at 60 (#895)
