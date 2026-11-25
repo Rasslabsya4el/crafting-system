@@ -275,7 +275,7 @@ class Net:
     yield_at: tuple[float | None, int | None] | None = None
     # (seconds, states, gap) a search with a plan in hand (held or walked, `_plan.search_net`, #1641) may go on past `seconds` and `states`
     # while it is still lowering its own plan: from each standing on, the search's net is its share plus these when the plan it holds there
-    # is below the one of the standing before by more than `gap` (the run's gap, OR-39; its first plan counts as lowered from none), and its
+    # is below the one of the standing before by more than `gap` (the run's gap, OR-39; the first plan lowers nothing), and its
     # share alone when not, so a search whose last round lowered nothing stops at its share as before. The room is the one a nearly done build
     # has (`late`: one more share at most, and at most half of what the rounds after it have), so the run keeps its net (OR-40). Without it a
     # second of noise decided whether a round finished the search round that made its cheap plan: R09 119.01 c or 214.86 c, R08 174.84 c or
@@ -1313,15 +1313,16 @@ class Search[S]:
             self.watch(self.standing)
 
     def _lowering(self) -> None:
-        """The net from this standing to the next (`Net.beyond`, #1641): the share widened by `beyond` when the plan held now is below the one
-        held at the standing before by more than the run's gap (the first plan counts as lowered from none), the share alone when not. Read
+        """The net from this standing to the next (`Net.beyond`, #1641): the share widened by `beyond` when a search round lowered the plan
+        held at the standing before by more than the run's gap, the share alone when not (and at the first plan's standing). Read
         at each standing, so the search never goes past its share on a round that lowered nothing, nor past the share and `beyond` at all."""
         share, upper = self.share, self.upper
         if share.beyond is None:
             return
         seconds, states, gap = share.beyond
         held = upper if upper is not None and math.isfinite(upper) else None
-        fell = held is not None and (self.stood is None or held < self.stood * (1.0 - gap))
+        # a search round lowered it: the first plan, before any round, has lowered nothing yet (the walk of round 1 keeps to the share)
+        fell = held is not None and self.stats.rounds > 0 and self.stood is not None and held < self.stood * (1.0 - gap)
         if held is not None:
             self.stood = held if self.stood is None else min(self.stood, held)
         wide = fell and (seconds or states)

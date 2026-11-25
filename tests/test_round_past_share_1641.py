@@ -98,3 +98,15 @@ def test_on_the_clock_the_build_takes_its_time_out_of_the_room():
     assert beyond_after_build(net, 40.0) == (20.0, None, GAP)  # a build past the share left 20 s of the 60
     assert beyond_after_build(net, 70.0) == (0.0, None, GAP)
     assert beyond_after_build(Net(seconds=30.0), 8.0) is None
+
+
+def test_on_the_clock_the_share_widens_by_its_seconds_only_after_a_search_round_lowered_the_plan():
+    # the seconds side of the rule, stood by hand (no clock is read for the net: `_lowering` reads the standings' plans only)
+    search = Search(falling_world(), net=Net(seconds=20.0, beyond=(10.0, None, GAP)))
+    stand = [(0, 302.69), (1, 302.69), (2, 87.20), (3, 87.0), (4, 60.0)]  # (rounds, plan): first plan, round 1, falls, a fall under 1%, a fall
+    seen = []
+    for rounds, plan in stand:
+        search.stats.rounds, search.upper = rounds, plan
+        search._stand(0.0, 0.0)
+        seen.append(search.net.seconds)
+    assert seen == [20.0, 20.0, 30.0, 20.0, 30.0]  # never past share + room, back to the share once a round lowers by no more than the gap
