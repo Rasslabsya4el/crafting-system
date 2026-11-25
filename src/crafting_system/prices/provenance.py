@@ -56,6 +56,7 @@ KINDS = (EXCHANGE, HISTORY, STASH, PREVIOUS_LEAGUE, STANDARD, WATCH, TRADE, OVER
 
 UNITS = "units"
 OBSERVATIONS = "observations"
+OBSERVATION_CAP = 399.0  # poe.ninja's daily count of a beast's listings stops here: 399 is the largest count in every beast's history (#930)
 DEPTH_UNITS = (UNITS, OBSERVATIONS)
 
 EXACT = "exact"

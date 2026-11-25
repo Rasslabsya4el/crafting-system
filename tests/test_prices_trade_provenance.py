@@ -61,8 +61,8 @@ def test_the_start_item_priced_by_cli_trade_is_a_recorded_price_on_the_report_an
     page = [line.text for field in section.goal.fields if field.label == "Prices" for line in field.lines]
 
     assert use.source == "trade site, instant buyout, Test, 2026-10-30" and use.depth == 5.0
-    assert NOT_RECORDED_WORDS not in line and "5 units behind it" in line
-    assert any(each.startswith(f"{START}: ") and "5 units behind it" in each for each in page)
+    assert NOT_RECORDED_WORDS not in line and "5 units listed" in line
+    assert any(each.startswith(f"{START}: ") and "5 units listed" in each for each in page)
     assert f"  {line}" in text
 
 
