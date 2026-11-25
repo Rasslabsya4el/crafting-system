@@ -2,8 +2,8 @@
 
 R06's target asks for the Heavy Belt's Strength implicit at its top roll and 20% Intrinsic Catalyst quality: the quality is planned since
 #159 and the implicit since #1231, both as finishes after the mods (the Blessed Orb: `+(25-35) to Strength` at 35, a chance of 1/11 a use, so
-11 orbs on average). Its start belt has no market line in any price file (#483, #515), so its own price file, the references file, holds a
-hand-set, marked price since #1267 (OR-44); the week-one file alone still refuses it. Its route file holds the guide's steps 2 and 3; step 4
+11 orbs on average). Its start belt, the Rare one the market sells since #1673 (OR-43), has no market line in any price file (#483), so its own price file, the
+references file, holds a hand-set, marked price since #1267 (OR-44); the week-one file alone still refuses it. Its route file holds the guide's steps 2 and 3; step 4
 (catalysts, Divine Orb, Blessed Orb, a bench craft) waits for route conditions on quality and the implicit roll (#1232). These check that
 the week-one file refuses R06 for its start price alone, that its own file prices it, marked, that both finishes are planned, and that the
 written rules read against the target's explicit mods and the offers. Nothing is solved (R06's plan takes minutes: the heavy benchmark plans
@@ -17,9 +17,11 @@ from pathlib import Path
 import pytest
 from abstraction_support import real_game_data
 
+from crafting_system.actions.listing import DRAW_LABEL
 from crafting_system.cli import load_route, make_plan
+from crafting_system.items import Rarity
 from crafting_system.planner import PlanError
-from crafting_system.prices import load_price_file
+from crafting_system.prices import load_price_file, price_marks
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,9 +52,16 @@ def test_its_own_price_file_prices_the_start_belt_by_hand_and_says_so(data, targ
     assert target.price_file is not None and target.price_file.name == "references-allflame-2026-07-31.json"
     named = ("catalyst", "blessed-orb", "exalted-orb")  # named: the classic offers of a module's tests hold neither finish's method
     plan = make_plan(data, dataclasses.replace(target, actions=named), load_price_file(target.price_file), solve_it=False)
-    assert plan.start_price.name == "Heavy Belt, normal, item level 75, Hunter influence" and plan.start_price.bought and not plan.start_price.given and plan.start_price.chaos == 5.0
-    entry = load_price_file(target.price_file).prices["Heavy Belt, normal, item level 75, Hunter influence"]
-    assert entry.chaos == 5.0 and entry.source == "hand" and "#1267" in entry.note and "OR-44" in entry.note
+    assert plan.start_price.name == "Heavy Belt, item level 75, Hunter influence" and plan.start_price.bought and not plan.start_price.given and plan.start_price.chaos == 5.0
+    prices = load_price_file(target.price_file)
+    entry = prices.prices["Heavy Belt, item level 75, Hunter influence"]
+    assert entry.chaos == 5.0 and entry.source == "hand-set" and "#1267" in entry.note and "OR-44" in entry.note
+    # #1673: the stand-in is marked on the page (never the plain number of a user's own hand price), and it prices the Rare belt the plan opens
+    assert [mark.reason for mark in price_marks(entry, prices, None)] == ["a price set by hand"]
+    assert target.start_item.rarity is Rarity.RARE and plan.start_price.rarity == "rare"
+    labels = [priced.label for priced in plan.offers]
+    assert DRAW_LABEL in labels  # the market's Rare opens with the free draw of its own mods: no Scouring, no orb paid (OR-43, OR-16)
+    assert not any(label.startswith("Orb of Scouring and") or label.endswith("on the bought Normal base") for label in labels)
 
 
 def test_with_a_start_price_r06_finishes_its_implicit_with_eleven_blessed_orbs_and_its_quality_with_catalysts(data, target):
