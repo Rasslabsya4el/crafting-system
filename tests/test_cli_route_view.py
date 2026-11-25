@@ -47,7 +47,7 @@ from crafting_system.cli._route_flow import build_flow
 from crafting_system.cli._route_html import render_page
 from crafting_system.cli._route_trade import buy_step
 from crafting_system.cli._route_view import (
-    COST_AGAINST_GIVEN,
+    AGAINST_GUIDE,
     DRAW_TITLE,
     Field,
     Line,
@@ -59,7 +59,8 @@ from crafting_system.cli._route_view import (
     _View,
     build_section,
     chance_text,
-    cost_against_given,
+    against_guide,
+    with_block,
     count,
     given_route_input,
     merge_sections,
@@ -501,8 +502,7 @@ def test_a_given_route_that_differs_is_drawn_with_its_differing_steps_only_and_l
 
     drawn, guide = merge_sections(policy, given_section, "restart route")
 
-    assert drawn.rows == policy.rows  # the planner's section gains only the cost against the given route in its goal card (#1305)
-    assert [field.label for field in drawn.goal.fields] == [*(field.label for field in policy.goal.fields), COST_AGAINST_GIVEN]
+    assert drawn == policy  # the planner's section is drawn as it is: the block against the guide is the page's (`route_page`, #1584)
     assert [row.number for row in guide.rows] == [row.number for row in given_section.rows if row.number != 1]  # the buy is shared
     assert lines_of_card(guide.goal, "Same as the planner") == ["step 1: the planner's step 1"]
     (shared,) = [field for field in guide.goal.fields if field.label == "Same as the planner"]
@@ -539,48 +539,79 @@ def costed(rows, prefix: str = "") -> tuple[StepRow, ...]:
     )
 
 
-def test_the_cost_against_the_given_route_names_each_kind_of_step_by_its_difference():
-    """#1305 (crafter Q9): a plan far under the guide says which steps make the difference, with their uses. Hand numbers: the plan spends
-    10 c on the start, 100 c of essences (50 uses), 20 c on a restart and 5 c of Annulments (135 c); the guide 10 c on the start, 900 c of
-    fossil pairs (45 uses), 5 c of Annulments and 50 c of Exalted Orbs (965 c). By difference: fossils 900, essences 100, Exalted 50, the
-    start item 20 (30 against 10, the restart counted with row 1); the Annulments are equal and named by nobody."""
+def test_the_block_against_the_guide_gives_both_costs_and_the_three_kinds_of_step_where_they_part():
+    """#1584 (#1305, crafter Q9): a plan far under the guide says the two costs, their ratio and the steps that make the difference, by name,
+    Chaos and uses, with no reason beyond them. Hand numbers: the plan spends 10 c on the start, 100 c of essences (50 uses), 20 c on a
+    restart and 5 c of Annulments (135 c); the guide 10 c on the start, 900 c of fossil pairs (45 uses), 5 c of Annulments and 50 c of
+    Exalted Orbs (965 c): 135 / 965 = 0.14 times. By difference: fossils 900, essences 100, Exalted 50, then the start item 20 (30 against
+    10, the restart counted with row 1), the fourth, in the line of the rest; the Annulments are equal and named by nobody."""
     plan = costed([("Buy the belt", 10.0, None), ("Essence", 100.0, 50.0), ("Restart: buy the belt again", 20.0, 2.0), ("Annul", 5.0, 0.4)])
     guide = costed([("Buy the belt", 10.0, None), ("Fossil", 900.0, 45.0), ("Annul", 5.0, 0.4), ("Exalt", 50.0, 1.0)], "g-")
 
-    field = cost_against_given(plan, guide)
+    field = against_guide(plan, guide)
 
-    assert field is not None and field.label == COST_AGAINST_GIVEN
+    assert field is not None and field.label == AGAINST_GUIDE
     assert [line.text for line in field.lines] == [
-        "this plan 135 c, the given route 965 c; by step, the largest difference first:",
-        "Fossil: nothing here, 900 c (45 uses) in the given route",
-        "Essence: 100 c (50 uses) here, nothing in the given route",
-        "Exalt: nothing here, 50 c (1 use) in the given route",
-        "the start item (row 1 and every restart): 30 c here, 10 c in the given route",
+        "this plan 135 c, the guide's route 965 c: 0.14 times its cost",
+        "the guide's route spends 900 c (45 uses) on Fossil; this plan does not use it",
+        "this plan spends 100 c (50 uses) on Essence; the guide's route does not use it",
+        "the guide's route spends 50 c (1 use) on Exalt; this plan does not use it",
+        "the other 1 kinds of step that differ: this plan 30 c, the guide's route 10 c",
+    ]
+
+
+def test_a_kind_of_step_both_routes_use_names_both_spends_and_a_dearer_plan_says_its_ratio():
+    """#1584 on R17 (1.80 times the guide): the block stands beside the proof sentence's "dearer than the guide's" and names where the plan
+    spends more. Hand numbers: the plan 1 c + 400 c of imprints (40 uses) + 80 c of Annulments (8 uses) = 481 c; the guide 1 c + 300 c of
+    imprints (30 uses) + 10 c of Annulments (1 use) = 311 c: 481 / 311 = 1.55 times."""
+    plan = costed([("Buy", 1.0, None), ("Imprint", 400.0, 40.0), ("Annul", 80.0, 8.0)])
+    guide = costed([("Buy", 1.0, None), ("Imprint", 300.0, 30.0), ("Annul", 10.0, 1.0)], "g-")
+
+    field = against_guide(plan, guide, reading="with a restart where its rules stop")
+
+    assert [line.text for line in field.lines] == [
+        "this plan 481 c, the guide's route 311 c (with a restart where its rules stop): 1.55 times its cost",
+        "Imprint: this plan 400 c (40 uses), the guide's route 300 c (30 uses)",
+        "Annul: this plan 80 c (8 uses), the guide's route 10 c (1 use)",
     ]
 
 
 def test_the_plans_finish_step_and_the_given_routes_catalysts_cost_the_same():
     """Checker on #1305, #1234: a guide that names the catalyst is priced on its own plan, which keeps the quality in its model, while the site
     plan draws it as a finish step after its mods. Plan 100 c of mods and a 17 c finish step; the guide 100 c of the same steps and 17 c of
-    catalysts: 117 c each, the same cost, and nothing is named."""
+    catalysts: 117 c each, the same cost, and no step is named."""
     plan = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0), ("Intrinsic Catalyst until the item has 20% Intrinsic quality", 17.0, 9.53)])
     guide = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0), ("Intrinsic Catalyst", 17.0, 9.53)], "g-")
-    assert cost_against_given(plan, guide) is None
+    assert [line.text for line in against_guide(plan, guide).lines] == ["this plan 117 c, the guide's route 117 c: the same cost, to within 1%"]
     without = costed([("Buy", 1.0, None), ("Essence", 99.0, 30.0)])
-    field = cost_against_given(without, guide)  # a plan without the step would read 17 c cheaper, with the catalyst as its reason
-    assert field is not None and "Intrinsic Catalyst: nothing here, 17 c (9.53 uses) in the given route" in [line.text for line in field.lines]
+    field = against_guide(without, guide)  # a plan without the step would read 17 c cheaper, with the catalyst as its reason
+    assert field is not None and "the guide's route spends 17 c (9.53 uses) on Intrinsic Catalyst; this plan does not use it" in [line.text for line in field.lines]
 
 
-def test_the_cost_against_the_given_route_folds_the_small_differences_and_says_nothing_when_the_costs_agree():
+def test_the_block_folds_the_small_differences_and_says_the_figures_alone_when_the_guide_has_no_rows_to_split():
     plan = costed([("Buy", 1.0, None), ("A", 50.0, 1.0), ("B", 40.0, 1.0), ("C", 30.0, 1.0), ("D", 20.0, 1.0), ("G", 15.0, 1.0), ("E", 3.0, 1.0), ("F", 2.0, 1.0)])
     guide = costed([("Buy", 1.0, None), ("A", 10.0, 1.0), ("B", 10.0, 1.0), ("C", 10.0, 1.0), ("D", 10.0, 1.0), ("G", 10.0, 1.0), ("E", 1.0, 1.0), ("F", 1.0, 1.0)], "g-")
-    field = cost_against_given(plan, guide)
+    field = against_guide(plan, guide)
     assert field is not None
-    assert field.lines[-1].text == "the other steps that differ (2) together: 5 c here, 2 c in the given route"  # E and F; the equal buy is no difference
-    assert len(field.lines) == 1 + 5 + 1
+    assert field.lines[-1].text == "the other 4 kinds of step that differ: this plan 40 c, the guide's route 22 c"  # D, G, E and F; the equal buy is no difference
+    assert len(field.lines) == 1 + 3 + 1
 
-    assert cost_against_given(costed([("Buy", 1.0, None), ("A", 99.5, 1.0)]), costed([("Buy", 1.0, None), ("B", 100.0, 1.0)], "g-")) is None  # within 1%
-    assert cost_against_given(costed([("Buy", 1.0, None), ("A", 9.0, 1.0)]), costed([("Buy", 1.0, None), ("No action", None, None)], "g-")) is None  # a gap
+    gap = costed([("Buy", 1.0, None), ("No action", None, None)], "g-")  # a guide whose rules stop: no rows to split
+    assert against_guide(costed([("Buy", 1.0, None), ("A", 9.0, 1.0)]), gap) is None  # and no figure: nothing to say
+    recorded = against_guide(costed([("Buy", 1.0, None), ("A", 9.0, 1.0)]), gap, (10.0, 40.0))
+    assert [line.text for line in recorded.lines] == ["this plan 10 c, the guide's route 40 c: 0.25 times its cost"]
+    assert against_guide(costed([("Buy", 1.0, None), ("A", 9.0, 1.0)]), None) is None  # a site user's own target: no guide, no block
+
+
+def test_the_block_goes_right_under_the_proof_sentence(two_leaf_plan):
+    """#1584: "near the top": the block is the goal card's field after the proof sentence."""
+    policy = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
+    block = Field(AGAINST_GUIDE, (Line("this plan 1 c, the guide's route 2 c: 0.50 times its cost"),))
+
+    labels = [field.label for field in with_block(policy, block).goal.fields]
+
+    assert labels[labels.index("Proof") + 1] == AGAINST_GUIDE
+    assert with_block(policy, None) is policy
 
 
 def test_a_step_with_the_same_words_but_another_follow_up_is_drawn_once_and_its_follow_up_stays_linked():

@@ -22,7 +22,8 @@ The report and the command line are one module here (ADR-0018 lists them as `rep
   (`<target>.route.html`): the goal card, then a row per step with its card and the item after it; the buy step of a
   target that buys its start item gets the trade-site search link of the buy spec computed from the target. The page model is `_route_view`, the HTML `_route_html`.
   `route_page(report, data, ...)` is the same page as text, which the website serves (`crafting_system.web`, #961).
-  `reference_guide(data, target)`: the guide's figure a reference craft's route file records, said on a page built with no route (#1596).
+  `reference_guide(data, target)`: the guide's figure a reference craft's route file records, said on a page built with no route (#1596);
+  `reference_beside(data, plan, target)`: that guide's route priced on the plan's model, for the page's block against the guide (#1584).
 * `plan_record(plan)` and `_report_net` (#1381): the command writes the plan's record (its totals, start and limits, from the plan alone) where
   the JSON policy goes before it builds anything else, and builds the report and the page inside the run's memory net; past it the outputs stop
   with a stated stop beside the record, never a crash after a finished plan. The benchmark writes each route's record as soon as its plan is made.
@@ -75,7 +76,7 @@ from crafting_system.planner import (
 from ._inputs import load_target_prices
 from ._main import main, run_budget
 from ._report import Report, build_report, plan_record, policy_document, render_text
-from ._reference_guide import reference_guide
+from ._reference_guide import reference_beside, reference_guide
 from ._route_view import route_page
 from ._route import Divergence, Gap, Route, RouteError, RouteResult, Rule, When, evaluate_route, load_route, parse_route
 from ._shares import WeightShare, start_shares, weight_share
@@ -131,6 +132,7 @@ __all__ = [
     "plan_record",
     "policy_document",
     "price_offers",
+    "reference_beside",
     "reference_guide",
     "render_text",
     "report_net",

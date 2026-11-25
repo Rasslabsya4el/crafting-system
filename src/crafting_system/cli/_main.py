@@ -56,7 +56,7 @@ from ._report import build_report, plan_record, policy_document, render_text
 from ._report_net import report_net
 from ._route import evaluate_route, load_route, route_actions
 from ._route_report import render_route_text, route_document
-from ._reference_guide import reference_guide
+from ._reference_guide import reference_beside, reference_guide
 from ._route_view import guide_figure, write_route_page
 from ._page_main import page_main
 from ._plan_file import save_plan
@@ -255,9 +255,14 @@ def main(
                     stage(f"verified by {check.runs:,} simulated crafts: {'agrees' if check.agrees else 'DOES NOT AGREE'}")
 
                 guide, recorded = guide_figure(plan, given, route)  # the guide's cost with the start item, or its file's recorded figure (OR-59, #1596)
-                if route is None:  # no guide's route given: a reference craft's target is compared with its guide's recorded figure (#1596)
-                    guide = reference_guide(game, target)
-                    recorded = guide is not None
+                beside = None
+                if route is None:  # no guide's route given: a reference craft's guide priced on the plan's model (#1584), else its recorded figure (#1596)
+                    beside = reference_beside(game, plan, target)
+                    if beside is not None:
+                        guide, recorded = beside.cost()
+                    else:
+                        guide = reference_guide(game, target)
+                        recorded = guide is not None
                 print(render_text(report, check, target_name=name, guide=guide, guide_recorded=recorded), end="")
                 printed = True
                 stage("text written")
@@ -275,7 +280,8 @@ def main(
                     spec = buy_spec_of(game, target) if target.start is StartKind.BOUGHT else None  # computed from the target: the buy step's link and filter
                     page = write_route_page(
                         page_path, report, game, route=route, given=given,
-                        buy_spec=spec, cache_dir=config.cache_dir, guide=guide if route is None else None, guide_recorded=recorded,
+                        buy_spec=spec, cache_dir=config.cache_dir, guide=guide if route is None and beside is None else None, guide_recorded=recorded,
+                        beside=beside,
                     )  # fmt: skip
                     print(f"Route view written to {page}")
         except BudgetExceeded as stop:  # the memory net, met while the outputs of a finished plan were built: said, and the record kept (#1381)
