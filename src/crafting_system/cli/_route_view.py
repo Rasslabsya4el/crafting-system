@@ -2306,6 +2306,24 @@ def against_guide(planned: tuple[StepRow, ...], given: tuple[StepRow, ...] | Non
     return Field(AGAINST_GUIDE, tuple(lines))
 
 
+def cost_rows(inp: RouteInput, data: GameData, buy: BuyStep | None = None) -> tuple[StepRow, ...]:
+    """The rows of a route with only what the block against the guide reads (`against_guide`): the number, the title, the step cost and the
+    uses; no field, no branch, and every row with the start's card. The guide's route of a page that draws no section of it needs no more,
+    and its whole section took R20 a quarter of an hour (#1584)."""
+    view = _View(inp, data, buy, "g-", False)
+    first = view.buy_row(final=False)
+    rows = [replace(first, fields=())]
+    for step in view.flow.steps:
+        number = step.number + 1
+        if step.action is None:
+            rows.append(StepRow(number, "No action", (), first.after, view.anchor(number)))
+            continue
+        rows.append(StepRow(number, view.title(step.action, step), (), first.after, view.anchor(number), False, step.step_cost, (), step.uses))
+    for at, step in enumerate(view.finishing):
+        rows.append(StepRow(view.finish_row + at, finish_title(step), (), first.after, view.anchor(view.finish_row + at), False, step.value, (), float(step.uses)))
+    return tuple(rows)
+
+
 def with_block(section: RouteSection, block: Field | None) -> RouteSection:
     """`section` with `block` in its goal card right after the proof sentence (the first field when there is none): near the top (#1584)."""
     if block is None:
@@ -2432,11 +2450,12 @@ def route_page(
     drawn = None
     if route is not None and given is not None:
         drawn = build_section(given_route_input(judged, route, given), data, buy, prefix="g-", anchor="given", route_field=False)
-    elif beside is not None and beside.given is not None:  # the guide's rows, for the block only: the page draws no section of them
-        drawn = build_section(given_route_input(beside.judged, beside.route, beside.given), data, buy, prefix="g-", anchor="given", route_field=False)
+    guide_rows = None if drawn is None else drawn.rows
+    if drawn is None and beside is not None and beside.given is not None:  # the guide's rows, for the block only: the page draws no section of them
+        guide_rows = cost_rows(given_route_input(beside.judged, beside.route, beside.given), data, buy)
     if guide is not None:
         cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.craft_mean)  # the plan's cost as the proof sentence says it (`proof_words`)
-        policy = with_block(policy, against_guide(policy.rows, drawn.rows if drawn is not None else None, (cost, guide), reading))
+        policy = with_block(policy, against_guide(policy.rows, guide_rows, (cost, guide), reading))
     sections = (policy,)
     if route is not None and given is not None and drawn is not None:
         sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
