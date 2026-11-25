@@ -704,10 +704,15 @@ def search_net(
         if states is None:
             states = max(int(clock.states_left() or 0) // max(searches, 1), 1)
         pieces = max(int(given.build_per_state * (1.0 + SEARCH_PER_BUILD if held or walked else 1.0) * states), 1)
+    seconds = left if left is None else left / max(searches, 1)
+    late = min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held or walked else 0.0
+    # a search with a plan in hand may go on past its share while it still lowers its own plan, by the room a nearly done build has (`Net.beyond`,
+    # #1641): counted in states, by that many times its states; on the clock, by that many times its seconds (less what its build took past them)
+    beyond = (None if seconds is None else late * seconds, int(late * states) if given.counted else None, given.gap) if late > 0.0 else None
     return Net(
-        seconds=left if left is None else left / max(searches, 1), states=given.states if states is None else states, memory_mb=given.memory_mb,
-        give_way=give_way, pieces=pieces, held=held, walked=walked and not held, late=min(_pattern.LATE, (max(searches, 1) - 1) / 2.0) if held or walked else 0.0,
-        blind=None if held or walked or blind is None or blind <= 1 else blind,
+        seconds=seconds, states=given.states if states is None else states, memory_mb=given.memory_mb,
+        give_way=give_way, pieces=pieces, held=held, walked=walked and not held, late=late,
+        blind=None if held or walked or blind is None or blind <= 1 else blind, beyond=beyond,
     )  # fmt: skip
 
 

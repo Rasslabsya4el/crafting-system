@@ -544,6 +544,16 @@ def envelope_result(
             say(f"the side-by-side work was stopped by the memory net ({reason}); the rest was made one at a time")
 
 
+def beyond_after_build(net: Net, used: float) -> tuple[float | None, int | None, float] | None:
+    """`Net.beyond` of the search once its bound's build took `used` of its `net.seconds` (#1641): the room past the search's own seconds
+    while its plan falls is what the build left of `1 + late` shares, less those seconds (a build that went past the share leaves less, one
+    that took all of `1 + late` shares none); the states room is unchanged (a build counts in pieces, not in states)."""
+    if net.beyond is None or net.beyond[0] is None or net.seconds is None:
+        return net.beyond
+    room = max((1.0 + net.late) * net.seconds - used, 0.0)
+    return (max(room - max(net.seconds - used, 0.0), 0.0), *net.beyond[1:])
+
+
 def _envelope_run(
     abstraction, start, offers, prune_corrupting, incumbent, net, bound, tolerance, say, guard, item, gap, gap_after, watch, goal=None, beaten_at=None
 ) -> PackedResult:
@@ -577,7 +587,10 @@ def _envelope_run(
         )  # fmt: skip
     if net is not None and net.seconds is not None:
         late = (1.0 + net.late) * net.seconds - (ready - began)  # a nearly done build went past the share (`BuildStop`): the first plan has what is left of its room
-        net = dataclasses.replace(net, seconds=max(net.seconds - (ready - began), 0.0), first=max(late, 0.0) if bound.late and bound.complete else net.first)
+        net = dataclasses.replace(
+            net, seconds=max(net.seconds - (ready - began), 0.0), first=max(late, 0.0) if bound.late and bound.complete else net.first,
+            beyond=beyond_after_build(net, ready - began),
+        )  # fmt: skip
     if gap_after is not None:
         gap_after = max(gap_after - (ready - began), 0.0)
     where = {priced.label: position for position, priced in enumerate(offers)}
