@@ -1280,13 +1280,18 @@ class Search[S]:
         so two equal readings are the same graph."""
         return len(self.states), self.stats.expanded, self.stats.realized
 
-    def _deadline(self, began: float, seconds: float | None = None, final: bool = False) -> float | None:
+    def _deadline(self, began: float, seconds: float | None = None, final: bool = False, standing: bool = False) -> float | None:
         """The instant the pricing of the plan in hand must end by (OR-40, #1516), or None for a search with no time net: where the net's
         seconds (or `seconds`, the first plan's chain's) end. `final` is the pricing of the answer after a stop: it may take `LAST_PRICING` of
         the longest time the net gave past the stop, at most, since without it a search stopped at its net would have no plan to give."""
         limit = self.net.seconds if seconds is None else seconds
         if limit is None:
             return None
+        if standing and seconds is None and self.share.beyond is not None and self.share.seconds is not None and self.share.beyond[0]:
+            # the pricing at a round's end is what shows whether the round lowered the plan (`_lowering`, #1641): it may take the room past
+            # the share, else a round that ends a second past its share is never priced, its fall never seen, and its plan dropped (R09 on
+            # a runner of the proof 45540686117: round 2 ended at 21 s of a 21.6 s search, its pricing was cut after 0.0 s, 214.84 c)
+            limit = max(limit, self.share.seconds + self.share.beyond[0])
         if not final:
             return began + limit
         limit = max(limit, self.net.first or 0.0)
@@ -1562,7 +1567,7 @@ class Search[S]:
                 return SearchResult(self.states, self.index, self._graph("exact"), lower, True, None, False, self.stats)
             if self.gap > 0.0 and self.gap_after is not None and time.perf_counter() - began >= self.gap_after:
                 try:
-                    plan, _, upper = self._upper(self._deadline(began))
+                    plan, _, upper = self._upper(self._deadline(began, standing=True))
                 except Late as late:  # the pricing met the time net (#1516): the net, asked just below, ends the search
                     plan, upper = None, math.inf
                     self.say(f"  the plan in hand could not be priced within the time limit this round: {late}")

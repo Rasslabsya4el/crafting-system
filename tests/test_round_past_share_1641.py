@@ -16,6 +16,7 @@ import pytest
 from test_envelope_gap_stop import world
 
 from crafting_system.budget import Budget
+from crafting_system.planner import _envelope
 from crafting_system.planner._envelope import Net, Search
 from crafting_system.planner._envelope_plan import beyond_after_build
 from crafting_system.planner._plan import search_net
@@ -110,3 +111,52 @@ def test_on_the_clock_the_share_widens_by_its_seconds_only_after_a_search_round_
         search._stand(0.0, 0.0)
         seen.append(search.net.seconds)
     assert seen == [20.0, 20.0, 30.0, 20.0, 30.0]  # never past share + room, back to the share once a round lowers by no more than the gap
+
+
+class WorkClock:
+    """The search's clock moved by its work alone (no clock is read): a second per kernel made, three per round's lower solve."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+
+    def perf_counter(self) -> float:
+        return self.now
+
+
+def on_work_clock(monkeypatch, share: float, beyond: float | None):
+    clock = WorkClock()
+    monkeypatch.setattr(_envelope, "time", clock)
+    problem = falling_world()
+    kernel = problem.kernel
+
+    def made(state, position):
+        clock.now += 1.0
+        return kernel(state, position)
+
+    problem.kernel = made
+    graph = Search._graph
+
+    def solved(self, kind):
+        if kind == "lower":
+            clock.now += 3.0
+        return graph(self, kind)
+
+    monkeypatch.setattr(Search, "_graph", solved)
+    said: list[str] = []
+    trace: list[tuple[int, float, float | None]] = []
+    net = Net(seconds=share, beyond=None if beyond is None else (beyond, None, GAP))
+    result = Search(problem, net=net, gap=GAP, gap_after=0.0, progress=said.append, watch=lambda s: trace.append((s.rounds, clock.now, s.upper))).run()
+    return result, said, trace, clock.now
+
+
+def test_a_round_whose_lower_solve_ends_past_its_share_is_still_priced_within_its_room(monkeypatch):
+    # runner 1 of the proof 45540686117, R09: round 2's walk ended at 21 s of a 21.6 s search, its solve went past the share, and the pricing
+    # that would show its fall was cut after 0.0 s: the round stopped with 214.84 c where runners 2 and 3 went on to 118.99 c. Here the share is
+    # 27 work-seconds: round 3's solve ends past it, and the share alone never prices that round (302.69, said so)
+    alone, said, _, _ = on_work_clock(monkeypatch, 27.0, None)
+    assert alone.upper == pytest.approx(302.69488600544264)
+    assert any("could not be priced within the time limit this round" in line for line in said)
+    wide, said, trace, ended = on_work_clock(monkeypatch, 27.0, 27.0)
+    assert wide.upper == pytest.approx(29.47729815014795)
+    assert any(rounds >= 3 and at > 27.0 and upper == pytest.approx(29.47729815014795) for rounds, at, upper in trace)  # priced past the share
+    assert ended <= 27.0 + 27.0 + 3.0  # within share and room (the last lower solve asks no clock inside it)
