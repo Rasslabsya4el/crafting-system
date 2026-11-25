@@ -909,13 +909,15 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         # item and a player reads the mods that do not decide its way as a count; the Where field names the one that decides (#1675). Where
         # every state holds at least one of the wanted rows only some hold (with one tier note), that many slots read "one of A / B" with the
         # note: the item holds one of them (crafters on R04, R08, R09: "any mod" hid that the item before the Exalted Orb holds one wanted mod)
-        wanted = [[row for row in each if row.tone == "wanted" and "fractured" not in row.marks and not row.note.startswith(BELOW_NOTES)] for each in rest]
-        held = min(len(each) for each in wanted)
-        named = list(dict.fromkeys(row for each in wanted for row in each))
-        notes = {row.note for row in named}
-        if held and len(notes) == 1 and len(named) > 1:
+        # the same of the crafted rows: "one of A / B · crafted" where every item holds one of the crafted mods only some hold (crafters on R04, R11)
+        for tone in ("wanted", "crafted"):
+            wanted = [[row for row in each if row.tone == tone and "fractured" not in row.marks and not row.note.startswith(BELOW_NOTES)] for each in rest]
+            held = min(len(each) for each in wanted)
+            named = list(dict.fromkeys(row for each in wanted for row in each))
+            if not held or len({(row.note, row.marks) for row in named}) != 1 or len(named) < 2:
+                continue
             text = f"one of {' / '.join(sorted(dict.fromkeys(row.text for row in named)))}"  # one order whatever the states' order
-            rows += [Slot(text, "wanted", (), named[0].note)] * min(held, max(0, limit - len(rows)))
+            rows += [Slot(text, tone, named[0].marks, named[0].note)] * min(held, max(0, limit - len(rows)))
             rest = [list(each) for each in rest]
             for each, own in zip(rest, wanted):
                 for row in own[:held]:

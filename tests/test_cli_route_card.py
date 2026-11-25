@@ -558,6 +558,20 @@ def test_a_join_whose_items_each_hold_one_of_two_wanted_mods_names_them_as_one_r
     assert mixed.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY)
 
 
+def test_a_join_whose_items_each_hold_one_of_two_crafted_mods_names_them_as_one_crafted_row():
+    """#1675, crafters on R04 step 7 and R11 step 7: an item that goes to Remove Crafted Mods holds one of two bench crafts, and "any mod"
+    hid which slot holds the craft to strip."""
+    ab = belt_abstraction()
+    crafts = ("JunMaster2AllDamage2_", "JunMaster2ArmourAndEnergyShield1")
+
+    card = card_of_states(ab, [ab.compress(belt(roll(mod_id, crafted=True))) for mod_id in crafts])
+
+    (first, *others) = card.prefixes
+    assert first.text.startswith("one of ") and first.tone == "crafted" and "crafted" in first.marks
+    assert all(mod_text(DATA.mods[mod_id]) in first.text for mod_id in crafts)
+    assert others == [EMPTY, EMPTY] and card.groups == ()
+
+
 def test_a_join_never_draws_more_lines_on_a_side_than_the_item_holds():
     """#889: R10's card drew six prefix lines on a Rare (three hold one wanted mod, three another): the side keeps its capacity."""
     a, b = belt(roll(LIFE_3)), belt(roll(FIRE, fractured=True))
