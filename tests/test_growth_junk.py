@@ -8,7 +8,9 @@ of the real 3.29.3.3 dump (they skip without it) show the offers each names ther
 * J2. The hold-back class of an addition is also read at the shape's item with a mod on each side: one that removes a mod of one side
   only removes nothing at an item that holds none there.
 * J3. An imprint brings the restores and the imprints made at its own shapes, not every imprint.
-* J4. A bench lock brings the other lockers of its side only where a step of the plan in hand uses it.
+* J4. A lock the protector names comes with the other ways of making that same lock (the Wild Bristle Matron where every outcome of its
+  draw at the item the step holds is that lock), and the closure brings no locker: on R24 the Matron is the suffix lock's other way; on
+  R17 with its prefixes full it is not the prefix lock's; on R14 its draw makes neither lock. A lock group names every locker, as before.
 """
 
 import dataclasses
@@ -141,16 +143,15 @@ def test_an_imprint_that_replaces_one_is_read_as_made_at_the_shape_whose_item_ho
     assert table._copies(restore, _View(MAGIC)) is False  # a restore makes no imprint
 
 
-# --- J4: the other lockers come where a step of the plan uses the bench lock --------------------------------------------------------------
+# --- J4: a named lock comes with the other ways of making that same lock ------------------------------------------------------------------
 
 
-def test_a_bench_lock_brings_the_beast_lock_only_where_a_step_of_the_plan_in_hand_uses_it():
+def test_a_bench_lock_brings_no_locker_through_the_closure():
     table = _lock_world()
     table.held_back = frozenset()
     suffix_lock, beast = 1, 3
-    assert _names(table, table.closure({suffix_lock})) == {"lock suffixes"}  # named as a protector, unused yet: main brought the beast
-    assert _names(table, table.closure({suffix_lock}, frozenset({suffix_lock}))) == {"lock suffixes", "beast lock"}
-    assert _names(table, table.closure({beast}, frozenset({beast}))) == {"beast lock"}  # a beast brings no bench lock
+    assert _names(table, table.closure({suffix_lock})) == {"lock suffixes"}  # main: {"lock suffixes", "beast lock"}
+    assert _names(table, table.closure({beast})) == {"beast lock"}
 
 
 # --- the real tables ----------------------------------------------------------------------------------------------------------------------
@@ -184,9 +185,18 @@ def test_on_r17_the_move_to_rare_is_the_alchemy_both_beast_swaps_are_held_back_a
     assert _names(table, table.closure({at[fenumal]})) == {fenumal, f"{fenumal}, replacing imprint 1", "Restore imprint 1"}
 
 
-def test_on_r24_a_bench_lock_brings_the_matron_only_where_the_plan_in_hand_uses_it():
-    table, at = _real_table("r24-avoid-shock-boots")
+def test_the_matron_is_the_other_way_of_a_lock_only_where_its_draw_makes_that_lock_alone_r24_r17_r14():
     matron, lock = "Beastcraft Wild Bristle Matron (add a metamod)", "Bench craft Suffixes Cannot Be Changed"
+    table, at = _real_table("r24-avoid-shock-boots")
     table.held_back = frozenset()
+    side = lambda name: frozenset(leaf for leaf in range(len(table.goal.leaves)) if table.side_of(leaf) == name)  # noqa: E731
+    assert _names(table, table.lock_ways("suffix", frozenset({RARE}), side("suffix"))) == {matron}
     assert _names(table, table.closure({at[lock]})) == {lock}
-    assert _names(table, table.closure({at[lock]}, frozenset({at[lock]}))) == {lock, matron}
+    table, _at = _real_table("r17-lightning-talisman")  # its prefixes full, the Matron's draw is the prefix lock or a suffix metamod: not the same lock
+    table.held_back = frozenset()
+    assert table.lock_ways("prefix", frozenset({RARE}), side("prefix")) == set()
+    assert table.lock_ways("suffix", frozenset({RARE}), side("suffix")) != set()
+    table, _at = _real_table("r14-hunter-bow")  # at its rare item holding either side's wanted mods, the Matron's draw makes no lock
+    table.held_back = frozenset()
+    for name in ("prefix", "suffix"):
+        assert table.lock_ways(name, frozenset({RARE}), side(name)) == set()
