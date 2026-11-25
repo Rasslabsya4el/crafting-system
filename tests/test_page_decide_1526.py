@@ -108,9 +108,11 @@ def test_a_long_list_shows_its_first_rows_and_the_rest_below_and_look_alike_item
 
     assert field is not None and field.label == DECIDE
     shown = field.lines[1:]
-    assert len(shown) == SHOWN_ROWS and shown[-1].text == f"the other {len(rows) - SHOWN_ROWS + 1} rows, in the same order"
-    assert shown[-1].more[-1].startswith("else any other item: items that look alike go on differently (50%): ")
-    assert "on 75%" in shown[-1].more[-1] and "on 25%" in shown[-1].more[-1]
+    assert len(shown) == SHOWN_ROWS
+    assert shown[-2].text == f"else check the other {len(rows) - SHOWN_ROWS + 1} rows, in this order, before the last row"
+    assert len(shown[-2].more) == len(rows) - SHOWN_ROWS + 1  # every row is on the page, the rarer middle folded
+    assert shown[-1].text.startswith("else any other item: items that look alike go on differently (50%): ")
+    assert "on 75%" in shown[-1].text and "on 25%" in shown[-1].text
 
 
 def test_a_veiled_mod_is_drawn_as_the_game_names_it_and_counts_apart_from_the_unwanted_mods():

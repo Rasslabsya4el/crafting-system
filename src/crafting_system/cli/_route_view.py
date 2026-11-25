@@ -85,10 +85,10 @@ from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS
 
 from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
-from crafting_system.prices.price_marks import chaos_text, provenance_of, units_text
+from crafting_system.prices.price_marks import price_marks, provenance_of, units_text
 from crafting_system.prices.price_file import DIVINE_ORB
 
-from ._price_marks import RATE_WORDS, PriceUse, price_uses, use_line
+from ._price_marks import RATE_WORDS, PriceUse, price_uses, supply_words, use_line
 from ._report import Report
 from ._report_net import ask
 from ._route import RESTART, Route, RouteResult, finish_labels
@@ -1081,13 +1081,17 @@ class _View:
                 parts = ", ".join(f"{self._place(step, edge)} on {chance_text(share)}" for edge, share in went)
                 lines.append(Line(f"{lead}items that look alike go on differently ({chance_text(share)}): {parts}"))
             texts.append(lines[-1].text + (f" {lines[-1].anchor}" if lines[-1].anchor else ""))
-        if len(lines) > SHOWN_ROWS:
-            rest = texts[SHOWN_ROWS - 1 :]
-            lines = [*lines[: SHOWN_ROWS - 1], Line(f"the other {len(rest)} rows, in the same order", more=tuple(rest), more_title="show them", more_apart=True)]
+        if len(lines) > SHOWN_ROWS:  # the first rows, the rarer middle folded, and the last row ("any other item", often the common case) shown
+            rest = texts[SHOWN_ROWS - 2 : -1]
+            fold = Line(f"else check the other {len(rest)} rows, in this order, before the last row", more=tuple(rest), more_title="show them", more_apart=True)
+            lines = [*lines[: SHOWN_ROWS - 2], fold, lines[-1]]
         head = [Line("check the item from the top; the first row that holds says what is next:")]
         if any(edge.kind == "goal" for edge in step.edges):  # the target's items are told by its mods, before any row (checker: a row could hold on them)
-            head.append(Line("the item holds every mod the target asks: it is done"))
-            lines = [replace(line, text=line.text if line.text.startswith(("else ", "the other ")) else f"else {line.text}") for line in lines]
+            if self.finish_row is not None:  # the mods are made: the finish steps follow (#1234; crafter on R17: "it is done" read as the end)
+                head.append(self.link(f"the item holds every mod the target asks: then {finish_title(self.finishing[0])}", self.finish_row))
+            else:
+                head.append(Line("the item holds every mod the target asks: it is done"))
+            lines = [replace(line, text=line.text if line.text.startswith("else ") else f"else {line.text}") for line in lines]
         return Field(DECIDE, (*head, *lines))
 
     def _place(self, step: Step, edge: Edge) -> str:
@@ -1901,9 +1905,14 @@ class _View:
             return []
         prices = self.plan.prices
         entry = prices.prices.get(DIVINE_ORB)
-        provenance = None if entry is None else provenance_of(entry, prices)
-        source = f"{RATE_WORDS}, {prices.league}, {prices.fetched_at:%Y-%m-%d}" if provenance is None else provenance.words
-        return [f"{DIVINE_ORB}: {chaos_text(prices.chaos_per_divine)} Chaos, {source}; the Divine figures of this page are at this rate"]
+        if entry is None:  # the file's rate, as `price_uses` lists a Divine Orb it holds no row for
+            use = PriceUse(DIVINE_ORB, prices.chaos_per_divine, f"{RATE_WORDS}, {prices.league}, {prices.fetched_at:%Y-%m-%d}", None, None, ())
+        else:  # its row, with its source, depth and marks as any price of the list (OR-7)
+            provenance = provenance_of(entry, prices)
+            source = "no source recorded" if provenance is None else provenance.words
+            depth = None if provenance is None else provenance.depth
+            use = PriceUse(DIVINE_ORB, prices.chaos_per_divine, source, depth, None, price_marks(entry, prices, 1.0), None, supply_words(provenance))
+        return [f"{use_line(use)}; the Divine figures of this page are at this rate"]
 
     def goal_card(self) -> GoalCard:
         plan, risk = self.plan, self.inp.risk

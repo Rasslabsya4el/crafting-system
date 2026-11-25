@@ -239,7 +239,7 @@ def test_the_goal_card_gives_route_mean_p90_and_prices(r12_plan):
 
     fields = {field.label: field.lines[0].text for field in build_section(route_input(r12_plan), DATA).goal.fields}
 
-    assert list(fields) == ["Route", "Proof", "Mean", "9 runs in 10", "Approximate inputs", "Prices"]  # no success line: it is 100%; the Harvest reforge reads an approximate claim (#197)
+    assert list(fields) == ["Route", "Proof", "Mean", "9 runs in 10", "Implicit", "Approximate inputs", "Prices"]  # the belt's implicit, not asked (#1651)  # no success line: it is 100%; the Harvest reforge reads an approximate claim (#197)
     assert fields["Route"] == "The planner's plan"  # how far it is proved the cheapest is the "Proof" field's (#1161, `tests/test_route_proof.py`)
     assert fields["Mean"] == f"{money(risk.mean.value + 4.0)} ({risk.mean.value / 300 + 4 / 300:.2g} Divine)"
     assert fields["9 runs in 10"].endswith(" or less") and money(risk.p90.value + 4.0) in fields["9 runs in 10"]
