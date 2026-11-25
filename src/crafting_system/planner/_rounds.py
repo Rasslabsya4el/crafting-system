@@ -441,6 +441,8 @@ def widen(
             # a growth round's share is half the time left: this round, and every round after it (OR-40: a share of the net, no count)
             give_way = None if best is not None or time_left is None else Share(time_left, GROWTH_SHARES, counted, measure, unit, gap)
             searches = GROWTH_SHARES if best is not None else 1
+            if best is not None and getattr(grow, "one_side_round", False):
+                searches = 1  # the one-side group (`_growth.Grower.one_side_group`, H69): all the time left, its build the whole of it
             asked = give_way if meter is None else _seen_by(meter, give_way)
             call = RoundCall(searches, best_upper, best is None, asked, None if meter is None else meter.net(searches), held, best is not None and not held,
                              blind=GROWTH_SHARES if best is None else None)  # fmt: skip

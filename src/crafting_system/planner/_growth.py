@@ -154,7 +154,8 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   swap, the Eldritch annulment and the Ember: 1,710.64 c against 2,134.44 c, main's round-4 group with them built 312,146 keys in 568 s).
   In every round before it (the seed's, a step's first read) they would enlarge a group that has not settled its methods yet: placed there
   on R24 (the first attempt) the Essence step's group made no plan in its share, and placed after the growth (the second) the group had
-  531 s for a build of 312,146 keys.
+  531 s for a build of 312,146 keys. So its round has all the time left (`_rounds.widen`, H69), its build the whole of it, where another
+  growth round has half: on R24 at its third attempt the group had 293 s at minute 50 for a build of about 570 s.
 
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
@@ -1016,6 +1017,7 @@ class Grower:
         self.locks_read: set[tuple] = set()  # (step, its W, its shapes) whose lock group was read (module text, the lock group)
         self.read_ever: set[str] = set()  # every step read under any plan: a step read again is a re-read (the one-side group, #1542)
         self.one_side_for = None  # the plan in hand the one-side group was named for (once per plan)
+        self.one_side_round = False  # the round named last is the one-side group: it has all the time left (`_rounds.widen`, H69)
         table.held_back = self.later_ones
 
     def _named_later(self, named: Callable[[], set[int]]) -> None:
@@ -1070,6 +1072,7 @@ class Grower:
         chosen = frozenset(positions)
         self.tried.append(chosen)
         self.last = chosen
+        self.one_side_round = False
         if improved:
             self.plan, self.plan_set, self.diagnosed = plan_in_hand, chosen, set()
 
@@ -1154,6 +1157,7 @@ class Grower:
         chosen = table.closure(set(current) | named | sides)
         if not self._new(chosen):
             return None
+        self.one_side_round = True
         return tuple(sorted(chosen)), (
             f"the one-side group of the plan, in place of the re-read of {label}: the methods a step that waits on one side uses to fill or "
             f"clear the other: {self._labels(sides - current)}"
