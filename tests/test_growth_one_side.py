@@ -40,7 +40,14 @@ class _Held:
 
     @property
     def slots(self):
-        return tuple(SimpleNamespace(side=Side(side)) for side in self.sides)
+        """A prefix passes A when the state passes A (the first prefix), every other slot is junk; a side written in capitals is crafted."""
+        slots, given = [], False
+        for side in self.sides:
+            gives = side == "prefix" and not given and self.status[A] is P
+            given = given or gives
+            contribution = (P if gives else N, N)
+            slots.append(SimpleNamespace(side=Side(side.lower()), crafted=side.isupper(), contribution=contribution))
+        return tuple(slots)
 
 
 def _one_side_table() -> OfferTable:
@@ -81,10 +88,12 @@ def test_a_step_that_waits_on_one_side_with_room_on_the_other_names_its_cheapest
     assert _names(table, table.side_roles(_acts(room))) == {"fill prefix", "swap remove suffix"}
 
 
-def test_with_the_other_side_full_of_a_wanted_mod_it_names_the_removal_of_the_waited_side_alone_with_the_one_offer_that_sets_it():
+def test_with_the_other_side_full_of_mods_no_removal_may_take_at_no_loss_it_names_the_removal_of_the_waited_side_alone_with_the_one_offer_that_sets_it():
     table = _one_side_table()
-    full = _Held("full", (P, N), sides=("prefix", "prefix"))  # the prefixes are full and hold A
+    full = _Held("full", (P, N), sides=("prefix", "PREFIX"))  # the prefixes are full: A and a crafted mod
     assert _names(table, table.side_roles(_acts(full))) == {"eldritch annul", "ichor"}
+    mixed = _Held("mixed", (P, N), sides=("prefix", "prefix"))  # A and a junk prefix: a plain removal may take the junk one, nothing named
+    assert table.side_roles(_acts(mixed)) == set()
     junk = _Held("junk", (N, N), sides=("prefix", "prefix"))  # full of junk: nothing to keep there, nothing named
     assert table.side_roles(_acts(junk)) == set()
 

@@ -144,7 +144,8 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
 * **The one-side group** (`Grower.one_side_group`, #1542, hypothesis H40 of #1434). The one-side role of a step (`OfferTable.side_roles`),
   read at the states where it acts: when every wanted mod it waits for sits on one side X and at some of those states the other side Y has
   room, the cheapest crafted mod that fills Y and takes no wanted family (`Entry.fills`) and the cheapest offer that takes a mod off X alone
-  as it draws one onto Y (a beast side swap); when at some of them Y is full and holds a wanted mod, the cheapest offer that takes a mod off X
+  as it draws one onto Y (a beast side swap); when at some of them Y is full of mods no removal may take at no loss (each passes a wanted
+  mod, or is crafted or fractured), the cheapest offer that takes a mod off X
   alone and adds none, with the one cheapest offer that sets what it reads (an Eldritch Orb of Annulment after the Ember). What an offer
   clears is read on its own outcomes at the item of each shape with one junk mod of each side (`OfferTable.read_sides`), once, when the role
   is first asked. Where: once per plan in hand, in place of the first re-read of a step (a step read under an earlier plan): that round holds
@@ -495,6 +496,11 @@ class OfferTable:
             mods[each.mod_id].generation_type == side for each in state.fractured if each.mod_id in mods
         )
 
+    def kept_full(self, state: CompressedState, side: str) -> bool:
+        """Whether every mod `state` holds on `side` is one a removal may not take at no loss: it passes a wanted mod, or it is crafted (a lock,
+        a filler: the bench takes it off), or fractured. A side that holds a junk mod is not: a plain removal may take that one."""
+        return all(getattr(slot.side, "value", slot.side) != side or slot.crafted or any(each is Status.PASSING for each in slot.contribution) for slot in state.slots)
+
     def capacity_of(self, rarity: Rarity, side: str) -> int | None:
         """How many mods of `side` an item of `rarity` holds on the run's base (`items.capacity`); None when the base is not in the data."""
         try:
@@ -506,7 +512,7 @@ class OfferTable:
         """The one-side role of a step (module text, #1542), read at the states where it acts (`acts`, as `read_step` reads them): when every
         wanted mod it waits for sits on one side X, and at some of those states the other side Y has room, the cheapest crafted mod that fills Y
         and the cheapest offer that takes a mod off X alone as it adds one to Y (a beast side swap: an addition kept off X, a removal kept off
-        Y); and when at some of them Y is full and holds a wanted mod, the cheapest offer that takes a mod off X alone and adds none, with the
+        Y); and when at some of them Y is full of mods a removal may not take at no loss (`kept_full`: wanted, crafted or fractured), the cheapest offer that takes a mod off X alone and adds none, with the
         one cheapest offer that sets what it reads (an Eldritch Orb of Annulment after the Ember that makes its side dominant). Empty when the
         step waits on both sides or on none."""
         leaves = len(self.goal.leaves)
@@ -515,7 +521,6 @@ class OfferTable:
         if side is None:
             return set()
         other = next(iter(_SIDES - {side}))
-        other_leaves = [leaf for leaf in range(leaves) if self.side_of(leaf) == other]
         room = full = False
         for state, _action, visits in acts:
             if not visits > 0.0:
@@ -525,7 +530,7 @@ class OfferTable:
                 continue
             if self.held_on(state, other) < cap:
                 room = True
-            elif any(state.status[leaf] is Status.PASSING for leaf in other_leaves):
+            elif self.kept_full(state, other):
                 full = True
         named: set[int] = set()
         if room:
