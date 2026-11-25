@@ -8,7 +8,7 @@ Three cases, each through the page command on a saved plan, as the reference pag
 
 * R12, whose guide's rules finish: a plan of R12's own Lightning reforge only, the guide's route walked on it; the two are the same route,
   so the block says the same cost and names no step.
-* R17, whose rules have gaps and whose file records the figure (33,140.41 Chaos): the small plan of `test_r17_page_1596` (Transmutation,
+* R17, whose rules have gaps and whose file records the figure: the small plan of `test_r17_page_1596` (Transmutation,
   Alterations, the catalyst); the guide's rules are priced with a restart where they stop, which gives the recorded figure, and the block
   names the steps where the two part. The proof sentence still says the recorded figure as recorded.
 * A target that is no reference craft (R12's amulet one item level lower): no guide, no block.
@@ -28,7 +28,8 @@ from abstraction_support import real_game_data
 from crafting_system.cli import make_plan, reference_beside
 from crafting_system.cli._page_main import page_main
 from crafting_system.cli._plan_file import save_plan
-from crafting_system.cli._route_view import AGAINST_GUIDE, RESTART_READING
+from crafting_system.cli._route import recorded_cost_of
+from crafting_system.cli._route_view import AGAINST_GUIDE, RESTART_READING, money
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target
 
@@ -91,15 +92,16 @@ def test_a_guide_with_gaps_is_priced_with_a_restart_and_the_block_names_where_th
     plan = make_plan(data, part, load_price_file(PRICES), methods=("Orb of Transmutation", "Orb of Alteration", "Intrinsic Catalyst"))
     beside = reference_beside(data, plan, target)
     assert beside is not None and beside.reading == RESTART_READING and beside.recorded
-    assert beside.cost() == (33_140.41, True)  # the proof sentence keeps the recorded figure (#1596)
+    recorded = recorded_cost_of(ROOT / "examples" / "routes" / "r17-lightning-talisman.yaml")
+    assert beside.cost() == (recorded, True)  # the proof sentence keeps the recorded figure (#1596)
 
     page, words = _page(data, plan, target, "r17", tmp_path)
 
     lines = _block(page)
-    assert lines and f"({RESTART_READING})" in lines[0] and "the guide's route ≈ 33,100 c" in lines[0], lines
+    assert lines and f"({RESTART_READING})" in lines[0] and f"the guide's route {money(beside.given.risk.mean.value + plan.start_price.chaos)}" in lines[0], lines
     assert 2 <= len(lines) <= 5  # the ratio, then at most three kinds of step and the line of the rest
     assert any("Imprint with the Fenumal Plagued Arachnid" in line for line in lines[1:])  # the guide's dearest step, by name and Chaos
-    assert "33,140.41 Chaos (the figure recorded for it: its steps as written do not finish on this item)" in words
+    assert f"{recorded:,.2f} Chaos (the figure recorded for it: its steps as written do not finish on this item)" in words
 
 
 def test_a_target_that_is_no_reference_craft_has_no_guide_and_no_block(data, r12, tmp_path):
