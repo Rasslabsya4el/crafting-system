@@ -162,3 +162,12 @@ def test_a_normal_item_made_magic_has_the_goal_a_magic_item():
     step = SimpleNamespace(states=[state(Rarity.NORMAL)])
     edges = [SimpleNamespace(states=[state(Rarity.MAGIC)])]
     assert _View.gains(view, step, edges) == ["a magic item"]
+
+
+def test_the_title_names_a_hybrid_mod_by_each_of_its_lines():
+    """#1625: R24's unveiled "Movement Speed / Onslaught" mod was titled "Movement Speed T1", a different mod to a player."""
+    from crafting_system.cli._route_view import _titled
+
+    hybrid = Slot("(25-30)% increased Movement Speed / (13-16)% chance to gain Onslaught for 4 seconds on Kill", "wanted", note="T1")
+
+    assert _titled(hybrid) == "Movement Speed / gain Onslaught for 4 seconds on Kill T1"

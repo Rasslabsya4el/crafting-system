@@ -1973,7 +1973,10 @@ def _titled(slot, tier: bool = True) -> str:
     crafted = crafted and "crafted" not in short_mod(slot.text).lower()  # "Can have up to 3 Crafted Modifiers" says it already (crafter on R13)
     marks = [mark for mark, held in (("fractured", "fractured" in slot.marks), ("crafted", crafted)) if held]
     tier = f" {slot.note}" if tier and re.match(r"^T\d", slot.note or "") else ""  # a group's member is named without its tier, as before
-    return f"{' '.join(marks) + ' ' if marks else ''}{short_mod(slot.text)}{tier}"
+    text = slot.text
+    # a hybrid mod is named by each of its lines, as the game names it (#1625: R24's unveiled Movement Speed and Onslaught read "Movement Speed")
+    name = " / ".join(short_mod(part) for part in text.split(" / ")) if " / " in text and not text.startswith("one of") and " or " not in text else short_mod(text)
+    return f"{' '.join(marks) + ' ' if marks else ''}{name}{tier}"
 
 
 def wanted_words(data: GameData, target: Target) -> str:
