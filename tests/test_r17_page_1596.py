@@ -39,7 +39,7 @@ TARGET = ROOT / "examples" / "targets" / "r17-lightning-talisman.yaml"
 ROUTE = ROOT / "examples" / "routes" / "r17-lightning-talisman.yaml"
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "references-allflame-2026-07-31.json"
 R12 = ROOT / "examples" / "targets" / "r12-lightning-amulet.yaml"
-RECORDED = "33,140.41 Chaos (the figure recorded for it: its steps as written do not finish on this item)"
+RECORDED = "34,099.35 Chaos (the figure recorded for it: its steps as written do not finish on this item)"
 CATALYST = "Intrinsic Catalyst"
 
 
@@ -75,9 +75,9 @@ def test_the_guide_is_priced_on_the_target_as_its_file_states_it(data, target, s
 
 
 def test_a_reference_craft_s_target_has_its_guide_s_recorded_figure(data, target, tmp_path):
-    assert reference_guide(data, target) == 33_140.41
+    assert reference_guide(data, target) == 34_099.35
     moved = dataclasses.replace(target, price_file=tmp_path / "elsewhere.json", actions=("Exalted Orb",))  # neither is the item
-    assert reference_guide(data, moved) == 33_140.41
+    assert reference_guide(data, moved) == 34_099.35
     assert reference_guide(data, dataclasses.replace(target, item_level=84)) is None  # another item: not the reference's
     assert reference_guide(data, load_target(R12, data)) is None  # R12's guide finishes: its cost is its route's own, given with --route
     assert reference_guide(data, target, root=tmp_path) is None  # no reference files there

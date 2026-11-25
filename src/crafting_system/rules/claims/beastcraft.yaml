@@ -7,7 +7,7 @@
 # where no source speaks.
 rules:
   - id: beastcraft.recipe_beasts
-    statement: "The beasts each single-item recipe consumes in 3.29, as a price-file name and a count; `any_rare_creature` counts the rare beasts of any kind (the Blood Altar takes four beasts per recipe, named red beasts first and any rare beast for the rest). `value` maps the recipe to its beasts. The aspect recipes list the beast of their aspect (Saqawal Avian, Farrul Cat, Craiceann Crab, Fenumus Spider); the level 30 version adds The Black Mórrígan and one rare beast fewer."
+    statement: "The beasts each single-item recipe consumes in 3.29, as a price-file name and a count; `any_rare_creature` counts the rare beasts of any kind (the Blood Altar takes four beasts per recipe, named red beasts first and any rare beast for the rest). `value` maps the recipe to its beasts. The aspect recipes list the beast of their aspect (Saqawal Avian, Farrul Cat, Craiceann Crab, Fenumus Spider); the level 30 version adds The Black Mórrígan and one rare beast fewer. The two imprint recipes (`imprint.beast_recipes`) take their named beast and three rare beasts of any kind, as poedb's recipe table shows (#1663)."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Beastcrafting#List_of_beast_recipes
     quote: "Modify Mods on an Item Add a Prefix, Remove a Random Suffix Only works on rare items 1x Farric Wolf Alpha"
@@ -27,6 +27,13 @@ rules:
       aspect_spider_30: {"Fenumus, First of the Night": 1, The Black Mórrígan: 1, any_rare_creature: 2}
       fracture_one_talisman: {Farric Frost Hellion Alpha: 1, any_rare_creature: 3}
       fracture_two_talisman: {Fenumal Plagued Arachnid: 1, The Black Mórrígan: 1, any_rare_creature: 2}
+      imprint_magic: {Craicic Croaker: 1, any_rare_creature: 3}
+      imprint_rare_talisman: {Fenumal Plagued Arachnid: 1, any_rare_creature: 3}
+    # The imprint rows (#1663): poedb's recipe table (https://poedb.tw/us/Bestiary_league, read 2026-11-25) shows "Create an Imprint: Of a
+    # Magic Item" as the Craicic Croaker and three blank rare-beast icons (AspectAll), "Of a Rare Talisman" as the Fenumal Plagued Arachnid
+    # and the same three, the shape of the Farric Wolf Alpha row; its older page (https://poedb.tw/us/Create_an_Imprint) says
+    # "Beast: 1x Craicic Chimeral + 3x any rare creature" and "each beastcrafting recipe requires four beasts to be sacrificed".
+    # Craft of Exile prices every recipe at its named beast alone (imprint, Wolf and Lynx alike), so it says nothing on the rare beasts.
 
   - id: beastcraft.default_beast_level
     statement: "The beast level of the side-swap beasts (Farric Wolf Alpha, Farric Lynx Alpha) when nothing names one: 83, a setting. Where a bought beast's level comes from is not documented, and poe.ninja prices a beast by name only."

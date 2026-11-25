@@ -24,9 +24,9 @@ RECORDED = " (the figure recorded for it: its steps as written do not finish on 
 
 
 def test_a_dearer_plan_says_so_and_how_many_times():
-    # R17's figures: the plan at the 1 h net against the guide's recorded figure
-    assert _guide_words(59_734.75, 33_140.41, recorded=True) == (
-        f" It costs 59,734.75 Chaos in all, 1.80 times the guide's route at 33,140.41 Chaos{RECORDED}: this plan is dearer than the guide's."
+    # R17's figures: the plan at the 1 h net against the guide's recorded figure (#1663: both with the imprint's three rare beasts)
+    assert _guide_words(61_076.85, 34_099.35, recorded=True) == (
+        f" It costs 61,076.85 Chaos in all, 1.79 times the guide's route at 34,099.35 Chaos{RECORDED}: this plan is dearer than the guide's."
     )
     assert _guide_words(1_500.0, 1_000.0) == " It costs 1,500.00 Chaos in all, 1.50 times the guide's route at 1,000.00 Chaos: this plan is dearer than the guide's."
 
@@ -89,4 +89,4 @@ def test_r17_records_the_guides_figure():
     from pathlib import Path
 
     text = (Path(__file__).resolve().parents[1] / "examples" / "routes" / "r17-lightning-talisman.yaml").read_text(encoding="utf-8")
-    assert "\nrecorded_cost: 33140.41\n" in text
+    assert "\nrecorded_cost: 34099.35\n" in text

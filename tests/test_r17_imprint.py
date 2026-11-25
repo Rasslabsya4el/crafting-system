@@ -67,8 +67,8 @@ def test_each_imprint_costs_its_beast_at_the_price_of_the_price_file(data, price
     imprints = {priced.offer.action.beast_name: priced for priced in plan.offers if isinstance(priced.offer.action, Imprint)}
     assert set(imprints) == {ARACHNID, CROAKER}  # the Croaker for a Magic Talisman, the Arachnid for a rare one (ADR-0034)
     for beast, priced in imprints.items():
-        assert priced.offer.resources == {beast: 1}
-        assert priced.cost == prices.prices[beast].chaos  # read from the file, never typed: it moves with the snapshot
+        assert priced.offer.resources == {beast: 1, "Chaos Orb": 3}  # and the three rare beasts of any kind the altar takes (#1663)
+        assert priced.cost == prices.prices[beast].chaos + 3  # read from the file, never typed: it moves with the snapshot
     (restore,) = [priced for priced in plan.offers if isinstance(priced.offer.action, Restore)]
     assert restore.offer.resources == {} and 0 < restore.cost < 1e-3 * min(priced.cost for priced in imprints.values())  # the imprint was paid when made
 
@@ -76,7 +76,7 @@ def test_each_imprint_costs_its_beast_at_the_price_of_the_price_file(data, price
 def test_another_beast_price_moves_the_imprint_cost_and_a_missing_beast_leaves_it_unpriced(data, target, prices):
     dearer = dataclasses.replace(prices, prices={**prices.prices, ARACHNID: dataclasses.replace(prices.prices[ARACHNID], chaos=1.0)})
     cheap = make_plan(data, target, dearer, solve_it=False, judges_route=True)
-    assert [priced.cost for priced in cheap.offers if priced.label == "Imprint with the Fenumal Plagued Arachnid"] == [1.0]
+    assert [priced.cost for priced in cheap.offers if priced.label == "Imprint with the Fenumal Plagued Arachnid"] == [4.0]  # 1 + 3 rare beasts
 
     without = dataclasses.replace(prices, prices={name: entry for name, entry in prices.prices.items() if name != ARACHNID})
     bare = make_plan(data, target, without, solve_it=False, judges_route=True)

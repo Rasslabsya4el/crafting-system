@@ -21,13 +21,13 @@ rules:
     date_checked: 2026-10-31
 
   - id: imprint.beast_recipes
-    statement: "Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0)."
-    source_kind: wiki
-    url: https://www.poewiki.net/wiki/Beastcrafting
-    quote: "Create an Imprint Of a Rare Talisman"
+    statement: "Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0). Each also takes three rare beasts of any kind, as every Blood Altar recipe takes four beasts (`beastcraft.recipe_beasts`, keys imprint_magic and imprint_rare_talisman, #1663). poedb's recipe table of the current game data shows each imprint row as its named beast (Croaker, Arachnid) and three blank rare-beast icons, the shape of the Farric Wolf Alpha row; poedb's page Create an Imprint (https://poedb.tw/us/Create_an_Imprint) says \"Beast: 1x Craicic Chimeral + 3x any rare creature\" (an older name of the magic beast) and \"each beastcrafting recipe requires four beasts to be sacrificed\". The wiki (https://www.poewiki.net/wiki/Beastcrafting, read 2026-10-31) lists the two recipes."
+    source_kind: datamined
+    url: https://poedb.tw/us/Bestiary_league
+    quote: "Create an Imprint: Of a Rare Talisman"
     value: {magic: Craicic Croaker, rare_talisman: Fenumal Plagued Arachnid}
     patch_verified: "3.29.3.3"
-    date_checked: 2026-10-31
+    date_checked: 2026-11-25
 
   - id: imprint.restores_state
     statement: Restoring reverts implicit and explicit mods, enchantments, quality amount and type, base defence values and Memory Strand count; influenced, synthesised and eldritch-implicit items are allowed.
