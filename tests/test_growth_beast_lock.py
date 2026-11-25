@@ -13,7 +13,7 @@ the goal adds the top Life prefix, `IncreasedLife3`. Every beta method is on (no
 * At `d` = 3.5 (the bench lock at 7): with the Matron at 1, `V = (18/5)(1 + 3 + 1)` = 18; with it at 30, the bench lock's
   `(18/5)(7 + 1)` = 28.8, below every plan without a lock (30.74).
 
-This toy holds the figures of the two locks through the entry; it does not witness the closure rule, since its rounds after the growth
+This toy holds the figures of the two locks through the entry; it does not witness the rule that names the Matron with the bench lock (#1665 J4: the other ways of making the same lock), since its rounds after the growth
 hold every method and main reaches the same plans. The rule is held by the table tests: `tests/test_growth.py` (the hand table and the
 growth's protector round) and the R24 test below.
 
@@ -95,7 +95,7 @@ def test_through_the_entry_the_cheaper_of_the_beast_and_the_bench_lock_is_paid_b
     assert SUFFIX_LOCK in _labels(dear) and MATRON not in _labels(dear)
 
 
-def test_on_r24_the_group_of_either_bench_lock_holds_the_matron_and_the_matron_brings_no_bench_lock():
+def test_on_r24_the_matron_is_another_way_of_making_the_suffix_lock():
     data = real_game_data()
     # every beta method, as the benchmark plans it (the suite reads this file with the methods it named before #405: `former_keys`)
     target = dataclasses.replace(load_target(ROOT / "examples" / "targets" / "r24-avoid-shock-boots.yaml", data), actions=None)
@@ -108,6 +108,9 @@ def test_on_r24_the_group_of_either_bench_lock_holds_the_matron_and_the_matron_b
     matron = table.entries[position[MATRON]]
     # the Matron draws which metamod it adds (so the protector rule, among the offers that draw nothing, never names it) and is cheaper
     assert matron.draws and matron.cost < table.entries[position[SUFFIX_LOCK]].cost
-    for lock in (SUFFIX_LOCK, PREFIX_LOCK):
-        assert {table.entries[each].label for each in table.closure({position[lock]})} == {lock, MATRON}
-    assert {table.entries[each].label for each in table.closure({position[MATRON]})} == {MATRON}
+    # on these boots, at the rare item holding the wanted suffixes, the Matron's draw can make the suffix lock: it is the same lock, named with
+    # the bench one; a closure brings no locker (#1665 J4)
+    table.held_back = frozenset()
+    suffixes = frozenset(leaf for leaf in range(len(goal.leaves)) if table.side_of(leaf) == "suffix")
+    assert position[MATRON] in table.lock_ways("suffix", frozenset(table.views), suffixes)
+    assert {table.entries[each].label for each in table.closure({position[SUFFIX_LOCK]})} == {SUFFIX_LOCK}

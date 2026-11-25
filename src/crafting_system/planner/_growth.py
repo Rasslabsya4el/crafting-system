@@ -76,14 +76,18 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   step are beaten (about 120 s), nothing more is named, and its lock group comes: 206,331.71 c within the hour.
 * **Dependencies** (`OfferTable.closure`): an offer that needs a veiled placeholder brings every offer that makes one and every other offer that
   needs one (a pick brings the Unveil, the veiled sources and the other picks); an offer that makes a placeholder brings those that need one;
-  a restore brings the imprints and an imprint the restores; and an offer that adds the lock of a side and draws nothing (the bench lock)
-  brings every offer that may add that lock and keeps the mods (`lockers`, #1513, hypothesis H35 of #1434). The protector rule names the
-  lock among the offers that draw no mod, so the Wild Bristle Matron, which draws which metamod it adds, was never named beside the bench
-  lock; yet where the item's state leaves it one metamod to add it puts on the same lock, and it may be the cheaper one: on R24's boots,
-  whose suffixes are full, the suffix lock is the one metamod with room (238 c against the bench's 353 c), and a plan that relocks at each
-  reroll of the prefixes pays it at each use. With the bench lock alone in the group, the plan paid the bench (2,541.56 c within the hour
-  against 2,184.44 c with the Matron beside it, proved within 1%). The search reads which metamod it adds at each state, so the group widens
-  and nothing is cut (OR-12).
+  a restore brings the imprints and an imprint the restores.
+  The other ways of making a lock (#1513, hypothesis H35 of #1434; #1665 J4). The protector rule names the lock among the offers that draw
+  no mod, so the Wild Bristle Matron, which draws which metamod it adds, was never named beside the bench lock; yet where the item's
+  state leaves it one metamod to add it puts on the same lock, and it may be the cheaper one: on R24's boots, whose suffixes are full, the
+  suffix lock is the one metamod with room (238 c against the bench's 353 c), and a plan that relocks at each reroll of the prefixes pays
+  it at each use (2,541.56 c within the hour with the bench lock alone, 2,184.44 c with the Matron beside it). So the protector names
+  with the bench lock of a side the lockers whose every outcome at the step's item (sampled: the shape's item with a mod of each wanted
+  mod at risk) is that same lock (`OfferTable.lock_ways`); a locker
+  whose draw may give another metamod there is another lock, and comes only where a step names that lock itself (a lock group names every
+  locker, `lock_roles`). Until #1665 the closure brought every locker of a side with its bench lock: on R17, whose step names the prefix
+  lock where the Matron makes the suffix lock, the Matron's states were 29.7% of the new keys of the guide set's probe, which then did not
+  build within the memory net (the probe's log `.claude/scratch/t1389c/full/run.log`; R24's figures #1513). The search reads which metamod it adds at each state, so nothing is cut (OR-12).
 * **The next round** holds the support of the plan in hand (the offers its policy uses), the run's named offers, the named roles and their
   dependencies; never the union of the earlier rounds. A set held by an earlier round names nothing new: the step is marked diagnosed and the
   next dearest is read. When no step names anything new the growth ends, and the rounds of `_rounds.widen` follow with the plan's support as
@@ -93,8 +97,9 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   by a held copy, so a round that holds it with the rest is a model of every pairing, which on R14 and R04 stopped the build of the round
   that first held the Exalted Orb with its narrower (#1423's hand probe: the guide's own set built in 12 s and 37 s, the same set with one
   such method stopped before a first bound). The class is read from the offer (`Entry.fans`), never from a list of names: it makes,
-  replaces or restores an imprint (`Action.imprint_move`); or it is an addition one of whose outcomes at a shape's item lacks a mod the item
-  held that was not fractured (it removes a random mod as it adds one: the Beastcraft side swaps, Harvest's add-remove crafts); or the draw
+  replaces or restores an imprint (`Action.imprint_move`); or it is an addition one of whose outcomes at a shape's item, or at that item
+  with a mod on each side (#1665 J2: a swap that takes a prefix off removes nothing from R17's rare item, which holds a suffix alone), lacks
+  a mod the item held that was not fractured (it removes a random mod as it adds one: the Beastcraft side swaps, Harvest's add-remove crafts); or the draw
   it declares there (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own: the side swaps'
   draw at the beast's level; the beast recipe that adds a mod to an influenced item drew the influence's mods alone until #1538 and now
   draws the item's own pool, as an Exalted Orb). The roles are read as before with these offers held out (the
@@ -230,6 +235,8 @@ class OfferTable:
     _finished: tuple | None = None  # `finished`, read once
     rebuy: float | None = None  # what buying the start item again costs; None when it is not bought (no reset closure)
     _reset: dict[frozenset[int], frozenset[int]] | None = None  # `reset_closure`, read once for each set of offers held back
+    _ways: dict | None = None  # (side, shape, leaves, held back) -> `lock_ways` there, read once each
+    _sided: dict | None = None  # id of a shape's item -> (that item, it with a mod on each side: `_both_sides`), read once each
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
                  ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None, rebuy: float | None = None) -> None:  # fmt: skip
@@ -346,14 +353,20 @@ class OfferTable:
 
     def _fans_at(self, action, view: Item) -> str:
         """Why an addition at `view`'s shape fans out over two random choices (module text, the later group), or "": one of its outcomes at
-        `view` lacks a mod `view` held that was not fractured (it removes a random mod as it adds one), or the draw it declares there
-        (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own)."""
+        `view`, or at `view`'s item holding a mod on each side (`_both_sides`), lacks a mod that item held that was not fractured (it removes
+        a random mod as it adds one), or the draw it declares at `view` (`Action.added_draw`) is over other mods than the item's own pool on
+        the same sides (a pool of its own). An offer that removes a mod of one side only removes nothing at an item that holds none there:
+        read at the one item a shape gives, which may hold a suffix alone, Beastcraft Add Suffix Remove Prefix escaped the class on R17
+        while its mirror was in it (#1665 J2)."""
         data = self.data
-        held = {entry.mod_id for entry in view.mods if not entry.fractured}
-        try:
-            results = getattr(action.outcomes(data, view), "results", None) if held else None
-            if results and any(held - {entry.mod_id for entry in after.mods} for _chance, after in results):
+        if self._sided is None:
+            self._sided = {}
+        if id(view) not in self._sided:  # read once for each shape's item
+            self._sided[id(view)] = (view, self._both_sides(view))
+        for item in (view, self._sided[id(view)][1]):
+            if item is not None and self._removes_at(action, item):
                 return REMOVES_AND_ADDS
+        try:
             draw = action.added_draw(data, view)
             if draw is None:
                 return ""
@@ -362,6 +375,43 @@ class OfferTable:
             return OWN_POOL if own != self.pool_ids(view, sides) else ""
         except (NotApplicableError, OutOfScopeError, ValueError):  # refused or out of the model's scope at this shape: nothing read here
             return ""
+
+    def _removes_at(self, action, item: Item) -> bool:
+        """Whether one of the outcomes of `action` at `item` lacks a mod `item` held that was not fractured; False where it is refused. The
+        outcomes are read as they are given: finished items (`results`), or the items each part keeps before its draw (`retained`, of
+        each of a mixture's `components`: a beast side swap is one part for each mod it may take off)."""
+        held = {entry.mod_id for entry in item.mods if not entry.fractured}
+        if not held:
+            return False
+        try:
+            outcomes = action.outcomes(self.data, item)
+        except (NotApplicableError, OutOfScopeError, ValueError):  # refused or out of the model's scope at this item: no removal read
+            return False
+        results = getattr(outcomes, "results", None)
+        if results:
+            kept = [after for _chance, after in results]
+        else:
+            parts = getattr(outcomes, "components", None)
+            kept = [part.retained for _chance, part in parts] if parts else [getattr(outcomes, "retained", None)]
+        return any(after is not None and held - {entry.mod_id for entry in after.mods} for after in kept)
+
+    def _both_sides(self, view: Item) -> Item | None:
+        """`view`'s item with a mod that is not fractured on each side (#1665 J2): a side that holds none gets the first mod of the item's
+        own pool on that side that fits (its lowest values); None when `view` holds one on each side already, or a side has room for
+        none, or the item cannot be made."""
+        data = self.data
+        item = view
+        try:
+            for side in (Side.PREFIX, Side.SUFFIX):
+                if any(entry.mod_id in data.mods and data.mods[entry.mod_id].generation_type == side.value and not entry.fractured for entry in item.mods):
+                    continue
+                mod = next((each.mod for family in build_pool(data, item) if family.side == side for each in family.mods if item.can_add(data, each.mod)), None)
+                if mod is None:
+                    return None
+                item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.min for stat in mod.stats)))
+        except (NotApplicableError, OutOfScopeError, ValueError):  # no such item at this shape: nothing more is read
+            return None
+        return None if item is view else item
 
     def pool_ids(self, view: Item, sides) -> set[str]:
         """The mods of the item's own pool on `sides` at `view`'s shape (its fractured mods and nothing else)."""
@@ -497,7 +547,8 @@ class OfferTable:
             if side is not None and wait_sides != {side}:
                 lock = self.cheapest(lambda entry, side=side: not entry.draws and any(getattr(each, "value", each) == side for each in entry.locks))
                 if lock is not None:
-                    named.add(lock)
+                    named.add(lock)  # with the other ways of making that same lock where the step acts (#1665 J4)
+                    named |= self.lock_ways(side, shapes, frozenset(risks))
             imprint = self.cheapest(lambda entry: entry.makes_imprint and not entry.draws and any(shape in entry.leads for shape in shapes))
             if imprint is not None:
                 named.add(imprint)
@@ -532,6 +583,61 @@ class OfferTable:
             if entry.position not in self.held_back and REROLL not in entry.kinds.values() and any(getattr(each, "value", each) == side for each in entry.locks)
         ]  # fmt: skip
 
+    def lock_ways(self, side: str, shapes, leaves: frozenset[int]) -> set[int]:
+        """The other ways of making the lock of `side` (#1665 J4): the lockers of that side that draw which metamod they add (the Wild Bristle
+        Matron), named only beside the bench lock of that side the protector names, each where every one of its outcomes at the sampled
+        item of one of `shapes` (its fractured mods and a mod of each wanted mod of
+        `leaves`, the mods the step holds and can lose, on either side) holds that very lock: there it is the same lock, made otherwise, and the search picks
+        between them by price. On R24's boots, whose suffixes the wanted mods fill, the suffix lock is the one metamod with room (#1513).
+        Where its draw may give another metamod (on R17's Talisman with its prefixes full the Matron makes the suffix lock or a suffix
+        metamod, never the prefix lock the step names) it is another lock: it comes only where a step names that lock itself. Read once each."""
+        if self._ways is None:
+            self._ways = {}
+        found: set[int] = set()
+        for shape in sorted(shapes, key=str):
+            key = (side, shape, leaves, self.held_back)
+            if key not in self._ways:
+                self._ways[key] = self._read_lock_ways(side, shape, leaves)
+            found |= self._ways[key]
+        return found
+
+    def _read_lock_ways(self, side: str, shape: Rarity, leaves: frozenset[int]) -> frozenset[int]:
+        data, view = self.data, self.views.get(shape)
+        drawing = [position for position in self.lockers(side) if self.entries[position].draws]
+        if view is None or not drawing:
+            return frozenset()
+        try:
+            item = view.changed(data, mods=tuple(entry for entry in view.mods if entry.fractured))
+        except (NotApplicableError, OutOfScopeError, ValueError):  # the item cannot be made: no other way is read there
+            return frozenset()
+        for each in sorted(leaves):
+            for mod_id in sorted(self.goal.leaves[each].tier_ok or self.goal.leaves[each].mod_ids):
+                mod = data.mods.get(mod_id)
+                if mod is None or mod.generation_type not in _SIDES or not item.can_add(data, mod):
+                    continue
+                try:
+                    item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.max for stat in mod.stats)))
+                    break
+                except (NotApplicableError, OutOfScopeError, ValueError):  # a mod the item cannot hold as rolled (a crafted one): the next
+                    continue
+        found = set()
+        for position in drawing:
+            try:
+                results = getattr(self.actions[position].outcomes(data, item), "results", None) or ()
+            except (NotApplicableError, OutOfScopeError, ValueError):  # refused at that item
+                continue
+            if results and all(self._holds_lock(after, side) for _chance, after in results):
+                found.add(position)
+        return frozenset(found)
+
+    def _holds_lock(self, item: Item, side: str) -> bool:
+        """Whether `item` holds the metamod that locks `side`."""
+        mods = self.data.mods
+        return any(
+            getattr(_LOCKS.get(family), "value", _LOCKS.get(family)) == side
+            for entry in item.mods if entry.mod_id in mods for family in mods[entry.mod_id].families
+        )  # fmt: skip
+
     def lock_roles(self, waits: set[int], shapes: frozenset[Rarity], held: frozenset[int]) -> set[int]:
         """The locks and the rerolls under them for a step that waits for wanted mods on both sides (module text, #1420): for each side,
         every offer that adds its lock (`lockers`), and for each waited mod the `PER_ROLE` rerolls of least cost over chance at the item
@@ -551,7 +657,7 @@ class OfferTable:
                     ranked = [position for _ratio, position in self.under_lock(side, shape, leaf, other) if position not in held]
                     rerolls.update(ranked[:PER_ROLE])
             if rerolls:  # a lock pays only with a reroll under it: with none ranked there the side names nothing
-                named.update(lockers)
+                named.update(lockers)  # a step that names its locks itself: every way of making them (#1665 J4 leaves it so)
                 named |= rerolls
         return named
 
@@ -687,8 +793,8 @@ class OfferTable:
         return {min(found)[1]} if found else set()
 
     def closure(self, positions: set[int]) -> set[int]:
-        """`positions` with what each needs to act, and the lockers of each side a bench lock among them locks (module text, dependencies);
-        a group that holds anything also holds the reset closure (module text)."""
+        """`positions` with what each needs to act (module text, dependencies); a group that holds anything also holds the reset closure
+        (module text). The other ways of making a lock are named with it where a step names it (`lock_ways`, #1665 J4), not here."""
         found = set(positions) | (set(self.reset_closure()) if positions else set())
         while True:
             more = set()
@@ -697,8 +803,6 @@ class OfferTable:
                 more.update(entry.position for entry in self.entries if entry.needs_veiled or (entry.veils and any(each.needs_veiled for each in chosen)))
             if any(entry.restores or entry.makes_imprint for entry in chosen):
                 more.update(entry.position for entry in self.entries if entry.restores or entry.makes_imprint)
-            for side in sorted({getattr(side, "value", side) for entry in chosen if not entry.draws for side in entry.locks}):
-                more.update(self.lockers(side))  # where the bench lock of a side is, every offer that may put that lock on is (#1513)
             if more <= found:
                 return found
             found |= more
