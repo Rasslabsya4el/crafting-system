@@ -45,7 +45,7 @@ def test_the_rare_beasts_of_a_beast_recipe_are_named_where_their_chaos_orbs_are(
     lines = _View.cost_lines(view, policy_action(1))
     assert lines == [
         "1 × Wild Bristle Matron 235 c",
-        "3 × rare beast of any kind 3 c, paid as 3 × Chaos Orb: approximate, a fixed price the planner sets: no price list holds them, and no supply is known",
+        "3 × rare beast of any kind 3 c: approximate, a fixed price the planner sets: no price list holds them, and no supply is known",
         "total 238 c",
     ]
 

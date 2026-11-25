@@ -200,7 +200,7 @@ def expected_uses(chain: Chain, labels) -> dict[str, float]:
 def use_line(use: PriceUse) -> str:
     """One price as a person reads it: "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07; approximate: price on 3.3 units"."""
     if use.paid_as is not None:  # goods no price list holds (#1597): the fixed price, what they are paid as, no supply known
-        line = f"{use.name}: {chaos_text(use.chaos)} Chaos each, paid as {use.paid_as}s, {use.source}, {NO_SUPPLY}"
+        line = f"{use.name}: {chaos_text(use.chaos)} Chaos each, {use.source}, {NO_SUPPLY}"
         if use.uses is not None:
             line += f", the plan buys about {units_text(use.uses)}"
         return line + "; approximate: " + "; ".join(mark.reason for mark in use.marks)

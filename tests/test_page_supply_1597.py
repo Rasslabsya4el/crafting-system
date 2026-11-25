@@ -66,12 +66,12 @@ def test_rare_beasts_of_any_kind_are_named_as_beasts_and_their_price_as_a_stand_
     swap = BeastSideSwap(Side.PREFIX)
     priced = priced_of(swap, [("Farric Wolf Alpha", 1, 2.0, "poe.ninja"), ("Chaos Orb", 3, 3.0, "a setting")])
     lines = priced_lines(DATA, priced, {}, 316.0)
-    assert lines[1].startswith("3 × rare beast of any kind 3 c, paid as 3 × Chaos Orb: approximate, a fixed price the planner sets")
+    assert lines[1].startswith("3 × rare beast of any kind 3 c: approximate, a fixed price the planner sets")
     assert lines[1].endswith("and no supply is known")
     assert all("Chaos Orb 3 c" not in line for line in lines)
     stand_in = PriceUse("rare beast of any kind", 1.0, "a fixed price the planner sets: no price list holds them", None, 947.3, (), paid_as="Chaos Orb")
     assert use_line(stand_in).startswith(
-        "rare beast of any kind: 1 Chaos each, paid as Chaos Orbs, a fixed price the planner sets: no price list holds them, no supply known, "
+        "rare beast of any kind: 1 Chaos each, a fixed price the planner sets: no price list holds them, no supply known, "
         "the plan buys about 947"
     )
     assert ChaosOrb().stand_ins(DATA) == {}
@@ -89,8 +89,8 @@ def test_conditions_read_one_way():
     life = _Column("with", "Life T1", (1, 0))
     gems = _Column("without", "+1 Gems T1", (2, 0))
     light = _Column("without", "+1 Lightning T1", (2, 1))
-    assert _words([gems, light]) == "without +1 Gems T1 or +1 Lightning T1"  # neither, not "without A; B"
-    assert _words([light, life, rare, gems]) == "a rare item with Life T1 and without +1 Gems T1 or +1 Lightning T1"
+    assert _words([gems, light]) == "without +1 Gems T1 and without +1 Lightning T1"  # neither, read one way
+    assert _words([light, life, rare, gems]) == "a rare item with Life T1 and without +1 Gems T1 and without +1 Lightning T1"
     assert "," not in _words([rare, life, gems])  # the ", or " between kinds of item is the only comma
 
 

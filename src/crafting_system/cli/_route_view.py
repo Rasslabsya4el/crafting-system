@@ -534,13 +534,13 @@ def _kinds(table: _Table, on_mine: np.ndarray, on_others: np.ndarray, rest: np.n
 def _words(columns: list[_Column]) -> str:
     """Conditions in words: those alone first, then "with ...", then "without ..." ("a rare item with Life T1 and without an unwanted prefix").
 
-    No comma inside one item's conditions, so that the ", or " between the kinds of `_kinds` parts them, and "without A or B" is an item
-    that holds neither (the crafter read "without A; B" two ways, #1597)."""
+    No comma inside one item's conditions, so that the ", or " between the kinds of `_kinds` parts them, and "without A and without B" is an
+    item that holds neither (the crafter read "without A; B" and "without A or B" two ways, #1597)."""
     ordered = sorted(columns, key=lambda column: column.order)
     signed = []
-    for sign, joiner in (("with", " and "), ("without", " or ")):
+    for sign in ("with", "without"):
         if nouns := [column.noun for column in ordered if column.sign == sign]:
-            signed.append(f"{sign} {joiner.join(nouns)}")
+            signed.append(f"{sign} {f' and {sign} '.join(nouns) if sign == 'without' else ' and '.join(nouns)}")
     return " ".join(part for part in (" ".join(column.noun for column in ordered if column.sign == ""), " and ".join(signed)) if part)
 
 
@@ -1016,7 +1016,7 @@ class _View:
         if self.reader.tracked:
             mods = sorted({len(state.fractured) + len(state.slots) for state in landing})
             if len(mods) > 1:
-                lines.append(f"the item comes out with {', '.join(map(str, mods[:-1]))} or {mods[-1]} mods")  # the result's, not the item it takes (#1597)
+                lines.append(f"after it the item holds {', '.join(map(str, mods[:-1]))} or {mods[-1]} mods")  # the result's, not the item it takes (#1597)
         if any(slot.tone == "any" for slot in (*after.prefixes, *after.suffixes)):
             lines.append("other mods: any")
         return lines
@@ -1495,7 +1495,7 @@ class _View:
                 break
             mod = max(always, key=lambda name: math.fsum(offer[0] for offer in left if offer[2] == name))
             share = math.fsum(offer[0] for offer in left if offer[2] == mod)
-            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: taken on {chance_text(share / whole)} of unveils")
+            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: taken on {chance_text(share / whole)} of unveils; it goes on to {mostly.get(mod, 'another step')}")
             left = [offer for offer in left if offer[2] != mod]
         if left:  # no order holds for the rest: they are said by where the item goes on to after them (#1644)
             shares: dict[str, float] = {}
@@ -1512,7 +1512,7 @@ class _View:
                     continue
                 for mod in mods:
                     alone = all(not set(shown) & set(free) for _, shown, taken in left if taken == mod)  # taken only when none of the rest is shown
-                    when = "only when the window shows none of the mods below" if alone else "by what else is shown"
+                    when = "only when the window shows none of the mods below" if alone else "over the mods below on some offers"
                     lines.append(f"{'else ' if lines else ''}{mod}: taken {when}, on {chance_text(shares[mod] / whole)} of unveils; it goes on to {place}")
             share = chance_text(math.fsum(shares[mod] for mod in free) / whole)
             each = f"each goes on to {main}, so which of them is taken is a free choice" if len(free) > 1 and main != "several steps" else f"it goes on to {main}"
@@ -1734,7 +1734,7 @@ def priced_lines(data: GameData, priced, supply: Mapping[str, PriceUse] | None =
         if stand_in is None:
             lines.append(f"{count_} × {name} {money(chaos)}")
             continue
-        lines.append(f"{stand_in.count} × {stand_in.goods} {money(chaos)}, paid as {count_} × {name}: approximate, {stand_in.why}, and no supply is known")
+        lines.append(f"{stand_in.count} × {stand_in.goods} {money(chaos)}: approximate, {stand_in.why}, and no supply is known")
     if len(priced.parts) > 1:
         lines.append(f"total {money(priced.cost)}")
     lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark

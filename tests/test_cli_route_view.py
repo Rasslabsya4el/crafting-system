@@ -455,8 +455,8 @@ def test_a_craft_step_with_several_outcomes_says_what_it_accepts_and_a_sure_one_
 
     essence, chaos = branch.rows[1], branch.rows[2]
     assert labels_of(essence)[:3] == ["Goal", "Accepts", "Chance per use"]  # between the goal and the chances
-    assert lines_of(essence, "Accepts") == ["the item comes out with 4 or 5 mods", "other mods: any"]
-    assert lines_of(chaos, "Accepts") == ["the item comes out with 4 or 5 mods", "other mods: any"]
+    assert lines_of(essence, "Accepts") == ["after it the item holds 4 or 5 mods", "other mods: any"]
+    assert lines_of(chaos, "Accepts") == ["after it the item holds 4 or 5 mods", "other mods: any"]
     assert all("Accepts" not in labels_of(row) for row in bench.rows[1:])  # a bench craft has one outcome
 
 
