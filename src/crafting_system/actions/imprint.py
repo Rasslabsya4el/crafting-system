@@ -3,7 +3,8 @@
 An imprint stores the state of one item and restores it later; the Eternal Orb that made it has not dropped since 2.0.0, so the planner
 offers the two beast recipes of 3.29 only (`imprint.beast_recipes`): the **Craicic Croaker** makes an imprint of a **magic** item, the
 **Fenumal Plagued Arachnid** one of a **rare Talisman**; a rare item that is not a Talisman cannot be imprinted. The beast is priced from
-the price file, once per imprint made. The item holds its imprints (`Item.imprints`): each is the whole item as it was, with no imprint of
+the price file, once per imprint made, with the three rare beasts of any kind the altar also takes (`beastcraft.recipe_beasts`, #1663),
+paid as Chaos Orbs at the setting `rare_creature_price` and shown on the page as stand-ins (`RareBeastFee`, #1518, #1652). The item holds its imprints (`Item.imprints`): each is the whole item as it was, with no imprint of
 its own, and they are kept in the order they were made.
 
 * **`Imprint(beast, limit, replaces)`.** Adds the item as it stands to the imprints it holds, and changes nothing else. At most `limit`
@@ -50,6 +51,7 @@ from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity
 from crafting_system.rules import get_rule
 
+from .beasts import RECIPE_BEASTS, ANY_RARE_CREATURE_PRICE, RareBeastFee, recipe_resources
 from .catalog import kind
 from .contract import Action, Adds, ImprintMove, Reads
 from .draw import jewel_class
@@ -74,6 +76,12 @@ CROAKER, ARACHNID = "magic", "rare_talisman"  # the keys of `imprint.beast_recip
 TALISMAN_TAG = "talisman"  # the tag of the Talisman bases (bases of the amulet class)
 
 
+IMPRINT_RECIPES = {CROAKER: "imprint_magic", ARACHNID: "imprint_rare_talisman"}  # the keys of `beastcraft.recipe_beasts` (#1663)
+for _beast, _recipe in IMPRINT_RECIPES.items():  # the two claims name the same beast
+    if RECIPE_BEASTS.value[_recipe].get(BEAST_RECIPES.value[_beast]) != 1:
+        raise ValueError(f"beastcraft.recipe_beasts {_recipe} does not take the {BEAST_RECIPES.value[_beast]} of imprint.beast_recipes")
+
+
 def _is_talisman(data: GameData, item: Item) -> bool:
     base = data.base_items.get(item.base_id)
     return base is not None and TALISMAN_TAG in base.tags
@@ -95,16 +103,17 @@ def _of(item: Item) -> Item:
 
 
 @dataclass(frozen=True)
-class Imprint(Action):
+class Imprint(RareBeastFee, Action):
     """One imprint of the item in hand, made by a beast: `beast` is `"magic"` (Craicic Croaker) or `"rare_talisman"` (Fenumal Plagued Arachnid).
 
     `limit` is the most imprints an item holds; `replaces` is None to add an imprint to an item with room, or the index of the imprint a
-    full item gives up for the new one.
+    full item gives up for the new one. The recipe also takes three rare beasts of any kind, paid at `rare_creature_price` Chaos each.
     """
 
     beast: str
     limit: int = DEFAULT_MAX_IMPRINTS
     replaces: int | None = None
+    rare_creature_price: int = ANY_RARE_CREATURE_PRICE.value
 
     def __post_init__(self) -> None:
         if self.beast not in BEAST_RECIPES.value:
@@ -124,7 +133,7 @@ class Imprint(Action):
         return text if self.replaces is None else f"{text}, replacing imprint {self.replaces + 1}"
 
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
-        return {self.beast_name: 1}
+        return recipe_resources(IMPRINT_RECIPES[self.beast], self.rare_creature_price)
 
     def reads(self, data: GameData) -> Reads:
         # The result keeps every mod and depends on none of their families; it does depend on the imprints held (the cap).
@@ -137,7 +146,7 @@ class Imprint(Action):
         return Adds(named=frozenset(), draws=False, imprints=True)
 
     def claims(self, data: GameData | None = None) -> frozenset[str]:
-        return frozenset({BEAST_RECIPES.id, RESTORES_STATE.id, REFUSED_ON_FRACTURED.id, REFUSED_ON_CORRUPTED.id, SEVERAL_PER_ITEM.id})
+        return frozenset({BEAST_RECIPES.id, RECIPE_BEASTS.id, RESTORES_STATE.id, REFUSED_ON_FRACTURED.id, REFUSED_ON_CORRUPTED.id, SEVERAL_PER_ITEM.id})
 
     def outcomes(self, data: GameData, item: Item) -> Finite:
         """The item as it is, with a new imprint of it; `NotApplicableError` where the game or the cap refuses (see the module)."""

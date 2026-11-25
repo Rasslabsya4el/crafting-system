@@ -21,7 +21,7 @@ rules:
     date_checked: 2026-10-31
 
   - id: imprint.beast_recipes
-    statement: "Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0)."
+    statement: "Two beast recipes make an imprint: of a magic item (Craicic Croaker) and of a rare Talisman (Fenumal Plagued Arachnid, since 3.29.0). Each also takes three rare beasts of any kind, as every Blood Altar recipe takes four beasts (`beastcraft.recipe_beasts`, keys imprint_magic and imprint_rare_talisman; poedb's recipe table, #1663)."
     source_kind: wiki
     url: https://www.poewiki.net/wiki/Beastcrafting
     quote: "Create an Imprint Of a Rare Talisman"
