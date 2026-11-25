@@ -334,6 +334,7 @@ def test_golden_r12_with_a_given_route_that_is_the_same_draws_one_section(tmp_pa
 def test_golden_a_given_route_that_differs_is_a_second_section_with_its_differing_steps(two_leaf_plan):
     policy = build_section(route_input(two_leaf_plan), DATA, anchor="policy")
     drawn = build_section(given(two_leaf_plan, RESTART_ROUTE), DATA, prefix="g-", anchor="given", route_field=False)
+    policy = with_block(policy, against_guide(policy.rows, drawn.rows))  # as `route_page` puts it under the proof sentence (#1584)
 
     html = render_page(Page("Test page", merge_sections(policy, drawn, "Restart on a lone gem")))
 
