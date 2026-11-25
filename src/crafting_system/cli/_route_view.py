@@ -85,7 +85,7 @@ from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS
 
 from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
-from crafting_system.prices.price_marks import price_marks, provenance_of, units_text
+from crafting_system.prices.price_marks import provenance_of, units_text
 from crafting_system.prices.price_file import DIVINE_ORB
 
 from ._price_marks import RATE_WORDS, PriceUse, price_uses, supply_words, use_line
@@ -1905,13 +1905,11 @@ class _View:
             return []
         prices = self.plan.prices
         entry = prices.prices.get(DIVINE_ORB)
-        if entry is None:  # the file's rate, as `price_uses` lists a Divine Orb it holds no row for
+        provenance = None if entry is None else provenance_of(entry, prices)
+        if provenance is None or provenance.depth is None:  # the file's rate, as `price_uses` lists a Divine Orb it holds no recorded row for
             use = PriceUse(DIVINE_ORB, prices.chaos_per_divine, f"{RATE_WORDS}, {prices.league}, {prices.fetched_at:%Y-%m-%d}", None, None, ())
-        else:  # its row, with its source, depth and marks as any price of the list (OR-7)
-            provenance = provenance_of(entry, prices)
-            source = "no source recorded" if provenance is None else provenance.words
-            depth = None if provenance is None else provenance.depth
-            use = PriceUse(DIVINE_ORB, prices.chaos_per_divine, source, depth, None, price_marks(entry, prices, 1.0), None, supply_words(provenance))
+        else:  # its row's source and depth; no step buys one, so no mark of a purchase applies (the rate only converts the page's figures)
+            use = PriceUse(DIVINE_ORB, prices.chaos_per_divine, provenance.words, provenance.depth, None, (), None, supply_words(provenance))
         return [f"{use_line(use)}; the Divine figures of this page are at this rate"]
 
     def goal_card(self) -> GoalCard:

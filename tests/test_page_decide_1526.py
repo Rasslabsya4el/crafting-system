@@ -150,3 +150,17 @@ def test_the_goal_card_says_the_divine_rate_and_the_implicit_the_target_does_not
     if base.implicits:
         (said,) = view.implicit_lines()
         assert said.startswith("not asked: the base's own implicit (")
+
+
+def test_items_no_three_conditions_part_get_rows_of_their_own_and_are_never_sent_elsewhere():
+    """Sixteen items told by four facts (with and without each), sent by the parity of the facts held: every conjunction of three conditions
+    holds on two items of different places, so no short row is pure and each item is said by its every fact (the learner once gave what was
+    left to the heaviest place, which sent R17's kept +1 Gems to the Restore)."""
+    bits = np.array([[(i >> b) & 1 for i in range(16)] for b in range(4)], dtype=bool)
+    tests = np.concatenate((bits, ~bits))
+    labels = bits.sum(axis=0) % 2
+    mass = np.linspace(1.0, 2.0, 16)
+
+    rows = decision_list(tests, labels, mass)
+
+    assert all(first_place(rows, tests, i) == labels[i] for i in range(labels.size))

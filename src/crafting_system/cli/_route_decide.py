@@ -62,10 +62,16 @@ def _learn(tests: np.ndarray, labels: np.ndarray, mass: np.ndarray, by_mass: boo
             found = _best_row(tests, labels, mass, left, by_mass, skip=last)
         if found is None:
             found = _best_row(tests, labels, mass, left, by_mass)
-        if found is None:  # no row parts what is left (the caller's labels promise it never happens): the heaviest label takes the rest
-            heaviest = max(open_labels.tolist(), key=lambda label: float(mass[left & (labels == label)].sum()))
-            rows.append((None, int(heaviest)))
-            break
+        if found is None:  # no row of `MOST_CONDITIONS` parts what is left: the heaviest item by every condition that holds on it (exact,
+            # as H63's learner isolates a key by its full row: the columns hold "with" and "without" of each fact, so they name the item)
+            j = max(np.flatnonzero(left).tolist(), key=lambda i: float(mass[i]))
+            conditions = tuple(c for c in range(tests.shape[0]) if tests[c, j] and (left & ~tests[c]).any())
+            covered = left.copy()
+            for c in conditions:
+                covered &= tests[c]
+            rows.append((conditions, int(labels[j])))
+            left &= ~covered
+            continue
         conditions, label, covered = found
         rows.append((conditions, label))
         left &= ~covered
