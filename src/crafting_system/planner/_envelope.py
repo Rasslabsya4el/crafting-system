@@ -147,7 +147,7 @@ import math
 import numbers
 import time
 from collections.abc import Callable, Hashable, Iterable, Iterator, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Protocol
 
 import numpy as np
@@ -273,6 +273,14 @@ class Net:
     # (seconds, states) set by `_envelope_plan` for such a round once its build ended before it was complete: the search gives way once it has
     # used them with no plan in hand (`YIELDED`); either None when the net has no such figure
     yield_at: tuple[float | None, int | None] | None = None
+    # (seconds, states, gap) a search with a plan in hand (held or walked, `_plan.search_net`, #1641) may go on past `seconds` and `states`
+    # while it is still lowering its own plan: from each standing on, the search's net is its share plus these when the plan it holds there
+    # is below the one of the standing before by more than `gap` (the run's gap, OR-39; its first plan counts as lowered from none), and its
+    # share alone when not, so a search whose last round lowered nothing stops at its share as before. The room is the one a nearly done build
+    # has (`late`: one more share at most, and at most half of what the rounds after it have), so the run keeps its net (OR-40). Without it a
+    # second of noise decided whether a round finished the search round that made its cheap plan: R09 119.01 c or 214.86 c, R08 174.84 c or
+    # 278.26 c at the ten-minute net, the round's search cut in its third round or just after it. None: the share holds (no plan in hand)
+    beyond: tuple[float | None, int | None, float] | None = None
 
 
 YIELDED = (
@@ -620,6 +628,8 @@ class Search[S]:
             raise ValueError(f"the gap of the stop is a share, zero or more (0.01 is 1%); got {gap!r}")
         self.p = problem
         self.net = net or Net()
+        self.share = self.net  # the net of the search's share; `self.net` is it, or it widened by `Net.beyond` while the plan falls (`_stand`, #1641)
+        self.stood: float | None = None  # the plan held at the last standing (`_stand`), None before one holds a plan
         self.began: float | None = None  # when `run` began: the net asked inside the making of a kernel reads its seconds from there (#1238)
         self.gap = gap  # OR-32: stop when the plan is proved to cost at most this share more than the cheapest; 0 is the exact search
         self.gap_after = gap_after  # the seconds of `run` after which the stop at the gap applies (0: from the first round); None: never
@@ -1298,8 +1308,34 @@ class Search[S]:
     def _stand(self, lower: float, began: float) -> None:
         """Record where the search stands and tell the watcher."""
         self.standing = Standing(lower, self.upper, self.stats.rounds, time.perf_counter() - began, len(self.states))
+        self._lowering()
         if self.watch is not None:
             self.watch(self.standing)
+
+    def _lowering(self) -> None:
+        """The net from this standing to the next (`Net.beyond`, #1641): the share widened by `beyond` when the plan held now is below the one
+        held at the standing before by more than the run's gap (the first plan counts as lowered from none), the share alone when not. Read
+        at each standing, so the search never goes past its share on a round that lowered nothing, nor past the share and `beyond` at all."""
+        share, upper = self.share, self.upper
+        if share.beyond is None:
+            return
+        seconds, states, gap = share.beyond
+        held = upper if upper is not None and math.isfinite(upper) else None
+        fell = held is not None and (self.stood is None or held < self.stood * (1.0 - gap))
+        if held is not None:
+            self.stood = held if self.stood is None else min(self.stood, held)
+        wide = fell and (seconds or states)
+        net = (
+            replace(
+                share, seconds=None if share.seconds is None else share.seconds + (seconds or 0.0),
+                states=None if share.states is None else share.states + (states or 0), beyond=None,
+            )
+            if wide else share
+        )  # fmt: skip
+        if wide and self.net is share:
+            room = ", ".join(part for part in (f"{seconds:g} seconds" if seconds else "", f"{states:,} states" if states else "") if part)
+            self.say(f"  its plan fell by more than the gap of {gap:.2%} this round: the search may go on past its share, by at most {room}")
+        self.net = net
 
     # ---- the rounds ---------------------------------------------------------------------------------------------
 

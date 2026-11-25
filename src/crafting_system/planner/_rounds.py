@@ -55,6 +55,12 @@ offer on every state, and on a route whose plan takes seconds it can meet the ne
   model and has not grown yet stops at the quarter (a build of one model keeps the whole share) (R13's round 2, #1142: its first model held 49 of 51 offers, the model adding the rest never
   ended, and with the whole share its search had none). A plan a stopped search walked to (#1142, `walked`) is in hand like any other. On R11's site plan every plan in hand was walked, and every
   round's build was cut at its quarter: the Exalted round's at 7 of its 27 s, on a pace that ends at about 38 s.
+  The search of a round with a plan in hand, a growth round's included, goes past its share while its plan still falls (`_envelope.Net.beyond`,
+  #1641): from each of its standings on, when the plan it holds is below the one of the standing before by more than the run's gap, it may
+  go on by the room a nearly done build has (one more share at most, and at most half of what the rounds after it have); when its last round
+  lowered nothing it stops at its share as before. The share alone put the plan on a second of noise: R08's 104-offer round and R09's
+  115-offer round searched about 22 s, and their third search round, the one that made the cheap plan, ended at 15 to 22 s or just after
+  (R09 119.01 c or 214.86 c, R08 174.84 c or 278.26 c in 14 saved runner logs). The time past the share comes off the rounds after it.
 * **A run counted in states** (`Budget.in_states`: a states net and no time net, the setting of the goldens, fixtures and benchmark records,
   #886). The rounds then count their work in the states their searches knew, never in seconds (`StatesMeter`): the states left are the net
   less the states the rounds before knew, a round with a plan in hand searches with a states net of its share of them, and `Share` reads the
