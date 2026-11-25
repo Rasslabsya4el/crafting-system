@@ -5,23 +5,15 @@
     {
       "machine": [
         {
-          "os": "Linux 7.0.0-1019-azure",
-          "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+          "os": "Linux 7.0.0-1020-azure",
+          "platform": "Linux-7.0.0-1020-azure-x86_64-with-glibc2.43",
           "cpu": "x86_64",
           "cpu_count": 4,
           "python": "CPython 3.14.4",
-          "commit": "af3aa55b5da646caee7415bed266d6cc879c9a47"
-        },
-        {
-          "os": "Linux 7.0.0-1016-aws",
-          "platform": "Linux-7.0.0-1016-aws-x86_64-with-glibc2.43",
-          "cpu": "x86_64",
-          "cpu_count": 4,
-          "python": "CPython 3.14.4",
-          "commit": "af3aa55b5da646caee7415bed266d6cc879c9a47"
+          "commit": "f68611f4ec40e4ec2fce7cfc793e9bb081c16779"
         }
       ],
-      "ran_at": "2026-11-18T12:08:15+00:00",
+      "ran_at": "2026-11-25T07:00:05+00:00",
       "prices": {
         "league": "Allflame",
         "fetched_at": "2026-07-31T00:00:00Z"
@@ -29,18 +21,18 @@
       "budget": {
         "aim_seconds": 60.0,
         "seconds": 600.0,
-        "memory_mb": 12786.4375
+        "memory_mb": 12785.640625
       }
     },
     {
       "machine": [
         {
-          "os": "Linux 7.0.0-1019-azure",
-          "platform": "Linux-7.0.0-1019-azure-x86_64-with-glibc2.43",
+          "os": "Linux 7.0.0-1020-azure",
+          "platform": "Linux-7.0.0-1020-azure-x86_64-with-glibc2.43",
           "cpu": "x86_64",
           "cpu_count": 4,
           "python": "CPython 3.14.4",
-          "commit": "af3aa55b5da646caee7415bed266d6cc879c9a47"
+          "commit": "f68611f4ec40e4ec2fce7cfc793e9bb081c16779"
         },
         {
           "os": "Linux 7.0.0-1016-aws",
@@ -48,10 +40,10 @@
           "cpu": "x86_64",
           "cpu_count": 4,
           "python": "CPython 3.14.4",
-          "commit": "af3aa55b5da646caee7415bed266d6cc879c9a47"
+          "commit": "f68611f4ec40e4ec2fce7cfc793e9bb081c16779"
         }
       ],
-      "ran_at": "2026-11-18T12:28:56+00:00",
+      "ran_at": "2026-11-25T07:15:31+00:00",
       "prices": {
         "league": "Allflame",
         "fetched_at": "2026-07-31T00:00:00Z"
@@ -59,7 +51,7 @@
       "budget": {
         "aim_seconds": 60.0,
         "seconds": 600.0,
-        "memory_mb": 12785.643750000001
+        "memory_mb": 12786.431250000001
       }
     }
   ],
@@ -68,17 +60,17 @@
       "runs": [
         {
           "mean": 40.930980408871676,
-          "lower": 1.0,
-          "seconds": 1.210028201,
-          "peak_mb": 899.412109375,
-          "stop": "stopped: not every round of the methods finished"
+          "lower": 40.930980254912264,
+          "seconds": 2.2211648800000034,
+          "peak_mb": 1206.9560546875,
+          "stop": "proved within 1.00% of the cheapest"
         },
         {
           "mean": 40.930980408871676,
-          "lower": 1.0,
-          "seconds": 1.5807278760000045,
-          "peak_mb": 683.8212890625,
-          "stop": "stopped: not every round of the methods finished"
+          "lower": 40.930980254912264,
+          "seconds": 3.9950243330000035,
+          "peak_mb": 1096.2958984375,
+          "stop": "proved within 1.00% of the cheapest"
         }
       ],
       "state": "planned",
@@ -89,134 +81,134 @@
     "R10": {
       "runs": [
         {
-          "mean": 39.71916954876565,
-          "lower": 17.0,
-          "seconds": 150.024160635,
-          "peak_mb": 973.7978515625,
-          "stop": "stopped: not every round of the methods finished"
+          "mean": 38.79504443045601,
+          "lower": 38.79504436340956,
+          "seconds": 0.833309488999987,
+          "peak_mb": 592.89453125,
+          "stop": "proved within 1.00% of the cheapest"
         },
         {
-          "mean": 39.71916954876565,
-          "lower": 17.0,
-          "seconds": 150.583987857,
-          "peak_mb": 1329.6416015625,
-          "stop": "stopped: not every round of the methods finished"
+          "mean": 38.79504443045601,
+          "lower": 38.79504436340956,
+          "seconds": 0.8263948449999816,
+          "peak_mb": 591.6630859375,
+          "stop": "proved within 1.00% of the cheapest"
         }
       ],
       "state": "planned",
       "spread": 0.0,
       "spread_share": 0.0,
-      "ceiling": 40.116361244253305
+      "ceiling": 39.18299487476057
     },
     "R11": {
       "runs": [
         {
-          "mean": 4964.9175723710805,
+          "mean": 392.69399899778244,
           "lower": 20.0,
-          "seconds": 18.63505911499999,
-          "peak_mb": 896.1845703125,
+          "seconds": 15.209651022000003,
+          "peak_mb": 426.81640625,
           "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": 4964.9175723710805,
+          "mean": 392.69399899778267,
           "lower": 20.0,
-          "seconds": 18.926500997999995,
-          "peak_mb": 903.947265625,
+          "seconds": 21.871493760999954,
+          "peak_mb": 417.583984375,
           "stop": "stopped: not every round of the methods finished"
         }
       ],
       "state": "planned",
-      "spread": 0.0,
-      "spread_share": 0.0,
-      "ceiling": 5014.566748094791
+      "spread": 2.2737367544323206e-13,
+      "spread_share": 5.790098041312723e-16,
+      "ceiling": 396.6209389877605
     },
     "R05": {
       "runs": [
         {
-          "mean": 92.76668330184138,
-          "lower": 2.2,
-          "seconds": 32.90372042499985,
-          "peak_mb": 466.84375,
+          "mean": 109.6316832234768,
+          "lower": 19.064999921635074,
+          "seconds": 9.55178586300002,
+          "peak_mb": 685.828125,
           "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": 92.76668330184138,
-          "lower": 2.2,
-          "seconds": 33.270576414999994,
-          "peak_mb": 456.1494140625,
+          "mean": 109.6316832234768,
+          "lower": 19.064999921635074,
+          "seconds": 9.40850105700001,
+          "peak_mb": 685.880859375,
           "stop": "stopped: not every round of the methods finished"
         }
       ],
       "state": "planned",
       "spread": 0.0,
       "spread_share": 0.0,
-      "ceiling": 93.6943501348598
+      "ceiling": 110.72800005571156
     },
     "R13": {
       "runs": [
         {
-          "mean": 95718.55177956443,
+          "mean": 5336.143117151014,
           "lower": 17.4,
-          "seconds": 20.46244494299998,
-          "peak_mb": 1518.619140625,
+          "seconds": 32.267663503999984,
+          "peak_mb": 887.55859375,
           "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": 95718.55177956443,
+          "mean": 1468.192149086178,
           "lower": 17.4,
-          "seconds": 20.48465230399995,
-          "peak_mb": 1487.02734375,
+          "seconds": 165.36898975300005,
+          "peak_mb": 1263.9033203125,
           "stop": "stopped: not every round of the methods finished"
         }
       ],
       "state": "planned",
-      "spread": 0.0,
-      "spread_share": 0.0,
-      "ceiling": 96675.73729736007
+      "spread": 3867.950968064836,
+      "spread_share": 2.634499149496406,
+      "ceiling": 9204.09408521585
     },
     "R08": {
       "runs": [
         {
-          "mean": 174.71882464927762,
-          "lower": 43.82409,
-          "seconds": 28.076524054000004,
-          "peak_mb": 492.2841796875,
+          "mean": 174.81796441608145,
+          "lower": 43.8,
+          "seconds": 31.30857873100001,
+          "peak_mb": 607.93359375,
           "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": 174.71882464927762,
-          "lower": 43.82409,
-          "seconds": 27.845188070999995,
-          "peak_mb": 461.1796875,
+          "mean": 174.81796441608162,
+          "lower": 43.8,
+          "seconds": 35.77200273,
+          "peak_mb": 587.4384765625,
           "stop": "stopped: not every round of the methods finished"
         }
       ],
       "state": "planned",
-      "spread": 0.0,
-      "spread_share": 0.0,
-      "ceiling": 176.4660128957704
+      "spread": 1.7053025658242404e-13,
+      "spread_share": 9.754732996235312e-16,
+      "ceiling": 176.56614406024244
     },
     "R09": {
       "runs": [
         {
-          "mean": 118.89047312626265,
-          "lower": 5.02409,
-          "seconds": 28.461847798000008,
-          "peak_mb": 480.0380859375,
+          "mean": 118.98961289306648,
+          "lower": 5.0,
+          "seconds": 30.855693057999986,
+          "peak_mb": 729.244140625,
           "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": 118.89047312626265,
-          "lower": 5.02409,
-          "seconds": 29.416659248000002,
-          "peak_mb": 546.5439453125,
+          "mean": 118.98961289306642,
+          "lower": 5.0,
+          "seconds": 40.60031590099999,
+          "peak_mb": 688.15625,
           "stop": "stopped: not every round of the methods finished"
         }
       ],
       "state": "planned",
-      "spread": 0.0,
-      "spread_share": 0.0,
-      "ceiling": 120.07937785752527
+      "spread": 5.684341886080802e-14,
+      "spread_share": 4.777174870876507e-16,
+      "ceiling": 120.17950902199715
     },
     "R04": {
       "runs": [
@@ -225,14 +217,14 @@
           "lower": null,
           "seconds": null,
           "peak_mb": null,
-          "stop": "stopped after 603 s, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists. The rounds that finished showed only that no plan made only of alchemy-orb; alteration-orb; chaos-orb; scouring-orb; transmutation-orb; veiled-chaos-orb; annulment-orb that add junk to the model; remove-crafted-mods that add junk to the model; corrupted-essence; harvest-reforge; restore that add imprints, junk to the model; augmentation-orb that add junk, pool weights to the model; regal-orb that add junk, pool weights to the model; veiled-exalted-orb that add junk, veiled mods to the model reaches the target. Not finished: round 11 (bench-craft that add junk to the model; 81 actions offered, 148 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 148 of the 589.584 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 1,525 of the 5,792 kinds of item it had found and counted 62 of the 82 actions offered); set aside, since the round after it was refused too); round 12 (essence; 181 actions offered, 110 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 110 of the 438.71 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 2,648 of the 4,826 kinds of item it had found and counted 64 of the 182 actions offered)); round 13 (fossil-set; 11,030 actions offered, 98 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (16.7584 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 100.73 Chaos; round 14 (harvest-damage-swap that add families by mod, junk to the model; 134 actions offered, 67 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (12.1156 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 246.52 Chaos; round 15 (harvest-resistance-swap that add families by mod, junk to the model; 134 actions offered, 45 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (8.56025 seconds)), with no plan; no plan with them costs less than 10.22 Chaos; round 17 (imprint that add imprints, junk to the model; 131 actions offered, 29 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (6.10123 seconds)), with no plan; no plan with them costs less than 63.30 Chaos; round 19 (exalted-orb that add junk, pool weights to the model; 131 actions offered, 18 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (4.1178 seconds)), with no plan; no plan with them costs less than 1.35 Chaos; round 21 (harvest-reforge-likelihood that add junk, pool weights to the model; 133 actions offered, 10 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (2.55238 seconds)), with no plan; no plan with them costs less than 4.09 Chaos; round 23 (beast-side-swap that add draw levels, junk, pool weights to the model; 134 actions offered, 4 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (1.24818 seconds)), with no plan; no plan with them costs less than 5.00 Chaos; round 24 (harvest-add-remove that add draw tags, junk, pool weights to the model; 143 actions offered, 2 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (0.562625 seconds)), with no plan; no plan with them costs less than 0.00 Chaos; round 25 (beast-influence-recipe that add every family, junk, veiled mods to the model; 138 actions offered, 1 s): stopped (the time limit of 0 seconds was reached), with no plan; no plan with them costs less than 0.00 Chaos; round 26 (fracturing-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 27 (wild-bristle-matron; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 28 (bench-craft; 4 actions offered, 0 s): not tried, the run's time was used up before this round; round 29 (unveil; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 30 (pick; 3 actions offered, 0 s): not tried, the run's time was used up before this round; round 31 (influenced-exalted-orb; 6 actions offered, 0 s): not tried, the run's time was used up before this round. To get a plan, run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "stop": "No usable plan found within the limit: the best plan found costs 37,784,520,487,872.68 Chaos and expects about 5,885,276,553,063 uses of Deafening Essence of Rage, more than the 100,000 uses of one step a player can follow, so it is not shown as a plan. The search ran out of time or memory before it finished checking the 11,139 crafts this planner can use on this item together; a longer run may find a usable plan."
         },
         {
           "mean": null,
           "lower": null,
           "seconds": null,
           "peak_mb": null,
-          "stop": "stopped after 601 s, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists. The rounds that finished showed only that no plan made only of alchemy-orb; alteration-orb; chaos-orb; scouring-orb; transmutation-orb; veiled-chaos-orb; annulment-orb that add junk to the model; remove-crafted-mods that add junk to the model; corrupted-essence; harvest-reforge; restore that add imprints, junk to the model; augmentation-orb that add junk, pool weights to the model; regal-orb that add junk, pool weights to the model; veiled-exalted-orb that add junk, veiled mods to the model reaches the target. Not finished: round 11 (bench-craft that add junk to the model; 81 actions offered, 147 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 147 of the 587.271 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 1,219 of the 5,792 kinds of item it had found and counted 62 of the 82 actions offered); set aside, since the round after it was refused too); round 12 (essence; 181 actions offered, 110 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 110 of the 438.59 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 1,593 of the 3,750 kinds of item it had found and counted 64 of the 182 actions offered)); round 13 (fossil-set; 11,030 actions offered, 99 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (16.9656 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 100.73 Chaos; round 14 (harvest-damage-swap that add families by mod, junk to the model; 134 actions offered, 68 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (12.3278 seconds)), with no plan; no plan with them costs less than 246.52 Chaos; round 15 (harvest-resistance-swap that add families by mod, junk to the model; 134 actions offered, 47 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (8.85767 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 10.22 Chaos; round 17 (imprint that add imprints, junk to the model; 131 actions offered, 31 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (6.48758 seconds)), with no plan; no plan with them costs less than 63.30 Chaos; round 19 (exalted-orb that add junk, pool weights to the model; 131 actions offered, 20 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (4.61009 seconds)), with no plan; no plan with them costs less than 1.35 Chaos; round 21 (harvest-reforge-likelihood that add junk, pool weights to the model; 133 actions offered, 12 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (3.08966 seconds)), with no plan; no plan with them costs less than 4.09 Chaos; round 23 (beast-side-swap that add draw levels, junk, pool weights to the model; 134 actions offered, 6 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (1.78867 seconds)), with no plan; no plan with them costs less than 5.00 Chaos; round 24 (harvest-add-remove that add draw tags, junk, pool weights to the model; 143 actions offered, 3 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (1.02762 seconds)), with no plan; no plan with them costs less than 1.35 Chaos; round 25 (beast-influence-recipe that add every family, junk, veiled mods to the model; 138 actions offered, 2 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (0.5392 seconds)), with no plan; no plan with them costs less than 0.00 Chaos; round 26 (fracturing-orb that add fractures, junk, pool weights to the model; 133 actions offered, 1 s): stopped (the time limit of 0 seconds was reached), with no plan; no plan with them costs less than 0.00 Chaos; round 27 (wild-bristle-matron; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 28 (bench-craft; 4 actions offered, 0 s): not tried, the run's time was used up before this round; round 29 (unveil; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 30 (pick; 3 actions offered, 0 s): not tried, the run's time was used up before this round; round 31 (influenced-exalted-orb; 6 actions offered, 0 s): not tried, the run's time was used up before this round. To get a plan, run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "stop": "No usable plan found within the limit: the best plan found costs 37,784,520,487,872.68 Chaos and expects about 5,885,276,553,063 uses of Deafening Essence of Rage, more than the 100,000 uses of one step a player can follow, so it is not shown as a plan. The search ran out of time or memory before it finished checking the 11,139 crafts this planner can use on this item together; a longer run may find a usable plan."
         }
       ],
       "state": "no plan",
@@ -243,24 +235,24 @@
     "R14": {
       "runs": [
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
-          "peak_mb": null,
-          "stop": "stopped, no plan found yet: the search found no plan before it stopped, so this does not show that no plan exists (the search stopped (the time limit of 47.6134 seconds was reached) before any policy that can be executed was found: it had looked at 695 of 989 states and no plan costs less than 0.10399 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 19 of the 66.3209 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while adding the actions that matter to that count: it had worked through 271 of the 271 kinds of item it had found and counted 87 of the 10,907 actions offered). To get a plan, run again with a larger time, states or memory limit, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "mean": 3159.970785520308,
+          "lower": 9.8,
+          "seconds": 87.628750285,
+          "peak_mb": 833.1259765625,
+          "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
-          "peak_mb": null,
-          "stop": "stopped, no plan found yet: the search found no plan before it stopped, so this does not show that no plan exists (the search stopped (the time limit of 49.7467 seconds was reached) before any policy that can be executed was found: it had looked at 940 of 989 states and no plan costs less than 0.10399 (the lower bound of the whole graph). The count of the cheapest possible cost was stopped (stopped after 17 of the 66.3784 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while adding the actions that matter to that count: it had worked through 271 of the 271 kinds of item it had found and counted 87 of the 10,907 actions offered). To get a plan, run again with a larger time, states or memory limit, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "mean": 3159.970785520308,
+          "lower": 9.8,
+          "seconds": 89.01729948300002,
+          "peak_mb": 815.9384765625,
+          "stop": "stopped: not every round of the methods finished"
         }
       ],
-      "state": "no plan",
-      "spread": null,
-      "spread_share": null,
-      "ceiling": null
+      "state": "planned",
+      "spread": 0.0,
+      "spread_share": 0.0,
+      "ceiling": 3191.570493375511
     },
     "R17": {
       "runs": [
@@ -269,17 +261,17 @@
           "lower": null,
           "seconds": null,
           "peak_mb": null,
-          "stop": "stopped after 613 s, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists. No round finished, so nothing is shown about any method. Not finished: round 1 (alchemy-orb; 1 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.177 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 2 (alteration-orb; 2 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.177 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 3 (chaos-orb; 3 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0664 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 4 (scouring-orb; 3 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0972 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 5 (transmutation-orb; 3 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0768 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: 0.872). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 6 (veiled-chaos-orb; 3 actions offered, 5 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 361 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 1.95 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.0105; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 7 (annulment-orb that add junk to the model; 3 actions offered, 18 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 3,134 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 2.83 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.123; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 8 (remove-crafted-mods that add junk to the model; 3 actions offered, 12 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 1,514 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 2.83 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.123; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 9 (corrupted-essence; 6 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 1.78 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.123; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 10 (harvest-reforge; 21 actions offered, 16 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0356 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 11 (bench-craft that add junk to the model; 92 actions offered, 156 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (23.7451 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 5,240,848,408,979.51 Chaos; round 12 (essence; 117 actions offered, 10 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.00254 (asked: tolerance 1e-10, accepted: 0.001; residual 0.00163 of its margin) (measured with every sum rounded once; with a rounding a term: 0.0892). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 13 (fossil-set; 11,019 actions offered, 147 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (17.6995 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 100.73 Chaos; round 14 (harvest-damage-swap that add families by mod, junk to the model; 123 actions offered, 63 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (10.9044 seconds)), with no plan; no plan with them costs less than 246.52 Chaos; round 15 (harvest-resistance-swap that add families by mod, junk to the model; 123 actions offered, 43 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (7.86974 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 10.22 Chaos; round 16 (restore that add imprints, junk to the model; 118 actions offered, 11 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 1,197 states certifies only a relative bound of 0.0012 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: 0.259). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 17 (imprint that add imprints, junk to the model; 122 actions offered, 28 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (5.40746 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 63.30 Chaos; round 18 (augmentation-orb that add junk, pool weights to the model; 119 actions offered, 70 s): stopped (the time limit of 51.1443 seconds was reached), with no plan; no plan with them costs less than 1,708,178,140,912.10 Chaos; round 19 (exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 20 (regal-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 21 (harvest-reforge-likelihood; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 22 (veiled-exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 23 (beast-side-swap; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 24 (harvest-add-remove; 11 actions offered, 0 s): not tried, the run's time was used up before this round; round 25 (beast-influence-recipe; 6 actions offered, 0 s): not tried, the run's time was used up before this round; round 26 (fracturing-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 27 (talisman-fracture; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 28 (wild-bristle-matron; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 29 (bench-craft; 4 actions offered, 0 s): not tried, the run's time was used up before this round; round 30 (unveil; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 31 (pick; 3 actions offered, 0 s): not tried, the run's time was used up before this round; round 32 (influenced-exalted-orb; 6 actions offered, 0 s): not tried, the run's time was used up before this round. To get a plan, run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "stop": "No usable plan found within the limit: the best plan found costs 1,708,178,141,471.36 Chaos and expects about 1,035,259,479,342 uses of Shrieking Essence of Loathing, more than the 100,000 uses of one step a player can follow, so it is not shown as a plan. The search checked only 100 of the 11,165 crafts this planner can use on this item fully in combination with that plan before it ran out of time or memory; a longer run may find a usable plan."
         },
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
-          "peak_mb": null,
-          "stop": "stopped after 608 s, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists. No round finished, so nothing is shown about any method. Not finished: round 1 (alchemy-orb; 1 actions offered, 3 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.177 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 2 (alteration-orb; 2 actions offered, 3 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.177 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 3 (chaos-orb; 3 actions offered, 3 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0664 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 4 (scouring-orb; 3 actions offered, 3 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0972 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 5 (transmutation-orb; 3 actions offered, 3 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0768 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: 0.872). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 6 (veiled-chaos-orb; 3 actions offered, 4 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 361 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 1.95 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.0105; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 7 (annulment-orb that add junk to the model; 3 actions offered, 14 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 3,134 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 2.83 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.123; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 8 (remove-crafted-mods that add junk to the model; 3 actions offered, 9 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 1,514 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 2.83 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.123; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 9 (corrupted-essence; 6 actions offered, 3 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of inf (asked: tolerance 1e-10, accepted: 0.001; residual 1.78 of its margin) (measured against the cost of the next 2 steps; against each state's own cheapest cost alone: inf, set at a state whose cheapest action costs 0.123; the cost ahead is measured over at most 64 steps). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`; set aside, since the round after it was refused too); round 10 (harvest-reforge; 21 actions offered, 12 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.0356 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: inf). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 11 (bench-craft that add junk to the model; 92 actions offered, 161 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (24.4941 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 5,240,848,408,979.51 Chaos; round 12 (essence; 117 actions offered, 8 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 326 states certifies only a relative bound of 0.00254 (asked: tolerance 1e-10, accepted: 0.001; residual 0.00163 of its margin) (measured with every sum rounded once; with a rounding a term: 0.0892). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 13 (fossil-set; 11,019 actions offered, 123 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (18.3045 seconds)), with no plan; no plan with them costs less than 100.73 Chaos; round 14 (harvest-damage-swap that add families by mod, junk to the model; 123 actions offered, 74 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (12.838 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 246.52 Chaos; round 15 (harvest-resistance-swap that add families by mod, junk to the model; 123 actions offered, 51 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (9.25455 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 10.22 Chaos; round 16 (restore that add imprints, junk to the model; 118 actions offered, 8 s): no plan (the search for the cheapest route could not give an answer: the policy iteration on 1,197 states certifies only a relative bound of 0.0012 (asked: tolerance 1e-10, accepted: 0.001; residual 0 of its margin) (measured with every sum rounded once; with a rounding a term: 0.259). The search that walks every possible item gives the exact answer instead, more slowly and with more memory: `--solver packed`); round 17 (imprint that add imprints, junk to the model; 122 actions offered, 34 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (6.6152 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 95.00 Chaos; round 18 (augmentation-orb that add junk, pool weights to the model; 119 actions offered, 76 s): stopped (the time limit of 65.8272 seconds was reached), with no plan; no plan with them costs less than 1,708,178,140,912.10 Chaos; round 19 (exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 20 (regal-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 21 (harvest-reforge-likelihood; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 22 (veiled-exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 23 (beast-side-swap; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 24 (harvest-add-remove; 11 actions offered, 0 s): not tried, the run's time was used up before this round; round 25 (beast-influence-recipe; 6 actions offered, 0 s): not tried, the run's time was used up before this round; round 26 (fracturing-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 27 (talisman-fracture; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 28 (wild-bristle-matron; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 29 (bench-craft; 4 actions offered, 0 s): not tried, the run's time was used up before this round; round 30 (unveil; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 31 (pick; 3 actions offered, 0 s): not tried, the run's time was used up before this round; round 32 (influenced-exalted-orb; 6 actions offered, 0 s): not tried, the run's time was used up before this round. To get a plan, run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "mean": 95509.38331069809,
+          "lower": 557.5555036513688,
+          "seconds": 546.0118792559999,
+          "peak_mb": 3991.4716796875,
+          "stop": "stopped: not every round of the methods finished"
         }
       ],
-      "state": "no plan",
+      "state": "unstable",
       "spread": null,
       "spread_share": null,
       "ceiling": null
@@ -287,68 +279,68 @@
     "R20": {
       "runs": [
         {
-          "mean": 35058370.94673531,
-          "lower": 181.5,
-          "seconds": 30.18934644699999,
-          "peak_mb": 231.7724609375,
-          "stop": "stopped: not every round of the methods finished"
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "No usable plan found within the limit: the best plan found costs 35,058,370.95 Chaos and expects about 1,368,926 uses of Essence of Horror, more than the 100,000 uses of one step a player can follow, so it is not shown as a plan. The search checked only 12 of the 10,876 crafts this planner can use on this item fully in combination with that plan before it ran out of time or memory; a longer run may find a usable plan."
         },
         {
-          "mean": 35058370.94673531,
-          "lower": 181.5,
-          "seconds": 36.602171354000006,
-          "peak_mb": 230.4736328125,
-          "stop": "stopped: not every round of the methods finished"
+          "mean": null,
+          "lower": null,
+          "seconds": null,
+          "peak_mb": null,
+          "stop": "No usable plan found within the limit: the best plan found costs 35,058,370.95 Chaos and expects about 1,368,926 uses of Essence of Horror, more than the 100,000 uses of one step a player can follow, so it is not shown as a plan. The search checked only 101 of the 10,876 crafts this planner can use on this item fully in combination with that plan before it ran out of time or memory; a longer run may find a usable plan."
         }
       ],
-      "state": "planned",
-      "spread": 0.0,
-      "spread_share": 0.0,
-      "ceiling": 35408954.65620266
+      "state": "no plan",
+      "spread": null,
+      "spread_share": null,
+      "ceiling": null
     },
     "R06": {
       "runs": [
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
+          "mean": 1506.5452447693913,
+          "lower": 24.178299921635016,
+          "seconds": 18.783935214999985,
           "peak_mb": null,
-          "stop": "not planned: the start belt has no price (#483, #515), the planner takes the target since #159 and #1231 but its search for the mods gives no plan within 25 minutes yet (#1267), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232)"
+          "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
+          "mean": 1516.396370752959,
+          "lower": 24.178299921635016,
+          "seconds": 18.82946558399999,
           "peak_mb": null,
-          "stop": "not planned: the start belt has no price (#483, #515), the planner takes the target since #159 and #1231 but its search for the mods gives no plan within 25 minutes yet (#1267), and the route file holds the guide's steps 2 and 3 only: its step 4 waits for route conditions on quality and the implicit roll (#1232)"
+          "stop": "stopped: not every round of the methods finished"
         }
       ],
-      "state": "no plan",
-      "spread": null,
-      "spread_share": null,
-      "ceiling": null
+      "state": "planned",
+      "spread": 9.851125983567727,
+      "spread_share": 0.006538884920828017,
+      "ceiling": 1531.5603344604885
     },
     "R24": {
       "runs": [
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
-          "peak_mb": null,
-          "stop": "stopped after 601 s, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists. The rounds that finished showed only that no plan made only of alteration-orb; chaos-orb; scouring-orb; veiled-chaos-orb; annulment-orb that add junk to the model; remove-crafted-mods that add junk to the model; corrupted-essence; harvest-reforge; essence; bench-craft that add junk to the model reaches the target. Not finished: round 11 (fossil-set; 10,816 actions offered, 133 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (20.1036 seconds)), with no plan; no plan with them costs less than 221.67 Chaos; round 12 (harvest-damage-swap that add families by mod, junk to the model; 152 actions offered, 92 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (14.52 seconds)), with no plan; no plan with them costs less than 246.52 Chaos; round 13 (harvest-resistance-swap that add families by mod, junk to the model; 152 actions offered, 63 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (10.3229 seconds), inside the making of the next action's outcomes: it was left unmade), with no plan; no plan with them costs less than 10.22 Chaos; round 14 (eldritch-annulment-orb that add implicits, junk to the model; 147 actions offered, 42 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (7.2138 seconds)), with no plan; no plan with them costs less than 44.17 Chaos; round 15 (orb-of-conflict that add implicits, junk to the model; 147 actions offered, 29 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (5.00906 seconds)), with no plan; no plan with them costs less than 75.16 Chaos; round 16 (eldritch-implicit-currency that add implicits, junk to the model; 154 actions offered, 17 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 16 of the 57.3911 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 1,308 of the 5,403 kinds of item it had found and counted 71 of the 155 actions offered); set aside, since the round after it was refused too); round 17 (restore that add imprints, junk to the model; 155 actions offered, 10 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 9 of the 37.2463 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 703 of the 4,306 kinds of item it had found and counted 71 of the 156 actions offered)); round 18 (imprint that add imprints, junk to the model; 149 actions offered, 8 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (1.54285 seconds)), with no plan; no plan with them costs less than 63.30 Chaos; round 19 (augmentation-orb that add junk, pool weights to the model; 148 actions offered, 4 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 3 of the 11.8275 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 210 of the 3,546 kinds of item it had found and counted 71 of the 149 actions offered)); round 20 (exalted-orb that add junk, pool weights to the model; 149 actions offered, 3 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (0.443172 seconds)), with no plan; no plan with them costs less than 6.22 Chaos; round 21 (regal-orb that add junk, pool weights to the model; 149 actions offered, 1 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 0 of the 0.954285 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 0 of the 1 kinds of item it had found and counted 71 of the 150 actions offered)); round 22 (harvest-reforge-likelihood; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 23 (veiled-exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 24 (beast-side-swap; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 25 (harvest-add-remove; 11 actions offered, 0 s): not tried, the run's time was used up before this round; round 26 (fracturing-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 27 (eldritch-exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 28 (wild-bristle-matron; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 29 (bench-craft; 4 actions offered, 0 s): not tried, the run's time was used up before this round; round 30 (unveil; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 31 (pick; 3 actions offered, 0 s): not tried, the run's time was used up before this round; round 32 (eldritch-chaos-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round. To get a plan, run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "mean": 51581.283464717,
+          "lower": 50.0,
+          "seconds": 595.386613349,
+          "peak_mb": 2001.6640625,
+          "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": null,
-          "lower": null,
-          "seconds": null,
-          "peak_mb": null,
-          "stop": "stopped after 602 s, no plan found yet: no round of the methods made a plan before the search stopped, so this does not show that no plan exists. The rounds that finished showed only that no plan made only of alteration-orb; chaos-orb; scouring-orb; veiled-chaos-orb; annulment-orb that add junk to the model; remove-crafted-mods that add junk to the model; corrupted-essence; harvest-reforge; essence; bench-craft that add junk to the model reaches the target. Not finished: round 11 (fossil-set; 10,816 actions offered, 132 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (19.9895 seconds)), with no plan; no plan with them costs less than 221.67 Chaos; round 12 (harvest-damage-swap that add families by mod, junk to the model; 152 actions offered, 92 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (14.4792 seconds)), with no plan; no plan with them costs less than 246.52 Chaos; round 13 (harvest-resistance-swap that add families by mod, junk to the model; 152 actions offered, 63 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (10.2691 seconds)), with no plan; no plan with them costs less than 10.22 Chaos; round 14 (eldritch-annulment-orb that add implicits, junk to the model; 147 actions offered, 42 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (7.16198 seconds)), with no plan; no plan with them costs less than 44.17 Chaos; round 15 (orb-of-conflict that add implicits, junk to the model; 147 actions offered, 29 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (4.9694 seconds)), with no plan; no plan with them costs less than 75.16 Chaos; round 16 (eldritch-implicit-currency that add implicits, junk to the model; 154 actions offered, 17 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 16 of the 56.9905 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 1,271 of the 5,396 kinds of item it had found and counted 71 of the 155 actions offered); set aside, since the round after it was refused too); round 17 (restore that add imprints, junk to the model; 155 actions offered, 10 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 9 of the 37.084 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 686 of the 4,283 kinds of item it had found and counted 71 of the 156 actions offered)); round 18 (imprint that add imprints, junk to the model; 149 actions offered, 8 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (1.54036 seconds)), with no plan; no plan with them costs less than 63.30 Chaos; round 19 (augmentation-orb that add junk, pool weights to the model; 148 actions offered, 4 s): no plan (no policy of the offered actions reaches the goal from the start item (no policy of the offers reaches the goal from the start. The count of the cheapest possible cost was stopped (stopped after 3 of the 11.7876 seconds of the time limit, to leave the rest for the search for the plan, which takes several times as long as this count) while counting the kinds of item the crafting can reach: it had worked through 209 of the 3,546 kinds of item it had found and counted 71 of the 149 actions offered)); round 20 (exalted-orb that add junk, pool weights to the model; 149 actions offered, 3 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (0.438377 seconds)), with no plan; no plan with them costs less than 6.22 Chaos; round 21 (regal-orb that add junk, pool weights to the model; 149 actions offered, 1 s): stopped (its bound's build ended before it was complete and its search held no plan once it had used the round's share of the net (the net left over the rounds left): it gave way to the rounds after it, and runs again with what is left if none of them makes a plan (0.070835 seconds)), with no plan; no plan with them costs less than 0.00 Chaos; round 22 (harvest-reforge-likelihood; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 23 (veiled-exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 24 (beast-side-swap; 2 actions offered, 0 s): not tried, the run's time was used up before this round; round 25 (harvest-add-remove; 11 actions offered, 0 s): not tried, the run's time was used up before this round; round 26 (fracturing-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 27 (eldritch-exalted-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 28 (wild-bristle-matron; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 29 (bench-craft; 4 actions offered, 0 s): not tried, the run's time was used up before this round; round 30 (unveil; 1 actions offered, 0 s): not tried, the run's time was used up before this round; round 31 (pick; 3 actions offered, 0 s): not tried, the run's time was used up before this round; round 32 (eldritch-chaos-orb; 1 actions offered, 0 s): not tried, the run's time was used up before this round. To get a plan, run again with more time or memory, or with fewer methods: a search over fewer methods is smaller and may finish where this one stopped"
+          "mean": 51581.28346471703,
+          "lower": 50.0,
+          "seconds": 517.822742897,
+          "peak_mb": 2909.0771484375,
+          "stop": "stopped: not every round of the methods finished"
         }
       ],
-      "state": "no plan",
-      "spread": null,
-      "spread_share": null,
-      "ceiling": null
+      "state": "planned",
+      "spread": 2.9103830456733704e-11,
+      "spread_share": 5.642323824036196e-16,
+      "ceiling": 52097.0962993642
     }
   }
 }
