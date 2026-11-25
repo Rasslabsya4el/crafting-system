@@ -108,6 +108,6 @@ def test_on_r24_the_group_of_either_bench_lock_holds_the_matron_and_the_matron_b
     matron = table.entries[position[MATRON]]
     # the Matron draws which metamod it adds (so the protector rule, among the offers that draw nothing, never names it) and is cheaper
     assert matron.draws and matron.cost < table.entries[position[SUFFIX_LOCK]].cost
-    for lock in (SUFFIX_LOCK, PREFIX_LOCK):
-        assert {table.entries[each].label for each in table.closure({position[lock]})} == {lock, MATRON}
+    for lock in (SUFFIX_LOCK, PREFIX_LOCK):  # where a step of the plan in hand uses the bench lock (#1665 J4)
+        assert {table.entries[each].label for each in table.closure({position[lock]}, {position[lock]})} == {lock, MATRON}
     assert {table.entries[each].label for each in table.closure({position[MATRON]})} == {MATRON}

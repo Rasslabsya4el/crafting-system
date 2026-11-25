@@ -199,6 +199,7 @@ class Entry:
     need: float = 0.0  # what the cheapest offer it needs to act costs (`OfferTable.priced_needs`): ranked with its price
     forces: bool = False  # every use puts on a mod it names (an essence's) or one of a tag (a Harvest reforge): no plain reroll or move (#1600)
     wipes: bool = False  # a reroll that draws no mod and adds none: it leaves the item bare but for what it keeps (an Orb of Scouring, #1600)
+    copies_at: frozenset[Rarity] = frozenset()  # the shapes where it makes an imprint (also of an item holding one: a replacing imprint, #1665 J3)
 
     def acts_at(self, shapes) -> bool:
         """Whether it is read as acting at one of `shapes` (its kind there is not a refusal)."""
@@ -230,6 +231,7 @@ class OfferTable:
     _finished: tuple | None = None  # `finished`, read once
     rebuy: float | None = None  # what buying the start item again costs; None when it is not bought (no reset closure)
     _reset: dict[frozenset[int], frozenset[int]] | None = None  # `reset_closure`, read once for each set of offers held back
+    _sided: dict | None = None  # id of a shape's item -> (that item, it with a mod on each side: `_both_sides`), read once each
 
     def __init__(self, data: GameData, abstraction: Abstraction, start: CompressedState, item: Item, priced: Sequence[PricedOffer],
                  ask: Callable[[], None] | None = None, locking: Callable[[], Abstraction] | None = None, rebuy: float | None = None) -> None:  # fmt: skip
@@ -266,6 +268,8 @@ class OfferTable:
             if ask is not None and position % 256 == 0:
                 ask()
             entry, action = self.entries[position], offer.offer.action
+            if self._copies(action, view):
+                entry.copies_at |= {rarity}
             try:
                 kind, named = _kind_of(data, view, offer)
                 entry.kinds[rarity] = kind
@@ -314,6 +318,20 @@ class OfferTable:
                     if bound is not None and bound > 0:
                         self.entries[position].chance[(rarity, leaf)] = bound
 
+    def _copies(self, action, view: Item) -> bool:
+        """Whether `action` makes an imprint of `view`'s item, or of it holding one imprint of itself (an imprint that replaces one acts only
+        on an item whose imprints are full), as its outcomes there say (#1665 J3)."""
+        move = getattr(action, "imprint_move", lambda: None)()
+        if move is None or move.restore:
+            return False
+        for item in (view, replace(view, imprints=(replace(view, imprints=()),))):
+            try:
+                action.outcomes(self.data, item)
+                return True
+            except (NotApplicableError, OutOfScopeError, ValueError):  # refused at this item
+                continue
+        return False
+
     def _read_declarations(self, entry: Entry, offer: PricedOffer, item: Item) -> None:
         data, action = self.data, offer.offer.action
         if isinstance(action, BuyStartItem) or getattr(action, "opens_listing", False):
@@ -346,14 +364,20 @@ class OfferTable:
 
     def _fans_at(self, action, view: Item) -> str:
         """Why an addition at `view`'s shape fans out over two random choices (module text, the later group), or "": one of its outcomes at
-        `view` lacks a mod `view` held that was not fractured (it removes a random mod as it adds one), or the draw it declares there
-        (`Action.added_draw`) is over other mods than the item's own pool on the same sides (a pool of its own)."""
+        `view`, or at `view`'s item holding a mod on each side (`_both_sides`), lacks a mod that item held that was not fractured (it removes
+        a random mod as it adds one), or the draw it declares at `view` (`Action.added_draw`) is over other mods than the item's own pool on
+        the same sides (a pool of its own). An offer that removes a mod of one side only removes nothing at an item that holds none there:
+        read at the one item a shape gives, which may hold a suffix alone, Beastcraft Add Suffix Remove Prefix escaped the class on R17
+        while its mirror was in it (#1665 J2)."""
         data = self.data
-        held = {entry.mod_id for entry in view.mods if not entry.fractured}
-        try:
-            results = getattr(action.outcomes(data, view), "results", None) if held else None
-            if results and any(held - {entry.mod_id for entry in after.mods} for _chance, after in results):
+        if self._sided is None:
+            self._sided = {}
+        if id(view) not in self._sided:  # read once for each shape's item
+            self._sided[id(view)] = (view, self._both_sides(view))
+        for item in (view, self._sided[id(view)][1]):
+            if item is not None and self._removes_at(action, item):
                 return REMOVES_AND_ADDS
+        try:
             draw = action.added_draw(data, view)
             if draw is None:
                 return ""
@@ -362,6 +386,43 @@ class OfferTable:
             return OWN_POOL if own != self.pool_ids(view, sides) else ""
         except (NotApplicableError, OutOfScopeError, ValueError):  # refused or out of the model's scope at this shape: nothing read here
             return ""
+
+    def _removes_at(self, action, item: Item) -> bool:
+        """Whether one of the outcomes of `action` at `item` lacks a mod `item` held that was not fractured; False where it is refused. The
+        outcomes are read as they are given: finished items (`results`), or the items each part keeps before its draw (`retained`, of
+        each of a mixture's `components`: a beast side swap is one part for each mod it may take off)."""
+        held = {entry.mod_id for entry in item.mods if not entry.fractured}
+        if not held:
+            return False
+        try:
+            outcomes = action.outcomes(self.data, item)
+        except (NotApplicableError, OutOfScopeError, ValueError):  # refused or out of the model's scope at this item: no removal read
+            return False
+        results = getattr(outcomes, "results", None)
+        if results:
+            kept = [after for _chance, after in results]
+        else:
+            parts = getattr(outcomes, "components", None)
+            kept = [part.retained for _chance, part in parts] if parts else [getattr(outcomes, "retained", None)]
+        return any(after is not None and held - {entry.mod_id for entry in after.mods} for after in kept)
+
+    def _both_sides(self, view: Item) -> Item | None:
+        """`view`'s item with a mod that is not fractured on each side (#1665 J2): a side that holds none gets the first mod of the item's
+        own pool on that side that fits (its lowest values); None when `view` holds one on each side already, or a side has room for
+        none, or the item cannot be made."""
+        data = self.data
+        item = view
+        try:
+            for side in (Side.PREFIX, Side.SUFFIX):
+                if any(entry.mod_id in data.mods and data.mods[entry.mod_id].generation_type == side.value and not entry.fractured for entry in item.mods):
+                    continue
+                mod = next((each.mod for family in build_pool(data, item) if family.side == side for each in family.mods if item.can_add(data, each.mod)), None)
+                if mod is None:
+                    return None
+                item = item.add_mod(data, ExplicitMod(mod.id, tuple(stat.min for stat in mod.stats)))
+        except (NotApplicableError, OutOfScopeError, ValueError):  # no such item at this shape: nothing more is read
+            return None
+        return None if item is view else item
 
     def pool_ids(self, view: Item, sides) -> set[str]:
         """The mods of the item's own pool on `sides` at `view`'s shape (its fractured mods and nothing else)."""
@@ -412,7 +473,7 @@ class OfferTable:
                 for roll in self._best(leaf, lambda entry, at=at: repeats(entry, at), 1, (at,)):
                     extra.add(roll)
                     if at != self.start_rarity:
-                        extra |= self.moves(frozenset({self.start_rarity}), at) - self.held_back
+                        extra |= self.move_to(frozenset({self.start_rarity}), at) - self.held_back
         return extra
 
     def _best(self, leaf: int, allowed: Callable[[Entry], bool], count: int, shapes: Sequence[Rarity] | None = None, held: frozenset[int] = frozenset()) -> list[int]:
@@ -488,7 +549,7 @@ class OfferTable:
         for position, at in adders:
             named.add(position)
             if at is not None and at not in shapes:
-                named.update(self.moves(shapes, at))
+                named.update(self.move_to(shapes, at))
         wait_sides = {self.side_of(leaf) for leaf in waits}
         for leaf in sorted(risks):
             if not fractured:
@@ -623,6 +684,12 @@ class OfferTable:
         moves of the reset path, module text)."""
         return set(self._way(shapes, to, plain)[1])
 
+    def move_to(self, shapes: frozenset[Rarity], to: Rarity) -> set[int]:
+        """The moves a role names to take an item from `shapes` to an adder's shape `to` (#1665 J1): the plain ones (`moves` with `plain`: no
+        offer that forces a mod, such as an essence whose other mods are a full random draw, and no offer whose outcomes have several
+        rarities), or, only where no plain way is found, the cheapest way of any offers."""
+        return self.moves(shapes, to, plain=True) or self.moves(shapes, to)
+
     def _way(self, shapes: frozenset[Rarity], to: Rarity, plain: bool = False) -> tuple[float, tuple[int, ...]]:
         """The cost and the positions of `moves`; infinity and none when no way is found."""
         best: dict[Rarity, tuple[float, tuple[int, ...]]] = {shape: (0.0, ()) for shape in shapes}
@@ -686,9 +753,21 @@ class OfferTable:
         ]  # fmt: skip
         return {min(found)[1]} if found else set()
 
-    def closure(self, positions: set[int]) -> set[int]:
-        """`positions` with what each needs to act, and the lockers of each side a bench lock among them locks (module text, dependencies);
-        a group that holds anything also holds the reset closure (module text)."""
+    def imprint_chain(self, chosen: Sequence[Entry]) -> set[int]:
+        """What an imprint or a restore among `chosen` brings (module text, dependencies; #1665 J3): every restore, and the imprints made at
+        the shapes where an imprint of `chosen` is made (`Entry.copies_at`: the one the roles named where the miss happens, and the one that
+        replaces it), or every imprint when `chosen` holds a restore and no imprint (no shape is named)."""
+        imprints = [entry for entry in chosen if entry.makes_imprint]
+        shapes = frozenset().union(*(entry.copies_at for entry in imprints)) if imprints else None
+        return {
+            entry.position for entry in self.entries
+            if entry.restores or (entry.makes_imprint and (shapes is None or entry.copies_at & shapes))
+        } | {entry.position for entry in imprints}  # fmt: skip
+
+    def closure(self, positions: set[int], uses: frozenset[int] | set[int] = frozenset()) -> set[int]:
+        """`positions` with what each needs to act, and the lockers of each side whose bench lock a step of the plan in hand uses (`uses`:
+        the offers its policy uses) when that bench lock is among them (module text, dependencies); a group that holds anything also holds
+        the reset closure (module text)."""
         found = set(positions) | (set(self.reset_closure()) if positions else set())
         while True:
             more = set()
@@ -696,9 +775,9 @@ class OfferTable:
             if any(entry.needs_veiled or entry.veils for entry in chosen):
                 more.update(entry.position for entry in self.entries if entry.needs_veiled or (entry.veils and any(each.needs_veiled for each in chosen)))
             if any(entry.restores or entry.makes_imprint for entry in chosen):
-                more.update(entry.position for entry in self.entries if entry.restores or entry.makes_imprint)
-            for side in sorted({getattr(side, "value", side) for entry in chosen if not entry.draws for side in entry.locks}):
-                more.update(self.lockers(side))  # where the bench lock of a side is, every offer that may put that lock on is (#1513)
+                more.update(self.imprint_chain(chosen))
+            for side in sorted({getattr(side, "value", side) for entry in chosen if not entry.draws and entry.position in uses for side in entry.locks}):
+                more.update(self.lockers(side))  # where a step of the plan uses the bench lock of a side, every offer that may put that lock on is (#1513, #1665 J4)
             if more <= found:
                 return found
             found |= more
@@ -828,7 +907,7 @@ class Grower:
         table = self.table
         held, table.held_back = table.held_back, frozenset()
         try:
-            self.later_named |= table.closure(set(named())) & self.later_ones
+            self.later_named |= table.closure(set(named()), self.support(self.plan)) & self.later_ones
         finally:
             table.held_back = held
 
@@ -840,7 +919,8 @@ class Grower:
         self.later_done, self.table.held_back = True, frozenset()
         if not self.later_named:
             return None
-        chosen = self.table.closure(set(self.support(self.plan)) | set(self.asked) | self.later_named)
+        support = self.support(self.plan)
+        chosen = self.table.closure(set(support) | set(self.asked) | self.later_named, support)
         if not self._new(chosen):
             return None
         return tuple(sorted(chosen)), f"the later group of the methods that fan out over two random choices or copy the item, after a plan proved without them: {self._labels(self.later_named)}"
@@ -929,7 +1009,7 @@ class Grower:
             named = table.roles(waits, risks, shapes, fractured, self.plan_set, current, pending)
             narrowers = self.state_narrowers(shares, current | named, at_states) - current - named
             named |= narrowers | (table.crafted_roles(current | named | narrowers) if narrowers else set())
-            chosen = table.closure(set(current) | named)
+            chosen = table.closure(set(current) | named, support)
             if named - current and self._new(chosen):
                 also = f"; and, at the states where the plan's drawing additions act, {self._labels(narrowers)}" if narrowers else ""
                 return tuple(sorted(chosen)), (
@@ -971,7 +1051,7 @@ class Grower:
         self._named_later(lambda: table.step_adders(waits, shapes, held))
         named = named | table.step_adders(waits, shapes, held)
         cleaner = table.cheapest(lambda entry: entry.removes and not entry.needs_crafted)
-        chosen = table.closure(set(current) | named | ({cleaner} if cleaner is not None else set()))
+        chosen = table.closure(set(current) | named | ({cleaner} if cleaner is not None else set()), self.support(self.plan))
         if not self._new(chosen):
             return None
         return tuple(sorted(chosen)), (

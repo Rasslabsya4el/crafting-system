@@ -479,6 +479,7 @@ def test_an_addition_fans_out_when_an_outcome_loses_a_mod_the_item_held_or_its_d
     own = _Addition([("P", "F", "H1")], pool=("H1",))  # keeps every mod, from a pool that is not the item's own
     same = _Addition([("P", "F", "S1")], pool=("S1", "S2"))  # a declared draw over the item's own pool
     lone_fractured = _Addition([("F", "S1")])  # nothing but a fractured mod held: no mod can be lost, so no removal is read
+    table._both_sides = lambda item: None  # these items hold what each case needs; the item with a mod on each side is #1665's test
     assert table._fans_at(swap, view) == _growth.REMOVES_AND_ADDS
     assert table._fans_at(exalt, view) == "" and table._fans_at(same, view) == ""
     assert table._fans_at(own, view) == _growth.OWN_POOL
@@ -757,20 +758,22 @@ def test_a_step_that_can_lose_a_mod_has_no_lock_group_its_usual_roles_name_its_p
 def test_where_the_bench_lock_of_a_side_is_every_offer_that_may_put_that_lock_on_and_keeps_the_mods_is_too():
     table = _lock_world()
     suffix_lock, prefix_lock, beast, locking_reroll = 1, 2, 3, 4
-    # the beast draws which metamod it adds, so the protector rule never names it; beside either bench lock it comes, as the lock groups hold it
-    assert _names(table, table.closure({suffix_lock})) == {"lock suffixes", "beast lock"}
-    assert _names(table, table.closure({prefix_lock})) == {"lock prefixes", "beast lock"}
+    # the beast draws which metamod it adds, so the protector rule never names it; beside either bench lock a step of the plan in hand uses
+    # (`uses`, #1665 J4) it comes, as the lock groups hold it
+    assert _names(table, table.closure({suffix_lock}, {suffix_lock})) == {"lock suffixes", "beast lock"}
+    assert _names(table, table.closure({prefix_lock}, {prefix_lock})) == {"lock prefixes", "beast lock"}
     # the rule goes one way: a beast brings no bench lock, and a reroll that adds a lock keeps no mod (no locker) and brings nothing
-    assert _names(table, table.closure({beast})) == {"beast lock"}
-    assert _names(table, table.closure({locking_reroll})) == {"locking reroll"}
+    assert _names(table, table.closure({beast}, {beast})) == {"beast lock"}
+    assert _names(table, table.closure({locking_reroll}, {locking_reroll})) == {"locking reroll"}
     # an offer held back for the later group stays held back (`lockers` reads the offers no role may name yet)
     table.held_back = frozenset({beast})
-    assert _names(table, table.closure({suffix_lock})) == {"lock suffixes"}
+    assert _names(table, table.closure({suffix_lock}, {suffix_lock})) == {"lock suffixes"}
 
 
-def test_the_round_that_names_the_bench_lock_as_a_protector_holds_the_beast_that_puts_the_same_lock_on():
+def test_the_round_after_a_plan_that_uses_the_bench_lock_holds_the_beast_that_puts_the_same_lock_on():
     # R24's shape: the spam waits for A (a prefix) and can lose B (a suffix); the protector of B is the suffix lock, the cheapest offer that
-    # adds it and draws nothing (353); the beast (238) puts the same lock on and comes into that round with it
+    # adds it and draws nothing (353); that round holds it alone (no step uses it yet, #1665 J4), and the round after a plan that relocks
+    # before each spam holds the beast (238), which puts the same lock on
     table = _lock_world()
     held, goal = _State("held", (Status.ABSENT, Status.PASSING), RARE), _State("goal", (Status.PASSING, Status.PASSING), RARE)
     lost = _State("lost", (Status.ABSENT, Status.ABSENT), RARE)
@@ -782,7 +785,15 @@ def test_the_round_that_names_the_bench_lock_as_a_protector_holds_the_beast_that
     assert "lock suffixes" in _names(table, named) and "beast lock" not in _names(table, named)  # the role itself names the bench lock alone
     positions, why = grower.next()
     assert why.startswith("the plan's dearest step not yet read, spam") and "can lose" in why
-    assert {"lock suffixes", "beast lock"} <= _names(table, positions) and "lock prefixes" not in _names(table, positions)
+    assert "lock suffixes" in _names(table, positions) and not _names(table, positions) & {"beast lock", "lock prefixes"}
+    locked = _State("locked", (Status.ABSENT, Status.PASSING), RARE)
+    view = {
+        held: Action("lock suffixes", 353.0, (Outcome(locked, 1),)),
+        locked: Action("spam", 25.0, (Outcome(goal, 1), Outcome(held, 9))),
+    }
+    relocks = _Plan(mean_remaining=400.0, start=held, packed=SimpleNamespace(view=view, risk_policy=None, risk_start=None))
+    grower.ran(positions, relocks, True)  # every group the growth names now passes the plan's support as what its steps use
+    assert {"lock suffixes", "beast lock"} <= _names(table, table.closure(set(grower.support(relocks)), grower.support(relocks)))
 
 
 # --- the adder that acts under the lock, named in the lock group (#1420, H37 of #1434) --------------------------------------------------
