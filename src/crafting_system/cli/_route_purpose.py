@@ -13,9 +13,10 @@ plan's own data, and the page now says it in four parts, each a general rule ove
   The wanted mod said is the one whose chance moves most; a step where no chance moves by half a point is not said.
 * `again`: a craft an item comes to more than once in a run is made again after each step that took it off: how many times after each step
   (the visits of the steps that lead into it), and for a step whose items hold it, the share of its uses that takes it off.
-* `instead`: the plan's own price of not making it here: on the item the step sees most, each other action the plan prices there (its
-  outcomes all have a value in the plan's solution), its cost then the plan's, against the craft's. An action whose outcomes the plan never
-  priced is said as not priced: the plan's data holds no figure for it.
+* `fills`: a craft that takes the last open slot of its side sends the next added mods to the other side.
+* `instead`: the other order (the actions the craft is made before, used first) where the plan's solution holds no value for it: said as
+  not priced, since the plan's data holds no figure for it (#1632's 5,102 c was priced by hand; its pricing is planner work).
+* `freed`: a Remove Crafted Mods step says which of these crafts it takes off and what can be added again.
 """
 
 from __future__ import annotations
@@ -25,7 +26,7 @@ from collections.abc import Sequence
 from dataclasses import replace
 
 from crafting_system.abstraction import CompressedState, Status
-from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, NotApplicableError, OutOfScopeError, crafted_limit_of
+from crafting_system.actions import BLOCKED_TAG, LOCKED_SIDE, crafted_limit_of
 from crafting_system.items import spawn_weight
 from crafting_system.items.model import Metamod
 
@@ -117,12 +118,30 @@ def _read(states: Sequence[CompressedState], weights: Sequence[float]) -> list[t
     return taken
 
 
+def fills(view, step, kind: str) -> str | None:
+    """When the craft takes the last open slot of its side on most of the items it is made on: the next mods added can only go to the
+    other side (R11's Fire Resistance craft, R14's multimod)."""
+    side = next((slot.side for edge in step.edges for state in edge.states for slot in state.slots if slot.crafted and slot.kind == kind), None)
+    if side is None:
+        return None
+    landing = [state for edge in step.edges if edge.kind in ("forward", "goal") for state in edge.states if holds(state, kind)]
+    free = [view._free_slots(state) for state in landing]
+    if not landing or any(open_ is None for open_ in free):
+        return None
+    index = 0 if side.value == "prefix" else 1
+    full = sum(1 for open_ in free if open_[index] == 0 and open_[1 - index] > 0)
+    if full * 2 <= len(landing):
+        return None
+    other = "suffix" if index == 0 else "prefix"
+    return f"it fills the last open {side.value}: a mod added next can only be a {other}"
+
+
 def chances(ab, state: CompressedState, action) -> tuple[list[float], list[float]] | None:
     """Per leaf, the chance one use of `action` on `state` makes it PASSING (a leaf it is not) and loses it (a leaf it is), from the
     abstraction `ab`'s kernel; None where the action has no outcome there."""
     try:
         kernel = ab.kernel(state, action)
-    except (NotApplicableError, OutOfScopeError, ValueError):
+    except Exception:  # noqa: BLE001  (a reason line never takes the page down: an action the abstraction cannot run there is not said)
         return None
     if not kernel:
         return None
@@ -173,9 +192,11 @@ def effects(view, kind: str) -> tuple[list[str], set[str]]:
             moved = [(abs(a - b) / whole, i, a / whole, b / whole) for i, (a, b) in enumerate(sums[name])]
             gap, i, on, off = max(moved)
             if gap >= MOVED:
-                said.append(f"{view.leaf_text(i)} {verb} on {_percent(on)} of uses with it, {_percent(off)} without")
+                said.append((gap, f"{view.leaf_text(i)} {verb} on {_percent(on)} of uses with it, {_percent(off)} without"))
         if said:
-            lines.append(f"step {step.number + 1} ({view.title_of(step.number + 1)}): " + "; ".join(said))
+            share = math.fsum(w for _, w in held) / (math.fsum(weights) or 1.0)
+            where = "" if share > 0.995 else f", on the items there that hold it ({_percent(share)} of its uses)"
+            lines.append(f"step {step.number + 1} ({view.title_of(step.number + 1)}){where}: " + "; ".join(text for _, text in sorted(said, reverse=True)))
     return lines, used
 
 
@@ -235,7 +256,7 @@ def _takes_off(view, step, kind: str) -> float | None:
     for state, weight in _read([s for s, _ in held], [w for _, w in held]):
         try:
             kernel = view.ab.kernel(state, acting)
-        except (NotApplicableError, OutOfScopeError, ValueError):
+        except Exception:  # noqa: BLE001  (a reason line never takes the page down: an action the abstraction cannot run there is not said)
             continue
         total += weight
         off += weight * math.fsum(float(chance) for outcome, chance in kernel.items() if not holds(outcome, kind))
@@ -243,45 +264,30 @@ def _takes_off(view, step, kind: str) -> float | None:
 
 
 def instead(view, step, against: set[str]) -> list[str]:
-    """On the item the step sees most: the cheapest other action the plan prices there, its cost then the plan's against the craft's; and
-    the actions the craft is made before (`against`) that the plan never priced there, named as such."""
+    """The other order: the actions the craft is made before (`against`) used here instead, on the item the step sees most, when the plan's
+    solution holds no value for what they make there: said as not priced. (Where it holds them, a one-step change of a plan that crafts
+    it next anyway is no other order, so no figure is said: checker and crafter on R14, a 10 c gap beside a 1,490 c step read as "skip it".)"""
     values = getattr(getattr(view.plan, "solution", None), "values", None)
-    if not values or not step.states:
+    if not values or not step.states or not against:
         return []
     weights = step.weights or (1.0,) * len(step.states)
     state = max(zip(step.states, weights, strict=True), key=lambda pair: pair[1])[0]
-    mine = values.get(state)
-    if mine is None or not math.isfinite(mine):
-        return []
-    priced, unpriced = [], []
+    unpriced = []
     for offer in view.plan.offers:
-        if offer.label == step.action.label or offer.label == RESTART:
+        if offer.label not in against or offer.label == step.action.label:
             continue
         try:
             kernel = view.ab.kernel(state, offer.offer.action)
-        except (NotApplicableError, OutOfScopeError, ValueError):
+        except Exception:  # noqa: BLE001  (a reason line never takes the page down: an action the abstraction cannot run there is not said)
             continue
-        stay = float(kernel.get(state, 0))
-        if not kernel or stay >= 1:
-            continue
-        if any(outcome != state and outcome not in values and not view.ab.is_goal(outcome) for outcome in kernel):
-            if offer.label in against:
-                unpriced.append(offer.label)
-            continue
-        rest = math.fsum(float(chance) * (0.0 if view.ab.is_goal(outcome) else values[outcome]) for outcome, chance in kernel.items() if outcome != state)
-        cost = (offer.cost + rest) / (1 - stay)
-        if math.isfinite(cost):
-            priced.append((cost, offer.label))
-    lines = []
-    if priced:
-        cost, label = min(priced)
-        lines.append(
-            f"not made here: on the item this step sees most, the cheapest other action the plan prices there, {label} then the plan, leaves "
-            f"{_words()[2](cost)} to pay against {_words()[2](mine)} with the craft"
-        )
-    if unpriced:
-        lines.append(f"{' or '.join(dict.fromkeys(unpriced))} there first, before the craft: not priced, the plan's search never followed it from that item")
-    return lines
+        if kernel and any(outcome != state and outcome not in values and not view.ab.is_goal(outcome) for outcome in kernel):
+            unpriced.append(offer.label)
+    if not unpriced:
+        return []
+    return [
+        f"the other order, {' or '.join(dict.fromkeys(unpriced))} first and this craft after: not priced, the plan's search never followed "
+        "it from the items here, so this page cannot say what it costs"
+    ]
 
 
 def purpose_lines(view, step) -> list[str]:
@@ -293,6 +299,8 @@ def purpose_lines(view, step) -> list[str]:
     for kind in added_crafts(view, step):
         if said := blocks(view.data, view.ab.base_id, view.ab.item_level, kind):
             lines.append(said)
+        if filled := fills(view, step, kind):
+            lines.append(filled)
         made, used = effects(view, kind)
         lines += made
         against |= used
@@ -319,6 +327,6 @@ def freed(view, step) -> list[str]:
         where = f" (crafted in step {makers[0]})" if makers else ""
         said = f"it takes off {_hashes(mod_text(view.data.mods[kind]))}{where}"
         if (blocked := blocks(view.data, view.ab.base_id, view.ab.item_level, kind)) and blocked.startswith("it takes the family of "):
-            said += f": {blocked.removeprefix('it takes the family of ').split(':')[0]} can roll again"
+            said += f": {blocked.removeprefix('it takes the family of ').split(':')[0]} can be added again"
         lines.append(said)
     return lines

@@ -667,8 +667,8 @@ class _View:
 
     def _grouped(self, entries: list[tuple[str, frozenset[int]]]) -> list[str]:
         """The texts of `entries` (a text and the leaves it meets), those that meet members of one k-of-n group alone joined in one line that
-        says the group (#1622): "one of A / B (the target asks 2 of 3: Fire Resistance / Cold Resistance / Lightning Resistance)", or "of
-        these 3" when every member is named. A text that meets no leaf, or leaves of no group or of two, stays as it is."""
+        says the group (#1622): "2 of these 3: A / B / C" when every member is named, else "A / B, toward 2 of 3: Fire Resistance / Cold
+        Resistance / Lightning Resistance". A text that meets no leaf, or leaves of no group or of two, stays as it is."""
         texts: list[str | list] = []
         open_: dict[tuple[int, ...], list] = {}
         for text, leaves in entries:
@@ -689,12 +689,13 @@ class _View:
                 continue
             k, members, named, met = entry
             named = list(dict.fromkeys(named))
-            lead = named[0] if len(named) == 1 else f"one of {' / '.join(named)}"
-            if len(named) > 1 and met == set(members):
-                said.append(f"{lead} (the target asks {k} of these {len(members)})")
+            names = list(dict.fromkeys(short_mod(self._leaf_mod_text(leaf)) for leaf in members))
+            if len(names) == 1:  # every member reads as one mod (its forms): no group to say
+                said.append(" / ".join(named))
+            elif len(named) > 1 and met == set(members):
+                said.append(f"{k} of these {len(members)}: {' / '.join(named)}")
             else:
-                names = " / ".join(dict.fromkeys(short_mod(self._leaf_mod_text(leaf)) for leaf in members))
-                said.append(f"{lead} (the target asks {k} of {len(members)}: {names})")
+                said.append(f"{' / '.join(named)}, toward {k} of {len(members)}: {' / '.join(names)}")
         return said
 
     def _leaf_mod_text(self, index: int) -> str:
@@ -1452,14 +1453,17 @@ class _View:
                 break
             mod = max(always, key=lambda name: math.fsum(offer[0] for offer in left if offer[2] == name))
             share = math.fsum(offer[0] for offer in left if offer[2] == mod)
-            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: {chance_text(share / whole)} of unveils")
+            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: taken on {chance_text(share / whole)} of unveils")
             left = [offer for offer in left if offer[2] != mod]
         if left:  # no order holds for the rest: each mod with how often it is taken
             shares: dict[str, float] = {}
             for share, _, mod in left:
                 shares[mod] = shares.get(mod, 0.0) + share
-            lines += [f"{mod}: {chance_text(share / whole)} of unveils" for mod, share in sorted(shares.items(), key=lambda kv: -kv[1])]
-        return ["the window shows up to three mods and one is taken, free; the plan takes:", *lines]
+            lines += [
+                f"{'else, by what else is shown, ' if lines else ''}{mod}: taken on {chance_text(share / whole)} of unveils"
+                for mod, share in sorted(shares.items(), key=lambda kv: -kv[1])
+            ]
+        return ["the window shows up to three mods and one is taken, free; the plan takes, in this order:", *lines]
 
     def _taken(self, made) -> str:
         """The mod of the offer a pick takes, read off its outcome: the slot it adds is of the family of one mod of the offer (a mod unveiled
@@ -1471,7 +1475,7 @@ class _View:
             matched = [entry for entry in made.offered.offer if entry.mod_id in self.data.mods and families & set(self.data.mods[entry.mod_id].families)]
             if len(matched) == 1:
                 return self._mod(matched[0].mod_id)
-        return str(made.pick.label)
+        return "another mod of the offer"
 
     def goal_states(self) -> list[CompressedState]:
         """The item states the mods' steps end in, the target's mods made; the start's own when no step is needed."""

@@ -65,8 +65,8 @@ def joined_picks[S](chain: Chain[S], holds_offer: Callable[[S], bool]) -> tuple[
     if (any_offer & ~all_offer).any():
         return chain, {}  # an item holding an offer reached otherwise than by the unveil alone
     unveil = has & all_offer[np.where(has, chain.kernel, 0)] & ~offer
-    if offer[0] or not unveil.any():
-        return chain, {}
+    if offer[0] or not unveil.any() or (offer & ~has).any():
+        return chain, {}  # the start holds an offer, no unveil, or an item holding an offer has no pick planned
     kept = np.flatnonzero(~offer)
     remap = np.full(m + len(chain.goals), -1, dtype=np.int64)
     remap[kept] = np.arange(len(kept))
