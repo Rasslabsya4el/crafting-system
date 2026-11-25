@@ -212,7 +212,10 @@ def test_a_recombinator_output_is_a_new_item_and_holds_no_imprint():
 
 
 def test_the_beasts_are_priced_from_the_price_file_and_a_restore_is_free():
-    assert dict(Imprint(CROAKER).resources()) == {MAGIC_BEAST: 1} and dict(Imprint(ARACHNID, 2, 0).resources()) == {TALISMAN_BEAST: 1}
+    # The altar takes four beasts (#1663): the named one, priced from the price file, and three rare beasts of any kind at 1 Chaos each.
+    assert dict(Imprint(CROAKER).resources()) == {MAGIC_BEAST: 1, "Chaos Orb": 3}
+    assert dict(Imprint(ARACHNID, 2, 0).resources()) == {TALISMAN_BEAST: 1, "Chaos Orb": 3}
+    assert dict(Imprint(CROAKER, rare_creature_price=2).resources()) == {MAGIC_BEAST: 1, "Chaos Orb": 6}  # the price is a setting
     assert dict(Restore(0).resources()) == {}
     prices = {MAGIC_BEAST: PriceEntry(7.0, "test"), TALISMAN_BEAST: PriceEntry(40.0, "test")}
     import datetime
@@ -222,8 +225,20 @@ def test_the_beasts_are_priced_from_the_price_file_and_a_restore_is_free():
     priced, dropped = price_offers(offers, file)
     assert not dropped
     costs = {entry.label: entry.cost for entry in priced}
-    assert costs["Imprint with the Craicic Croaker"] == 7.0 and costs["Imprint with the Fenumal Plagued Arachnid"] == 40.0
-    assert costs["Restore imprint 1"] == pytest.approx(FREE_ACTION_SHARE * 7.0)  # a free action costs a share of the cheapest offer that costs something
+    # by hand: 7 + 3 x 1 = 10 Chaos for the Croaker's imprint, 40 + 3 x 1 = 43 for the Arachnid's
+    assert costs["Imprint with the Craicic Croaker"] == 10.0 and costs["Imprint with the Fenumal Plagued Arachnid"] == 43.0
+    assert costs["Restore imprint 1"] == pytest.approx(FREE_ACTION_SHARE * 10.0)  # a free action costs a share of the cheapest offer that costs something
+
+
+def test_the_three_rare_beasts_of_an_imprint_are_shown_as_stand_ins():
+    from crafting_system.actions.beasts import RARE_BEAST, RARE_BEAST_PRICE_WORDS
+    from crafting_system.actions.contract import StandIn
+
+    beasts = StandIn(RARE_BEAST, 3, 1.0, RARE_BEAST_PRICE_WORDS)
+    assert Imprint(CROAKER).stand_ins(CONTRACT_DATA) == {"Chaos Orb": beasts}
+    assert Imprint(ARACHNID, 2, 1).stand_ins(CONTRACT_DATA) == {"Chaos Orb": beasts}
+    assert Imprint(CROAKER, rare_creature_price=0).stand_ins(CONTRACT_DATA) == {}
+    assert Restore(0).stand_ins(CONTRACT_DATA) == {}
 
 
 def test_the_eleven_claims_are_in_the_registry_with_the_unverified_ones_stamped_and_marked_approximate():
@@ -250,7 +265,7 @@ def test_the_eleven_claims_are_in_the_registry_with_the_unverified_ones_stamped_
         assert rules[rule_id].approximate_reason, rule_id
     for rule_id in ("imprint.consumed_on_restore", "imprint.several_per_item"):
         assert "grill B3" in rules[rule_id].approximate_reason, rule_id
-    assert Imprint(CROAKER).claims() <= set(ids) and Restore(0).claims() == {
+    assert Imprint(CROAKER).claims() <= {*ids, "beastcraft.recipe_beasts"} and Restore(0).claims() == {
         "imprint.restores_state", "imprint.refused_on_fractured", "imprint.refused_on_corrupted_mirrored", "imprint.not_for_derived_items",
         "imprint.consumed_on_restore", "awakener.imprint_restores_receiver_only",
     }
