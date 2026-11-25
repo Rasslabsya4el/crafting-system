@@ -1,4 +1,6 @@
-"""R04, R14 and S02 end to end through `make_plan` on the packed solver (ticket #374, ADR-0063 point 1).
+"""R04 and S02 end to end through `make_plan` on the packed solver (ticket #374, ADR-0063 point 1). R14 was here too until #1635: the
+walk is retired and no longer ends on R14 in an hour (#1608), so its packed record was dropped; R14's opening is checked by
+`tests/test_cli_r04_r14_heavy.py`.
 
 "Done when: R04, R14 and S02 give their exact value through the planner." The graphs are R04's 177,242 states and 535.9 M
 transitions, R14's 816,153 states and S02's 106,002 states and 76.6 billion transitions (ticket #312): minutes to half an
@@ -32,8 +34,6 @@ from crafting_system.cli._reach import policy_states
 from crafting_system.prices import load_price_file
 from crafting_system.targets import load_target, parse_target
 
-R14_OPENING = "Orb of Scouring and Orb of Transmutation on the bought item (any rarity)"  # R14's start is priced by a search of any rarity (#1537)
-
 ROOT = Path(__file__).resolve().parents[1]
 GOLDEN = ROOT / "tests" / "golden" / "packed_values.json"
 PRICES = ROOT / "tests" / "fixtures" / "prices" / "routes-allflame-2026-07-31.json"
@@ -48,12 +48,12 @@ def golden() -> dict:
 def test_the_golden_values_file_names_the_main_it_was_taken_on():
     found = golden()
 
-    assert found["main"] and set(found["routes"]) == {"R04", "R14", "S02"}
+    assert found["main"] and set(found["routes"]) == {"R04", "S02"}  # R14 dropped (#1635): the retired walk no longer ends on it
     for row in found["routes"].values():
         assert row["mean_remaining"] > 0 and row["states"] > 0 and row["error_bound"] < 1e-6
 
 
-@pytest.fixture(scope="module", params=["R04", "R14", "S02"])
+@pytest.fixture(scope="module", params=["R04", "S02"])  # R14 has no packed record since #1635
 def planned(request):
     """(route id, plan) of one heavy route, planned once by `make_plan` on the packed solver by name (`auto` is the envelope search since #535, which walks less)."""
     data = real_game_data()
@@ -95,22 +95,6 @@ def test_the_value_is_certified_and_was_solved_packed(planned):
     assert isinstance(plan.policy, PackedPolicy)
     assert plan.risk is not None and plan.risk.success_probability.value == pytest.approx(1.0)
     assert plan.risk.mean.value == pytest.approx(plan.mean_remaining, rel=1e-6)
-
-
-@HEAVY
-def test_r14_does_not_open_with_a_transmutation_on_its_magic_bow_and_offers_none(planned):
-    """#576: R14 starts from a Magic bow (the guide opens with Alteration, no Transmutation Orb is named), so the plan's first step is not a Transmutation Orb."""
-    route, plan = planned
-    if route != "R14":
-        pytest.skip("only R14 is a Magic start")
-
-    assert plan.target.start_item.rarity.value == "magic"
-    first = plan.policy[plan.start]
-    assert first.label == R14_OPENING  # the bought bow, priced at any rarity (#1537): its Scouring and Transmutation come first, then the decision on each outcome
-    chosen = {plan.policy[state].label for state, _ in first.outcomes if state in plan.policy}
-    assert {"Orb of Alteration", "Orb of Augmentation"} <= chosen  # an Augmentation where the bow holds 1 mod, an Alteration where it holds 2
-    assert "Orb of Transmutation" not in chosen
-    assert "Orb of Transmutation" not in {offer.label for offer in plan.offers}
 
 
 @HEAVY
