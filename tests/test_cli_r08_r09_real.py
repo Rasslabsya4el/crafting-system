@@ -49,8 +49,8 @@ RUNS = 200
 BUDGET = 60.0  # the plan is made as the command makes it by default: under a budget, by the envelope search, which stops at a proved gap (OR-39; a judged route included, #829)
 RATES = Rates(4e-5, 7e-6)  # read by nothing since #926 (`auto` makes no forecast); they go with the forecast (#928)
 ROUTES = {
-    "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.82716, "Dense Fossil"),
-    "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.02716, "Pristine Fossil"),
+    "r08": ("r08-energy-shield-boots", "Sorcerer Boots, item level 86-100", 29.8, "Dense Fossil"),
+    "r09": ("r09-life-boots", "Two-Toned Boots [BootsAtlas1], item level 86-100", 5.0, "Pristine Fossil"),
 }
 SPEED_CRAFTS = 1  # the bench's plain Movement Speed craft at its top tier is the only craft that counts (the guide says "bench-craft the movement speed"; the three hybrid crafts are not asked since #404, OR-2)
 
@@ -82,7 +82,7 @@ def plan(data, route, plans):
     return plans[route]
 
 
-def test_the_start_boots_cost_their_trade_price_plus_an_alchemy(plan, route):
+def test_the_start_boots_cost_their_normal_base_trade_price(plan, route):  # the Alchemy is the plan's own paid step (#1522, #1535)
     _, name, chaos, _ = ROUTES[route]
 
     assert plan.start_price.name == name

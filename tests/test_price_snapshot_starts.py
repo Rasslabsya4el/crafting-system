@@ -40,20 +40,20 @@ def test_a_quoted_start_item_of_the_old_file_is_remembered_as_its_last_deep_read
     assert script.remembered_starts(old, "Keepers") == {}  # another league's reading is never this one's
 
 
-def test_a_thin_search_today_leaves_a_thin_record_with_its_mean_plus_what_the_plan_adds(script):
-    """Three priced listings of 7 on the site: (2 + 3 + 4) / 3 = 3 c, plus one Orb of Alchemy of 0.25 c for a composite."""
-    record, reading = script.start_record("thin", [2.0, 3.0, 4.0], 7, {"q": 1}, "h", "Allflame", DAY, 0.25)
+def test_a_thin_search_today_leaves_a_thin_record_with_the_bought_items_own_mean(script):
+    """Three priced listings of 7 on the site: (2 + 3 + 4) / 3 = 3 c. A composite's Orb of Alchemy is the plan's own paid step, never in the record (#1535)."""
+    record, reading = script.start_record("thin", [2.0, 3.0, 4.0], 7, {"q": 1}, "h", "Allflame", DAY)
 
     assert reading is None
-    assert record == MarketRecord("thin", "Allflame", DAY, 7, 3, "h", {"q": 1}, 3.25, 3)
+    assert record == MarketRecord("thin", "Allflame", DAY, 7, 3, "h", {"q": 1}, 3.0, 3)
 
 
 def test_a_search_with_no_listing_is_a_none_record_and_a_quoted_one_a_deep_reading(script):
     none, _ = script.start_record("none", [], 0, {}, "h", "Allflame", DAY)
-    _, deep = script.start_record("quoted", [1.0, 2.0, 3.0, 4.0, 5.0, 60.0], 30, {}, "h", "Allflame", DAY, 0.25)
+    _, deep = script.start_record("quoted", [1.0, 2.0, 3.0, 4.0, 5.0, 60.0], 30, {}, "h", "Allflame", DAY)
 
     assert (none.state, none.chaos, none.used) == ("none", None, 0)
-    assert deep == DeepReading(3.25, "Allflame", DAY, 30, 6)  # (1 + 2 + 3 + 4 + 5) / 5 + 0.25
+    assert deep == DeepReading(3.0, "Allflame", DAY, 30, 6)  # (1 + 2 + 3 + 4 + 5) / 5, the base alone
 
 
 def test_the_planner_reads_a_thin_start_item_as_its_old_price_marked_with_its_day(script):

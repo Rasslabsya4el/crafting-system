@@ -45,7 +45,7 @@ start_item:
   mods: []
 
 # The start item is bought. Its buy spec, trade query and price key are computed from this file
-# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base plus an Orb of Alchemy, not of this rare item (OR-16, #494 point 2).
+# (base, item level, influence, start item), so nothing else describes it. The committed price is of a Normal base alone, not of this rare item: the plan's first step is the Orb of Alchemy that makes it rare, paid (OR-16, OR-43, #494 point 2, #1522, #1535).
 start: bought
 
 requirements:

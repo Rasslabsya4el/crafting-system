@@ -16,7 +16,7 @@ price is stored under; the trade query is `build_query` of the spec. Nothing is 
   gained anywhere in the pool changes the odds of the craft, so the whole-pool window is the exact one. A window that runs to the highest
   item level has no maximum in the query.
 * **The rarity** is the start item's, as the target states it. (R08 and R09 start rare with no mods; their committed prices are of a Normal
-  base plus an Alchemy typed into the sum, which the keys and the tests mark as a price for another item, #494 point 2.)
+  base alone, which the keys and the tests mark as a price for another item, #494 point 2; the plan casts and pays the Alchemy, #1522, #1535.)
 * **The key** is the one place a price name of a start item is made (#471). It carries what tells two start items apart for buying: the base
   (the base id too, where the name is shared), the rarity, the item level window, the influences and the corruption, then the start mods.
   Two targets that differ in any of these read two price entries. `base_line_name` is the other name made here: the poe.ninja-style line
