@@ -111,12 +111,25 @@ __all__ = [
     "Reads",
     "Rerolled",
     "SocketRule",
+    "StandIn",
     "model_readings",
 ]
 
 if TYPE_CHECKING:
     from .outcomes import Outcomes
     from .pool import PoolFamily
+
+
+@dataclass(frozen=True)
+class StandIn:
+    """Goods no price list holds, paid as a resource at a fixed price (`Action.stand_ins`, #1518, #1597): a beast recipe's rare beasts of
+    any kind, paid as Chaos Orbs. `goods` names one unit ("rare beast of any kind"), `count` the units one use takes, `each` the Chaos one
+    unit is paid at, `why` what the price rests on, in a player's words. No market was read for them, so no supply is known."""
+
+    goods: str
+    count: int
+    each: float
+    why: str
 
 
 SocketShape = Callable[[int, tuple[int, ...]], "tuple[tuple[int, tuple[int, ...], Fraction], ...] | None"]
@@ -811,9 +824,10 @@ class Action(ABC):
     def resources(self, data: GameData | None = None) -> Mapping[str, int]:
         """What one use consumes, by price-file name; read from claims. `data` may be None for an action that needs none."""
 
-    def stand_ins(self, data: GameData | None = None) -> Mapping[str, str]:
-        """The resources of `resources` that are paid in place of goods no price list holds, each with the words of what it stands for (a beast
-        recipe's rare beasts of any kind, paid as Chaos Orbs, #1518): a page that names the resource says what it is. Empty by default."""
+    def stand_ins(self, data: GameData | None = None) -> Mapping[str, StandIn]:
+        """The resources of `resources` that are paid in place of goods no price list holds, each with the goods it stands for (a beast
+        recipe's rare beasts of any kind, paid as Chaos Orbs, #1518): a page names the goods, not the resource, and marks their price as a
+        stand-in with no supply known (#1597). Empty by default."""
         return {}
 
     def sure_reason(self, data: GameData | None = None) -> str | None:

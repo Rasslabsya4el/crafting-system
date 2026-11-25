@@ -50,7 +50,7 @@ from .poe_ninja import HISTORY_SOURCE, history_slug
 from .ninja_items import BEAST, STASH_TYPES
 from .previous_league import PREVIOUS_SOURCE
 from .price_file import CHAOS_ORB, DIVINE_ORB, PriceEntry, PriceFile
-from .provenance import ESTIMATE, EXCHANGE, HAND_SET, HISTORY, KIND_OF_SOURCE, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
+from .provenance import ESTIMATE, EXCHANGE, HAND_SET, HISTORY, KIND_OF_SOURCE, OBSERVATION_CAP, OBSERVATIONS, PREVIOUS_LEAGUE, RECIPE, STANDARD, STASH, TRADE, WATCH, Provenance
 
 __all__ = ["DayRow", "build_snapshot", "reading_on", "wants_history"]
 
@@ -207,7 +207,7 @@ def _read_beast(name: str, beast_rows_of: BeastRowsOf, league: str, start: date,
         row = reading_on(beast_rows_of(league, name), as_of)
         if row is None:
             return None
-        note = f"poe.ninja daily value of the beast on {row.day.isoformat()} (league day {(row.day - start).days}), {row.count:,} listings seen that day"
+        note = f"poe.ninja daily value of the beast on {row.day.isoformat()} (league day {(row.day - start).days}), {_seen(row.count)} listings seen that day"
         if row.day != as_of:
             note += f"; {as_of.isoformat()} had no row of {MIN_COUNT} listings or more"
         detail = {"league": league, "date": row.day.isoformat(), "category": BEAST, "as_of": as_of.isoformat(), "league_day": (as_of - start).days}
@@ -218,10 +218,15 @@ def _read_beast(name: str, beast_rows_of: BeastRowsOf, league: str, start: date,
         return None
     note = (
         f"poe.ninja daily value of the beast on {row.day.isoformat()} in {old} (its league day {(row.day - old_start).days}, the same age),"
-        f" {row.count:,} listings seen that day: {league} has no daily row {_window(as_of)}"
+        f" {_seen(row.count)} listings seen that day: {league} has no daily row {_window(as_of)}"
     )
     detail = {"league": old, "date": row.day.isoformat(), "category": BEAST, "current_league": league, "age_days": (as_of - start).days}
     return PriceEntry(row.chaos, PREVIOUS_SOURCE, note, detail, Provenance(PREVIOUS_LEAGUE, old, row.day.isoformat(), float(row.count), OBSERVATIONS))
+
+
+def _seen(count: float) -> str:
+    """A beast's count of listings in words: at the cap poe.ninja counts no further, so it is a least number (#930)."""
+    return f"at least {count:,.0f}" if count >= OBSERVATION_CAP else f"{count:,.0f}"
 
 
 def _read_exchange(name: str, rows_of: RowsOf, league: str, start: date, as_of: date, previous: Previous | None) -> PriceEntry | None:

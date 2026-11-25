@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 from crafting_system.prices import CHAOS_ORB, DIVINE_ORB
 from crafting_system.prices.price_marks import PriceMark, chaos_text, judged_depth, price_marks, provenance_of, units_text
-from crafting_system.prices.provenance import WIDER
+from crafting_system.prices.provenance import HAND_SET, OBSERVATIONS, TRADE, WIDER, Provenance, capped
 import numpy as np
 
 from crafting_system.solver import Action
@@ -43,10 +43,41 @@ class PriceUse:
     uses: float | None  # the units the plan expects to buy; None when not solved
     marks: tuple[PriceMark, ...]
     wider: str | None = None  # what a stand-in price was read for, in words; None for the exact item
+    supply: str | None = None  # the supply the reading saw, in words ("399 listings seen that day"); None when none is known (#1597)
+    paid_as: str | None = None  # goods no price list holds (`Action.stand_ins`): the resource they are paid as ("Chaos Orb")
 
     @property
     def approximate(self) -> bool:
         return bool(self.marks)
+
+
+STAND_IN_FEE = "stand-in-fee"  # the mark of goods paid at a fixed price, with no market read (#1597)
+NO_SUPPLY = "no supply known"
+
+
+def supply_words(provenance: Provenance | None) -> str | None:
+    """What the reading saw of the market, in a player's words, by what its depth counts (#1597): the listings poe.ninja saw that day, the
+    units the trade site's listings held, or the units traded that day. None when no depth is recorded."""
+    if provenance is None or provenance.depth is None:
+        return None
+    if provenance.depth_unit == OBSERVATIONS:
+        if capped(provenance):  # the count stops at the cap: the listings were that many or more (#930)
+            return f"at least {units_text(provenance.depth)} listings seen that day (poe.ninja counts no further)"
+        return f"{units_text(provenance.depth)} listings seen that day"
+    if provenance.kind in (TRADE, HAND_SET):
+        return f"{units_text(provenance.depth)} units listed"
+    return f"{units_text(provenance.depth)} units traded that day"
+
+
+def _stand_ins(plan: Plan, labels: Mapping[str, Action]) -> dict[tuple, dict[str, int]]:
+    """Goods paid as another resource at a fixed price (`Action.stand_ins`): (the stand-in's goods, price and words, the resource paid) ->
+    {offer label -> units one use takes}."""
+    data = getattr(getattr(plan, "abstraction", None), "data", None)
+    found: dict[tuple, dict[str, int]] = {}
+    for label, action in labels.items():
+        for paid, stand_in in plan.offer_of(action).offer.action.stand_ins(data).items():
+            found.setdefault((stand_in.goods, stand_in.each, stand_in.why, paid), {})[label] = stand_in.count
+    return found
 
 
 def _labels(plan: Plan, policy: Mapping) -> dict[str, Action]:
@@ -117,8 +148,10 @@ def price_uses(
             need.append(name)
     if all_uses:
         need = list(names)
+    stand_ins = _stand_ins(plan, labels) if labels else {}
     solved: dict[str, float | None] = {}
-    if need and solve_uses and policy is not None and labels:
+    per_label: dict[str, float] = {}
+    if (need or stand_ins) and solve_uses and policy is not None and labels:
         per_label = expected_uses(chain if chain is not None else chain_of_policy(plan.start, policy, plan.is_goal), labels)
         for name in need:
             total = math.fsum(per_label[label] * count for label, count in counts.get(name, {}).items())
@@ -142,7 +175,11 @@ def price_uses(
         source = "no source recorded" if provenance is None else provenance.words
         depth = None if provenance is None else provenance.depth
         wider = None if provenance is None or provenance.item != WIDER else (provenance.for_item or "")
-        found.append(PriceUse(name, entry.chaos, source, depth, uses, marks, wider))
+        found.append(PriceUse(name, entry.chaos, source, depth, uses, marks, wider, supply_words(provenance)))
+    for (goods, each, why, paid), counts_of in stand_ins.items():  # goods no price list holds, at a fixed price: approximate, no supply known (#1597)
+        uses = math.fsum(per_label[label] * count for label, count in counts_of.items()) if per_label else None
+        mark = PriceMark(STAND_IN_FEE, "a stand-in price with no market behind it")
+        found.append(PriceUse(goods, each, why, None, uses, (mark,), paid_as=paid))
     return tuple(found)
 
 
@@ -162,13 +199,20 @@ def expected_uses(chain: Chain, labels) -> dict[str, float]:
 
 def use_line(use: PriceUse) -> str:
     """One price as a person reads it: "Prismatic Fossil: 5.87 Chaos, poe.ninja exchange, Allflame, 2026-11-07; approximate: price on 3.3 units"."""
+    if use.paid_as is not None:  # goods no price list holds (#1597): the fixed price, what they are paid as, no supply known
+        line = f"{use.name}: {chaos_text(use.chaos)} Chaos each, {use.source}, {NO_SUPPLY}"
+        if use.uses is not None:
+            line += f", the plan buys about {units_text(use.uses)}"
+        return line + "; approximate: " + "; ".join(mark.reason for mark in use.marks)
     line = f"{use.name}: {chaos_text(use.chaos)} Chaos, {use.source}"
     if use.wider is not None:
         line += ", taken for a wider item" + (f" ({use.wider})" if use.wider else "")
-    if use.depth is not None:
-        line += f", {units_text(use.depth)} units behind it"
+    if use.supply is not None or use.depth is not None:
+        line += f", {use.supply or units_text(use.depth or 0) + ' units behind it'}"
         if use.uses is not None:
             line += f", the plan buys about {units_text(use.uses)}"
+    elif use.source not in (UNIT_WORDS,) and not use.source.startswith(RATE_WORDS):
+        line += ", no supply recorded"
     if use.marks:
         line += "; approximate: " + "; ".join(mark.reason for mark in use.marks)
     return line

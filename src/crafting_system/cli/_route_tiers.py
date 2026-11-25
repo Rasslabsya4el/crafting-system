@@ -169,6 +169,8 @@ def tier_lines(
     adds = action.adds(ab.data, None)
     if adds.named is not None and not adds.draws and not ids & set(adds.named):
         return []  # the action adds only the mods it names, and none of them is in a wanted family
+    if adds.imprints and adds.named is None and not adds.draws:
+        return []  # a restore puts back the mods of an imprint, rolled before: it rolls no tier (crafter on R17's restore, #1597)
     total = math.fsum(weights)
     sums: list[dict[int, list[float]]] = [{} for _ in families]
     seen: dict[Hashable, dict[str, Fraction]] = {}

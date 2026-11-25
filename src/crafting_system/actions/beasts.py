@@ -26,7 +26,7 @@ from crafting_system.items import ExplicitMod, Item, Rarity, Side
 from crafting_system.rules import get_rule
 
 from .catalog import kind
-from .contract import Action, Adds, Reads
+from .contract import Action, Adds, Reads, StandIn
 from .draw import Outcome
 from .errors import NotApplicableError, OutOfScopeError
 from .finite import Finite
@@ -53,6 +53,8 @@ ASPECT_NEEDS_OPEN_SUFFIX = get_rule("beastcraft.aspect_needs_open_suffix")
 
 ANY_RARE_CREATURE = "any_rare_creature"  # the key of `recipe_beasts` for the rare beasts of any kind
 CHAOS_ORB = "Chaos Orb"  # the price-file name the rare beasts are paid in
+RARE_BEAST = "rare beast of any kind"  # the goods a recipe's rare beasts of any kind are, one unit (#1597)
+RARE_BEAST_PRICE_WORDS = "a fixed price the planner sets: no price list holds them"
 TALISMAN_TAG = "talisman"  # the tag of the Talisman bases (bases of the amulet class)
 ASPECT_WORDS = {"avian": "Bird", "cat": "Cat", "crab": "Crab", "spider": "Spider"}  # the aspect as it reads in the id of its mod
 ASPECT_LEVELS = (20, 30)
@@ -74,15 +76,12 @@ class RareBeastFee:
 
     rare_creature_price: int
 
-    def stand_ins(self, data: GameData | None = None) -> Mapping[str, str]:
+    def stand_ins(self, data: GameData | None = None) -> Mapping[str, StandIn]:
         chaos = self.resources(data).get(CHAOS_ORB, 0)  # type: ignore[attr-defined]  (the recipe is an Action)
         if not chaos or self.rare_creature_price <= 0:
             return {}
         beasts = chaos // self.rare_creature_price
-        return {
-            CHAOS_ORB: f"the recipe's {beasts} rare beast{'' if beasts == 1 else 's'} of any kind, at {self.rare_creature_price} Chaos each "
-            "(a fixed price: no price list holds them)"
-        }
+        return {CHAOS_ORB: StandIn(RARE_BEAST, beasts, float(self.rare_creature_price), RARE_BEAST_PRICE_WORDS)}
 
 
 def aspect_mod_id(aspect: str, level: int) -> str:

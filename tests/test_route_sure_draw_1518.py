@@ -12,12 +12,13 @@ from items_support import DATA
 
 from crafting_system.actions import ChaosOrb
 from crafting_system.actions.beast_mods import BeastSideSwap, WildBristleMatron
-from crafting_system.actions.beasts import AspectBeast, TalismanFracture
+from crafting_system.actions.beasts import RARE_BEAST, RARE_BEAST_PRICE_WORDS, AspectBeast, TalismanFracture
+from crafting_system.actions.contract import StandIn
 from crafting_system.cli._route_view import _View
 from crafting_system.items import Side
 from crafting_system.planner._offers import Offer, PricedOffer
 
-BEASTS = "the recipe's 3 rare beasts of any kind, at 1 Chaos each (a fixed price: no price list holds them)"
+BEASTS = StandIn(RARE_BEAST, 3, 1.0, RARE_BEAST_PRICE_WORDS)
 
 
 def view_of(action, parts=()):
@@ -37,12 +38,16 @@ def test_the_rare_beasts_of_a_beast_recipe_are_named_where_their_chaos_orbs_are(
     assert BeastSideSwap(Side.PREFIX).stand_ins(DATA) == {"Chaos Orb": BEASTS}
     assert ChaosOrb().stand_ins(DATA) == {}  # a real Chaos Orb stands for nothing else
     assert TalismanFracture(1).stand_ins(DATA) == {"Chaos Orb": BEASTS}
-    assert AspectBeast("cat", 30).stand_ins(DATA) == {"Chaos Orb": BEASTS.replace("3 rare", "2 rare")}  # The Black Mórrígan takes one place
+    assert AspectBeast("cat", 30).stand_ins(DATA) == {"Chaos Orb": StandIn(RARE_BEAST, 2, 1.0, RARE_BEAST_PRICE_WORDS)}  # The Black Mórrígan takes one place
     assert AspectBeast("cat", 20, rare_creature_price=0).stand_ins(DATA) == {}
 
     view = view_of(WildBristleMatron(), [("Wild Bristle Matron", 1, 235.0, "poe.ninja"), ("Chaos Orb", 3, 3.0, "a setting")])
     lines = _View.cost_lines(view, policy_action(1))
-    assert lines == ["1 × Wild Bristle Matron 235 c", f"3 × Chaos Orb 3 c: {BEASTS}", "total 238 c"]
+    assert lines == [
+        "1 × Wild Bristle Matron 235 c",
+        "3 × rare beast of any kind 3 c: approximate, a fixed price the planner sets: no price list holds them, and no supply is known",
+        "total 238 c",
+    ]
 
 
 def note_view(action, steps=()):

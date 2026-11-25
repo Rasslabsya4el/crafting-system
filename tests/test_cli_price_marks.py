@@ -92,7 +92,7 @@ def test_the_text_report_prints_each_price_with_its_source_and_marks(thin_plan):
     text = render_text(build_report(thin_plan, DATA))
 
     line = next(each for each in text.splitlines() if each.startswith(f"  {LIFEFORCE}: "))
-    assert line.startswith(f"  {LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units behind it, the plan buys about ")
+    assert line.startswith(f"  {LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units traded that day, the plan buys about ")
     assert line.endswith("; approximate: price on 10 units")
     assert "Approximate inputs (claims that no other source settles):" in text
     assert text.index("Prices: league") < text.index(f"  {LIFEFORCE}: 0.01 Chaos") < text.index("Start item")
@@ -114,7 +114,7 @@ def test_the_page_prints_the_source_of_each_price_and_its_marks(thin_plan):
 
     assert lines[0] == "league Test, fetched 2026-10-30"
     line = next(each for each in lines if each.startswith(f"{LIFEFORCE}: "))
-    assert line.startswith(f"{LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units behind it, the plan buys about ")
+    assert line.startswith(f"{LIFEFORCE}: 0.01 Chaos, poe.ninja exchange, Test, {DAY}, 10 units traded that day, the plan buys about ")
     assert line.endswith("; approximate: price on 10 units")
     assert any("price on 10 units" in line.text and "Source: poe.ninja exchange, Test" in line.text for line in approximate.lines)
 

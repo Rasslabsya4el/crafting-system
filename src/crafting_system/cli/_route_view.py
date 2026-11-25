@@ -84,7 +84,9 @@ from crafting_system.planner import GIVEN_SOURCE, REACHED, SHOWN_LABELS, STRANDS
 
 from ._interval import IntervalAnswer
 from ._marking import approximate_inputs, approximate_page_lines, price_inputs
-from ._price_marks import price_uses, use_line
+from crafting_system.prices.price_marks import units_text
+
+from ._price_marks import PriceUse, price_uses, use_line
 from ._report import Report
 from ._report_net import ask
 from ._route import RESTART, Route, RouteResult, finish_labels
@@ -530,13 +532,27 @@ def _kinds(table: _Table, on_mine: np.ndarray, on_others: np.ndarray, rest: np.n
 
 
 def _words(columns: list[_Column]) -> str:
-    """Conditions in words: those alone first, then "with ...", then "without ..." ("a rare item, with Life T1, without an unwanted prefix")."""
+    """Conditions in words: those alone first, then "with ...", then "without ..." ("a rare item with Life T1 and without an unwanted prefix").
+
+    No comma inside one item's conditions, so that the ", or " between the kinds of `_kinds` parts them, and "without A and without B" is an
+    item that holds neither (the crafter read "without A; B" and "without A or B" two ways, #1597)."""
     ordered = sorted(columns, key=lambda column: column.order)
-    parts = [column.noun for column in ordered if column.sign == ""]
+    signed = []
     for sign in ("with", "without"):
         if nouns := [column.noun for column in ordered if column.sign == sign]:
-            parts.append(f"{sign} {'; '.join(nouns)}")
-    return ", ".join(parts)
+            signed.append(f"{sign} {f' and {sign} '.join(nouns) if sign == 'without' else ' and '.join(nouns)}")
+    return " ".join(part for part in (" ".join(column.noun for column in ordered if column.sign == ""), " and ".join(signed)) if part)
+
+
+ONE_PLACE = 0.95  # a pick whose items go on to one place this often is said to go there (#1644)
+FEW_RUNS = 0.5  # a step fewer runs than this come to says that share first (`_rare_uses`)
+RUNS_COME = "of runs come to this step"  # the words of a step most runs never reach (`_rare_uses`)
+
+
+def _rare_uses(uses: float, reached: float, times: float, per: str) -> str:
+    """The uses of a step that only some runs reach, the mean over every run first, then the share of runs that come and how often they come
+    (#1597: "comes ≈215 times in a run that reaches it (reached in ≈0.026% of runs)" read as the craft's count beside a sure step)."""
+    return f"{chance_text(reached)} {RUNS_COME}, and such a run brings an item here {count(times).replace('≈ ', '≈')} times, {per}; {count(uses).replace('≈ ', '≈')} in a run on average"
 
 
 class _View:
@@ -1000,7 +1016,7 @@ class _View:
         if self.reader.tracked:
             mods = sorted({len(state.fractured) + len(state.slots) for state in landing})
             if len(mods) > 1:
-                lines.append(f"{', '.join(map(str, mods[:-1]))} or {mods[-1]} mods")
+                lines.append(f"after it the item holds {', '.join(map(str, mods[:-1]))} or {mods[-1]} mods")  # the result's, not the item it takes (#1597)
         if any(slot.tone == "any" for slot in (*after.prefixes, *after.suffixes)):
             lines.append("other mods: any")
         return lines
@@ -1069,7 +1085,7 @@ class _View:
                 found.append(Branch(f"{what} ({chance_text(edge.chance)})", card))
         return tuple(found)
 
-    def cost_lines(self, action: Action) -> list[str]:
+    def cost_lines(self, action: Action, uses: float | None = None) -> list[str]:
         if action.label == RESTART:
             mark = self.plan.start_price.mark
             return [money(self.plan.start_price.chaos), *([mark] if mark else [])]  # OR-8: a thin market's price carries its mark
@@ -1078,7 +1094,23 @@ class _View:
             if self.plan.start_price.made is not None:  # the item was made in row 1, not bought (#1523)
                 return [f"{FREE}: the item was paid in step 1{again}"]
             return [f"{FREE}: the listing's price is paid in step 1{again}"]
-        return priced_lines(self.data, self.plan.offer_of(action))
+        return priced_lines(self.data, self.plan.offer_of(action), self.supply() if uses is not None else None, uses)
+
+    def supply(self) -> dict[str, PriceUse]:
+        """The plan's priced resources by name (`price_uses`, made once for the page): the steps say a part bought past its market (#1597)."""
+        found = self.__dict__.get("_supply")
+        if found is None:
+            found = {use.name: use for use in self.price_uses()}
+            self._supply = found
+        return found
+
+    def price_uses(self) -> tuple[PriceUse, ...]:
+        """Each price the policy buys with, its source, supply and marks (#616, OR-7, OR-23), solved once for the page."""
+        found = self.__dict__.get("_price_uses")
+        if found is None:
+            found = price_uses(self.plan, self.inp.policy, self.inp.risk.mean.value, chain=self.chain)
+            self._price_uses = found
+        return found
 
     def plan_name(self, price_name: str | None) -> str | None:
         """A price name as the page shows it: the base by its game name, never its id (#553, #481); words tell it from a base of its name."""
@@ -1230,9 +1262,9 @@ class _View:
         times = step.uses / step.reached
         if times < 1.05:
             return None
-        said = (
-            "each time an item comes back here the craft is gone (the steps under \"Reached from\" that send it back take it off), so it is "
-            "paid again: the step cost counts every one"
+        said = (  # an item that comes here never held the craft or had it taken off: the crafter read "gone" of items that never held it (#1645)
+            "the bench refuses an item that already holds this mod, so every item that comes here lacks it: one that never held it, or one "
+            "a step took it off; the craft is paid each time it comes, and the step cost counts every one"
         )
         made = [line for kind in added_crafts(self, step, unasked=False) if (line := again(self, step, kind))]  # by the step that took it off (#1632)
         return said + (f"; {made[0]}" if made else "")
@@ -1396,7 +1428,7 @@ class _View:
         step_cost = step.step_cost
         leave = math.fsum(edge.chance for edge in step.edges if edge.to != step.number)  # the chance a use takes the item out of the step
         uses = [NEVER_FINISHES] if never else [] if step.uses is None else [self.uses_text(step.uses, step.reached, sure or restart, leave)]
-        if uses and not never and step.reached is not None and step.reached < 0.9995:
+        if uses and not never and step.reached is not None and step.reached < 0.9995 and RUNS_COME not in uses[0]:
             uses[0] += f" (reached in {chance_text(step.reached)} of runs)"
         chances = [] if restart else self.chance_lines(step, action, shown, number + 1, sure)
         if restart:
@@ -1419,7 +1451,7 @@ class _View:
             self.trade_field() if restart else None,
             Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
             None if one_way else self.tier_field(step, action),  # a listing that goes on the same way: its odds change no choice (crafter, #1442)
-            _plain("Cost per use", *self.cost_lines(action)),
+            _plain("Cost per use", *self.cost_lines(action, step.uses)),
             _plain("Uses on average", *uses),
             _plain("Step cost", FREE if self.free(action) else money(step_cost)) if step_cost is not None else None,
             Field(NEXT, tuple(self.restart_lines(step, failing))) if failing and restart else None,
@@ -1436,34 +1468,62 @@ class _View:
         if not any(state in self.picks for state in step.states):
             return []
         weights = step.weights or (1.0,) * len(step.states)
+        where = {state: edge for edge in step.edges for state in edge.states}  # the branch each item the step leaves goes on by
         offers: list[tuple[float, tuple[str, ...], str]] = []  # (share of the step's unveils, the mods shown, the one taken)
+        goes: dict[str, dict[str, float]] = {}  # each mod taken -> where the items it makes go on to, in words, with the share of its uses
         for state, weight in zip(step.states, weights, strict=True):
             for made in self.picks.get(state, ()):
                 shown = tuple(self._mod(entry.mod_id) for entry in made.offered.offer)
                 taken = self._taken(made)
                 offers.append((weight * made.chance, shown, taken))
+                for landing, chance in made.pick.outcomes:
+                    if chance > 0 and landing in where:
+                        place = goes.setdefault(taken, {})
+                        place[self._onward(where[landing])] = place.get(self._onward(where[landing]), 0.0) + weight * made.chance * float(chance)
+        # where the items a pick makes go on to, when nearly all go to one place; else "several steps" (no free choice is said of it)
+        mostly = {mod: (top if place[top] >= ONE_PLACE * math.fsum(place.values()) else "several steps") for mod, place in goes.items() for top in [max(place, key=place.__getitem__)]}
         whole = math.fsum(share for share, _, _ in offers)
         if not whole:
             return []
         lines, left = [], list(offers)
+        alike = {offer[2] for offer in offers}
         while left:
             taken = {offer[2] for offer in left}
-            always = [mod for mod in taken if all(offer[2] == mod for offer in left if mod in offer[1])]  # taken whenever it is shown
+            # taken whenever it is shown, and the one mod that sends the item where it goes (mods that go on alike are a free choice, below)
+            always = [mod for mod in taken if all(offer[2] == mod for offer in left if mod in offer[1]) and sum(mostly.get(mod) == mostly.get(other) for other in alike) == 1]
             if not always:
                 break
             mod = max(always, key=lambda name: math.fsum(offer[0] for offer in left if offer[2] == name))
             share = math.fsum(offer[0] for offer in left if offer[2] == mod)
-            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: taken on {chance_text(share / whole)} of unveils")
+            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: taken on {chance_text(share / whole)} of unveils; it goes on to {mostly.get(mod, 'another step')}")
             left = [offer for offer in left if offer[2] != mod]
-        if left:  # no order holds for the rest: each mod with how often it is taken
+        if left:  # no order holds for the rest: they are said by where the item goes on to after them (#1644)
             shares: dict[str, float] = {}
             for share, _, mod in left:
                 shares[mod] = shares.get(mod, 0.0) + share
-            lines += [
-                f"{'else, by what else is shown, ' if lines else ''}{mod}: taken on {chance_text(share / whole)} of unveils"
-                for mod, share in sorted(shares.items(), key=lambda kv: -kv[1])
-            ]
+            places: dict[str, list[str]] = {}  # where the item goes on to -> the mods that send it there, the most taken first
+            for mod in sorted(shares, key=lambda name: -shares[name]):
+                places.setdefault(mostly.get(mod, "another step"), []).append(mod)
+            known = [place for place in places if place != "several steps"] or list(places)
+            main = max(known, key=lambda place: math.fsum(shares[mod] for mod in places[place]))
+            free = places[main]
+            for place, mods in places.items():  # a mod that sends the item elsewhere than the rest: said before them, with when it is taken
+                if place == main:
+                    continue
+                for mod in mods:
+                    alone = all(not set(shown) & set(free) for _, shown, taken in left if taken == mod)  # taken only when none of the rest is shown
+                    when = "only when the window shows none of the mods below" if alone else "over the mods below on some offers"
+                    lines.append(f"{'else ' if lines else ''}{mod}: taken {when}, on {chance_text(shares[mod] / whole)} of unveils; it goes on to {place}")
+            share = chance_text(math.fsum(shares[mod] for mod in free) / whole)
+            each = f"each goes on to {main}, so which of them is taken is a free choice" if len(free) > 1 and main != "several steps" else f"it goes on to {main}"
+            lines.append(f"{'else ' if lines else ''}{'; '.join(free)}: {each}; taken on {share} of unveils")
         return ["the window shows up to three mods and one is taken, free; the plan takes, in this order:", *lines]
+
+    def _onward(self, edge: Edge) -> str:
+        """Where a branch of a step goes on to, in words: the target, this step again, or step N by its title."""
+        if edge.kind == "goal" or edge.to is None:
+            return "the target"
+        return f"step {edge.to + 1} ({self.next_title(edge)})"
 
     def _taken(self, made) -> str:
         """The mod of the offer a pick takes, read off its outcome: the slot it adds is of the family of one mod of the offer (a mod unveiled
@@ -1500,7 +1560,7 @@ class _View:
                 _plain("Goal", step.goal),
                 chance,
                 onward,
-                _plain("Cost per use", *priced_lines(self.data, step.priced)),
+                _plain("Cost per use", *priced_lines(self.data, step.priced, self.supply(), float(step.uses))),
                 _plain("Uses on average", count(float(step.uses))),
                 _plain("Step cost", money(step.value)),
                 _plain("Note", FINISH_NOTE, step.approximate),
@@ -1559,12 +1619,19 @@ class _View:
             if times < 1.05:  # an item comes once: the uses are those on one item
                 return count(uses)
             each = count(1.0 / leave).replace("≈ ", "≈")
+            per = f"{each} {'use' if each in ('1', '≈1') else 'uses'} each time"
+            if reached and reached < FEW_RUNS:  # the share of runs first: a count of a run that comes here alone reads as the craft's (#1597)
+                return _rare_uses(uses, reached, times, per)
             run = "in a run that reaches it" if reached else "in a run"
-            return f"{count(uses)} in all: an item comes to this step {count(times).replace('≈ ', '≈')} times {run}, {each} {'use' if each in ('1', '≈1') else 'uses'} each time"
+            return f"{count(uses)} in all: an item comes to this step {count(times).replace('≈ ', '≈')} times {run}, {per}"
         if not reached:  # no reach solved: the times a run is at the step are not known, each of them is still one sure use
             return "1 each time"
         times = count(uses / reached)
-        return "1" if times in ("1", "≈ 1") else f"an item comes to this step {times.replace('≈ ', '≈')} times in a run that reaches it, 1 use each time"
+        if times in ("1", "≈ 1"):
+            return "1"
+        if reached < FEW_RUNS:
+            return _rare_uses(uses, reached, uses / reached, "1 use each time")
+        return f"an item comes to this step {times.replace('≈ ', '≈')} times in a run that reaches it, 1 use each time"
 
     def start_field(self) -> Field | None:
         """When the start item is made at a vendor: the start options with their totals, so the choice can be read off the page."""
@@ -1615,7 +1682,7 @@ class _View:
         p90 = said if said is not None else f"{total(risk.p90.value)} or less" if math.isfinite(risk.p90.value) else "no finish in 9 runs of 10"
         success = risk.success_probability.value
         interval = self.inp.interval
-        uses = price_uses(plan, self.inp.policy, risk.mean.value, chain=self.chain)  # each price the policy buys with, its source and marks (#616, OR-7, OR-23)
+        uses = self.price_uses()  # each price the policy buys with, its source and marks (#616, OR-7, OR-23)
         if interval is None:
             approximate = approximate_page_lines(approximate_inputs(plan, self.inp.policy, self.data, uses))
             rule = ()
@@ -1652,15 +1719,40 @@ def _leaf_count(node) -> int:
     return 1 if isinstance(node, Wanted) else sum(_leaf_count(member) for member in node.members)
 
 
-def priced_lines(data: GameData, priced) -> list[str]:
-    """What one use of a priced offer costs, by its parts, with the marks of a thin market's price (OR-8)."""
+def priced_lines(data: GameData, priced, supply: Mapping[str, PriceUse] | None = None, uses: float | None = None) -> list[str]:
+    """What one use of a priced offer costs, by its parts, with the marks of a thin market's price (OR-8).
+
+    Goods paid as another resource at a fixed price (`Action.stand_ins`) are named as the goods, marked as a stand-in with no supply known
+    (#1597). With `supply` (the plan's priced resources, `price_uses`) and `uses` (the step's mean uses in a run), a part the plan buys more of
+    in a run than its reading saw on the market says so: what this step buys, what the plan buys in all, and what the market showed (#1597)."""
     if not priced.parts:  # an unveil, a pick: it consumes nothing (the planner's epsilon is for its solver, not a price, #1442)
         return [FREE]
     stand_ins = priced.offer.action.stand_ins(data)  # a resource paid in place of goods no price list holds says what it is (#1518)
-    lines = [f"{count_} × {name} {money(chaos)}" + (f": {stand_ins[name]}" if name in stand_ins else "") for name, count_, chaos, _ in priced.parts]
+    lines = []
+    for name, count_, chaos, _ in priced.parts:
+        stand_in = stand_ins.get(name)
+        if stand_in is None:
+            lines.append(f"{count_} × {name} {money(chaos)}")
+            continue
+        lines.append(f"{stand_in.count} × {stand_in.goods} {money(chaos)}: approximate, {stand_in.why}, and no supply is known")
     if len(priced.parts) > 1:
         lines.append(f"total {money(priced.cost)}")
     lines.extend(f"{name}: {mark}" for name, mark in priced.marks)  # OR-8: a part priced from a thin market carries its mark
+    for name, count_, _, _ in priced.parts:
+        use = (supply or {}).get(name)
+        if use is None or name in stand_ins or uses is None or use.uses is None or use.depth is None or use.uses <= use.depth:
+            continue
+        here = units_text(uses * count_)
+        if use.supply is not None and use.supply.startswith("at least "):  # a count at its cap: whether the market holds this many is not known (#930)
+            lines.append(
+                f"{name}: this step buys about {here} in a run, the plan about {units_text(use.uses)} in all, against {use.supply} in the "
+                "market reading of its price: whether the market holds that many is not known"
+            )
+            continue
+        lines.append(
+            f"{name}: this step buys about {here} in a run, the plan about {units_text(use.uses)} in all, against "
+            f"{use.supply or units_text(use.depth) + ' units'} in the market reading of its price: more than that market showed, so the price may not hold"
+        )
     return lines
 
 

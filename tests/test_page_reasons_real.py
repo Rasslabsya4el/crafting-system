@@ -74,3 +74,21 @@ def test_r04_under_the_attack_lock_the_exalt_lands_life_two_thirds_and_far_less_
     with_lock, bare = chances(ab, on, ExaltedOrb())[0][0], chances(ab, without(on, NO_ATTACK), ExaltedOrb())[0][0]
     assert with_lock == pytest.approx(2 / 3) and bare < with_lock / 2
     assert MULTI not in {mod.mod_id for mod in quiver.mods}  # the quiver holds one crafted mod: the item without it is one the game can have
+
+
+def test_r11_a_bench_fire_resistance_below_the_tier_asked_is_said_to_be_no_step_toward_the_target(data):
+    """R11 (#1645 point 2): the bench's +(16-20)% to Fire Resistance fills the last suffix; the target asks (29-35)% or better (FireResist6 and
+    up, hand-picked here), so the craft is a stand-in for its slot, not the target's mod. A craft of another family says nothing of it."""
+    from types import SimpleNamespace
+
+    from crafting_system.cli._route_purpose import below_target
+
+    asked = frozenset(mod.id for mod in data.mods.values() if mod.id in ("FireResist6", "FireResist7", "FireResist8"))
+    ab = Abstraction(data, Goal((Wanted(asked),)), LION_PELT, 85, [ExaltedOrb(), BenchCraft("HelenaMasterFireResist1")])
+    view = SimpleNamespace(data=data, ab=ab)
+    said = below_target(view, "HelenaMasterFireResist1")
+    assert said == (
+        "it is not the +#% to Fire Resistance the target asks (+(36-41)% to Fire Resistance or better): this craft is a lower roll of its family, "
+        "so it only holds the slot until a step takes it off"
+    )
+    assert below_target(view, ARMOUR) is None

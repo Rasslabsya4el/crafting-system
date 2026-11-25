@@ -16,6 +16,7 @@ plan's own data, and the page now says it in four parts, each a general rule ove
 * `fills`: a craft that takes the last open slot of its side sends the next added mods to the other side.
 * `instead`: the other order (the actions the craft is made before, used first) where the plan's solution holds no value for it: said as
   not priced, since the plan's data holds no figure for it (#1632's 5,102 c was priced by hand; its pricing is planner work).
+* `below_target`: a craft of the family of a mod the target asks, at a tier it does not accept, is said to be no step toward it (#1645).
 * `freed`: a Remove Crafted Mods step says which of these crafts it takes off and what can be added again.
 """
 
@@ -103,6 +104,23 @@ def blocks(data, base_id: str, item_level: int, kind: str) -> str | None:
         return None
     said = " / ".join(names[:NAMED]) + (f" and {len(names) - NAMED} more" if len(names) > NAMED else "")
     return f"it takes the family of {said}: while it is on, no such mod can be added"
+
+
+def below_target(view, kind: str) -> str | None:
+    """When the crafted mod `kind` is of the family of a mod the target asks and is not one the target accepts (R11's bench +(16-20)% Fire
+    Resistance where the (29-35)% is asked, #1645): it is no step toward that mod, only a stand-in that holds its slot and its family."""
+    mod = view.data.mods[kind]
+    for leaf in view.ab.goal.leaves:
+        if kind in leaf.mod_ids:
+            return None
+        asked = [view.data.mods[other] for other in sorted(leaf.mod_ids) if other in view.data.mods and set(view.data.mods[other].families) & set(mod.families)]
+        if asked:
+            least = min(asked, key=lambda other: (other.required_level, other.id))
+            return (
+                f"it is not the {_hashes(mod_text(least))} the target asks ({mod_text(least)} or better): this craft is a lower roll of its "
+                "family, so it only holds the slot until a step takes it off"
+            )
+    return None
 
 
 def _read(states: Sequence[CompressedState], weights: Sequence[float]) -> list[tuple[CompressedState, float]]:
@@ -297,6 +315,8 @@ def purpose_lines(view, step) -> list[str]:
         return []
     lines, against = [], set()
     for kind in added_crafts(view, step):
+        if below := below_target(view, kind):
+            lines.append(below)
         if said := blocks(view.data, view.ab.base_id, view.ab.item_level, kind):
             lines.append(said)
         if filled := fills(view, step, kind):
@@ -318,8 +338,15 @@ def freed(view, step) -> list[str]:
     landing = [state for edge in step.edges if edge.kind in ("forward", "goal") for state in edge.states]
     if any(tuple(slot for slot in state.slots if not slot.crafted) not in kept for state in landing):
         return []  # it changes more than the crafted mods (a Scouring): what it is used for is that
-    held = {slot.kind for state in step.states for slot in state.slots if slot.crafted and slot.kind in view.data.mods and all(x is not Status.PASSING for x in slot.contribution)}
-    lines = []
+    crafted = [slot for state in step.states for slot in state.slots if slot.crafted and slot.kind in view.data.mods]
+    held = {slot.kind for slot in crafted if all(x is not Status.PASSING for x in slot.contribution)}
+    asked = {slot.kind for slot in crafted} - held  # a crafted mod the target asks, taken off with the rest on the items that hold it (#1645)
+    lines, also = [], []
+    for kind in sorted(asked):
+        if landing and not any(holds(state, kind) for state in landing):
+            makers = [other.number + 1 for other in view.flow.steps if other.action is not None and kind in added_crafts(view, other, unasked=False)]
+            where = f", crafted in step {makers[0]}" if makers else ""
+            also.append(f"{_hashes(mod_text(view.data.mods[kind]))}{where}, a mod the target asks, on the items that hold it: it is crafted again after")
     for kind in sorted(held):
         if not landing or any(holds(state, kind) for state in landing):
             continue
@@ -329,4 +356,4 @@ def freed(view, step) -> list[str]:
         if (blocked := blocks(view.data, view.ab.base_id, view.ab.item_level, kind)) and blocked.startswith("it takes the family of "):
             said += f": {blocked.removeprefix('it takes the family of ').split(':')[0]} can be added again"
         lines.append(said)
-    return lines
+    return lines + [f"it {'also ' if lines else ''}takes off {line}" for line in also]

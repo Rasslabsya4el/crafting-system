@@ -75,6 +75,9 @@ def _guide_words(cost: float, guide: float | None, recorded: bool = False) -> st
     if _chaos(cost) == _chaos(guide):
         return f" It costs {_chaos(cost)} in all, the same as the guide's route{RECORDED if recorded else ''}."
     if cost > guide:
+        if guide <= 0 or f"{cost / guide:,.2f}" == "1.00":  # no ratio of a free guide; a hair dearer reads by its difference (#1597)
+            more = f"{_chaos(cost - guide)} more than {where}" + (f" ({(cost - guide) / guide:.2%} more)" if guide > 0 else "")
+            return f" It costs {_chaos(cost)} in all, {more}: this plan is dearer than the guide's."
         return f" It costs {_chaos(cost)} in all, {cost / guide:,.2f} times {where}: this plan is dearer than the guide's."
     return f" It costs {_chaos(cost)} in all, less than {where}: this plan is cheaper than the guide's."
 

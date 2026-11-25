@@ -54,6 +54,7 @@ from .provenance import (
     WATCH,
     WIDER,
     Provenance,
+    capped,
     derive,
 )
 
@@ -152,7 +153,10 @@ def price_marks(entry: PriceEntry, price_file: PriceFile, uses: float | None) ->
             found.append(PriceMark(NO_DEPTH, "price with no recorded depth"))
         elif p.depth < (1.0 if uses is None else uses):
             noun = "observations" if p.depth_unit == OBSERVATIONS else "units"
-            found.append(PriceMark(DEPTH, f"price on {units_text(p.depth)} {noun}"))
+            if capped(p):  # poe.ninja counts no further: the depth is not known (#930)
+                found.append(PriceMark(DEPTH, f"price on at least {units_text(p.depth)} observations, poe.ninja's count stops there: whether the market holds what the plan buys is not known"))
+            else:
+                found.append(PriceMark(DEPTH, f"price on {units_text(p.depth)} {noun}"))
     if p.recorded and p.trade_unread is not None and found:  # beside every other reason, a previous league's included; a plain fact needs none
         found.append(PriceMark(TRADE_UNREAD, f"the trade offers beside it were not read: {p.trade_unread}"))
     if not p.recorded:
