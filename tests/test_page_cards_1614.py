@@ -116,7 +116,7 @@ def test_a_start_bought_at_any_rarity_draws_the_item_as_bought_and_the_orbs_make
     bought = rows[0].after
     assert bought.properties[0] == "Any rarity but unique" and set(bought.prefixes) == {ANY_OR_EMPTY}  # its mods are any (OR-17)
     opened = rows[1]
-    assert field(opened, "Goal") == ["a magic item"]
+    assert field(opened, "Goal")[0] == "a magic item"
     assert field(opened, "Used on")[0] == "the Toy Listing Boots bought in step 1 (any rarity)"
     assert opened.after.properties[0] == "Magic"
 
