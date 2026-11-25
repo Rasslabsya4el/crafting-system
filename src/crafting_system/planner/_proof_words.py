@@ -216,7 +216,7 @@ def unusable_words(plan, label: str, uses: float, line: float) -> ProofWords:
         f"more than the {line:,.0f} uses of one step a player can follow, so it is not shown as a plan."
     )
     if best.case == PROVED:
-        considered = f" No plan is cheaper among {_all(best.open)}: a usable one would need a method this planner does not offer yet."
+        considered = f" No cheaper plan exists among {_all(best.open)}; a plan that uses one step fewer times, if there is one, costs more."
     elif best.tried_together:
         considered = (
             f" The search checked only {best.tried_together:,} {f'of the {best.open:,} ' if best.open else ''}crafts this planner can use on "

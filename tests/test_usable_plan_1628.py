@@ -85,7 +85,7 @@ def test_r17_s_ten_minute_plan_is_no_usable_plan_and_a_plan_under_the_line_is_an
         with pytest.raises(UnusablePlan) as raised:
             check_usable(plan, USABLE_STEP_USES)
         assert raised.value.step.label == label and raised.value.plan is plan
-        assert str(raised.value).startswith("no usable plan found within the limit")
+        assert str(raised.value) == raised.value.words.sentence and str(raised.value).startswith("No usable plan found within the limit")
     assert dominant_step(r17).chaos == pytest.approx(1_708_178_140_914.3, rel=1e-9)
     # every reference craft's plan at the one-hour net uses one step at most 3,189 times (R20's Essence of Horror): answered as before
     r20_hour = essence_spam(Fraction(1, 3189), 25.61, label="Essence of Horror")
@@ -116,7 +116,7 @@ def test_the_answer_s_sentence_gives_the_cost_the_step_its_uses_and_what_was_con
     proved = essence_spam(Fraction(1, 1_368_925), 25.61, label="Essence of Horror")
     with pytest.raises(UnusablePlan) as raised:
         check_usable(proved, USABLE_STEP_USES)
-    assert "No plan is cheaper among every craft this planner can use on this item" in raised.value.words.sentence
+    assert "No cheaper plan exists among every craft this planner can use on this item; a plan that uses one step fewer times" in raised.value.words.sentence
 
 
 def test_the_entry_answers_no_usable_plan_under_its_setting(monkeypatch):
@@ -145,7 +145,7 @@ def test_the_heavy_benchmark_records_no_usable_plan_as_no_plan(tmp_path, monkeyp
     code = main([COMMAND, "--out", str(tmp_path), "--net"], data=DATA, prices=price_file(), env={}, today=TODAY)
     assert code == 0
     entry = next(entry for entry in read_json(tmp_path / "benchmark.json")["routes"] if entry["id"] == "R12")
-    assert entry["error"].startswith("no usable plan found within the limit") and entry["solver"] is None
+    assert entry["error"].startswith("No usable plan found within the limit") and entry["solver"] is None
     assert entry["unusable"]["step"] == "Harvest Reforge Lightning" and entry["unusable"]["line"] == 1
     assert entry["record"]["mean"] is None and entry["record"]["stop"] == entry["error"]
 
@@ -189,3 +189,20 @@ def test_the_committed_record_check_reads_no_unusable_figure_as_a_plan():
     made = make_record(_run(R17=(entry, 33_140.41)), _run(R17=(entry, 33_140.41)))
     assert made["routes"]["R17"]["state"] == "no plan" and made["routes"]["R17"]["ceiling"] is None
 
+
+
+def test_the_cli_and_the_web_say_the_whole_answer(tmp_path, monkeypatch, capsys):
+    # the web's worker says a refusal by its text (`web._work.run_job`): the text is the whole sentence, the cost and what was considered
+    from crafting_system.web._work import REFUSALS
+
+    plan = essence_spam(Fraction(1, 1_368_925), 25.61, label="Essence of Horror", limits=STOPPED)
+    with pytest.raises(UnusablePlan) as raised:
+        check_usable(plan, USABLE_STEP_USES)
+    assert isinstance(raised.value, REFUSALS) and "35,058,174.25 Chaos" in str(raised.value)
+    # the command prints it as its proof and exits 1, as a run with no plan does
+    import crafting_system.cli._main as main_module
+
+    monkeypatch.setattr(main_module, "plan_target", lambda *args, **kwargs: (_ for _ in ()).throw(raised.value))
+    code = main([str(R12), "--json", str(tmp_path / "plan.json")], data=DATA, prices=price_file(), env={}, today=TODAY)
+    out, err = capsys.readouterr()
+    assert code == 1 and f"Proof: {raised.value.words.sentence}" in out and "Error: no usable plan found within the limit" in err

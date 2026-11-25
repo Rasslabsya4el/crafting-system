@@ -291,7 +291,9 @@ def main(
     except (TargetError, DataError, PriceFileNotFound, PlanError, NotApplicableError, OutOfScopeError, ConvergenceError, ValueError, OSError) as error:  # the refusals are ValueErrors: named so that the Error: line is known to carry their text
         if isinstance(error, UnusablePlan):  # a plan no player would follow is no plan: its own proof sentence says why (#1628, OR-12)
             print(f"Proof: {error.words.sentence}")
-        elif isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-59, #1576)
+            print("Error: no usable plan found within the limit", file=sys.stderr)
+            return 1
+        if isinstance(error, PlanError) and NO_PLAN in str(error):  # stopped with no plan: the third proof sentence (OR-59, #1576)
             print(f"Proof: {no_plan_words().sentence}")
         print(f"Error: {error}", file=sys.stderr)
         return 1

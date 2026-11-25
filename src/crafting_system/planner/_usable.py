@@ -42,7 +42,8 @@ class DominantStep:
 
 def dominant_step(plan) -> DominantStep | None:
     """The step of `plan` used most often on average (`_growth.step_shares`, read on the plan's chain), or None when its chain cannot be read
-    (no packed policy, or no visits to solve): such a plan is not judged."""
+    (no packed policy, a plan of the approximate ladder, or a chain whose visits cannot be solved): such a plan is not judged, and is answered
+    as a plan as before."""
     steps = [DominantStep(str(label), sum(visits for _state, _action, visits in where), share) for label, share, where in step_shares(plan)]
     steps = [step for step in steps if math.isfinite(step.uses)]
     return max(steps, key=lambda step: (step.uses, step.label), default=None)
@@ -56,14 +57,14 @@ class UnusablePlan(PlanError):
 
     def __init__(self, plan, step: DominantStep, line: float, words) -> None:
         self.plan, self.step, self.line, self.words = plan, step, line, words
-        super().__init__(f"no usable plan found within the limit: the best plan found expects about {step.uses:,.0f} uses of {step.label}, past the setting of {line:,.0f} uses of one step")
+        super().__init__(words.sentence)  # the whole answer: every caller that says a refusal by its text (the web's `run_job`) says all of it
 
     def document(self) -> dict:
         """What a record keeps of it (the benchmark's entry): the plan's cost with the start item, the step, its uses, the line and the proof
         sentence."""
         plan = self.plan
         cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.craft_mean)
-        return {"cost": float(cost), "step": self.step.label, "uses": self.step.uses, "step_chaos": self.step.chaos, "line": self.line, "sentence": self.words.sentence}
+        return {"cost": float(cost), "step": self.step.label, "uses": self.step.uses, "step_chaos": float(self.step.chaos), "line": self.line, "sentence": self.words.sentence}
 
 
 def check_usable(plan, line: float | None):
