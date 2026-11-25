@@ -46,7 +46,7 @@ def test_branches_told_apart_only_by_the_mods_the_target_does_not_need_say_so():
 
     rows = lines(chaos, DECIDE)[1:]
     assert len(rows) == 2
-    assert rows[0].startswith("with an unwanted prefix: then Benchcraft: ") or rows[0] == "with 2 unwanted prefixes: this step again"
+    assert rows[0].startswith("with an unwanted prefix: then Benchcraft: ") or rows[0].startswith("with 2 unwanted prefixes: this step again (")
     assert rows[1].startswith("else any other item: ")
     assert ("Benchcraft" in rows[0]) != ("Benchcraft" in rows[1])
     chances = lines(chaos, "Chance per use")
@@ -73,7 +73,7 @@ def assert_rows_send_every_item(view, step) -> None:
             continue
         for state in edge.states:
             i = table.index[state]
-            went = next(went for _, went, columns in rows if all(table.tests[c, i] for c in columns))
+            went = next(went for _, went, columns, _ in rows if all(table.tests[c, i] for c in columns))
             assert edge.to in {other.to for other, _ in went}
 
 

@@ -24,6 +24,7 @@ def report_steps(plan: Plan, data: GameData) -> tuple[tuple[ReportStep, ...], di
     """One `ReportStep` for each step of the plan's policy, in the page's order (none when the start item already meets the target), and the
     page's row of every item state the policy reaches."""
     view = _View(route_input(plan), data, None, "", False)
+    view.lists_branches = False  # the text report has no "Where the item goes" list: each outcome keeps its own words (#1526)
     steps = (*(_step(view, step) for step in view.flow.steps), *_finish_steps(view))
     return steps, {state: number + 1 for state, number in view.flow.step_of.items()}
 

@@ -404,8 +404,8 @@ def _require_limits(plan: Plan) -> None:
 # --- telling the branches of a step apart by the item (#1442) ---------------------------------------------------
 
 # the order of the conditions on an item: wanted mods first, a wanted family at too low a tier last
-_ORDER = {"leaf": 0, "group": 0, "blocks": 1, "crafted": 1, "fractured": 1, "rarity": 2, "junk": 3, "tag": 3, "veiled": 3, "open": 4, "below": 5}
-_BINARY = ("leaf", "group", "blocks", "below", "fractured", "crafted", "rarity")
+_ORDER = {"leaf": 0, "group": 0, "blocks": 1, "crafted": 1, "imprint": 1, "imprinted": 1, "fractured": 1, "rarity": 2, "junk": 3, "tag": 3, "veiled": 3, "open": 4, "below": 5}
+_BINARY = ("leaf", "group", "blocks", "imprint", "imprinted", "below", "fractured", "crafted", "rarity")
 KINDS = 4  # the most kinds of item one line names, and the most conditions that name one: past them a line no longer reads as a condition
 KIND_WORDS = 4
 
@@ -845,7 +845,7 @@ class _View:
     def _item_words(self, step: Step, edge: Edge, among: list[Edge] | None, given: tuple[tuple[str, str], ...]) -> str:
         if not edge.states:
             return ""
-        if among is None and self.decisions(step):  # the step's decision field says which item goes where (#1526)
+        if among is None and self.lists_branches and self.decisions(step):  # the step's decision field says which item goes where (#1526)
             return ""
         pool = [other for other in (step.edges if among is None else among) if other is not edge and other.to != edge.to]
         # the items of the branches that go on with another action (the target's too): a lost-and-back branch to the same step reads apart already
@@ -891,6 +891,10 @@ class _View:
             return f"{below.text} · {below.note}"  # "tier too low", or "below roll 12" for a leaf that asks a roll (#1433)
         if kind == "crafted":
             return f"{self._mod(key[1])} · crafted"
+        if kind == "imprint":
+            return "an imprint of the item kept"
+        if kind == "imprinted":
+            return f"an imprint that holds {self.leaf_text(key[1])}"
         if kind == "group":  # a k-of-n group of the target met (#1526): "one of Fire Resistance / Cold Resistance / Lightning Resistance · T2 or better"
             k, members = key[1]
             names = list(dict.fromkeys(short_mod(self._leaf_mod_text(leaf)) for leaf in members))
@@ -913,6 +917,10 @@ class _View:
         for entry in state.fractured:
             traits[("fractured", self._fractured_text(entry))] = 1
         traits[("rarity", state.flags.rarity.value)] = 1
+        if self.plan_imprints:  # an imprint of the item kept: what a Restore brings back (R17, H63's key)
+            traits[("imprint", "")] = int(bool(state.imprints))
+            for i in range(len(state.status)):  # what the imprint would bring back: a wanted mod it holds (a player knows what he imprinted)
+                traits[("imprinted", i)] = int(any(kept.status[i] is Status.PASSING for kept in state.imprints))
         junk = {Side.PREFIX: 0, Side.SUFFIX: 0}
         veiled = {Side.PREFIX: 0, Side.SUFFIX: 0}
         tags: Counter = Counter()
@@ -937,6 +945,8 @@ class _View:
             if free is not None:
                 traits[("open", "prefix")], traits[("open", "suffix")] = free
         return traits
+
+    lists_branches = True  # the page says a step's branches in its "Where the item goes" list; the text report keeps them on each outcome
 
     def _groups(self) -> list[tuple[int, tuple[int, ...]]]:
         """The target's top-level k-of-n groups of plain leaves, as (k, member leaves)."""
@@ -964,6 +974,15 @@ class _View:
         return (mod is not None and mod.domain == VEILED_DOMAIN) or "veiled" in kind.lower()
 
     @property
+    def plan_imprints(self) -> bool:
+        """Whether any state of the plan's route keeps an imprint: then whether an item keeps one is a condition."""
+        found = self.__dict__.get("_plan_imprints")
+        if found is None:
+            found = any(state.imprints for step in self.flow.steps for state in step.states)
+            self.__dict__["_plan_imprints"] = found
+        return found
+
+    @property
     def plan_veils(self) -> bool:
         """Whether any state of the plan's route holds a veiled mod: then every item's count of them is a condition (0 included)."""
         found = self.__dict__.get("_plan_veils")
@@ -972,11 +991,11 @@ class _View:
             self.__dict__["_plan_veils"] = found
         return found
 
-    def decisions(self, step: Step) -> list[tuple[str, list[tuple[Edge, float]], tuple[int, ...]]]:
+    def decisions(self, step: Step) -> list[tuple[str, list[tuple[Edge, float]], tuple[int, ...], float]]:
         """Where the items a use of `step` leaves go next, as a list read from the top (`_route_decide`, #1526): each row the conditions that
         hold on its items ("" for any other item) and the branches they go on by, with each one's share of the row's items (one branch, or
         several when items a player sees alike go on differently: a question for the planner, never words that would send a player wrong), and
-        the columns of the step's table (`_table`) the words say.
+        the columns of the step's table (`_table`) the words say, and the share of the step's uses whose items the row takes.
         Empty when the items go on to fewer than two places besides the target (the target is told by its mods)."""
         cache = self.__dict__.setdefault("_decisions", {})
         if step.number in cache:
@@ -1021,16 +1040,22 @@ class _View:
         label_places = {label: places_ for places_, label in sets.items()}
         found = []
         negative = np.array([column.sign == "without" for column in table.columns], dtype=bool)
+        left = np.ones(len(rows), dtype=bool)
         for conditions, label in decision_list(tests, labels, weight, negative):
+            taken = left.copy()
+            for c in conditions or ():
+                taken &= tests[c]
+            share = float(weight[taken].sum())
+            left &= ~taken
             words = "" if conditions is None else _words([table.columns[c] for c in conditions])
             went = alike.get(label)
             columns = tuple(conditions or ())
             if went is None:
                 (to,) = label_places[label]
-                found.append((words, [(places[to][0], 1.0)], columns))
+                found.append((words, [(places[to][0], 1.0)], columns, share))
             else:
                 whole = math.fsum(went.values())
-                found.append((words, [(places[to][0], went[to] / whole) for to in sorted(went, key=lambda to: -went[to])], columns))
+                found.append((words, [(places[to][0], went[to] / whole) for to in sorted(went, key=lambda to: -went[to])], columns, share))
         cache[step.number] = found
         return found
 
@@ -1041,15 +1066,16 @@ class _View:
             return None
         lines: list[Line] = []
         texts: list[str] = []
-        for at, (words, went, _) in enumerate(rows):
+        for at, (words, went, _, share) in enumerate(rows):
             lead = ("else " if at else "") + (f"{words}: " if words else "any other item: " if at else "")
             if len(went) == 1:
                 edge = went[0][0]
                 place = self._place(step, edge)
-                lines.append(self.link(f"{lead}{place}", edge.to + 1) if edge.to != step.number else Line(f"{lead}{place}"))
+                text = f"{lead}{place} ({chance_text(share)})"
+                lines.append(self.link(text, edge.to + 1) if edge.to != step.number else Line(text))
             else:  # items a player sees alike that the plan sends on differently
                 parts = ", ".join(f"{self._place(step, edge)} on {chance_text(share)}" for edge, share in went)
-                lines.append(Line(f"{lead}items that look alike go on differently: {parts}"))
+                lines.append(Line(f"{lead}items that look alike go on differently ({chance_text(share)}): {parts}"))
             texts.append(lines[-1].text + (f" {lines[-1].anchor}" if lines[-1].anchor else ""))
         if len(lines) > SHOWN_ROWS:
             rest = texts[SHOWN_ROWS - 1 :]
@@ -1836,6 +1862,23 @@ class _View:
         """Whether the planner's own plan is one its search walked to and was stopped on (a `REACHED` limit, #1142); a given route never is."""
         return self.inp.label == PLANNER_LABEL and any(limit.kind == REACHED for limit in self.plan.limits)
 
+    def implicit_lines(self) -> list[str]:
+        """When the target asks no implicit of a base that has one (fixed, or a Talisman's random one): the plan keeps whatever implicit the
+        item has (#1651: R17's guide spends steps 2 and 3 on the Talisman's implicit, and the page said nothing of it)."""
+        asked = getattr(self.plan, "asked_target", self.plan.target)
+        if asked.implicits:
+            return []
+        base = self.data.base_items[self.ab.base_id]
+        if "talisman" in base.tags:
+            return ["not asked: a Talisman's implicit is random, and the plan keeps whatever implicit the bought Talisman has"]
+        if base.implicits:
+            return [f"not asked: the base's own implicit ({', '.join(self._implicit_text(mod_id) for mod_id in base.implicits)}) stays as it is"]
+        return []
+
+    def _implicit_text(self, mod_id: str) -> str:
+        mod = self.data.mods.get(mod_id)
+        return mod_text(mod) if mod is not None and mod.text else mod_id
+
     def divine_line(self, uses: tuple[PriceUse, ...]) -> list[str]:
         """The Divine Orb's rate the page's Divine figures are in (the Mean, 9 runs in 10), with its source, when no step buys one (then its
         line is already there): "(12 Divine)" was said with no rate on R17, R24 and R14 (#1651, #891)."""
@@ -1876,6 +1919,7 @@ class _View:
             _plain("9 runs in 10", p90),
             _plain("Success chance", chance_text(success)) if success < 1 - 1e-9 else None,
             *rule,
+            _plain("Implicit", *self.implicit_lines()),
             _plain("Approximate inputs", *approximate, tone="warn"),
             _plain("Prices", f"league {plan.prices.league}, fetched {plan.prices.fetched_at:%Y-%m-%d}", *(plain_base_names(self.data, use_line(use)) for use in uses), *self.divine_line(uses)),
         )

@@ -37,6 +37,7 @@ from ._route_card import _hashes, mod_text
 MOVED = 0.005  # a chance that moves by less than half a point is not said
 SAID_STATES = 0.99  # the states of a step read, by weight, at most `MOST_STATES` of them
 MOST_STATES = 300
+FAMILY_LEAD = "it is of one family with "  # the words of a crafted mod's blocked family (`blocks`)
 NAMED = 3  # the natural mods a blocked family names, the rest counted
 
 
@@ -103,7 +104,9 @@ def blocks(data, base_id: str, item_level: int, kind: str) -> str | None:
     if not names:
         return None
     said = " / ".join(names[:NAMED]) + (f" and {len(names) - NAMED} more" if len(names) > NAMED else "")
-    return f"it takes the family of {said}: while it is on, no such mod can be added"
+    # a player reads a family as "these two cannot both be on the item" (#1645 point 3); a hybrid of another family is not blocked (the
+    # family of "+# to Evasion Rating / +# to maximum Life" is not that of "+# to Evasion Rating": Craft of Exile agrees, #1282)
+    return f"{FAMILY_LEAD}{said}: an item holds one mod of a family, so while this craft is on, {'none of them can' if len(names) > 1 else 'it cannot'} be added"
 
 
 def below_target(view, kind: str) -> str | None:
@@ -353,7 +356,7 @@ def freed(view, step) -> list[str]:
         makers = [other.number + 1 for other in view.flow.steps if other.action is not None and kind in added_crafts(view, other)]
         where = f" (crafted in step {makers[0]})" if makers else ""
         said = f"it takes off {_hashes(mod_text(view.data.mods[kind]))}{where}"
-        if (blocked := blocks(view.data, view.ab.base_id, view.ab.item_level, kind)) and blocked.startswith("it takes the family of "):
-            said += f": {blocked.removeprefix('it takes the family of ').split(':')[0]} can be added again"
+        if (blocked := blocks(view.data, view.ab.base_id, view.ab.item_level, kind)) and blocked.startswith(FAMILY_LEAD):
+            said += f": {blocked.removeprefix(FAMILY_LEAD).split(':')[0]} can be added again"
         lines.append(said)
     return lines + [f"it {'also ' if lines else ''}takes off {line}" for line in also]

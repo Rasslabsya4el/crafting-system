@@ -51,7 +51,9 @@ def test_r11_the_armour_craft_names_the_flat_evasion_family_and_the_exalt_finds_
     assert without(on, ARMOUR) == ab.compress(pelt)  # the item had the craft not been made
     assert chances(ab, on, ExaltedOrb())[0][0] == pytest.approx(float(Fraction(7000, 21275)), rel=1e-12)
     assert chances(ab, without(on, ARMOUR), ExaltedOrb())[0][0] == pytest.approx(float(Fraction(7000, 29275)), rel=1e-12)
-    assert blocks(data, LION_PELT, 85, ARMOUR) == "it takes the family of +# to Evasion Rating: while it is on, no such mod can be added"
+    assert blocks(data, LION_PELT, 85, ARMOUR) == (
+        "it is of one family with +# to Evasion Rating: an item holds one mod of a family, so while this craft is on, it cannot be added"
+    )
 
 
 def test_r14_under_the_attack_lock_an_annulment_never_takes_the_attack_speed_and_takes_it_without(data):
