@@ -102,6 +102,7 @@ from ._limit_words import display_text, fossil_name, group_words, page_limits, p
 from ._route_proof import PROOF, Proof, group_title, page_line, page_words, proof_of
 from ._route_tiers import TierLine, tier_lines
 from ._route_purpose import added_crafts, again, purpose_lines
+from ._route_reforge import either_rarity, link_spec, reforged_start
 from ._route_unveil import joined_picks
 from ._route_decide import SHOWN_ROWS, decision_list
 from ._route_trade import BuyStep, buy_step
@@ -1554,12 +1555,16 @@ class _View:
         if price.taken_for:
             cost.append(price.taken_for)
             cost.append(self.wider_advice())
+        accepts, name = self.start_accepts(), self.start_name()
+        reforge = reforged_start(self.data, self.plan)
+        if reforge is not None:  # the first step reforges a Rare one alike: buy either (#1673)
+            accepts, name = either_rarity(accepts, name, reforge)
         fields = _fields(
-            _plain("Accepts", *self.start_accepts()),
+            _plain("Accepts", *accepts),
             self.trade_field(),
             _plain("Cost per use", *cost),
         )
-        title = f"Buy {self.start_name()}" if price.name else "Start item"
+        title = f"Buy {name}" if price.name else "Start item"
         return StepRow(1, title, fields, self.start_card(), self.anchor(1), final, price.chaos)
 
     def start_name(self) -> str | None:
@@ -2368,6 +2373,8 @@ def route_page(
         searchable = [mod for mod in data.mods.values() if mod.text]  # a mod with no text (a veiled one) cannot be searched by
         searched = plan.start_price.searched  # a start priced as a wider item: the step names and links what was priced (#937, OR-7)
         spec = buy_spec if searched is None else searched_spec(buy_spec, searched)
+        if searched is None and reforged_start(data, plan) is not None:  # the link finds the Normal or Rare one the step says to buy (#1673)
+            spec = link_spec(spec)
         buy = buy_step(spec, plan.prices.league, searchable, _trade_stats(cache_dir), searched)
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
     judged = plan if given_on is None else given_on
