@@ -134,10 +134,29 @@ def test_a_fractured_start_is_reset_by_the_wipe_alone_and_rerolled_by_the_altera
     assert _names(table, table.plain_reroll()) == {"alteration"}  # the wipe draws no mod: it is no reroll
 
 
-def test_a_normal_start_is_reset_by_the_wipe_alone_and_has_no_reroll():
-    table = _table(_entry("augment", AUGMENT, chance={A: Fraction(1, 2)}), _wipe(), _move("transmute", TRANSMUTE, MAGIC))
-    table.start_rarity, table.rebuy = NORMAL, 3.0
-    assert _names(table, table.reset_closure()) == {"scour"}
+def test_a_normal_start_has_no_reroll_so_its_closure_holds_nothing_though_the_wipe_beats_the_rebuy():
+    # R17's Talisman (#1637): the Scouring lands on the start itself and the Transmutation follows it, a magic reroll of 0.357 c beside no
+    # Alteration in the group; the closure holds nothing, and the Alteration a magic item has does not make it hold the wipe
+    table = _table(
+        _entry("augment", AUGMENT, chance={A: Fraction(1, 2)}, leads={MAGIC: frozenset({MAGIC})}),
+        _wipe(),
+        _move("transmute", TRANSMUTE, MAGIC),
+        _reroll("alteration", ALTERATION),
+    )
+    table.start_rarity, table.rebuy = NORMAL, 533.0
+    assert _names(table, table.reset_path()) == {"scour"}  # 0.346 c against 533 c: cheaper, yet
+    assert table.plain_reroll() == set()  # nothing rerolls a Normal item
+    assert table.reset_closure() == frozenset()
+    assert _names(table, table.closure({0})) == {"augment"}
+
+
+def test_a_magic_start_whose_reroll_is_held_back_holds_no_wipe_in_that_group():
+    table = _magic_start()
+    table.held_back = frozenset({4, 5})  # both Alterations wait for a later group
+    assert _names(table, table.reset_path()) == {"scour", "transmute"}
+    assert table.reset_closure() == frozenset()
+    table.held_back = frozenset()
+    assert _names(table, table.reset_closure()) == {"scour", "transmute", "alteration"}
 
 
 def test_a_wipe_held_back_or_a_reset_dearer_than_the_rebuy_is_not_named():
@@ -176,6 +195,23 @@ def test_the_real_orbs_declare_their_parts_and_the_grower_s_table_holds_the_rebu
     seed = grower.seed()
     assert {"Orb of Scouring", "Orb of Transmutation", "Orb of Alteration"} <= _names(table, seed[0])
     assert _plan.rounds_grower(data, goal, aim, priced, None, ()).table.reset_closure() == frozenset()  # a start not bought
+
+
+def test_a_normal_toy_start_bought_has_no_reset_closure_from_the_real_orbs():
+    from listing_support import target
+
+    data = magic_toy()
+    aim = target(data, rarity="normal", actions=", ".join(METHODS))
+    entries = prices(start_price_key(data, aim))
+    entries.prices["Orb of Scouring"] = PriceEntry(1.0, "fixture")
+    goal = Goal.from_target(aim)
+    priced, _dropped = price_offers(offers_for(data, goal, aim.base_id, aim.start_item, aim.actions).offers, entries, "test")
+    grower = _plan.rounds_grower(data, goal, aim, priced, unopened_listing(data, aim.start_item), (), 10.0)
+    table = grower.table
+    assert table.start_rarity is NORMAL
+    assert _names(table, table.reset_path()) == {"Orb of Scouring"}  # 1 c against the 10 c listing
+    assert table.plain_reroll() == set()  # the Alteration rerolls a magic item, not the Normal start
+    assert table.reset_closure() == frozenset()  # so the wipe is not put in every group
 
 
 def _scourings_at_magic(plan) -> int:
