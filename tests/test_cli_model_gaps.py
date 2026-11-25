@@ -181,6 +181,7 @@ CLAUSES: list[tuple[str, str, tuple[str, ...], str, str]] = [
     ("cli/_route_packed.py", "walk_route.act", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route's rule cannot be used here on its own reach (#986), and the gap line says why"),
     ("cli/_route_packed.py", "route_label", ("NotApplicableError", "OutOfScopeError"), EITHER, "the route has no action at this state of the plan: a gap, not a divergence"),
     ("cli/_route_sim.py", "route_policy.policy", ("NotApplicableError", "OutOfScopeError"), EITHER, "the rule's action cannot be used on this item: a gap of the route"),
+    ("cli/_route_reforge.py", "reforged_start", ("NotApplicableError", "OutOfScopeError"), EITHER, "the plan's first step refuses the Normal start or the Rare item it makes: it is no reforge of both, and the buy step stays as it was (#1673)"),
     ("targets/corrupted.py", "CorruptedResolver._pools", ("NotApplicableError", "OutOfScopeError"), EITHER, "the target cannot ask for `corrupted: true` here, and the error says why"),
     ("targets/parse.py", "_Ladder.tiers", ("OutOfScopeError",), GAP, "an item class with no influence key: the tiers of the base"),
     ("planner/_awakener.py", "solve_donors", ("NoPolicy", "BoundError", "ConvergenceError", "OutOfScopeError", "NotApplicableError"), EITHER, "an Awakener's Orb whose donor no plan makes (#832): no policy reaches the want, the bound or the solve failed, the model has no rule or the game refuses; the orb is left out and the plan says so with the error's text (`no_donor_limit`)"),
