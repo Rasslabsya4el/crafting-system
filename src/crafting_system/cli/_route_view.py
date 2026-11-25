@@ -67,7 +67,7 @@ import numpy as np
 
 from crafting_system.actions import DRAW_LABEL, NotApplicableError, OutOfScopeError, paid_opening, scoured_from
 from crafting_system.solver._packed import expand_ranges
-from crafting_system.abstraction import CompressedState, Status
+from crafting_system.abstraction import AtLeast, CompressedState, Status, Wanted
 from crafting_system.abstraction._kinds import kind_tags
 from crafting_system.data import GameData
 from crafting_system.items import Item, Rarity, Side
@@ -97,6 +97,8 @@ from ._route_html import render_page
 from ._limit_words import display_text, fossil_name, group_words, page_limits, player_words, state_line_text
 from ._route_proof import PROOF, Proof, group_title, page_line, page_words, proof_of
 from ._route_tiers import TierLine, tier_lines
+from ._route_purpose import added_crafts, again, purpose_lines
+from ._route_unveil import joined_picks
 from ._route_trade import BuyStep, buy_step
 from ._start_step import ROLE_GEMS, FirstStep, first_step
 
@@ -544,7 +546,9 @@ class _View:
         self.inp, self.plan, self.data, self.buy, self.prefix = inp, inp.plan, data, buy, prefix
         self.route_field = route_field
         self.ab = self.plan.abstraction
-        self.chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
+        # an unveil and its pick are one action of a player: one step, its offers and picks kept for its lines (#1625)
+        chain = inp.chain if inp.chain is not None else chain_of_policy(self.plan.start, inp.policy, self.ab.is_goal, inp.reasons)
+        self.chain, self.picks = joined_picks(chain, lambda state: bool(state.offer))
         self.flow = steps_of_chain(self.chain)
         # a start item made at a vendor (ADR-0059): row 1 is the recipe, not a buy
         starts = getattr(self.plan, "starts", None)  # a stand-in plan of a test has none
@@ -607,7 +611,8 @@ class _View:
     def gains(self, step: Step, edges: list[Edge]) -> list[str]:
         """What a step makes true in the states its forward edges lead to (a leaf met, a mod fractured or crafted).
 
-        A leaf that only some of the step's states already meet still counts: the step aims at it for the others.
+        A leaf that only some of the step's states already meet still counts: the step aims at it for the others. The leaves of one k-of-n
+        group are one line, said with the group (`_grouped`, #1622): a target that asks 2 of 3 resistances never reads as asking all three.
         """
         landing = [state for edge in edges for state in edge.states]
         if not landing:
@@ -615,24 +620,26 @@ class _View:
         before_passing = self._passing_in_all(step.states)
         before_fractured = set().union(*(self._fractured(state) for state in step.states))
         before_crafted = set().union(*(self._crafted(state) for state in step.states))
-        mods, explained = [], set()  # a new fractured or crafted mod, and the leaves it meets (named once, as the mod)
+        mods, explained = [], set()  # a new fractured or crafted mod with the leaves it meets, and those leaves (named once, as the mod)
         for state in landing:
             for entry in state.fractured:
                 if entry not in before_fractured:
-                    mods.append(self._fractured_text(entry))
-                    explained |= {i for i, status in enumerate(entry.contribution) if status is Status.PASSING}
+                    meets = frozenset(i for i, status in enumerate(entry.contribution) if status is Status.PASSING)
+                    mods.append((self._fractured_text(entry), meets))
+                    explained |= meets
             for slot in state.slots:
                 if slot.crafted and slot.kind not in before_crafted:
-                    mods.append(f"{self._mod(slot.kind)} · crafted")
-                    explained |= {i for i, status in enumerate(slot.contribution) if status is Status.PASSING}
-        found = [
-            self.leaf_text(i)
+                    meets = frozenset(i for i, status in enumerate(slot.contribution) if status is Status.PASSING)
+                    mods.append((f"{self._mod(slot.kind)} · crafted", meets))
+                    explained |= meets
+        leaves = [
+            (self.leaf_text(i), frozenset((i,)))
             for i in range(len(self.plan.leaf_labels))
             if i not in before_passing
             and i not in explained
             and any(state.status[i] is Status.PASSING for state in landing)
         ]
-        found += mods
+        found = self._grouped(leaves + mods)
         if before_crafted and all(not self._crafted(state) for state in landing):
             found.append("crafted mods removed")
         if all(state.flags.rarity.value == "normal" for state in step.states) and any(
@@ -641,6 +648,60 @@ class _View:
             made = [rarity.value for rarity in (Rarity.MAGIC, Rarity.RARE) if any(state.flags.rarity is rarity for state in landing)]
             found.append(f"a {' or '.join(made)} item")  # the rarity the use makes: a Transmutation's is magic (crafter on R14 step 14)
         return list(dict.fromkeys(found))
+
+    def leaf_group(self, index: int) -> tuple[int, tuple[int, ...]] | None:
+        """The k-of-n group leaf `index` is a member of: its `k` and the leaf numbers of its members; None for a leaf the target asks by
+        itself. Only a group of the target's top level made of plain leaves (the card refuses a nested one)."""
+        groups = self.__dict__.get("_leaf_groups")
+        if groups is None:
+            groups, position = {}, 0
+            for node in self.ab.goal.requirements:
+                if isinstance(node, AtLeast) and all(isinstance(member, Wanted) for member in node.members):
+                    members = tuple(range(position, position + len(node.members)))
+                    groups.update({leaf: (node.k, members) for leaf in members})
+                    position += len(node.members)
+                else:
+                    position += _leaf_count(node)
+            self.__dict__["_leaf_groups"] = groups
+        return groups.get(index)
+
+    def _grouped(self, entries: list[tuple[str, frozenset[int]]]) -> list[str]:
+        """The texts of `entries` (a text and the leaves it meets), those that meet members of one k-of-n group alone joined in one line that
+        says the group (#1622): "one of A / B (the target asks 2 of 3: Fire Resistance / Cold Resistance / Lightning Resistance)", or "of
+        these 3" when every member is named. A text that meets no leaf, or leaves of no group or of two, stays as it is."""
+        texts: list[str | list] = []
+        open_: dict[tuple[int, ...], list] = {}
+        for text, leaves in entries:
+            groups = {self.leaf_group(leaf) for leaf in leaves}
+            if len(groups) != 1 or None in groups:
+                texts.append(text)
+                continue
+            ((k, members),) = groups
+            if members not in open_:
+                open_[members] = [k, members, [], set()]
+                texts.append(open_[members])
+            open_[members][2].append(text)
+            open_[members][3] |= leaves
+        said = []
+        for entry in texts:
+            if isinstance(entry, str):
+                said.append(entry)
+                continue
+            k, members, named, met = entry
+            named = list(dict.fromkeys(named))
+            lead = named[0] if len(named) == 1 else f"one of {' / '.join(named)}"
+            if len(named) > 1 and met == set(members):
+                said.append(f"{lead} (the target asks {k} of these {len(members)})")
+            else:
+                names = " / ".join(dict.fromkeys(short_mod(self._leaf_mod_text(leaf)) for leaf in members))
+                said.append(f"{lead} (the target asks {k} of {len(members)}: {names})")
+        return said
+
+    def _leaf_mod_text(self, index: int) -> str:
+        try:
+            return self.reader.leaf(index)[1]
+        except ValueError:
+            return self.plan.leaf_labels[index]
 
     def lost(self, edge: Edge, removed: bool = False) -> list[str]:
         """What a failure edge costs the item, in words: the wanted mod its uses lose, or the list of those they may lose. A sure use
@@ -1168,10 +1229,12 @@ class _View:
         times = step.uses / step.reached
         if times < 1.05:
             return None
-        return (
+        said = (
             "each time an item comes back here the craft is gone (the steps under \"Reached from\" that send it back take it off), so it is "
             "paid again: the step cost counts every one"
         )
+        made = [line for kind in added_crafts(self, step, unasked=False) if (line := again(self, step, kind))]  # by the step that took it off (#1632)
+        return said + (f"; {made[0]}" if made else "")
 
     def sure_draw_note(self, action: Action, step: Step, goal: list[str] | tuple[str, ...] = ()) -> str | None:
         """For a craft that draws its result at random but is sure on every item of the step (the Wild Bristle Matron on a suffix-full item,
@@ -1349,7 +1412,9 @@ class _View:
         fields = _fields(
             self.reached_from(number),
             _plain("Goal", *goal),
+            None if restart else _plain("Why", *purpose_lines(self, step)),
             _plain("Used on", *self.opening_lines(opening, moving)) if opens else _plain("Accepts", *self.accepts(action, moving, after)),
+            _plain("Pick from the offer", *self.pick_lines(step)),
             self.trade_field() if restart else None,
             Field((NEXT if len(chances) == 1 else SURE_NEXT) if sure else NEXT if one_way else "Chance per use", tuple(chances)) if chances else None,
             None if one_way else self.tier_field(step, action),  # a listing that goes on the same way: its odds change no choice (crafter, #1442)
@@ -1362,6 +1427,51 @@ class _View:
         )
         final = any(edge.kind == "goal" for edge in step.edges) and not self.finishing  # with finish steps, the last of them makes the target
         return StepRow(number, self.title(action, step), fields, after, self.anchor(number), final, step_cost, self.branches(step, after), step.uses)
+
+    def pick_lines(self, step: Step) -> list[str]:
+        """For an unveil joined with its pick (`joined_picks`, #1625): which mod of the offer the plan takes, in the order a player checks
+        the window (a mod taken whenever it is shown comes before the rest), each with how often it is the one taken, by the visits of the
+        step's states. Empty for any other step."""
+        if not any(state in self.picks for state in step.states):
+            return []
+        weights = step.weights or (1.0,) * len(step.states)
+        offers: list[tuple[float, tuple[str, ...], str]] = []  # (share of the step's unveils, the mods shown, the one taken)
+        for state, weight in zip(step.states, weights, strict=True):
+            for made in self.picks.get(state, ()):
+                shown = tuple(self._mod(entry.mod_id) for entry in made.offered.offer)
+                taken = self._taken(made)
+                offers.append((weight * made.chance, shown, taken))
+        whole = math.fsum(share for share, _, _ in offers)
+        if not whole:
+            return []
+        lines, left = [], list(offers)
+        while left:
+            taken = {offer[2] for offer in left}
+            always = [mod for mod in taken if all(offer[2] == mod for offer in left if mod in offer[1])]  # taken whenever it is shown
+            if not always:
+                break
+            mod = max(always, key=lambda name: math.fsum(offer[0] for offer in left if offer[2] == name))
+            share = math.fsum(offer[0] for offer in left if offer[2] == mod)
+            lines.append(f"{'else ' if lines else ''}{mod}, whenever it is shown: {chance_text(share / whole)} of unveils")
+            left = [offer for offer in left if offer[2] != mod]
+        if left:  # no order holds for the rest: each mod with how often it is taken
+            shares: dict[str, float] = {}
+            for share, _, mod in left:
+                shares[mod] = shares.get(mod, 0.0) + share
+            lines += [f"{mod}: {chance_text(share / whole)} of unveils" for mod, share in sorted(shares.items(), key=lambda kv: -kv[1])]
+        return ["the window shows up to three mods and one is taken, free; the plan takes:", *lines]
+
+    def _taken(self, made) -> str:
+        """The mod of the offer a pick takes, read off its outcome: the slot it adds is of the family of one mod of the offer (a mod unveiled
+        from the pool is a slot of the kind `^<family>`, ADR-0026). The pick's own name when no single mod of the offer matches."""
+        landing = [state for state, weight in made.pick.outcomes if weight > 0]
+        if landing:
+            added = Counter(landing[0].slots) - Counter(made.offered.slots)
+            families = {slot.kind.lstrip("^").split("@")[0] for slot in added}
+            matched = [entry for entry in made.offered.offer if entry.mod_id in self.data.mods and families & set(self.data.mods[entry.mod_id].families)]
+            if len(matched) == 1:
+                return self._mod(matched[0].mod_id)
+        return str(made.pick.label)
 
     def goal_states(self) -> list[CompressedState]:
         """The item states the mods' steps end in, the target's mods made; the start's own when no step is needed."""
@@ -1531,6 +1641,11 @@ class _View:
         )
         asked = getattr(plan, "asked_target", plan.target)  # the target as asked, its quality and implicit wishes with it (#1234)
         return GoalCard(fields, card_of_target(self.data, asked, self.start_item, self.forced), leaves_out)
+
+
+def _leaf_count(node) -> int:
+    """The leaves of a requirement of the goal: one for a leaf, those of its members for a group (`Goal.leaves` is depth-first)."""
+    return 1 if isinstance(node, Wanted) else sum(_leaf_count(member) for member in node.members)
 
 
 def priced_lines(data: GameData, priced) -> list[str]:
