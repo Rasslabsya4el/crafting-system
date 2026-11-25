@@ -313,6 +313,19 @@ fixtures(
 )
 
 
+BLEND_CAPTION = "only on some of these items, each in a slot marked any:"  # the group #889 drew under a joined card, until #1675
+BLENDED = item(prefixes=(ANY, ANY, ANY)).removesuffix("</div>") + f'<div class="sd">{BLEND_CAPTION}</div>{LIFE}</div>'
+
+fixtures(
+    pl.check_card_is_one_item,
+    counter={
+        "R20 before #1675: the card after a step lists the rows only some of its items hold": page(route(goal(), step(1, "Chaos Orb", ("Goal", "+(130-144) to maximum Life · T1"), after=BLENDED))),
+    },
+    example={
+        "since #1675: those rows are the card's any slots, and the card is one item": page(route(goal(), step(1, "Chaos Orb", ("Goal", "+(130-144) to maximum Life · T1"), after=item(prefixes=(ANY, ANY, ANY))))),
+    },
+)
+
 def test_the_counter_example_of_or_14_is_found_by_both_the_check_of_the_repeated_card_and_the_check_of_one_step_per_action():
     html = COUNTER["check_no_repeated_card"]["R14 before #70: the same Restart card again and again, each with its own chance"]
     read = pl.read_page(html)

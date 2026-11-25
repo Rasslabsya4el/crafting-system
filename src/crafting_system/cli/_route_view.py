@@ -167,6 +167,7 @@ class Branch:
 
     caption: str
     card: ItemCard
+    final: bool = False  # the branch ends in the target: its card, not the joined card above it, is drawn as the target (#1675)
 
 
 @dataclass(frozen=True)
@@ -1271,7 +1272,7 @@ class _View:
         for edge, (what, _) in zip(edges, self.phrases(step, edges)):
             card = card_of_states(self.ab, list(edge.states), self.reader)
             if card != after or self.decisions(step):  # a step read by its list draws every branch's item (#1644: the Unveil's Annulment had no card)
-                found.append(Branch(f"{what} ({chance_text(edge.chance)})", card))
+                found.append(Branch(f"{what} ({chance_text(edge.chance)})", card, edge.kind == "goal" and not self.finishing))
         return tuple(found)
 
     def cost_lines(self, action: Action, uses: float | None = None) -> list[str]:
@@ -2198,10 +2199,33 @@ def _parting(given: RouteSection, shared: dict[int, StepRow], prefix: str) -> di
     return found
 
 
-COST_AGAINST_GIVEN = "Where the cost differs from the given route"
+AGAINST_GUIDE = "Against the guide's route"
 START_SPEND = "the start item (row 1 and every restart)"
-SHOWN_DIFFERENCES = 5  # the kinds of step named one by one; the rest is one line
-SAME_COST = 0.01  # under this share of the given route's cost apart, the two routes cost the same and nothing is named
+SHOWN_DIFFERENCES = 3  # the kinds of step named one by one; the rest is one line
+SAME_COST = 0.01  # under this share of the guide's cost apart, the two routes cost the same and no step is named
+# what was added to the guide's words to price them, said in the block (#1584 point 4; crafter on R04 and R17: no "route file", no "restart")
+COMPLETED_READING = "its steps as written do not finish on this item: priced with steps added where its words stop, which the guide does not name"
+RESTART_READING = "its steps as written do not finish on this item: priced with a new item bought wherever its words stop"
+
+
+@dataclass(frozen=True)
+class GuideBeside:
+    """The guide's route of a reference craft priced on the plan's model, for a page that draws no given route: the page says the plan's cost
+    against it in one block near the top (#1584). `judged` is the plan the route was evaluated on (`judged_on`), `given` its evaluation, or
+    None when only the route file's recorded figure is known; `reading` says what was added to the guide's words to price it ("" for none)."""
+
+    judged: Plan
+    route: Route
+    given: RouteResult | None
+    reading: str = ""
+    recorded: bool = False  # the guide's cost is the route file's recorded figure (its rules do not finish), `given` priced them with a restart
+
+    def cost(self) -> tuple[float | None, bool]:
+        """The guide's cost with the start item and whether it is the route file's recorded figure (`guide_figure`): the proof sentence says
+        a recorded figure as recorded, whatever priced the steps of the block."""
+        if self.recorded:
+            return self.route.recorded_cost, True
+        return guide_figure(self.judged, self.given, self.route)
 
 
 def judged_on(plan: Plan, labels: tuple[str, ...], data: GameData, target: Target, prices=None) -> Plan:
@@ -2221,18 +2245,21 @@ def judged_on(plan: Plan, labels: tuple[str, ...], data: GameData, target: Targe
     return guide_plan(data, target, plan.prices if prices is None else prices, labels)
 
 
-def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...]) -> Field | None:
-    """What the plan spends on each kind of step against what the given route (the guide's) spends on it, the largest difference first,
-    with the uses of each (#1305, crafter Q9: a plan several times cheaper than its guide names the choices that make the difference).
+def against_guide(planned: tuple[StepRow, ...], given: tuple[StepRow, ...] | None, figures: tuple[float, float] | None = None, reading: str = "") -> Field | None:
+    """The block near the top of the page that says how the plan stands against the guide's route and where the two part (#1584, OR-46,
+    OR-59): the two costs and their ratio, then the kinds of step whose spend differs most, the largest first, each by its name, its Chaos and
+    its uses on either side; no reason is given beyond those numbers and names.
 
-    A kind of step is a row title; the start item's row 1 and every restart are one kind, the buys of the start item. Each route's
-    spend on a kind is the sum of its rows' step costs, so a route's kinds add up to its cost with the start item (`StepRow.cost`).
-    None when either route has no cost (a gap, a row that never finishes) or the two costs are within `SAME_COST` of each other."""
+    A kind of step is a row title; the start item's row 1 and every restart are one kind, the buys of the start item. Each route's spend on a
+    kind is the sum of its rows' step costs, so a route's kinds add up to its cost with the start item (`StepRow.cost`). `figures` (the plan's
+    cost, the guide's) stand in when the guide's rows have no cost to split (a gap, a row that never finishes, or no rows: only the figure its
+    file records): the block then says the two costs only. `reading` is what was added to the guide's words to price it. None when neither
+    the rows nor `figures` give the two costs. Within `SAME_COST` of each other the two cost the same and no step is named."""
 
-    def spend(rows: tuple[StepRow, ...]) -> tuple[dict[str, float], dict[str, float]] | None:
+    def spend(rows: tuple[StepRow, ...] | None) -> tuple[dict[str, float], dict[str, float]] | None:
         found: dict[str, float] = {}
         uses: dict[str, float] = {}
-        for row in rows:
+        for row in rows or ():
             if row.cost is None or not math.isfinite(row.cost):
                 return None  # a gap ("No action") or a row that never finishes: the route has no cost to split
             # a finish step's row is the kind of its catalyst or orb, as a guide's own row of it is titled (#1234)
@@ -2240,34 +2267,71 @@ def cost_against_given(planned: tuple[StepRow, ...], given: tuple[StepRow, ...])
             found[kind] = found.get(kind, 0.0) + row.cost
             if kind != START_SPEND and row.uses is not None and math.isfinite(row.uses):
                 uses[kind] = uses.get(kind, 0.0) + row.uses
-        return found, uses
+        return (found, uses) if found else None
 
     mine_rows, theirs_rows = spend(planned), spend(given)
-    if mine_rows is None or theirs_rows is None or not mine_rows[0] or not theirs_rows[0]:
+    split = mine_rows is not None and theirs_rows is not None
+    if split:
+        (ours, our_uses), (theirs, their_uses) = mine_rows, theirs_rows
+        mine, guide = math.fsum(ours.values()), math.fsum(theirs.values())
+    elif figures is not None and all(math.isfinite(value) for value in figures):
+        mine, guide = figures
+    else:
         return None
-    (ours, our_uses), (theirs, their_uses) = mine_rows, theirs_rows
-    mine, guide = math.fsum(ours.values()), math.fsum(theirs.values())
-    if abs(mine - guide) <= SAME_COST * guide:
-        return None
+    same = abs(mine - guide) <= SAME_COST * guide
+    ratio = "the same cost, to within 1%" if same else f"{mine / guide:,.2f} times its cost" if guide > 0 else "the guide's route is free"
+    lines = [Line(f"this plan {money(mine)}, the guide's route {money(guide)}{f' ({reading})' if reading else ''}: {ratio}")]
+    if not split or same:
+        return Field(AGAINST_GUIDE, tuple(lines))
     gap = {kind: abs(ours.get(kind, 0.0) - theirs.get(kind, 0.0)) for kind in set(ours) | set(theirs)}
     kinds = sorted((kind for kind in gap if gap[kind] > 0), key=lambda kind: (-gap[kind], kind))
     named, rest = kinds[:SHOWN_DIFFERENCES], kinds[SHOWN_DIFFERENCES:]
 
-    def side(kind: str, spent: dict[str, float], used: dict[str, float]) -> str:
-        value = spent.get(kind, 0.0)
-        if value <= 0:
-            return "nothing"
+    def spent(kind: str, cost: dict[str, float], used: dict[str, float]) -> str:
         times = used.get(kind)
-        return money(value) + (f" ({count(times)} use{'' if times == 1 else 's'})" if times else "")
+        return money(cost[kind]) + (f" ({count(times)} use{'' if times == 1 else 's'})" if times else "")
 
-    lines = [Line(f"this plan {money(mine)}, the given route {money(guide)}; by step, the largest difference first:")]
-    lines.extend(
-        Line(f"{kind}: {side(kind, ours, our_uses)} here, {side(kind, theirs, their_uses)} in the given route") for kind in named
-    )
+    for kind in named:
+        here, there = ours.get(kind, 0.0) > 0, theirs.get(kind, 0.0) > 0
+        if here and there:
+            lines.append(Line(f"{kind}: this plan {spent(kind, ours, our_uses)}, the guide's route {spent(kind, theirs, their_uses)}"))
+        elif there:
+            lines.append(Line(f"the guide's route spends {spent(kind, theirs, their_uses)} on {kind}; this plan does not use it"))
+        else:
+            lines.append(Line(f"this plan spends {spent(kind, ours, our_uses)} on {kind}; the guide's route does not use it"))
     here, there = math.fsum(ours.get(kind, 0.0) for kind in rest), math.fsum(theirs.get(kind, 0.0) for kind in rest)
     if rest and (here or there):
-        lines.append(Line(f"the other steps that differ ({len(rest)}) together: {money(here) if here else 'nothing'} here, {money(there) if there else 'nothing'} in the given route"))
-    return Field(COST_AGAINST_GIVEN, tuple(lines))
+        others = "the other kind of step that differs" if len(rest) == 1 else f"the other {len(rest)} kinds of step that differ"
+        lines.append(Line(f"{others}: this plan {money(here) if here else 'nothing'}, the guide's route {money(there) if there else 'nothing'}"))
+    return Field(AGAINST_GUIDE, tuple(lines))
+
+
+def cost_rows(inp: RouteInput, data: GameData, buy: BuyStep | None = None) -> tuple[StepRow, ...]:
+    """The rows of a route with only what the block against the guide reads (`against_guide`): the number, the title, the step cost and the
+    uses; no field, no branch, and every row with the start's card. The guide's route of a page that draws no section of it needs no more,
+    and its whole section took R20 a quarter of an hour (#1584)."""
+    view = _View(inp, data, buy, "g-", False)
+    first = view.buy_row(final=False)
+    rows = [replace(first, fields=())]
+    for step in view.flow.steps:
+        number = step.number + 1
+        if step.action is None:
+            rows.append(StepRow(number, "No action", (), first.after, view.anchor(number)))
+            continue
+        rows.append(StepRow(number, view.title(step.action, step), (), first.after, view.anchor(number), False, step.step_cost, (), step.uses))
+    for at, step in enumerate(view.finishing):
+        rows.append(StepRow(view.finish_row + at, finish_title(step), (), first.after, view.anchor(view.finish_row + at), False, step.value, (), float(step.uses)))
+    return tuple(rows)
+
+
+def with_block(section: RouteSection, block: Field | None) -> RouteSection:
+    """`section` with `block` in its goal card right after the proof sentence (the first field when there is none): near the top (#1584)."""
+    if block is None:
+        return section
+    fields = list(section.goal.fields)
+    at = next((i + 1 for i, field in enumerate(fields) if field.label == PROOF), 0)
+    fields.insert(at, block)
+    return replace(section, goal=replace(section.goal, fields=tuple(fields)))
 
 
 def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tuple[RouteSection, ...]:
@@ -2282,9 +2346,6 @@ def merge_sections(policy: RouteSection, given: RouteSection, name: str) -> tupl
     planner's section; the given section holds only what its own steps cannot show (`flow_limits`).
     """
     prefix = given.rows[0].anchor.removesuffix("s1") if given.rows else ""
-    differs = cost_against_given(policy.rows, given.rows)  # from every row of both routes, before the shared ones are taken out
-    if differs is not None:
-        policy = replace(policy, goal=replace(policy.goal, fields=(*policy.goal.fields, differs)))
     alike = _same_steps(policy, given, prefix)
     if len(alike) == len(given.rows) == len(policy.rows) == len({row.number for row in alike.values()}):
         head = (Field("Route", (Line(policy.title),)), Field("Given route", (Line(f"Same as the given route ({name})"),)))
@@ -2332,9 +2393,12 @@ def write_route_page(
     guide: float | None = None,
     given_on: Plan | None = None,
     guide_recorded: bool = False,
+    beside: GuideBeside | None = None,
 ) -> Path:
     """Write the route view of `report`'s plan to `path` (and of the given route, stacked below) and return `path` (`route_page`)."""
-    page = route_page(report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide, given_on=given_on, guide_recorded=guide_recorded)
+    page = route_page(
+        report, data, route=route, given=given, buy_spec=buy_spec, cache_dir=cache_dir, guide=guide, given_on=given_on, guide_recorded=guide_recorded, beside=beside
+    )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(page, encoding="utf-8", newline="\n")
     return path
@@ -2351,6 +2415,7 @@ def route_page(
     guide: float | None = None,
     given_on: Plan | None = None,
     guide_recorded: bool = False,
+    beside: GuideBeside | None = None,
 ) -> str:
     """The route view of `report`'s plan (and of the given route, stacked below) as one self-contained HTML page: the page
     `write_route_page` writes and the website serves (#961).
@@ -2359,7 +2424,10 @@ def route_page(
     `<cache_dir>/trade/stats.json` when that exists. `guide` is the guide's route's cost with the start item when no given route is drawn (the
     benchmark's figure of it, or the figure a reference craft's route file records, `_reference_guide`): the proof sentence says the plan's cost
     against it, and `guide_recorded` says it is the recorded figure (#1596); a given route's own cost takes its place. `given_on` is the
-    plan the given route was evaluated on when it is not `report.plan` (the guide's own plan of its actions, `guide_plan`, #1305).
+    plan the given route was evaluated on when it is not `report.plan` (the guide's own plan of its actions, `guide_plan`, #1305). `beside`
+    is the guide's route of a reference craft priced on the plan's model when no given route is drawn (`reference_beside`): its cost takes
+    the place of `guide`. Either way the goal card says the plan's cost against the guide's and the steps where the two part, right under the
+    proof sentence (`against_guide`, #1584); with no guide (a site user's own target) it says nothing of a guide.
     """
     ask(fresh=True)  # the report's memory net, read at the page's start (#1381)
     plan = report.plan
@@ -2372,14 +2440,24 @@ def route_page(
     stacked = route is not None and given is not None  # then each section has a heading with its route's name
     judged = plan if given_on is None else given_on
     recorded = guide_recorded
+    reading = ""
     if given is not None:
         guide, recorded = guide_figure(judged, given, route)
+    elif beside is not None:
+        guide, recorded = beside.cost()
+        reading = beside.reading
     policy = build_section(route_input(plan, report.interval, guide, recorded), data, buy, anchor="policy", route_field=not stacked)
-    sections = (policy,)
+    drawn = None
     if route is not None and given is not None:
-        drawn = build_section(
-            given_route_input(judged, route, given), data, buy, prefix="g-", anchor="given", route_field=False
-        )
+        drawn = build_section(given_route_input(judged, route, given), data, buy, prefix="g-", anchor="given", route_field=False)
+    guide_rows = None if drawn is None else drawn.rows
+    if drawn is None and beside is not None and beside.given is not None:  # the guide's rows, for the block only: the page draws no section of them
+        guide_rows = cost_rows(given_route_input(beside.judged, beside.route, beside.given), data, buy)
+    if guide is not None:
+        cost = plan.start_price.chaos + (plan.risk.mean.value if plan.risk is not None else plan.craft_mean)  # the plan's cost as the proof sentence says it (`proof_words`)
+        policy = with_block(policy, against_guide(policy.rows, guide_rows, (cost, guide), reading))
+    sections = (policy,)
+    if route is not None and given is not None and drawn is not None:
         sections = merge_sections(policy, drawn, route.name or Path(route.source).name)
     wider = any_base_words(buy) if plan.start_price.searched is not None else None
     return render_page(Page(page_title(data, plan.asked_target, wider), sections))

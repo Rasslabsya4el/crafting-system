@@ -683,7 +683,7 @@ def _decide(plan: Plan, route: Route, data: GameData, state: CompressedState) ->
     return refusal
 
 
-def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
+def evaluate_route(plan: Plan, route: Route, data: GameData, divergences: bool = True) -> RouteResult:
     """The route as a fixed policy from `plan.start`, with its exact risk, gaps and divergences from the solver.
 
     Breadth-first from the start: at every reachable non-goal state the first matching rule gives the
@@ -695,10 +695,11 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     states of about 1,500 outcomes each, #70) does not fit as objects: the object walk is dropped there and the route walks its own reach again on
     packed arrays (`_route_packed.evaluate_route_reach`, #986), the same numbers in a fraction of the memory. Nothing walks the planner's whole
     graph for a route. A plan of the walk holds its graph, and the route is read there (`_route_packed.evaluate_route_packed`). The divergences
-    are read where the plan has a choice: on the states of its own policy.
+    are read where the plan has a choice: on the states of its own policy; `divergences` False skips them (the page's block against the guide
+    needs only the route's own costs, and on R20's site plan reading them took over half an hour, #1584).
     """
     if plan.donors is not None:  # the route makes second items too: it is read on the product of the target and its donors (#225)
-        return _evaluate_route_with_donors(plan, route, data)
+        return _evaluate_route_with_donors(plan, route, data, divergences)
     searched = plan.packed is not None and "envelope" in plan.packed.info
     if isinstance(plan.policy, PackedPolicy) and not searched:  # the walked graph is held: read the route there (R04's object chain does not fit, ticket #70)
         from ._route_packed import evaluate_route_packed
@@ -725,7 +726,7 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
             from ._route_packed import evaluate_route_reach
 
             del choices, policy, order, seen
-            return evaluate_route_reach(plan, route, data)
+            return evaluate_route_reach(plan, route, data, divergences)
         for successor, weight in choice.outcomes:
             if weight > 0 and successor not in seen:
                 seen.add(successor)
@@ -738,8 +739,8 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
     # mods as they follow the plan's (#1234): a rule that names the finish's catalyst or orb is never followed, since a goal is never acted on
     risk = evaluate_risk(lumped.policy, lumped.start, lumped.is_goal, plan.craft_mean, free_cost=free_action_cost(plan.offers), steps=plan.finish_steps)
 
-    divergences: list[Divergence] = []
-    for state in policy_states(plan.start, plan.policy, plan.is_goal):
+    parted: list[Divergence] = []
+    for state in policy_states(plan.start, plan.policy, plan.is_goal) if divergences else ():
         ask()  # the divergences are read on the plan's own policy: on R13's site plan its reach held 16 GB in 4 minutes (#1600)
         if plan.is_goal(state) or state not in plan.policy:
             continue
@@ -747,9 +748,9 @@ def evaluate_route(plan: Plan, route: Route, data: GameData) -> RouteResult:
         if isinstance(choice, str):
             continue  # a gap, not a divergence
         if choice.label != plan.policy[state].label:
-            divergences.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
-    first = divergences[0] if divergences else None
-    return RouteResult(policy, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(divergences))
+            parted.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
+    first = parted[0] if parted else None
+    return RouteResult(policy, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(parted))
 
 
 def _decide_product(plan: Plan, route: Route, data: GameData, product: tuple) -> Action | str:
@@ -773,7 +774,7 @@ def _decide_product(plan: Plan, route: Route, data: GameData, product: tuple) ->
     return refusal
 
 
-def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> RouteResult:
+def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData, divergences: bool = True) -> RouteResult:
     """`evaluate_route` for a plan that makes donors (ticket #225): the route as a fixed policy of the product of the target and its donors.
 
     The walk starts at the target's own item and follows every outcome and every second item a recombination consumes; a second item is
@@ -810,8 +811,8 @@ def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> Rou
     values = {product: 0.0 for product in policy}
     own = main_view(Solution(values, policy, 0.0)).policy
 
-    divergences: list[Divergence] = []
-    for state in policy_states(plan.start, plan.policy, plan.is_goal):
+    parted: list[Divergence] = []
+    for state in policy_states(plan.start, plan.policy, plan.is_goal) if divergences else ():
         if plan.is_goal(state) or state not in plan.policy:
             continue
         product = ("in", MAIN, state)
@@ -819,6 +820,6 @@ def _evaluate_route_with_donors(plan: Plan, route: Route, data: GameData) -> Rou
         if isinstance(choice, str):
             continue
         if choice.label != plan.policy[state].label:
-            divergences.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
-    first = divergences[0] if divergences else None
-    return RouteResult(own, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(divergences), product_policy=policy)
+            parted.append(Divergence(state, str(plan.policy[state].label), str(choice.label)))
+    first = parted[0] if parted else None
+    return RouteResult(own, risk, tuple(gaps), first, time.perf_counter() - began, divergences=tuple(parted), product_policy=policy)

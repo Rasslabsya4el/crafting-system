@@ -25,7 +25,7 @@ from cli_support import run as run_r12
 from start_support import with_start
 from two_runs_support import masked, without_timings
 
-from crafting_system.cli import StartContext, build_report, make_plan, policy_document, render_text, vendor_recipe_starts
+from crafting_system.cli import StartContext, build_report, make_plan, policy_document, reference_beside, render_text, vendor_recipe_starts
 from crafting_system.planner._start_options import gem_price_name
 from crafting_system.planner._start_types import CAP_BELOW_ASKED, NO_PRICE, NO_TARGET_MOD, ROLL_NOT_GUARANTEED
 from crafting_system.items import ExplicitMod, Rarity, tier_table
@@ -145,12 +145,14 @@ def test_r12_with_recipe_starts_off_is_the_report_make_plan_gives_byte_for_byte(
     code, out = run_r12(tmp_path, "--no-recipe-starts", data=data, prices=prices)
     printed = capsys.readouterr().out
 
-    plan = make_plan(data, load_target(TARGETS / "r12-lightning-amulet.yaml", data), prices)
+    target = load_target(TARGETS / "r12-lightning-amulet.yaml", data)
+    plan = make_plan(data, target, prices)
     report = build_report(plan, data)
-    expected = json.loads(json.dumps(policy_document(report, None, target_name="r12-lightning-amulet.yaml")))
+    guide, recorded = reference_beside(data, plan, target).cost()  # R12 is a reference craft: its guide's cost is said (#1584)
+    expected = json.loads(json.dumps(policy_document(report, None, target_name="r12-lightning-amulet.yaml", guide=guide, guide_recorded=recorded)))
     document = read_json(out)
     assert code == 0
-    assert masked(printed).startswith(masked(render_text(report, target_name="r12-lightning-amulet.yaml")))
+    assert masked(printed).startswith(masked(render_text(report, target_name="r12-lightning-amulet.yaml", guide=guide, guide_recorded=recorded)))
     assert "Start options" not in printed and "start_options" not in document
     assert without_timings(document) == without_timings(expected)
 

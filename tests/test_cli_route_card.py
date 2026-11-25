@@ -22,7 +22,6 @@ from crafting_system.cli._route_card import (
     Group,
     ItemCard,
     ANY_OR_EMPTY,
-    VARIES,
     Slot,
     _StateReader,
     card_of_item,
@@ -533,16 +532,44 @@ def test_a_join_of_states_with_different_junk_counts_is_any_mod_then_any_mod_or_
     assert card.suffixes == expected
 
 
-def test_a_row_only_some_states_have_is_no_line_of_the_item_but_listed_apart_and_a_shared_row_stays_plain():
-    """#889: a card is an item a player can hold; what only some of the joined items hold is listed once under its own heading."""
+def test_a_row_only_some_states_have_is_one_of_the_any_slots_and_a_shared_row_stays_plain():
+    """#889, #1675: a card is one item a player can hold; what only some of the joined items hold is one of its "any" slots, never a group
+    "only on some of these items" under the card (a wanted mod included: the step's decision list names it where it decides the way)."""
     fractured = roll(FIRE, fractured=True)
 
     card = belt_join(belt(fractured), belt(fractured, roll(LIFE_3)))
 
     assert card.suffixes == (Slot("+(6-11)% to Fire Resistance", "mod", ("fractured",), "T1"), EMPTY, EMPTY)
     assert card.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY)
-    assert card.groups == (Group(VARIES, (Slot("+# to maximum Life", "wanted", ("prefix",), "any tier"),)),)
+    assert card.groups == ()
     assert not any("in some" in slot.note for slot in (*card.prefixes, *card.suffixes))
+
+
+def test_a_join_whose_items_each_hold_one_of_two_wanted_mods_names_them_as_one_row():
+    """#1675, crafters on R04, R08 and R09: before the Exalted Orb every item holds Life T1 or Movement Speed T1, and "any mod" hid it. A slot
+    every joined item fills with one of the wanted mods only some hold reads "one of A / B" with their one tier note; the rest stays "any"."""
+    ab = Abstraction(DATA, Goal((Wanted(frozenset({LIFE_3})), Wanted(frozenset({SHIELD})))), BELT, BELT_LEVEL, CRAFTS)
+
+    card = card_of_states(ab, [ab.compress(belt(roll(LIFE_3))), ab.compress(belt(roll(SHIELD)))])
+
+    assert card.prefixes == (Slot("one of +(1-3) to maximum Energy Shield / +(40-54) to maximum Life", "wanted", (), "T1"), EMPTY, EMPTY)
+    assert card.groups == ()
+    mixed = card_of_states(ab, [ab.compress(belt(roll(LIFE_3))), ab.compress(belt())])  # one item holds none: no slot is sure, "any" it is
+    assert mixed.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY)
+
+
+def test_a_join_whose_items_each_hold_one_of_two_crafted_mods_names_them_as_one_crafted_row():
+    """#1675, crafters on R04 step 7 and R11 step 7: an item that goes to Remove Crafted Mods holds one of two bench crafts, and "any mod"
+    hid which slot holds the craft to strip."""
+    ab = belt_abstraction()
+    crafts = ("JunMaster2AllDamage2_", "JunMaster2ArmourAndEnergyShield1")
+
+    card = card_of_states(ab, [ab.compress(belt(roll(mod_id, crafted=True))) for mod_id in crafts])
+
+    (first, *others) = card.prefixes
+    assert first.text.startswith("one of ") and first.tone == "crafted" and "crafted" in first.marks
+    assert all(mod_text(DATA.mods[mod_id]) in first.text for mod_id in crafts)
+    assert others == [EMPTY, EMPTY] and card.groups == ()
 
 
 def test_a_join_never_draws_more_lines_on_a_side_than_the_item_holds():
@@ -552,7 +579,7 @@ def test_a_join_never_draws_more_lines_on_a_side_than_the_item_holds():
     card = belt_join(a, b)
 
     assert len(card.prefixes) == 3 and len(card.suffixes) == 3
-    assert {slot.text for slot in card.groups[0].members} == {"+# to maximum Life", "+(6-11)% to Fire Resistance"}
+    assert card.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY) and card.suffixes == (ANY_OR_EMPTY, EMPTY, EMPTY) and card.groups == ()
 
 
 def test_properties_that_differ_between_the_joined_states_say_so():

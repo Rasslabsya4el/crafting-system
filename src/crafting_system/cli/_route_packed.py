@@ -359,7 +359,7 @@ def walk_route(plan: Plan, route, data: GameData) -> RouteReach:
     return RouteReach(walked, np.asarray(chosen, dtype=np.int64), labels, np.asarray(cost, dtype=np.float64), gaps)
 
 
-def evaluate_route_reach(plan: Plan, route, data: GameData):
+def evaluate_route_reach(plan: Plan, route, data: GameData, divergences: bool = True):
     """The `RouteResult` of `route` walked on its own reach (`walk_route`), for a plan whose graph does not hold that reach (#986).
 
     The risk is evaluated as on the walked graph (merged, lumped, `packed_risk`); the divergences are read on the states of the plan's own
@@ -367,8 +367,8 @@ def evaluate_route_reach(plan: Plan, route, data: GameData):
     """
     began = time.perf_counter()
     reach = walk_route(plan, route, data)
-    divergences = _policy_divergences(plan, route, data, reach)
-    return _result(plan, reach.walked, reach.walked.graph, reach.chosen, reach.labels, reach.cost, reach.gaps, divergences, began)
+    parted = _policy_divergences(plan, route, data, reach) if divergences else []  # none asked: the page's block needs the costs only (#1584)
+    return _result(plan, reach.walked, reach.walked.graph, reach.chosen, reach.labels, reach.cost, reach.gaps, parted, began)
 
 
 def _policy_divergences(plan: Plan, route, data: GameData, reach: RouteReach) -> list:
