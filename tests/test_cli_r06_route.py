@@ -19,7 +19,7 @@ from abstraction_support import real_game_data
 
 from crafting_system.cli import load_route, make_plan
 from crafting_system.planner import PlanError
-from crafting_system.prices import load_price_file
+from crafting_system.prices import load_price_file, price_marks
 from crafting_system.targets import load_target
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -51,8 +51,11 @@ def test_its_own_price_file_prices_the_start_belt_by_hand_and_says_so(data, targ
     named = ("catalyst", "blessed-orb", "exalted-orb")  # named: the classic offers of a module's tests hold neither finish's method
     plan = make_plan(data, dataclasses.replace(target, actions=named), load_price_file(target.price_file), solve_it=False)
     assert plan.start_price.name == "Heavy Belt, normal, item level 75, Hunter influence" and plan.start_price.bought and not plan.start_price.given and plan.start_price.chaos == 5.0
-    entry = load_price_file(target.price_file).prices["Heavy Belt, normal, item level 75, Hunter influence"]
-    assert entry.chaos == 5.0 and entry.source == "hand" and "#1267" in entry.note and "OR-44" in entry.note
+    prices = load_price_file(target.price_file)
+    entry = prices.prices["Heavy Belt, normal, item level 75, Hunter influence"]
+    assert entry.chaos == 5.0 and entry.source == "hand-set" and "#1267" in entry.note and "OR-44" in entry.note
+    # #1673: the stand-in is marked (never printed as the plain number of a user's own hand price, the OVERRIDE kind)
+    assert [mark.reason for mark in price_marks(entry, prices, None)] == ["a price set by hand"]
 
 
 def test_with_a_start_price_r06_finishes_its_implicit_with_eleven_blessed_orbs_and_its_quality_with_catalysts(data, target):

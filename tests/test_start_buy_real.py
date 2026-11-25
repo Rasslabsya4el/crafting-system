@@ -59,7 +59,7 @@ WINDOWS = {  # (item level, highest item level with the same pool)
 # The entries priced for another item than the one the target computes (a price file entry keeps the body it was priced with).
 OTHER_ITEM = {
     "r03-avoid-shock-boots": "#483 the exact item has 0 listings (searched on 2026-11-06; the query itself is #514): the bought start item has no price, so none is written",
-    "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; a normal item cannot carry an influence, #515) and no file has a line for an influenced Heavy Belt: it has no body",
+    "r06-strength-heavy-belt": "#1267 the stored price is hand-set (OR-44): the exact item has 0 listings (searched on 2026-11-06, #483; the market sells Rare ones, which the first essence reforges like the Normal one, #1673) and no file has a line for an influenced Heavy Belt: it has no body",
     "r05-strength-ring": "#483 the exact item has 1 listing, at 12,905 Chaos on 2026-11-10: the stored price is hand-set (OR-44) from a search of any ring of item level 75 or more",
     "r10-fractured-boots": "#483 the stored price of item level 85 is hand-set (OR-44) from the 2026-11-10 reading of a search of item level 84 or more (#1472); its stored query, the search of 85, was never sent",
     "r10-fractured-boots-70-life": "#483 the stored price of item level 85 is hand-set (OR-44) from the 2026-11-10 reading of a search of item level 84 or more (#1472); its stored query, the search of 85, was never sent",
