@@ -134,6 +134,12 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   th59's Scouring and Augmentation 762 times where a player alters (0.357 c a try against the Alteration's 0.178 c). With both in every
   group, R13 gave about 1,450 c after the start at minute 5, against main's 1,842 c (th59's pair, #1434). The search picks between them by
   price; the closure only makes sure both are there.
+  So where nothing rerolls an item of the start's rarity (a Normal start: R17's Talisman, R04's quiver, R06's belt), the closure holds
+  nothing (#1637). There the wipe lands on the start itself and the start's first move (an Orb of Transmutation) follows every wipe: the
+  pair is a reroll of the shape that move makes, a cheap one in a group without that shape's own reroll, the fault above again. On R17
+  the Scouring alone in every group gave a plan of 3,860 Transmutation and Scouring loops where a player alters, and its Normal to Magic
+  loop made the second round 3.4 times slower (1,612 s against 477 s), so the later group that gives the hour's plan had 198 s instead of
+  756 s and ended with none: 71,039.07 c against 59,734.75 c. The Scouring keeps its group in the widening rounds (OR-12).
 
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
@@ -636,11 +642,13 @@ class OfferTable:
 
     def reset_closure(self) -> frozenset[int]:
         """Where the start item is bought (`rebuy`), the reset path when it costs less than buying the start again, and the plain reroll of
-        the start's rarity (module text, the reset closure); empty when it is not bought. Read once for each set of offers held back."""
+        the start's rarity (module text, the reset closure); empty when it is not bought, and when no offer rerolls an item of the start's
+        rarity (a Normal start: the reset would stand alone, #1637). Read once for each set of offers held back."""
         if self._reset is None:
             self._reset = {}
         if self.held_back not in self._reset:
-            self._reset[self.held_back] = frozenset(self.reset_path() | self.plain_reroll()) if self.rebuy is not None else frozenset()
+            reroll = self.plain_reroll() if self.rebuy is not None else set()
+            self._reset[self.held_back] = frozenset(self.reset_path() | reroll) if reroll else frozenset()  # no reroll at the start's rarity, no reset (#1637)
         return self._reset[self.held_back]
 
     def reset_path(self) -> set[int]:
