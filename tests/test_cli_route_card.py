@@ -545,6 +545,19 @@ def test_a_row_only_some_states_have_is_one_of_the_any_slots_and_a_shared_row_st
     assert not any("in some" in slot.note for slot in (*card.prefixes, *card.suffixes))
 
 
+def test_a_join_whose_items_each_hold_one_of_two_wanted_mods_names_them_as_one_row():
+    """#1675, crafters on R04, R08 and R09: before the Exalted Orb every item holds Life T1 or Movement Speed T1, and "any mod" hid it. A slot
+    every joined item fills with one of the wanted mods only some hold reads "one of A / B" with their one tier note; the rest stays "any"."""
+    ab = Abstraction(DATA, Goal((Wanted(frozenset({LIFE_3})), Wanted(frozenset({SHIELD})))), BELT, BELT_LEVEL, CRAFTS)
+
+    card = card_of_states(ab, [ab.compress(belt(roll(LIFE_3))), ab.compress(belt(roll(SHIELD)))])
+
+    assert card.prefixes == (Slot("one of +(40-54) to maximum Life / +(1-3) to maximum Energy Shield", "wanted", (), "T1"), EMPTY, EMPTY)
+    assert card.groups == ()
+    mixed = card_of_states(ab, [ab.compress(belt(roll(LIFE_3))), ab.compress(belt())])  # one item holds none: no slot is sure, "any" it is
+    assert mixed.prefixes == (ANY_OR_EMPTY, EMPTY, EMPTY)
+
+
 def test_a_join_never_draws_more_lines_on_a_side_than_the_item_holds():
     """#889: R10's card drew six prefix lines on a Rare (three hold one wanted mod, three another): the side keeps its capacity."""
     a, b = belt(roll(LIFE_3)), belt(roll(FIRE, fractured=True))

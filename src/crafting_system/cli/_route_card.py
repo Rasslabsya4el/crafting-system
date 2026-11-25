@@ -863,6 +863,9 @@ def _rank(row: Slot) -> int:
 
 
 
+BELOW_NOTES = ("tier too low", "below roll")  # the note of a wanted family's row below what the target asks: on a joined card, one of the "any mod" slots
+
+
 def _shared_rows(per_state: list[list[Slot]]) -> tuple[list[Slot], list[list[Slot]]]:
     """The rows every state has (as many times as each has it at least), and per state the rows it has beside them."""
     counts = [Counter(rows) for rows in per_state]
@@ -903,7 +906,20 @@ def card_of_states(abstraction, states: Sequence[CompressedState], reader: _Stat
         rows, rest = _shared_rows([entry.rows[side] for entry in read])
         limit = _capacity(data, base_id, side, Rarity.MAGIC if only_magic else Rarity.RARE)
         # a row only some states hold, wanted, crafted, fractured or not, is one of the "any mod" slots: the stage board's rule, a card is one
-        # item and a player reads the mods that do not decide its way as a count; the Where field names the one that decides (#1675)
+        # item and a player reads the mods that do not decide its way as a count; the Where field names the one that decides (#1675). Where
+        # every state holds at least one of the wanted rows only some hold (with one tier note), that many slots read "one of A / B" with the
+        # note: the item holds one of them (crafters on R04, R08, R09: "any mod" hid that the item before the Exalted Orb holds one wanted mod)
+        wanted = [[row for row in each if row.tone == "wanted" and "fractured" not in row.marks and not row.note.startswith(BELOW_NOTES)] for each in rest]
+        held = min(len(each) for each in wanted)
+        named = list(dict.fromkeys(row for each in wanted for row in each))
+        notes = {row.note for row in named}
+        if held and len(notes) == 1 and len(named) > 1:
+            text = f"one of {' / '.join(dict.fromkeys(row.text for row in named))}"
+            rows += [Slot(text, "wanted", (), named[0].note)] * min(held, max(0, limit - len(rows)))
+            rest = [list(each) for each in rest]
+            for each, own in zip(rest, wanted):
+                for row in own[:held]:
+                    each.remove(row)
         if reader.tracked:
             counts = [entry.junk[side] + len(each) for entry, each in zip(read, rest)]  # what a state holds beside the shared rows
             rows += [ANY_MOD] * min(min(counts), max(0, limit - len(rows)))
