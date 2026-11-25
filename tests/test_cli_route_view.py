@@ -792,8 +792,10 @@ def test_a_restart_row_buys_again_and_goes_back_to_the_first_step(two_leaf_plan)
     failure = restart.fields[-1].lines[0]
     assert failure.text == "the start item bought again" and failure.href == "#s2"
     # a step whose failure restarts the item says the restart's step and what it costs: its row may be far from this one (#1442)
-    restarted = [line for row in section.rows for field in row.fields if field.label == "On failure" for line in field.lines if "restarted" in line.text]
-    assert restarted and all("the item is restarted: a new start item for 4 c (" in line.text for line in restarted)  # after the item that sends there (#1442)
+    restarted = [line for row in section.rows for field in row.fields if field.label == "On failure" for line in field.lines if "item is given up" in line.text]
+    assert restarted and all(line.text.endswith("the item is given up: a new one is bought for 4 c") for line in restarted)  # after the item that sends there (#1442)
+    # the share of uses that lose the item comes first: R13's Fracturing Orb, 44% of its cost, loses the belt on about half its uses (#1602)
+    assert all(re.match(r"^[≈<>]?\s?[\d.]+% of uses: ", line.text) for line in restarted)
     assert {line.anchor for line in restarted} == {f"→ step {restart.number}"}
     # a bought rare: the other mods are not known
     assert restart.after.suffixes[0].text == "any mod or empty" and restart.after.properties == ("Rare", "item level 84")
