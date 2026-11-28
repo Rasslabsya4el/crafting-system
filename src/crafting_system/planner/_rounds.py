@@ -441,6 +441,8 @@ def widen(
             # a growth round's share is half the time left: this round, and every round after it (OR-40: a share of the net, no count)
             give_way = None if best is not None or time_left is None else Share(time_left, GROWTH_SHARES, counted, measure, unit, gap)
             searches = GROWTH_SHARES if best is not None else 1
+            if best is not None and getattr(grow, "one_side_round", False):
+                searches = 1  # the one-side group (`_growth.Grower.one_side_group`, H69): all the time left, its build the whole of it
             asked = give_way if meter is None else _seen_by(meter, give_way)
             call = RoundCall(searches, best_upper, best is None, asked, None if meter is None else meter.net(searches), held, best is not None and not held,
                              blind=GROWTH_SHARES if best is None else None)  # fmt: skip
@@ -459,8 +461,9 @@ def widen(
             # has a plan read on a whole bound: the growth goes on from it
             ends = status not in (CLOSED, WITHIN, BEATEN, NONE, REFUSED) and not built
             if ends:
-                # a lock group that did not finish ends nothing: the growth reads on, with the next lock group or the later group (`_growth.Grower.stop`, #1420)
-                what = "the growth reads on with the next lock group or the later group" if getattr(grow, "lock_round", False) else "the growth of the methods ended here"
+                # a lock group or the one-side group that did not finish ends nothing: the growth reads on (`_growth.Grower.stop`, #1420, #1542)
+                reads_on = getattr(grow, "lock_round", False) or getattr(grow, "one_side_round", False)
+                what = "the growth reads on with the next round it names" if reads_on else "the growth of the methods ended here"
                 reason += ("; " if reason else "") + f"{what}: this round did not finish within its share" + (
                     " (its bound's build did not complete)" if plan is not None else "")
             known = None if meter is None else meter.ended(touched)
