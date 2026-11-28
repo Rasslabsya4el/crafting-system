@@ -833,7 +833,7 @@ def _make_plan(
     not the target's own item (a vendor recipe, ADR-0059): it wins over `start_price` and over the price the target's computed key has in the file.
     `priced_as` is the target whose start item is priced when the caller gives no price: the target as written, where `target` is it with its
     finishes taken off (`make_plan`). The start item is the same item, but its key is computed from the target, and a catalyst quality narrows
-    the window of item levels the key names (R06: `item level 75` with its Intrinsic quality, `75-76` without, #1267), so the price is the
+    the window of item levels the key names (R06: `item level 84` with its Intrinsic quality, `84-85` without, #1267, #1693), so the price is the
     one of the item the target describes (OR-3).
 
     `solver` picks the exact solve (ticket #374, #377, #535, ADR-0063): "auto" (the default) is the envelope search wherever its bound can be

@@ -86,9 +86,11 @@ def test_r06_loads_as_base_rolls_plus_intrinsic_quality(r06):
 
 def test_r06_at_item_level_84_asks_the_finished_item_its_reading_at_75_asked(r06, real, tmp_path):
     """#1693 (OR-1, OR-43): R06 plans at item level 84, where the market sells the belt, and states the tiers OR-1 gives at the guide's 75,
-    so the item asked is the same: the file read at 75 with no `min_tier` (the reading before #1693) asks every mod alike. Worked by hand:
+    so the predicate on the finished item is the same: the file read at 75 with no `min_tier` (the reading before #1693) asks every mod alike. Worked by hand:
     Life tier 1 is IncreasedLife9 at both levels; Armour tier 3 or better is 6, 7 and 8_ (tiers 2 and 1 open at 83 and 86); each resistance
-    tier 2 or better is 7 and 8 (tier 1, 84). At 84 with no `min_tier`, OR-1 would ask Armour tier 2 and the resistances tier 1 alone."""
+    tier 2 or better is 7 and 8 (tier 1, 84). At 84 with no `min_tier`, OR-1 would ask Armour tier 2 and the resistances tier 1 alone.
+    The predicate is the same, not the pool: at 84 a better tier that cannot roll at 75 (Armour tier 2, a tier-1 resistance) rolls and
+    meets it, a reading of OR-1 the PR names (#1693)."""
     text = (EXAMPLES / "r06-strength-heavy-belt.yaml").read_text(encoding="utf-8")
     text = text.replace("price_file: ../../", f"price_file: {(EXAMPLES / '..' / '..').resolve().as_posix()}/")
 
