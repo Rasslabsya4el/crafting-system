@@ -301,24 +301,24 @@
     "R06": {
       "runs": [
         {
-          "mean": 1506.5452447693913,
-          "lower": 24.178299921635016,
-          "seconds": 18.783935214999985,
+          "mean": 1260.1644338320739,
+          "lower": 30.936449515590766,
+          "seconds": 19.822824067,
           "peak_mb": null,
           "stop": "stopped: not every round of the methods finished"
         },
         {
-          "mean": 1516.396370752959,
-          "lower": 24.178299921635016,
-          "seconds": 18.82946558399999,
+          "mean": 1718.2375556103605,
+          "lower": 30.936449515590766,
+          "seconds": 18.157358845999966,
           "peak_mb": null,
           "stop": "stopped: not every round of the methods finished"
         }
       ],
       "state": "planned",
-      "spread": 9.851125983567727,
-      "spread_share": 0.006538884920828017,
-      "ceiling": 1531.5603344604885
+      "spread": 458.0731217782866,
+      "spread_share": 0.3635026584469755,
+      "ceiling": 2176.310677388647
     },
     "R24": {
       "runs": [
