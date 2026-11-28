@@ -156,6 +156,9 @@ named here. Every choice is read from what the offers declare (`_offer_kinds._ki
   on R24 (the first attempt) the Essence step's group made no plan in its share, and placed after the growth (the second) the group had
   531 s for a build of 312,146 keys. So its round has all the time left (`_rounds.widen`, H69), its build the whole of it, where another
   growth round has half: on R24 at its third attempt the group had 293 s at minute 50 for a build of about 570 s.
+  A one-side group that does not finish ends nothing, as a lock group (`Grower.stop`): it only adds offers to a plan's, so the usual growth
+  reads on after it with what time is left. A state of a rarity that holds no mod of a side (a Normal item) reads neither room nor a full
+  side there.
 
 The `PER_ROLE` count orders what is searched first; it cuts nothing (OR-12): every offer keeps its group in the widening rounds after the growth.
 """
@@ -506,7 +509,7 @@ class OfferTable:
         """How many mods of `side` an item of `rarity` holds on the run's base (`items.capacity`); None when the base is not in the data."""
         try:
             return capacity(self.data, self.base_id, rarity).of(Side(side))
-        except (KeyError, ValueError, AttributeError, UnknownBaseError):
+        except (KeyError, ValueError, UnknownBaseError):
             return None
 
     def side_roles(self, acts: Sequence[tuple[CompressedState, object, float]]) -> set[int]:
@@ -527,7 +530,7 @@ class OfferTable:
             if not visits > 0.0:
                 continue
             cap = self.capacity_of(state.flags.rarity, other)
-            if cap is None:
+            if not cap:  # no count of the side's slots, or a rarity that holds none (a Normal item): neither room nor a full side there
                 continue
             if self.held_on(state, other) < cap:
                 room = True
@@ -1018,6 +1021,7 @@ class Grower:
         self.read_ever: set[str] = set()  # every step read under any plan: a step read again is a re-read (the one-side group, #1542)
         self.one_side_for = None  # the plan in hand the one-side group was named for (once per plan)
         self.one_side_round = False  # the round named last is the one-side group: it has all the time left (`_rounds.widen`, H69)
+        self.one_side_ran = False  # the round that ran last was the one-side group (`stop`: one that did not finish ends nothing)
         table.held_back = self.later_ones
 
     def _named_later(self, named: Callable[[], set[int]]) -> None:
@@ -1046,8 +1050,8 @@ class Grower:
 
     def stop(self) -> tuple[tuple[int, ...], str] | None:
         """A growth round did not finish within its share (`_rounds.widen`): the usual growth ends; the lock groups not yet read come, then
-        the later group when it is owed. A lock group that did not finish ends nothing (module text)."""
-        if self.lock_round:
+        the later group when it is owed. A lock group or the one-side group that did not finish ends nothing (module text)."""
+        if self.lock_round or self.one_side_ran:  # neither ends the usual growth: the one-side group only adds offers to a plan's (#1542)
             return self.next()
         self.ended = True
         return self.last_lock() or self.later()
@@ -1072,7 +1076,7 @@ class Grower:
         chosen = frozenset(positions)
         self.tried.append(chosen)
         self.last = chosen
-        self.one_side_round = False
+        self.one_side_ran, self.one_side_round = self.one_side_round, False  # `stop` reads whether the round that ran was the one-side group
         if improved:
             self.plan, self.plan_set, self.diagnosed = plan_in_hand, chosen, set()
 

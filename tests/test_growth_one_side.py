@@ -131,3 +131,31 @@ def test_the_one_side_group_comes_in_place_of_the_first_re_read_of_a_step_once_p
     assert grower.one_side_for is grower.plan
     later = grower._next()  # the same plan: the group is not named twice
     assert later is None or "one-side" not in later[1]
+
+
+def test_a_state_of_a_rarity_that_holds_no_mod_of_the_other_side_reads_neither_room_nor_a_full_side():
+    table = _one_side_table()
+    table.capacity_of = lambda rarity, side: 0  # a Normal item: no slot of either side
+    bare = _Held("bare", (N, N))
+    assert table.side_roles(_acts(bare)) == set()
+    table.capacity_of = lambda rarity, side: None  # a base the data does not hold: no count either
+    assert table.side_roles(_acts(bare)) == set()
+
+
+def test_a_one_side_group_that_did_not_finish_ends_nothing_the_growth_reads_on():
+    table = _one_side_table()
+    grower = Grower(table, ())
+    room = _Held("room", (N, N), sides=("prefix",))
+    grower.ran((0,), _plan_of(room), True)
+    read = grower._next()
+    grower.ran(read[0], _plan_of(room), True)
+    group = grower._next()
+    assert group is not None and "one-side group" in group[1] and grower.one_side_round
+    grower.ran(group[0], grower.plan, False)  # the group's round did not finish within its share (`_rounds.widen` then asks `stop`)
+    grower.stop()
+    assert not grower.ended  # the usual growth goes on
+    plain = Grower(_one_side_table(), ())
+    plain.ran((0,), _plan_of(room), True)
+    plain.ran(plain._next()[0], _plan_of(room), False)  # a usual round that did not finish ends the usual growth, as on main
+    plain.stop()
+    assert plain.ended
